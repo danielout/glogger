@@ -1,7 +1,59 @@
-# Tauri + Vue + TypeScript
+# Glogger
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+A desktop app for tracking various game data in **Project: Gorgon**. Built with [Tauri](https://tauri.app) (Rust backend) and Vue 3 frontend.
 
-## Recommended IDE Setup
+## What it does
 
-- [VS Code](https://code.visualstudio.com/) + [Vue - Official](https://marketplace.visualstudio.com/items?itemName=Vue.volar) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+Glogger tails your game's log file in real time and parses events as they happen — items gathered, speed bonuses, XP/skill updates, acquisition rates, and (eventually) session history, running averages, etc.
+
+## Tech stack
+
+- **Tauri 2** — Rust backend, tiny distributable (~5–10MB), uses OS webview
+- **Vue 3** — frontend UI
+- **Pinia** — state management
+- **tokio** — async file watching in Rust
+
+## Prerequisites
+
+- [Git](https://git-scm.com/downloads)
+- [Node.js LTS](https://nodejs.org)
+- [Rust + rustup](https://rustup.rs) + Visual Studio C++ build tools (Windows)
+- VS Code with extensions: Tauri, Rust Analyzer, Vue - Official
+
+## Getting started
+
+```bash
+git clone https://github.com/YOUR_USERNAME/glogger.git
+cd glogger
+npm install
+npm run tauri dev
+```
+
+## Project structure
+
+```
+glogger/
+├── src/              # Vue frontend
+├── src-tauri/
+│   ├── src/
+│   │   ├── main.rs   # Entry point 
+│   │   └── lib.rs    # Tauri commands, file watcher, log parsers
+│   ├── capabilities/
+│   │   └── default.json  # Permission config
+│   └── Cargo.toml
+├── package.json
+└── docs/
+    └── sample.log    # Test data
+```
+
+## Log events parsed
+
+| Log pattern | Data extracted |
+|---|---|
+| `ProcessDoDelayLoop` | Survey start (map name) |
+| `ProcessScreenText` | Item collected, speed bonus, quantity |
+| `ProcessUpdateSkill` | Skill type, level, XP, TNL |
+
+## Status
+
+Early development — currently proving the Rust → Vue event pipeline and working on basic log parsing.
