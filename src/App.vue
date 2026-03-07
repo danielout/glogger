@@ -8,6 +8,7 @@ import { useSurveyStore } from "./stores/surveyStore";
 import SkillGrid from "./components/SkillGrid.vue";
 import SurveySessionCard from "./components/SurveySessionCard.vue";
 import SurveyLog from "./components/SurveyLog.vue";
+import ItemSearch from "./components/ItemSearch.vue";
 
 const skillStore = useSkillStore();
 const surveyStore = useSurveyStore();
@@ -16,12 +17,12 @@ const logPath = ref("");
 const error = ref("");
 const watching = ref(false);
 const parsing = ref(false);
-const activeTab = ref<"skills" | "surveying">("skills");
+const activeTab = ref<"skills" | "surveying" | "items">("skills");
 
 onMounted(async () => {
   await listen("skill-update", (event: any) => {
     skillStore.handleUpdate(event.payload);
-    surveyStore.handleSkillUpdate(event.payload); // survey store also wants skill XP
+    surveyStore.handleSkillUpdate(event.payload);
   });
   await listen("survey-event", (event: any) => {
     surveyStore.handleSurveyEvent(event.payload);
@@ -98,6 +99,12 @@ async function parseLog() {
         @click="activeTab = 'surveying'">
         Surveying
       </button>
+      <button
+        class="tab"
+        :class="{ active: activeTab === 'items' }"
+        @click="activeTab = 'items'">
+        Items
+      </button>
     </div>
 
     <div class="tab-content">
@@ -107,6 +114,9 @@ async function parseLog() {
       <template v-if="activeTab === 'surveying'">
         <SurveySessionCard />
         <SurveyLog />
+      </template>
+      <template v-if="activeTab === 'items'">
+        <ItemSearch />
       </template>
     </div>
   </div>

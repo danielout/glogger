@@ -1,0 +1,15 @@
+// Re-export all game data types from their modules
+export type { ItemInfo } from './items'
+export type { SkillInfo } from './skills'
+export type { AbilityInfo } from './abilities'
+export type { RecipeIngredient, RecipeResultItem, RecipeInfo } from './recipes'
+export type { NpcPreference, NpcInfo } from './npcs'
+
+// CacheStatus lives here since it's not really a game data type
+export interface CacheStatus {
+  cached_version: number | null
+  remote_version: number | null
+  up_to_date: boolean
+  item_count: number
+  skill_count: number
+}
