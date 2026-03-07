@@ -5,6 +5,7 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 
 use crate::parsers::parse_skill_update;
+use crate::survey_parser::SurveyParser;
 
 #[tauri::command]
 pub async fn start_watching(path: String, app: AppHandle) -> Result<(), String> {
@@ -18,6 +19,7 @@ pub async fn start_watching(path: String, app: AppHandle) -> Result<(), String> 
         file.seek(SeekFrom::End(0)).expect("could not seek to end");
         let mut reader = BufReader::new(file);
         let mut line = String::new();
+        let mut survey_parser = SurveyParser::new();
 
         loop {
             line.clear();
@@ -27,9 +29,7 @@ pub async fn start_watching(path: String, app: AppHandle) -> Result<(), String> 
                 }
                 Ok(_) => {
                     let l = line.trim_end().to_string();
-                    if let Some(update) = parse_skill_update(&l) {
-                        app.emit("skill-update", update).ok();
-                    }
+                    emit_events(&app, &l, &mut survey_parser);
                 }
                 Err(e) => {
                     eprintln!("Read error: {}", e);
@@ -52,14 +52,13 @@ pub async fn parse_log(path: String, app: AppHandle) -> Result<(), String> {
     tokio::spawn(async move {
         let file = File::open(&path).expect("could not open log file");
         let reader = BufReader::new(file);
+        let mut survey_parser = SurveyParser::new();
 
         for line in reader.lines() {
             match line {
                 Ok(l) => {
                     let l = l.trim_end().to_string();
-                    if let Some(update) = parse_skill_update(&l) {
-                        app.emit("skill-update", update).ok();
-                    }
+                    emit_events(&app, &l, &mut survey_parser);
                 }
                 Err(e) => eprintln!("Read error: {}", e),
             }
@@ -67,4 +66,14 @@ pub async fn parse_log(path: String, app: AppHandle) -> Result<(), String> {
     });
 
     Ok(())
+}
+
+/// Central dispatch: parse one line for all event types and emit any that fire
+fn emit_events(app: &AppHandle, line: &str, survey_parser: &mut SurveyParser) {
+    if let Some(update) = parse_skill_update(line) {
+        app.emit("skill-update", update).ok();
+    }
+    for event in survey_parser.process_line(line) {
+        app.emit("survey-event", event).ok();
+    }
 }

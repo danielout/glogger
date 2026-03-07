@@ -1,5 +1,6 @@
 mod parsers;
 mod commands;
+mod survey_parser;
 
 use commands::{start_watching, parse_log};
 
