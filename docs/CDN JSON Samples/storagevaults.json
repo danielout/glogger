@@ -1,0 +1,23 @@
+{
+  "*AccountStorage_AnimalTown": {
+    "Area": "AreaSunVale",
+    "HasAssociatedNpc": false,
+    "ID": 110,
+    "NpcFriendlyName": "Animal Town Transfer Chest",
+    "NumSlots": 0
+  },
+  "*AccountStorage_Casino": {
+    "Area": "AreaCasino",
+    "HasAssociatedNpc": false,
+    "ID": 111,
+    "NpcFriendlyName": "Red Wing Casino Transfer Chest",
+    "NumSlots": 0
+  },
+  "*AccountStorage_Home1": {
+    "Area": "AreaApartment1",
+    "HasAssociatedNpc": false,
+    "ID": 117,
+    "NpcFriendlyName": "Home Vault",
+    "NumSlots": 0
+  }
+}

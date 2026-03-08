@@ -1,0 +1,116 @@
+{
+  "recipe_1": {
+    "Description": "Create basic butter. Bland but buttery. (Requires a stove or fire pit.)",
+    "IconId": 5794,
+    "Ingredients": [
+      {
+        "ItemCode": 5010,
+        "StackSize": 2
+      },
+      {
+        "ItemCode": 5001,
+        "StackSize": 1
+      },
+      {
+        "ChanceToConsume": 0.2,
+        "ItemCode": 12551,
+        "StackSize": 1
+      }
+    ],
+    "InternalName": "Butter",
+    "Name": "Butter",
+    "ResultItems": [
+      {
+        "ItemCode": 5011,
+        "StackSize": 3
+      },
+      {
+        "ItemCode": 1,
+        "StackSize": 2
+      }
+    ],
+    "RewardSkill": "Cheesemaking",
+    "RewardSkillXp": 10,
+    "RewardSkillXpDropOffLevel": 10,
+    "RewardSkillXpDropOffPct": 0.1,
+    "RewardSkillXpDropOffRate": 5,
+    "RewardSkillXpFirstTime": 40,
+    "Skill": "Cheesemaking",
+    "SkillLevelReq": 0
+  },
+  "recipe_100": {
+    "Description": "Grinds orcish wheat into flour, carefully avoiding the toxic bits.",
+    "IconId": 6737,
+    "Ingredients": [
+      {
+        "ChanceToConsume": 0.03,
+        "ItemCode": 4181,
+        "StackSize": 1
+      },
+      {
+        "ItemCode": 5332,
+        "StackSize": 1
+      }
+    ],
+    "InternalName": "OrcishFlour",
+    "IsItemMenuKeywordReqSufficient": true,
+    "ItemMenuKeywordReq": "OrcishWheat",
+    "ItemMenuLabel": "Grind Flour",
+    "Name": "Orcish Flour",
+    "ResultItems": [
+      {
+        "ItemCode": 5334,
+        "StackSize": 1
+      },
+      {
+        "ItemCode": 5334,
+        "PercentChance": 0.2,
+        "StackSize": 1
+      }
+    ],
+    "RewardSkill": "Cooking",
+    "RewardSkillXp": 320,
+    "RewardSkillXpDropOffLevel": 90,
+    "RewardSkillXpDropOffPct": 0.1,
+    "RewardSkillXpDropOffRate": 5,
+    "RewardSkillXpFirstTime": 1280,
+    "Skill": "Cooking",
+    "SkillLevelReq": 80,
+    "UsageDelay": 3,
+    "UsageDelayMessage": "Grinding"
+  },
+  "recipe_10001": {
+    "Description": "Create 1000 beginner's arrows.",
+    "IconId": 5238,
+    "Ingredients": [
+      {
+        "ItemCode": 20121,
+        "StackSize": 1
+      },
+      {
+        "ItemCode": 20101,
+        "StackSize": 1
+      },
+      {
+        "ItemCode": 1139,
+        "StackSize": 1
+      }
+    ],
+    "InternalName": "Arrow1",
+    "Name": "Beginner's Arrow",
+    "ResultItems": [
+      {
+        "ItemCode": 20001,
+        "StackSize": 1000
+      }
+    ],
+    "RewardSkill": "Fletching",
+    "RewardSkillXp": 0,
+    "RewardSkillXpDropOffLevel": 13,
+    "RewardSkillXpDropOffPct": 0.1,
+    "RewardSkillXpDropOffRate": 5,
+    "RewardSkillXpFirstTime": 100,
+    "Skill": "Fletching",
+    "SkillLevelReq": 3
+  }
+}

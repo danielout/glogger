@@ -1,0 +1,119 @@
+{
+  "quest_1": {
+    "Description": "(No longer used or given out!)",
+    "InternalName": "KillSkeletons",
+    "IsCancellable": true,
+    "Name": "Kill Skeletons",
+    "Objectives": [
+      {
+        "Description": "Kill Skeletons",
+        "Number": 5,
+        "Target": "Skeleton",
+        "Type": "Kill"
+      },
+      {
+        "Description": "Talk to Rita",
+        "Number": 1,
+        "Type": "Scripted"
+      }
+    ],
+    "ReuseTime_Minutes": 180,
+    "Rewards": [
+      {
+        "Skill": "Sword",
+        "T": "SkillXp",
+        "Xp": 100
+      },
+      {
+        "Skill": "Mycology",
+        "T": "SkillXp",
+        "Xp": 25
+      }
+    ],
+    "Rewards_Items": [
+      {
+        "Item": "DiscoverWordOfPower1",
+        "StackSize": 1
+      },
+      {
+        "Item": "Potato",
+        "StackSize": 5
+      }
+    ],
+    "Version": 3
+  },
+  "quest_10": {
+    "Description": "Kill 2 fey panthers and return to Kalaba.",
+    "DisplayedLocation": "Eltibule",
+    "InternalName": "KillPanthers2",
+    "IsCancellable": true,
+    "Name": "Kill Fey Panthers",
+    "Objectives": [
+      {
+        "Description": "Kill Fey Panthers",
+        "Number": 2,
+        "Target": "FeyPanther",
+        "Type": "Kill"
+      },
+      {
+        "Description": "Talk to Kalaba",
+        "Number": 1,
+        "Type": "Scripted"
+      }
+    ],
+    "Requirements": [
+      {
+        "Quest": "KillPanthers",
+        "T": "QuestCompleted"
+      }
+    ],
+    "Reward_Favor": 50,
+    "Rewards": [
+      {
+        "Skill": "Unarmed",
+        "T": "SkillXp",
+        "Xp": 1000
+      }
+    ],
+    "Version": 1
+  },
+  "quest_10001": {
+    "Description": "Joeh in Serbule asked you to obtain some intact eyes from slain tigers. \"Intact ones are pretty hard to find, but if you kill enough tigers I'm sure you'll get them.\"",
+    "DisplayedLocation": "Serbule",
+    "FavorNpc": "AreaSerbule/NPC_Joe",
+    "InternalName": "GetCatEyeballsForJoeh",
+    "IsCancellable": true,
+    "Name": "Get Cat Eyeballs for Joeh",
+    "Objectives": [
+      {
+        "Description": "Obtain Cat Eyeballs",
+        "ItemName": "CatEyeball",
+        "Number": 2,
+        "Type": "Collect"
+      },
+      {
+        "Description": "Talk to Joeh",
+        "Number": 1,
+        "Type": "Scripted"
+      }
+    ],
+    "PrefaceText": "There's a lot of tigers around here! The sewer system's a mess of poorly-planned portals, and personally, I think the tigers have been pouring out of one of them! Sir Coth is too incompetent to deal with the menace, and I'm too busy. Can you do it?\n\nI need some proof that they're being handled. Can you get me a couple of cat eyeballs? Intact ones are pretty hard to find, but if you kill enough tigers I'm sure you'll get them.",
+    "Requirements": [
+      {
+        "Level": "Hated",
+        "Npc": "AreaSerbule/NPC_Joe",
+        "T": "MinFavorLevel"
+      }
+    ],
+    "Reward_Favor": 100,
+    "Rewards": [
+      {
+        "Skill": "Sword",
+        "T": "SkillXp",
+        "Xp": 750
+      }
+    ],
+    "SuccessText": "Great! I mean, these are incredibly disgusting, but great, thanks for doing that! Now let me teach you how to handle a saber like a real elf!",
+    "Version": 2
+  }
+}

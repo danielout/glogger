@@ -1,0 +1,40 @@
+{
+  "Altar_Druid": {
+    "AreaFriendlyName": "Sun Vale",
+    "AreaName": "AreaSunVale",
+    "Desc": "A specialized altar.",
+    "Name": "Altar",
+    "Services": [
+      {
+        "Favor": "Despised",
+        "Type": "Store"
+      },
+      {
+        "Favor": "Despised",
+        "Skills": [
+          "Unknown",
+          "Teleportation"
+        ],
+        "Type": "Training"
+      }
+    ]
+  },
+  "BearCharmPedestal": {
+    "AreaFriendlyName": "Kur Mountains",
+    "AreaName": "AreaKurMountains",
+    "Desc": "It's inscribed with little etchings of bears.",
+    "Name": "Sacrificial Bowl"
+  },
+  "CasinoWorkOrderSign": {
+    "AreaFriendlyName": "Red Wing Casino",
+    "AreaName": "AreaCasino",
+    "Desc": "Who knows where Irkima gets these work orders...",
+    "Name": "Work Orders",
+    "Services": [
+      {
+        "Favor": "Despised",
+        "Type": "Store"
+      }
+    ]
+  }
+}

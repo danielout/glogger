@@ -1,0 +1,35 @@
+{
+  "effect_10003": {
+    "Desc": "You are covered in lemon juice and it is super sticky! Your movements are hindered and you stick to everything, including the ground!\nYou lose 3 movement speed and 2 sprint speed.\nYou need to bathe in water to remove the stickiness!",
+    "DisplayMode": "Effect",
+    "Duration": -2,
+    "IconId": 5622,
+    "Keywords": [
+      "Debuff"
+    ],
+    "Name": "Sticky!"
+  },
+  "effect_10005": {
+    "Desc": "You have been blessed with the luck of the lemon!\nYou have an extra 5% chance to find legendary gear!",
+    "DisplayMode": "Effect",
+    "Duration": 3600,
+    "IconId": 5622,
+    "Keywords": [
+      "Buff"
+    ],
+    "Name": "Luck of the Legendary Lemon"
+  },
+  "effect_10010": {
+    "Desc": "Your inventory capacity is expanded by 25 slots for 3 hours. This effect does not stack with other inventory expansion potions from Orran and overrides all inventory Words of Power.",
+    "DisplayMode": "Effect",
+    "Duration": 18000,
+    "IconId": 6333,
+    "Keywords": [
+      "Buff",
+      "OrranInv"
+    ],
+    "Name": "Orran's Inventory Expander",
+    "StackingPriority": 101,
+    "StackingType": "WordOfPowerInventory"
+  }
+}

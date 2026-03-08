@@ -1,0 +1,2304 @@
+{
+  "item_1": {
+    "entries": [
+      {
+        "npc": "NPC_SerHackley",
+        "type": "Barter"
+      },
+      {
+        "npc": "NPC_TheFloriculturist",
+        "type": "Barter"
+      },
+      {
+        "type": "Effect"
+      },
+      {
+        "itemTypeId": 10001,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 12567,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 1313,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15001,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15002,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15004,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15005,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15006,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15007,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15008,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15009,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15016,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15017,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15018,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15019,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15020,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15021,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15022,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15023,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15024,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15025,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15029,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15035,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15036,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15037,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15040,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15041,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15042,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15045,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15046,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15047,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15053,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15056,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15057,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15061,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15063,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15064,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15083,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15086,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15087,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15101,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15102,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15103,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15104,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15105,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15106,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15107,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15108,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15109,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15110,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15111,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15112,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15113,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15114,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15211,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15801,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15802,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15804,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15805,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15872,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15873,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15881,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15882,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15890,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15891,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15892,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15897,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15898,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15899,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15900,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15901,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15902,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15903,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15904,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15912,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15931,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15932,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15933,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15934,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15985,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 15986,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 2,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5004,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5010,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5015,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5016,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5017,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5018,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5019,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5028,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5075,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5080,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5401,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5402,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5403,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5404,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5405,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5406,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5407,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5408,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 5409,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6053,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6058,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6083,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6084,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6085,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6086,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6087,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6088,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6093,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6105,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6106,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6107,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6108,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6111,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6114,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6128,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6207,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6278,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6291,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6382,
+        "type": "Item"
+      },
+      {
+        "itemTypeId": 6403,
+        "type": "Item"
+      },
+      {
+        "type": "Monster"
+      },
+      {
+        "npc": "NPC_Percy",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "NPC_Riger",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedBarley",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedBasil",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedBeet",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedBroccoli",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedCabbage",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedCantaloupe",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedCarrot",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedCorn",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedCotton",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedEscarole",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedEvilPumpkin",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlax",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower1",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower10",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower11",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower12",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower13",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower14",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower15",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower16",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower17",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower18",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower19",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower2",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower20",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower3",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower4",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower5",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower6",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower7",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower8",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFlower9",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedFoulAcornPlant",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedGreenPepper",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedHorseApple",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedMoonspelt",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedOats",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedOnion",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedPeaPlant",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedPotato",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedPumpkin",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedRedLeafLettuce",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedRedPepper",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedSoybeanPlant",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedSquash",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedSugarcane",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedTomatoPlant",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedTundraRyePlant",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "SummonedWheatPlant",
+        "type": "NpcGift"
+      },
+      {
+        "npc": "WaterWellFillable",
+        "type": "NpcGift"
+      },
+      {
+        "questId": 45016,
+        "type": "Quest"
+      },
+      {
+        "recipeId": 101,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1028,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 102,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1033,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1037,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1042,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1048,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1056,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1057,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 105,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1061,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1062,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1063,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1068,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 106,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1070,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1086,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1090,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1091,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1096,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1106,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1107,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1108,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 110,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 111,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1120,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 112,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1132,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1147,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1149,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1159,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1160,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1164,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1166,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1167,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1168,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1169,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1173,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1174,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1175,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 117,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1183,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 118,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1191,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 12075,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 12076,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 12077,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 12078,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 12079,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 12091,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 12092,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 12093,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 12094,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 12095,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 120,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 122,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1237,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1239,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1250,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1259,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 125,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1268,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1269,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 126,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1279,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 127,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1282,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1283,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1285,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1286,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 128,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1291,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1293,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1300,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1303,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 131,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 13205,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 13206,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 13207,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 13208,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 13209,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 13245,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 13246,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 13247,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 13248,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 13249,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 134,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 139,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 14335,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 14336,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 14337,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 14338,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 14339,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 14435,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 14436,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 14437,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 14438,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 14439,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 149,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 15045,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 15046,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 15047,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 15048,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 15049,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 150,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 15124,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 15125,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 15126,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 15127,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 15128,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 155,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 156,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 159,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 16045,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 16046,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 16047,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 16048,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 16049,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 160,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 16145,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 16146,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 16147,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 16148,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 16149,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 162,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 164,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 165,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 176,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 184,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 19014,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 196,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 19,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 1,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 200,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 22521,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 22522,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 22524,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 22525,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 23756,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24021,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24022,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24023,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24024,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24025,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24026,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24027,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24028,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24029,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24030,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24031,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24032,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24033,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24101,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24102,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24103,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24104,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24105,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24106,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24107,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24108,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24109,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24110,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24111,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24112,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24113,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24114,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24115,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24116,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24117,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24118,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24119,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24120,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24121,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24122,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24123,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24124,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24125,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24126,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24127,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24128,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24129,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24130,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24131,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24132,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24133,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24252,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24253,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24254,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24255,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24256,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24260,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24261,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24264,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24266,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24267,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24268,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24269,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24271,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24272,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24273,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24274,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24275,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24277,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24279,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24281,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24283,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24285,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24287,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24288,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24289,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24292,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 24294,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 25051,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 25052,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 25053,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 25054,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 25055,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 25056,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 25057,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 26016,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 28005,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 2,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 404,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 411,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 412,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 413,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 414,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 415,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 416,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 418,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 419,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 420,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 421,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 422,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 423,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 424,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 425,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 428,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 429,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 430,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 431,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 432,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 433,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 434,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 436,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 437,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 438,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 439,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 440,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 442,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 443,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 444,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 445,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 446,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 447,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 448,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 449,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 450,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 451,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 452,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 453,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 454,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 456,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 457,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 458,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 459,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 461,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 462,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 463,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 464,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 507,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 510,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 511,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 512,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 513,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 537,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 540,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 565,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 574,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 581,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 583,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 584,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 585,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 590,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 591,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 595,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 596,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 599,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 600,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 6011,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 6012,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 6029,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 6030,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 6031,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 6032,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 6033,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 6034,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 6,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7010,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7011,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7012,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7013,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7014,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7022,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7028,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7029,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7030,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7031,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7035,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7042,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7043,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7051,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7052,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7055,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7059,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7060,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7067,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7080,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7087,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7092,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7098,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7304,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7311,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7312,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7313,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7314,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7315,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7571,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7581,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7582,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7591,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7592,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7593,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7594,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7601,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7602,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7603,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7604,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7631,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7641,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7808,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7809,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7810,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7811,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7812,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7813,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7814,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7815,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7816,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7817,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7818,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7819,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7820,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7821,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7822,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7823,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7824,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7825,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7826,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7827,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7828,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7829,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7830,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7831,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7832,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7841,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7863,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7891,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7893,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 7931,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 801,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 802,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 832,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 841,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 846,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 8551,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 8559,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 951,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 952,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 953,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 954,
+        "type": "Recipe"
+      },
+      {
+        "friendlyName": "(This entity is no longer used)",
+        "type": "ResourceInteractor"
+      },
+      {
+        "npc": "NPC_Arlan",
+        "type": "Vendor"
+      },
+      {
+        "npc": "AdminTestNpc",
+        "type": "Vendor"
+      },
+      {
+        "npc": "NPC_JuliusPatton",
+        "type": "Vendor"
+      },
+      {
+        "npc": "NPC_Norbert",
+        "type": "Vendor"
+      },
+      {
+        "npc": "NPC_PitreFerrence",
+        "type": "Vendor"
+      }
+    ]
+  },
+  "item_10001": {
+    "entries": [
+      {
+        "hangOutId": 10303,
+        "npc": "NPC_Ivyn",
+        "type": "HangOut"
+      },
+      {
+        "questId": 10303,
+        "type": "Quest"
+      },
+      {
+        "recipeId": 901,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 902,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 903,
+        "type": "Recipe"
+      },
+      {
+        "recipeId": 905,
+        "type": "Recipe"
+      },
+      {
+        "npc": "NPC_Yetta",
+        "type": "Vendor"
+      }
+    ]
+  },
+  "item_10002": {
+    "entries": []
+  }
+}

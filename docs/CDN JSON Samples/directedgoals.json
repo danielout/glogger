@@ -1,0 +1,26 @@
+[
+  {
+    "Id": 1,
+    "IsCategoryGate": true,
+    "Label": "General",
+    "LargeHint": "",
+    "SmallHint": "",
+    "Zone": "Tasks without a specific location"
+  },
+  {
+    "Id": 10,
+    "IsCategoryGate": true,
+    "Label": "Anagoge Island",
+    "LargeHint": "",
+    "SmallHint": "",
+    "Zone": "Tasks in this area"
+  },
+  {
+    "Id": 20,
+    "IsCategoryGate": true,
+    "Label": "Serbule Hills",
+    "LargeHint": "Serbule Hills can be reached by traveling south from Serbule.",
+    "SmallHint": "Visit Serbule Hills to unlock this list of tasks.",
+    "Zone": "Tasks in this area"
+  }
+]

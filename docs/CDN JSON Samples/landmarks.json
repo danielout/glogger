@@ -1,0 +1,79 @@
+{
+  "AreaApartment1": [
+    {
+      "Desc": "Return to Statehelm",
+      "Loc": "x:-5.915932 y:0.003667 z:22.325081",
+      "Name": "Exit",
+      "Type": "Portal"
+    }
+  ],
+  "AreaCasino": [
+    {
+      "Desc": "Employees Only!",
+      "Loc": "x:-119.407501 y:-7.11 z:101.227501",
+      "Name": "Employee Exit",
+      "Type": "Portal"
+    },
+    {
+      "Combo": "4017",
+      "Loc": "x:0.0 y:5.19417 z:213.75",
+      "Name": "Meditation Pillar",
+      "Type": "MeditationPillar"
+    },
+    {
+      "Loc": "x:7.5 y:0.999 z:22.5",
+      "Name": "TeleportCircle_CasinoFoyer",
+      "Type": "TeleportationPlatform"
+    }
+  ],
+  "AreaCave1": [
+    {
+      "Desc": "Back to the rest of the Keep.",
+      "Loc": "x:962.5 y:46.5 z:-146.762253",
+      "Name": "Exit",
+      "Type": "Portal"
+    },
+    {
+      "Desc": "You can get out from here.",
+      "Loc": "x:-507.410004 y:-40.0 z:-648.75",
+      "Name": "Passageway Up",
+      "Type": "Portal"
+    },
+    {
+      "Desc": "You can climb back up here.",
+      "Loc": "x:2500.624023 y:505.391998 z:-1654.823975",
+      "Name": "Passageway Up",
+      "Type": "Portal"
+    },
+    {
+      "Desc": "Back to the rest of the Keep.",
+      "Loc": "x:1007.5 y:37.527 z:-280.839996",
+      "Name": "Exit",
+      "Type": "Portal"
+    },
+    {
+      "Desc": "Return to the keep courtyard",
+      "Loc": "x:-295.25 y:29.57 z:406.054932",
+      "Name": "Exit",
+      "Type": "Portal"
+    },
+    {
+      "Desc": "You can get out from here.",
+      "Loc": "x:-1172.838379 y:52.841877 z:-94.230782",
+      "Name": "Passageway Up",
+      "Type": "Portal"
+    },
+    {
+      "Desc": "You could squeeze in there.",
+      "Loc": "x:-441.25 y:-59.275002 z:-615.25",
+      "Name": "Tight Passage",
+      "Type": "Portal"
+    },
+    {
+      "Desc": "Back to the rest of the Keep.",
+      "Loc": "x:974.288025 y:-65.905998 z:-277.5",
+      "Name": "Exit",
+      "Type": "Portal"
+    }
+  ]
+}

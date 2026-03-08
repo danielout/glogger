@@ -1,0 +1,43 @@
+{
+  "AcidAura": {
+    "Abilities": {
+      "AcidAuraBall1": {
+        "maxLevel": 20
+      },
+      "AcidAuraBall2": {
+        "maxLevel": 40,
+        "minLevel": 21
+      },
+      "AcidAuraBall3": {
+        "maxLevel": 50,
+        "minLevel": 41
+      },
+      "AcidAuraBall4": {
+        "minLevel": 51
+      }
+    },
+    "Comment": "Destroyed By Knockback",
+    "MobilityType": "Immobile",
+    "UncontrolledPet": true
+  },
+  "AcidFountain": {
+    "Abilities": {
+      "AcidFountainExplode": {},
+      "AcidFountainSplash": {}
+    },
+    "Strategy": "Melee",
+    "Swimming": true
+  },
+  "AcidFrog": {
+    "Abilities": {
+      "FrogBelch": {},
+      "FrogLick": {},
+      "SpecialBuffIndirectProtection": {
+        "cue": "SpecialBuff",
+        "cueVal": 3
+      }
+    },
+    "Strategy": "Melee",
+    "Swimming": true
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "ability_1002": {
+    "entries": [
+      {
+        "skill": "Unarmed",
+        "type": "Skill"
+      }
+    ]
+  },
+  "ability_1003": {
+    "entries": [
+      {
+        "skill": "Unarmed",
+        "type": "Skill"
+      }
+    ]
+  },
+  "ability_1004": {
+    "entries": [
+      {
+        "skill": "Unarmed",
+        "type": "Skill"
+      }
+    ]
+  }
+}

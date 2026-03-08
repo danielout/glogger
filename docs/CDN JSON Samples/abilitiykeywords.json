@@ -1,0 +1,41 @@
+[
+  {
+    "AttributesThatDeltaCritChance": [
+      "DELTA_ANATOMY_CRITICAL_CHANCE"
+    ],
+    "AttributesThatModCritDamage": [
+      "MOD_CRITICAL_HIT_DAMAGE_ANATOMY"
+    ],
+    "MustHaveAbilityKeywords": [
+      "AnatomyCriticals"
+    ]
+  },
+  {
+    "AttributesThatModCritDamage": [
+      "MOD_CRITICAL_HIT_DAMAGE"
+    ],
+    "MustHaveAbilityKeywords": [
+      "PhrenologyCriticals"
+    ]
+  },
+  {
+    "AttributesThatDeltaAccuracy": [
+      "ACCURACY_DELTA_BASICATTACK"
+    ],
+    "AttributesThatDeltaDamage": [
+      "BOOST_ABILITY_BASICATTACK"
+    ],
+    "AttributesThatDeltaPowerCost": [
+      "BASICATTACK_COST_DELTA"
+    ],
+    "AttributesThatDeltaResetTime": [
+      "ABILITY_RESETTIME_BASICATTACK_DELTA"
+    ],
+    "AttributesThatModDamage": [
+      "MOD_ABILITY_BASICATTACK"
+    ],
+    "MustHaveAbilityKeywords": [
+      "BasicAttack"
+    ]
+  }
+]

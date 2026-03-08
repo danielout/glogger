@@ -1,0 +1,164 @@
+{
+  "Alchemy": {
+    "AdvancementHints": {
+      "50": "To earn more XP in Alchemy, defeat a fabled dragon of yore, or gain favor with Strom Farblood in Statehelm.",
+      "60": "To earn more XP in Alchemy, gain favor with Strom Farblood in Statehelm.",
+      "70": "To earn more XP in Alchemy, gain favor with Strom Farblood in Statehelm."
+    },
+    "Combat": false,
+    "Description": "The art of combining esoteric things together to make potions and poisons.",
+    "GuestLevelCap": 15,
+    "Id": 34,
+    "InteractionFlagLevelCaps": {
+      "LevelCap_Alchemy_100": 90,
+      "LevelCap_Alchemy_60": 50,
+      "LevelCap_Alchemy_70": 60,
+      "LevelCap_Alchemy_80": 70,
+      "LevelCap_Alchemy_90": 80
+    },
+    "MaxBonusLevels": 25,
+    "PassiveAdvancementTable": "ModestPassive",
+    "RecipeIngredientKeywords": [
+      "AlchemyIngredient"
+    ],
+    "Rewards": {
+      "10": {
+        "Ability": "PoisonBlade1"
+      },
+      "15": {
+        "BonusToSkill": "Mycology"
+      },
+      "20": {
+        "Ability": "PoisonBlade2"
+      },
+      "25": {
+        "BonusToSkill": "BattleChemistry"
+      },
+      "30": {
+        "Ability": "PoisonBlade3"
+      },
+      "35": {
+        "BonusToSkill": "Cooking"
+      },
+      "40": {
+        "Ability": "PoisonBlade4"
+      },
+      "42": {
+        "BonusToSkill": "ShamanicInfusion"
+      },
+      "45": {
+        "BonusToSkill": "BattleChemistry"
+      },
+      "49": {
+        "BonusToSkill": "Brewing"
+      },
+      "50": {
+        "Ability": "PoisonBlade5"
+      },
+      "60": {
+        "BonusToSkill": "FireMagic"
+      },
+      "70": {
+        "BonusToSkill": "BattleChemistry"
+      },
+      "80": {
+        "BonusToSkill": "Toolcrafting"
+      }
+    },
+    "XpTable": "TypicalNoncombatSkill"
+  },
+  "AlcoholTolerance": {
+    "AdvancementHints": {},
+    "Combat": false,
+    "Description": "This 'skill' represents your ability to ward off the adverse effects of alcohol. Note, however, that alcohol tolerance does not prevent you from becoming an alcoholic after prolonged alcohol abuse.",
+    "GuestLevelCap": 15,
+    "Id": 146,
+    "InteractionFlagLevelCaps": {},
+    "MaxBonusLevels": 25,
+    "Name": "Alcohol Tolerance",
+    "PassiveAdvancementTable": "AlcoholTolerance",
+    "Rewards": {
+      "30": {
+        "BonusToSkill": "Brewing"
+      },
+      "50": {
+        "BonusToSkill": "IocaineResistance"
+      },
+      "70": {
+        "BonusToSkill": "Endurance"
+      },
+      "80": {
+        "BonusToSkill": "Brewing"
+      },
+      "90": {
+        "BonusToSkill": "Dying"
+      },
+      "10_Dwarf": {
+        "BonusToSkill": "Anatomy_Dwarves"
+      },
+      "10_Elf": {
+        "BonusToSkill": "Anatomy_Elves"
+      },
+      "10_Fae": {
+        "BonusToSkill": "Anatomy_Fey"
+      },
+      "10_Human": {
+        "BonusToSkill": "Anatomy_Humans"
+      },
+      "10_Orc": {
+        "BonusToSkill": "Anatomy_Orcs"
+      },
+      "10_Rakshasa": {
+        "BonusToSkill": "Anatomy_Rakshasa"
+      }
+    },
+    "XpTable": "AlcoholTolerance"
+  },
+  "Anatomy": {
+    "Combat": false,
+    "Description": "Knowledge of the physiology of creatures in general. This is an umbrella skill that encompasses a vast suite of sub-skills for particular types of creatures. This skill represents generalized knowledge that applies to all creatures in the world.",
+    "GuestLevelCap": 15,
+    "Id": 18,
+    "IsUmbrellaSkill": true,
+    "MaxBonusLevels": 125,
+    "Name": "Anatomy",
+    "Parents": [],
+    "PassiveAdvancementTable": "BonusInventoryFolderAt25",
+    "Rewards": {
+      "15": {
+        "BonusToSkill": "AnimalHandling"
+      },
+      "20": {
+        "BonusToSkill": "ArmorPatching"
+      },
+      "25": {
+        "BonusToSkill": "AnimalHandling"
+      },
+      "30": {
+        "BonusToSkill": "Bowyery"
+      },
+      "35": {
+        "BonusToSkill": "FirstAid"
+      },
+      "40": {
+        "BonusToSkill": "ArmorPatching"
+      },
+      "45": {
+        "BonusToSkill": "Fletching"
+      },
+      "50": {
+        "BonusToSkill": "ShamanicInfusion"
+      },
+      "65": {
+        "BonusToSkill": "FirstAid"
+      },
+      "75": {
+        "BonusToSkill": "Fletching"
+      },
+      "95": {
+        "BonusToSkill": "FirstAid"
+      }
+    },
+    "XpTable": "None"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "ABILITYDEBUFF_BOOST_MARKWEAKNESS": {
+    "DefaultValue": 0,
+    "DisplayRule": "IfNotDefault",
+    "DisplayType": "AsBuffMod",
+    "IconIds": [
+      3934
+    ],
+    "Label": "Mark Weakness Debuff Boost %"
+  },
+  "ABILITY_AMMOSTICK_DELTA_KNIFE": {
+    "DefaultValue": 0,
+    "DisplayRule": "IfNotDefault",
+    "DisplayType": "AsDoubleTimes100",
+    "IconIds": [
+      108
+    ],
+    "Label": "Chance for Thrown Knives to Stick in Corpse"
+  },
+  "ABILITY_AOE_DELTA_DELERIUM": {
+    "DefaultValue": 0,
+    "DisplayRule": "IfNotDefault",
+    "DisplayType": "AsBuffDelta",
+    "IconIds": [
+      3484
+    ],
+    "Label": "Delerium Burst Range"
+  }
+}

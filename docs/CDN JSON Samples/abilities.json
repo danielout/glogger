@@ -1,0 +1,125 @@
+{
+  "ability_10001": {
+    "Animation": "Attack",
+    "AttributesThatDeltaResetTime": [
+      "ABILITY_RESETTIME_DELTA"
+    ],
+    "CausesOfDeath": [
+      "AttackWildAnimal"
+    ],
+    "DamageType": "Crushing",
+    "Description": "Crushing Damage",
+    "IconID": 2129,
+    "InternalName": "AnimalBite",
+    "Keywords": [
+      "Attack",
+      "Melee",
+      "NonRageAttack",
+      "CrushingAttack",
+      "Lint_MonsterAbility"
+    ],
+    "Level": 0,
+    "Name": "Bite",
+    "PvE": {
+      "AttributesThatDeltaDamage": [
+        "BOOST_ABILITY_NONRAGEATTACK"
+      ],
+      "AttributesThatModCritDamage": [
+        "MOD_CRITICAL_HIT_DAMAGE_NONRAGEATTACK"
+      ],
+      "AttributesThatModDamage": [
+        "MOD_ABILITY_NONRAGEATTACK"
+      ],
+      "Damage": 8,
+      "PowerCost": 0,
+      "RageCost": -8,
+      "Range": 4
+    },
+    "ResetTime": 1.5,
+    "Skill": "Unknown",
+    "Target": "Enemy",
+    "TargetParticle": "Bite"
+  },
+  "ability_10002": {
+    "Animation": "Attack2",
+    "AttributesThatDeltaResetTime": [
+      "ABILITY_RESETTIME_DELTA"
+    ],
+    "CausesOfDeath": [
+      "AttackWildAnimal"
+    ],
+    "DamageType": "Slashing",
+    "Description": "Slashing Damage",
+    "IconID": 2130,
+    "InternalName": "AnimalClaw",
+    "Keywords": [
+      "Attack",
+      "Melee",
+      "NonRageAttack",
+      "SlashingAttack",
+      "Lint_MonsterAbility"
+    ],
+    "Level": 0,
+    "Name": "Claw",
+    "PvE": {
+      "AttributesThatDeltaDamage": [
+        "BOOST_ABILITY_NONRAGEATTACK"
+      ],
+      "AttributesThatModCritDamage": [
+        "MOD_CRITICAL_HIT_DAMAGE_NONRAGEATTACK"
+      ],
+      "AttributesThatModDamage": [
+        "MOD_ABILITY_NONRAGEATTACK"
+      ],
+      "Damage": 10,
+      "PowerCost": 0,
+      "RageCost": -10,
+      "Range": 4
+    },
+    "ResetTime": 1.5,
+    "Skill": "Unknown",
+    "Target": "Enemy",
+    "TargetParticle": "ClawMarks"
+  },
+  "ability_10003": {
+    "Animation": "Attack",
+    "AttributesThatDeltaResetTime": [
+      "ABILITY_RESETTIME_DELTA"
+    ],
+    "CausesOfDeath": [
+      "AttackEnragedWildAnimal"
+    ],
+    "DamageType": "Crushing",
+    "Description": "Heavy Crushing Damage",
+    "IconID": 2129,
+    "InternalName": "AnimalOmegaBite",
+    "Keywords": [
+      "Attack",
+      "Melee",
+      "RageAttack",
+      "CrushingAttack",
+      "Lint_MonsterAbility"
+    ],
+    "Level": 0,
+    "Name": "Bite",
+    "PvE": {
+      "AttributesThatDeltaDamage": [
+        "BOOST_ABILITY_RAGEATTACK"
+      ],
+      "AttributesThatModCritDamage": [
+        "MOD_CRITICAL_HIT_DAMAGE_RAGEATTACK"
+      ],
+      "AttributesThatModDamage": [
+        "MOD_ABILITY_RAGEATTACK"
+      ],
+      "Damage": 20,
+      "PowerCost": 0,
+      "RageCostMod": 1,
+      "Range": 4
+    },
+    "ResetTime": 1.5,
+    "Skill": "Unknown",
+    "Target": "Enemy",
+    "TargetParticle": "Bite"
+  }
+}
