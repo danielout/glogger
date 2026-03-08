@@ -23,6 +23,15 @@ use cdn_commands::{
     get_abilities_for_skill,
     get_recipes_for_item,
     get_recipes_using_item,
+    search_recipes,
+    get_recipes_for_skill,
+    get_items_batch,
+    get_all_quests,
+    search_quests,
+    get_quest_by_key,
+    get_all_npcs,
+    search_npcs,
+    get_npcs_in_area,
     get_icon_path,
 };
 
@@ -86,6 +95,17 @@ pub fn run() {
             // Recipe queries
             get_recipes_for_item,
             get_recipes_using_item,
+            search_recipes,
+            get_recipes_for_skill,
+            get_items_batch,
+            // Quest queries
+            get_all_quests,
+            search_quests,
+            get_quest_by_key,
+            // NPC queries
+            get_all_npcs,
+            search_npcs,
+            get_npcs_in_area,
             // Icons
             get_icon_path,
         ])

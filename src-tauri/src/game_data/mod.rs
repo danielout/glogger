@@ -37,6 +37,7 @@ pub use items::ItemInfo;
 pub use skills::SkillInfo;
 pub use abilities::AbilityInfo;
 pub use recipes::{RecipeInfo, RecipeIngredient, RecipeResultItem};
+pub use quests::QuestInfo;
 pub use npcs::{NpcInfo, NpcPreference};
 
 // ── Shared utilities ─────────────────────────────────────────────────────────
@@ -53,13 +54,21 @@ pub fn parse_id_map<T: for<'de> Deserialize<'de>>(
     })?;
 
     let mut out = HashMap::with_capacity(raw.len());
+    let mut skipped = 0;
     for (key, value) in raw {
         // Keys are like "Item_1", "Ability_42", "Level_1" etc.
         if let Some(id_str) = key.split('_').last() {
             if let Ok(id) = id_str.parse::<u32>() {
                 out.insert(id, value);
+            } else {
+                skipped += 1;
             }
+        } else {
+            skipped += 1;
         }
+    }
+    if skipped > 0 {
+        eprintln!("{file_name}: Warning: skipped {skipped} entries with invalid keys");
     }
     Ok(out)
 }

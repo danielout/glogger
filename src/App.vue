@@ -1,23 +1,34 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { open } from "@tauri-apps/plugin-dialog";
 import { useSkillStore } from "./stores/skillStore";
 import { useSurveyStore } from "./stores/surveyStore";
+import { useSettingsStore } from "./stores/settingsStore";
+import MenuBar, { type AppView } from "./components/MenuBar.vue";
 import SkillGrid from "./components/SkillGrid.vue";
 import SurveySessionCard from "./components/SurveySessionCard.vue";
 import SurveyLog from "./components/SurveyLog.vue";
-import ItemSearch from "./components/ItemSearch.vue";
+import DataBrowser from "./components/DataBrowser.vue";
+import Settings from "./components/Settings.vue";
 
 const skillStore = useSkillStore();
 const surveyStore = useSurveyStore();
+const settingsStore = useSettingsStore();
 
-const logPath = ref("");
+const logPath = ref(settingsStore.settings.logFilePath);
 const error = ref("");
 const watching = ref(false);
 const parsing = ref(false);
-const activeTab = ref<"skills" | "surveying" | "items">("skills");
+const currentView = ref<AppView>("skills");
+
+// Watch for changes to the log path in settings
+watch(
+  () => settingsStore.settings.logFilePath,
+  (newPath) => {
+    logPath.value = newPath;
+  }
+);
 
 onMounted(async () => {
   await listen("skill-update", (event: any) => {
@@ -27,15 +38,12 @@ onMounted(async () => {
   await listen("survey-event", (event: any) => {
     surveyStore.handleSurveyEvent(event.payload);
   });
-});
 
-async function pickFile() {
-  const selected = await open({
-    multiple: false,
-    filters: [{ name: "Log Files", extensions: ["log", "txt"] }],
-  });
-  if (selected) logPath.value = selected;
-}
+  // Auto-watch on startup if enabled
+  if (settingsStore.settings.autoWatchOnStartup && logPath.value) {
+    await startWatching();
+  }
+});
 
 async function startWatching() {
   error.value = "";
@@ -62,62 +70,37 @@ async function parseLog() {
     parsing.value = false;
   }
 }
+
+function navigateToView(view: AppView) {
+  currentView.value = view;
+}
 </script>
 
 <template>
   <div class="app">
-    <div class="toolbar">
-      <span class="app-title">Glogger</span>
-      <input
-        v-model="logPath"
-        placeholder="Pick a log file..."
-        class="path-input"
-        readonly />
-      <button @click="pickFile" :disabled="watching || parsing">Browse</button>
-      <button
-        @click="startWatching"
-        :disabled="watching || parsing || !logPath">
-        {{ watching ? "Watching…" : "Start Watching" }}
-      </button>
-      <button @click="parseLog" :disabled="watching || parsing || !logPath">
-        {{ parsing ? "Parsing…" : "Parse Log" }}
-      </button>
-    </div>
+    <MenuBar :currentView="currentView" @navigate="navigateToView" />
 
-    <div v-if="error" class="error">{{ error }}</div>
-
-    <div class="tabs">
-      <button
-        class="tab"
-        :class="{ active: activeTab === 'skills' }"
-        @click="activeTab = 'skills'">
-        Skills
-      </button>
-      <button
-        class="tab"
-        :class="{ active: activeTab === 'surveying' }"
-        @click="activeTab = 'surveying'">
-        Surveying
-      </button>
-      <button
-        class="tab"
-        :class="{ active: activeTab === 'items' }"
-        @click="activeTab = 'items'">
-        Items
-      </button>
-    </div>
-
-    <div class="tab-content">
-      <template v-if="activeTab === 'skills'">
-        <SkillGrid />
-      </template>
-      <template v-if="activeTab === 'surveying'">
-        <SurveySessionCard />
-        <SurveyLog />
-      </template>
-      <template v-if="activeTab === 'items'">
-        <ItemSearch />
-      </template>
+    <div class="content">
+      <div class="view-content">
+        <template v-if="currentView === 'skills'">
+          <SkillGrid />
+        </template>
+        <template v-else-if="currentView === 'surveying'">
+          <SurveySessionCard />
+          <SurveyLog />
+        </template>
+        <template v-else-if="currentView === 'data-browser'">
+          <DataBrowser />
+        </template>
+        <template v-else-if="currentView === 'settings'">
+          <Settings
+            :watching="watching"
+            :parsing="parsing"
+            :error="error"
+            :onStartWatching="startWatching"
+            :onParseLog="parseLog" />
+        </template>
+      </div>
     </div>
   </div>
 </template>
@@ -136,58 +119,18 @@ body {
 .app {
   padding: 1rem;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  flex-wrap: wrap;
-}
-.app-title {
-  color: #e0c060;
-  font-weight: bold;
-  font-size: 1.1rem;
-  margin-right: 0.5rem;
-}
-.path-input {
+.content {
   flex: 1;
-  min-width: 200px;
-  padding: 0.4rem;
-  background: #222;
-  color: #ccc;
-  border: 1px solid #444;
-}
-
-.error {
-  color: #f66;
-  margin-bottom: 0.75rem;
-  font-size: 0.85rem;
-}
-
-.tabs {
   display: flex;
-  gap: 0;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid #333;
+  flex-direction: column;
 }
-.tab {
-  padding: 0.4rem 1rem;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: #666;
-  cursor: pointer;
-  font-family: monospace;
-  font-size: 0.9rem;
-}
-.tab:hover {
-  color: #aaa;
-}
-.tab.active {
-  color: #e0c060;
-  border-bottom-color: #e0c060;
+
+.view-content {
+  flex: 1;
 }
 
 button {
@@ -197,6 +140,7 @@ button {
   border: 1px solid #444;
   cursor: pointer;
   font-family: monospace;
+  border-radius: 4px;
 }
 button:hover:not(:disabled) {
   background: #2a2a2a;

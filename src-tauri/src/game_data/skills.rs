@@ -1,12 +1,15 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use super::parse_id_map;
+use super::parse_string_map;
 
 // ── Raw CDN shapes ────────────────────────────────────────────────────────────
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone)]
 pub struct RawSkill {
+    #[serde(rename = "Id")]
+    pub id: u32,
+
     #[serde(rename = "Name")]
     pub name: Option<String>,
 
@@ -48,13 +51,18 @@ pub struct SkillInfo {
 // ── Parse function ───────────────────────────────────────────────────────────
 
 pub fn parse(json: &str) -> Result<HashMap<u32, SkillInfo>, String> {
-    let raw_skills: HashMap<u32, RawSkill> = parse_id_map(json, "skills.json")?;
+    // Skills.json uses skill names as keys (e.g., "Alchemy", "Cooking")
+    // Each skill has an "Id" field inside
+    let raw_skills: HashMap<String, RawSkill> = parse_string_map(json, "skills.json")?;
+    eprintln!("skills.json: Parsed {} raw skills", raw_skills.len());
 
     let mut skills = HashMap::with_capacity(raw_skills.len());
-    for (id, raw) in raw_skills {
+    for (skill_name, raw) in raw_skills {
+        let id = raw.id;
         skills.insert(id, SkillInfo {
             id,
-            name: raw.name.unwrap_or_else(|| format!("Unknown Skill {id}")),
+            // Prefer the Name field, fall back to the key name
+            name: raw.name.unwrap_or(skill_name),
             description: raw.description,
             icon_id: raw.icon_id,
             xp_table: raw.xp_table,
@@ -62,5 +70,6 @@ pub fn parse(json: &str) -> Result<HashMap<u32, SkillInfo>, String> {
         });
     }
 
+    eprintln!("skills.json: Created {} SkillInfo entries", skills.len());
     Ok(skills)
 }

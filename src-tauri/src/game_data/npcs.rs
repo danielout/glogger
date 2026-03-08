@@ -65,11 +65,29 @@ pub fn parse(json: &str) -> Result<HashMap<String, NpcInfo>, String> {
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        let trains_skills = value.get("SkillsTraining")
+        // Extract skills from Services array where Type == "Training"
+        let trains_skills = value.get("Services")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter()
-                .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                .collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter(|service| {
+                        service.get("Type")
+                            .and_then(|t| t.as_str())
+                            .map(|t| t == "Training")
+                            .unwrap_or(false)
+                    })
+                    .flat_map(|service| {
+                        service.get("Skills")
+                            .and_then(|s| s.as_array())
+                            .map(|skills| {
+                                skills.iter()
+                                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                    .collect::<Vec<_>>()
+                            })
+                            .unwrap_or_default()
+                    })
+                    .collect()
+            })
             .unwrap_or_default();
 
         // Parse preferences

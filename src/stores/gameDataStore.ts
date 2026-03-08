@@ -7,6 +7,8 @@ import type {
   SkillInfo,
   AbilityInfo,
   RecipeInfo,
+  QuestInfo,
+  NpcInfo,
   CacheStatus,
 } from "../types/gameData";
 
@@ -107,6 +109,46 @@ export const useGameDataStore = defineStore("gameData", () => {
     return invoke<RecipeInfo[]>("get_recipes_using_item", { itemId });
   }
 
+  async function searchRecipes(query: string, limit = 50): Promise<RecipeInfo[]> {
+    return invoke<RecipeInfo[]>("search_recipes", { query, limit });
+  }
+
+  async function getRecipesForSkill(skill: string): Promise<RecipeInfo[]> {
+    return invoke<RecipeInfo[]>("get_recipes_for_skill", { skill });
+  }
+
+  async function getItemsBatch(ids: number[]): Promise<Record<number, ItemInfo>> {
+    return invoke<Record<number, ItemInfo>>("get_items_batch", { ids });
+  }
+
+  // ── Quest queries ──────────────────────────────────────────────────────────
+
+  async function getAllQuests(): Promise<QuestInfo[]> {
+    return invoke<QuestInfo[]>("get_all_quests");
+  }
+
+  async function searchQuests(query: string): Promise<QuestInfo[]> {
+    return invoke<QuestInfo[]>("search_quests", { query });
+  }
+
+  async function getQuestByKey(key: string): Promise<QuestInfo | null> {
+    return invoke<QuestInfo | null>("get_quest_by_key", { key });
+  }
+
+  // ── NPC queries ────────────────────────────────────────────────────────────
+
+  async function getAllNpcs(): Promise<NpcInfo[]> {
+    return invoke<NpcInfo[]>("get_all_npcs");
+  }
+
+  async function searchNpcs(query: string): Promise<NpcInfo[]> {
+    return invoke<NpcInfo[]>("search_npcs", { query });
+  }
+
+  async function getNpcsInArea(area: string): Promise<NpcInfo[]> {
+    return invoke<NpcInfo[]>("get_npcs_in_area", { area });
+  }
+
   // ── Icon helpers ───────────────────────────────────────────────────────────
 
   /**
@@ -143,6 +185,15 @@ export const useGameDataStore = defineStore("gameData", () => {
     getAbilitiesForSkill,
     getRecipesForItem,
     getRecipesUsingItem,
+    searchRecipes,
+    getRecipesForSkill,
+    getItemsBatch,
+    getAllQuests,
+    searchQuests,
+    getQuestByKey,
+    getAllNpcs,
+    searchNpcs,
+    getNpcsInArea,
     getIconPath,
   };
 });

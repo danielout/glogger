@@ -13,7 +13,7 @@ pub struct RawAbility {
     #[serde(rename = "Description")]
     pub description: Option<String>,
 
-    #[serde(rename = "IconId")]
+    #[serde(rename = "IconID")]
     pub icon_id: Option<u32>,
 
     #[serde(rename = "Skill")]

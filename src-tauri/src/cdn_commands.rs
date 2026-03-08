@@ -7,7 +7,7 @@ use tauri::{AppHandle, Manager, State};
 use tokio::sync::RwLock;
 
 use crate::cdn;
-use crate::game_data::{self, GameData, ItemInfo, SkillInfo, AbilityInfo, RecipeInfo};
+use crate::game_data::{self, GameData, ItemInfo, SkillInfo, AbilityInfo, RecipeInfo, QuestInfo, NpcInfo};
 
 // ── Managed state ─────────────────────────────────────────────────────────────
 
@@ -259,6 +259,202 @@ pub async fn get_recipes_using_item(
         .filter(|r| r.ingredient_item_ids.contains(&item_id))
         .cloned()
         .collect();
+    Ok(results)
+}
+
+/// Search recipes by name.
+#[tauri::command]
+pub async fn search_recipes(
+    query: String,
+    limit: Option<usize>,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<RecipeInfo>, String> {
+    let data = state.read().await;
+    let q = query.to_lowercase();
+    let limit = limit.unwrap_or(50);
+
+    let mut results: Vec<RecipeInfo> = data
+        .recipes
+        .values()
+        .filter(|r| r.name.to_lowercase().contains(&q))
+        .cloned()
+        .collect();
+
+    results.sort_by(|a, b| a.name.cmp(&b.name));
+    results.truncate(limit);
+    Ok(results)
+}
+
+/// Get all recipes for a given skill.
+#[tauri::command]
+pub async fn get_recipes_for_skill(
+    skill: String,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<RecipeInfo>, String> {
+    let data = state.read().await;
+
+    let recipe_ids = data.recipes_by_skill.get(&skill);
+    let results: Vec<RecipeInfo> = match recipe_ids {
+        Some(ids) => ids
+            .iter()
+            .filter_map(|id| data.recipes.get(id))
+            .cloned()
+            .collect(),
+        None => vec![],
+    };
+
+    Ok(results)
+}
+
+/// Get multiple items by their IDs (for efficient batch lookup).
+#[tauri::command]
+pub async fn get_items_batch(
+    ids: Vec<u32>,
+    state: State<'_, GameDataState>,
+) -> Result<std::collections::HashMap<u32, ItemInfo>, String> {
+    let data = state.read().await;
+    let mut result = std::collections::HashMap::new();
+
+    for id in ids {
+        if let Some(item) = data.items.get(&id) {
+            result.insert(id, item.clone());
+        }
+    }
+
+    Ok(result)
+}
+
+// ── Quest query commands ──────────────────────────────────────────────────────
+
+/// Get all quests.
+#[tauri::command]
+pub async fn get_all_quests(
+    state: State<'_, GameDataState>,
+) -> Result<Vec<QuestInfo>, String> {
+    let data = state.read().await;
+    let mut results: Vec<QuestInfo> = data.quests.values().cloned().collect();
+    results.sort_by(|a, b| {
+        // Sort by internal_name for now since we don't have parsed display names yet
+        let a_name = a.raw.get("DisplayName")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let b_name = b.raw.get("DisplayName")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        a_name.cmp(b_name)
+    });
+    Ok(results)
+}
+
+/// Search quests by name.
+#[tauri::command]
+pub async fn search_quests(
+    query: String,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<QuestInfo>, String> {
+    let data = state.read().await;
+    let q = query.to_lowercase();
+
+    let mut results: Vec<QuestInfo> = data
+        .quests
+        .values()
+        .filter(|quest| {
+            // Search in DisplayName, InternalName, or Description
+            let display_name = quest.raw.get("DisplayName")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_lowercase();
+            let description = quest.raw.get("Description")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_lowercase();
+
+            display_name.contains(&q) || description.contains(&q)
+        })
+        .cloned()
+        .collect();
+
+    results.sort_by(|a, b| {
+        let a_name = a.raw.get("DisplayName")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let b_name = b.raw.get("DisplayName")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        a_name.cmp(b_name)
+    });
+
+    Ok(results)
+}
+
+/// Get a quest by its internal key.
+#[tauri::command]
+pub async fn get_quest_by_key(
+    key: String,
+    state: State<'_, GameDataState>,
+) -> Result<Option<QuestInfo>, String> {
+    let data = state.read().await;
+    Ok(data.quests.get(&key).cloned())
+}
+
+// ── NPC query commands ────────────────────────────────────────────────────────
+
+/// Get all NPCs.
+#[tauri::command]
+pub async fn get_all_npcs(
+    state: State<'_, GameDataState>,
+) -> Result<Vec<NpcInfo>, String> {
+    let data = state.read().await;
+    let mut results: Vec<NpcInfo> = data.npcs.values().cloned().collect();
+    results.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(results)
+}
+
+/// Search NPCs by name or description.
+#[tauri::command]
+pub async fn search_npcs(
+    query: String,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<NpcInfo>, String> {
+    let data = state.read().await;
+    let q = query.to_lowercase();
+
+    let mut results: Vec<NpcInfo> = data
+        .npcs
+        .values()
+        .filter(|npc| {
+            let name_match = npc.name.to_lowercase().contains(&q);
+            let desc_match = npc.desc
+                .as_ref()
+                .map(|d| d.to_lowercase().contains(&q))
+                .unwrap_or(false);
+            name_match || desc_match
+        })
+        .cloned()
+        .collect();
+
+    results.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(results)
+}
+
+/// Get all NPCs in a specific area.
+#[tauri::command]
+pub async fn get_npcs_in_area(
+    area: String,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<NpcInfo>, String> {
+    let data = state.read().await;
+
+    let mut results: Vec<NpcInfo> = data
+        .npcs
+        .values()
+        .filter(|npc| {
+            npc.area_name.as_ref().map(|a| a == &area).unwrap_or(false)
+        })
+        .cloned()
+        .collect();
+
+    results.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(results)
 }
 
