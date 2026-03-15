@@ -30,7 +30,7 @@ When a feature needs a CDN field that's currently only in `raw_json`:
 
 ### 1. Find the CDN field name
 
-Check [`docs/reference/cdn-field-schemas.json`](cdn-field-schemas.json) for the exact field name, type, and coverage percentage. Field names are PascalCase in the CDN JSON (e.g., `FoodDesc`, `SkillReqs`).
+Check [`docs/architecture/cdn-field-schemas.json`](cdn-field-schemas.json) for the exact field name, type, and coverage percentage. Field names are PascalCase in the CDN JSON (e.g., `FoodDesc`, `SkillReqs`).
 
 ### 2. Add to Rust struct
 
@@ -92,7 +92,7 @@ SELECT raw_json FROM items WHERE id = 1234;
 
 ### Systematic: use the field schemas
 
-[`docs/reference/cdn-field-schemas.json`](cdn-field-schemas.json) contains every field, its type(s), frequency (% of entries that have it), and sample values. Compare against the typed fields in the Rust struct to find gaps.
+[`docs/architecture/cdn-field-schemas.json`](cdn-field-schemas.json) contains every field, its type(s), frequency (% of entries that have it), and sample values. Compare against the typed fields in the Rust struct to find gaps.
 
 ### Re-extract schemas after CDN update
 

@@ -154,7 +154,6 @@ Quick checklist for implementing common features in the glogger data architectur
 - Types: `src/types/`
 
 **Documentation:**
-- Reference: `docs/reference/`
-- Guides: `docs/guides/`
+- Architecture: `docs/architecture/`
+- Features: `docs/features/`
 - Plans: `docs/plans/`
-- Specs: `docs/specs/`

@@ -171,7 +171,7 @@ const craftEvents = await invoke('get_recent_events', {
 
 ## Database Schema
 
-See [/docs/specs/database-schema.md](../specs/database-schema.md) for full schema documentation.
+See [database-schema.md](database-schema.md) for full schema documentation.
 
 ## Example: Integrating Survey Tracking
 
