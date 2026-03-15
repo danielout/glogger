@@ -1,28 +1,57 @@
 use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
-use super::parse_id_map;
-
-// ── Raw CDN shapes ────────────────────────────────────────────────────────────
-
-#[allow(dead_code)]
-#[derive(Debug, Deserialize, Clone)]
-pub struct RawXpTableInfo {
-    #[serde(flatten)]
-    pub extra: serde_json::Value,
-}
+use serde::Serialize;
+use serde_json::Value;
 
 // ── Parsed structs (app shape) ───────────────────────────────────────────────
 
-#[derive(Debug, Serialize, Clone, Default)]
+#[derive(Debug, Serialize, Clone)]
 pub struct XpTableInfo {
-    pub raw: serde_json::Value,
+    pub internal_name: Option<String>,
+    pub xp_amounts: Vec<u64>,
+
+    // Full raw JSON
+    pub raw_json: Value,
 }
 
 // ── Parse function ───────────────────────────────────────────────────────────
 
 pub fn parse(json: &str) -> Result<HashMap<u32, XpTableInfo>, String> {
-    let raw: HashMap<u32, serde_json::Value> = parse_id_map(json, "xptables.json")?;
-    Ok(raw.into_iter()
-        .map(|(k, v)| (k, XpTableInfo { raw: v }))
-        .collect())
+    let raw: HashMap<String, Value> = serde_json::from_str(json).map_err(|e| {
+        format!("xptables.json: parse error at line {}, col {}: {e}", e.line(), e.column())
+    })?;
+
+    let mut tables = HashMap::with_capacity(raw.len());
+    let mut skipped = 0;
+
+    for (key, value) in raw {
+        let id_str = match key.split('_').last() {
+            Some(s) => s.to_string(),
+            None => { skipped += 1; continue; }
+        };
+        let id: u32 = match id_str.parse() {
+            Ok(id) => id,
+            Err(_) => { skipped += 1; continue; }
+        };
+
+        let internal_name = value.get("InternalName")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        let xp_amounts = value.get("XpAmounts")
+            .and_then(|v| v.as_array())
+            .map(|arr| arr.iter().filter_map(|v| v.as_u64()).collect())
+            .unwrap_or_default();
+
+        tables.insert(id, XpTableInfo {
+            internal_name,
+            xp_amounts,
+            raw_json: value,
+        });
+    }
+
+    if skipped > 0 {
+        eprintln!("xptables.json: Warning: skipped {skipped} entries with invalid keys");
+    }
+
+    Ok(tables)
 }

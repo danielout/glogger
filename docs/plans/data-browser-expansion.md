@@ -1,9 +1,9 @@
 # Data Browser Expansion Plan
 
-**Status:** In Progress - 4 of 7 Phases Complete (57%)
-**Last Updated:** 2026-03-07
-**Completed:** Phases 1-4 (Skills, Abilities, Recipes, Quests)
-**Remaining:** Phases 5-7 (NPCs, Cross-References, Polish)
+**Status:** In Progress - 5 of 7 Phases Complete (71%)
+**Last Updated:** 2026-03-13
+**Completed:** Phases 1-5 (Skills, Abilities, Recipes, Quests, NPCs)
+**Remaining:** Phases 6-7 (Cross-References, Polish)
 **Goal:** Implement Skills, Abilities, Recipes, Quests, and NPCs tabs in the data browser to match the functionality and polish of the Items tab.
 
 ---
@@ -15,7 +15,8 @@
 - **Skills Tab:** Full browser with search, detail view, related abilities list
 - **Abilities Tab:** Skill-filtered browser with search and detail view
 - **Recipes Tab:** Complete browser with ingredients, results, XP rewards, prerequisites
-- **Quests Tab:** Basic browser with raw JSON display (full parsing pending)
+- **Quests Tab:** Full browser with filtering, objectives, requirements, rewards, dialog text
+- **NPCs Tab:** Full browser with area filtering, favor preferences, skill training, gift items
 - **Backend Commands:**
   - Skills: `get_all_skills`, `get_skill_by_name`
   - Abilities: `get_abilities_for_skill`
@@ -30,8 +31,6 @@
   - Debug logging for parsing diagnostics
 
 ### ❌ Still Missing
-- **NPCs Tab:** No UI component yet (backend partially ready)
-- **Quest Detail Parsing:** Full quest structure (objectives, rewards, prerequisites) not yet parsed
 - **Cross-References:** Links between related entities (e.g., click a recipe's skill to jump to that skill)
 - **Shared Components:** No extracted reusable components yet (EntityIcon, KeywordTag, etc.)
 - **Polish:** Keyboard navigation, loading states, empty states improvements
@@ -668,7 +667,7 @@ Create reusable components:
 | Phase 2: Abilities | ✅ **DONE** | Medium | High | Phase 1 | Skill-filtered browser |
 | Phase 3: Recipes | ✅ **DONE** | High | Very High | Phase 1, 2 | Full ingredient/result display |
 | Phase 4: Quests | ✅ **DONE** | Medium | High | Phase 1 | Basic browser (full parsing pending) |
-| Phase 5: NPCs | ⏳ **TODO** | Medium | Medium | Phase 1 | Backend commands needed |
+| Phase 5: NPCs | ✅ **DONE** | Medium | Medium | Phase 1 | Area filtering, favor prefs, training |
 | Phase 6: Cross-References | ⏳ **TODO** | High | Very High | Phases 1-5 | Navigation between entities |
 | Phase 7: Polish | ⏳ **TODO** | Medium | Medium | Phases 1-6 | Shared components, keyboard nav |
 

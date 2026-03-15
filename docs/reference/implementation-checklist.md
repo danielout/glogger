@@ -1,0 +1,160 @@
+# Implementation Checklist
+
+Quick checklist for implementing common features in the glogger data architecture.
+
+## Adding a New Log Event Parser
+
+- [ ] Add `LogEvent` variant in [`log_watchers.rs`](../../src-tauri/src/log_watchers.rs)
+- [ ] Implement parsing logic in appropriate watcher (`PlayerLogWatcher` or `ChatLogWatcher`)
+- [ ] Add test case for the parser
+- [ ] Add event handler in [`coordinator.rs`](../../src-tauri/src/coordinator.rs)
+- [ ] Add database insert logic (if needed)
+- [ ] Emit Tauri event to frontend (if needed)
+- [ ] Add frontend listener in store (if needed)
+- [ ] Test with real log files
+- [ ] Update documentation
+
+## Adding a New Database Table
+
+- [ ] Add table schema to [`migrations.rs`](../../src-tauri/src/db/migrations.rs) in `migration_v1_unified_schema`
+- [ ] Add indexes for common queries
+- [ ] Add unique constraints if needed for deduplication
+- [ ] Create query module in [`db/queries.rs`](../../src-tauri/src/db/queries.rs) or new file
+- [ ] Implement insert/update/select functions
+- [ ] Add error handling with proper Result types
+- [ ] Add Tauri commands for frontend access (if needed)
+- [ ] Register commands in [`lib.rs`](../../src-tauri/src/lib.rs)
+- [ ] Add TypeScript types for frontend (if needed)
+- [ ] Test database operations
+- [ ] Update documentation
+
+## Adding a New Coordinator Operation
+
+- [ ] Add `OperationType` variant in [`coordinator.rs`](../../src-tauri/src/coordinator.rs)
+- [ ] Implement `start_*` method with operation locking
+- [ ] Implement `stop_*` method with cleanup
+- [ ] Update `get_status()` to include new operation
+- [ ] Add progress tracking (if long-running)
+- [ ] Emit status change events
+- [ ] Add Tauri commands for start/stop
+- [ ] Register commands in [`lib.rs`](../../src-tauri/src/lib.rs)
+- [ ] Add frontend store actions
+- [ ] Add UI controls (if needed)
+- [ ] Test operation lifecycle
+- [ ] Test conflict detection with other operations
+- [ ] Update documentation
+
+## Adding a New Settings Field
+
+- [ ] Add field to `AppSettings` struct in [`settings.rs`](../../src-tauri/src/settings.rs)
+- [ ] Add `#[serde(default)]` if it's optional
+- [ ] Update `Default` implementation
+- [ ] Add getter method to `SettingsManager` (if needed)
+- [ ] Add field to `AppSettings` interface in [`settingsStore.ts`](../../src/stores/settingsStore.ts)
+- [ ] Add field to `BackendSettings` interface
+- [ ] Update `toBackendSettings()` conversion
+- [ ] Update `fromBackendSettings()` conversion
+- [ ] Update `getDefaultSettings()`
+- [ ] Add update method in store (if needed)
+- [ ] Add UI control in Settings component
+- [ ] Test saving and loading
+- [ ] Update documentation
+
+## Adding a New Frontend Store
+
+- [ ] Create store file in `src/stores/`
+- [ ] Define state with `ref()`
+- [ ] Add computed properties with `computed()`
+- [ ] Add Tauri event listeners with `listen()`
+- [ ] Implement actions (async functions)
+- [ ] Add error handling
+- [ ] Return public API from store
+- [ ] Import and use in components
+- [ ] Test reactivity
+- [ ] Update documentation
+
+## Adding a New Tauri Command
+
+- [ ] Implement function in appropriate Rust module
+- [ ] Add `#[tauri::command]` attribute
+- [ ] Use `State<'_, T>` for managed state
+- [ ] Return `Result<T, String>` for error handling
+- [ ] Import command in [`lib.rs`](../../src-tauri/src/lib.rs)
+- [ ] Add to `invoke_handler` in [`lib.rs`](../../src-tauri/src/lib.rs)
+- [ ] Call from frontend with `invoke()`
+- [ ] Add TypeScript types for parameters/return
+- [ ] Test error cases
+- [ ] Update documentation
+
+## Performance Optimization
+
+- [ ] Profile with `cargo flamegraph` or similar
+- [ ] Check database query plans with `EXPLAIN QUERY PLAN`
+- [ ] Add indexes for slow queries
+- [ ] Batch database operations where possible
+- [ ] Use `INSERT OR IGNORE` to skip duplicates
+- [ ] Adjust polling intervals if needed
+- [ ] Monitor memory usage
+- [ ] Test with large datasets
+- [ ] Update documentation
+
+## Testing
+
+- [ ] Add unit tests in Rust module
+- [ ] Test happy path
+- [ ] Test error cases
+- [ ] Test edge cases (empty input, null, etc.)
+- [ ] Run `cargo test`
+- [ ] Test in dev mode (`npm run tauri dev`)
+- [ ] Test with real game data
+- [ ] Test auto-start behavior
+- [ ] Test across app restarts
+- [ ] Update test documentation
+
+## Release Preparation
+
+- [ ] All tests passing
+- [ ] No compiler warnings
+- [ ] Database migrations tested
+- [ ] Settings upgrade path tested
+- [ ] Performance acceptable
+- [ ] Error handling complete
+- [ ] Logging/debugging info added
+- [ ] Documentation updated
+- [ ] User-facing changes noted
+- [ ] Breaking changes documented
+
+## Documentation
+
+- [ ] Update README if user-facing
+- [ ] Update architecture docs if structural change
+- [ ] Add/update code comments
+- [ ] Update TypeScript types
+- [ ] Add example usage
+- [ ] Document any breaking changes
+- [ ] Update migration guide (if needed)
+- [ ] Add to changelog
+
+## Quick Reference: File Locations
+
+**Rust Backend:**
+- Main entry: `src-tauri/src/lib.rs`
+- Coordinator: `src-tauri/src/coordinator.rs`
+- Log watchers: `src-tauri/src/log_watchers.rs`
+- Settings: `src-tauri/src/settings.rs`
+- Database: `src-tauri/src/db/`
+  - Schema: `migrations.rs`
+  - Queries: `queries.rs`
+  - Commands: `*_commands.rs`
+
+**Frontend:**
+- Main app: `src/App.vue`
+- Stores: `src/stores/`
+- Components: `src/components/`
+- Types: `src/types/`
+
+**Documentation:**
+- Reference: `docs/reference/`
+- Guides: `docs/guides/`
+- Plans: `docs/plans/`
+- Specs: `docs/specs/`

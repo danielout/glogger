@@ -1,0 +1,418 @@
+use rusqlite::{params, Connection, Result, Transaction, OptionalExtension};
+use crate::game_data::{GameData, ItemInfo, SkillInfo, AbilityInfo, QuestInfo, XpTableInfo, TsysClientInfo, ItemUseInfo, AreaInfo};
+
+/// Persist all CDN data to the database
+pub fn persist_cdn_data(conn: &mut Connection, data: &GameData) -> Result<()> {
+    let tx = conn.transaction()?;
+
+    // Clear old data
+    clear_cdn_data(&tx)?;
+
+    // Insert new data
+    insert_items(&tx, &data.items)?;
+    insert_skills(&tx, &data.skills)?;
+    insert_abilities(&tx, &data.abilities)?;
+    insert_recipes(&tx, data)?;
+    insert_npcs(&tx, data)?;
+    insert_quests(&tx, &data.quests)?;
+    insert_xp_tables(&tx, &data.xp_tables)?;
+    insert_tsys_client_info(&tx, &data.tsys.client_info)?;
+    insert_item_uses(&tx, &data.item_uses)?;
+    insert_areas(&tx, &data.areas)?;
+
+    // Update CDN version
+    tx.execute(
+        "INSERT OR REPLACE INTO cdn_version (id, version) VALUES (1, ?1)",
+        params![data.version],
+    )?;
+
+    tx.commit()?;
+    Ok(())
+}
+
+/// Clear all CDN data tables
+fn clear_cdn_data(tx: &Transaction) -> Result<()> {
+    tx.execute_batch(
+        "DELETE FROM recipe_ingredients;
+         DELETE FROM recipes;
+         DELETE FROM abilities;
+         DELETE FROM skills;
+         DELETE FROM items;
+         DELETE FROM npc_skills;
+         DELETE FROM npcs;
+         DELETE FROM quests;
+         DELETE FROM xp_tables;
+         DELETE FROM tsys_client_info;
+         DELETE FROM item_uses;
+         DELETE FROM areas;"
+    )?;
+    Ok(())
+}
+
+/// Insert items into database
+fn insert_items(tx: &Transaction, items: &std::collections::HashMap<u32, ItemInfo>) -> Result<()> {
+    let mut stmt = tx.prepare(
+        "INSERT INTO items (id, name, description, icon_id, value, max_stack_size,
+                            keywords, effect_descs, internal_name, food_desc, equip_slot,
+                            num_uses, skill_reqs, behaviors, bestow_recipes, bestow_ability,
+                            bestow_quest, bestow_title, craft_points, crafting_target_level,
+                            tsys_profile, raw_json)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)"
+    )?;
+
+    for (id, item) in items {
+        let keywords_json = serde_json::to_string(&item.keywords).unwrap_or_else(|_| "[]".to_string());
+        let effects_json = serde_json::to_string(&item.effect_descs).unwrap_or_else(|_| "[]".to_string());
+        let skill_reqs_json = item.skill_reqs.as_ref().map(|v| v.to_string());
+        let behaviors_json = item.behaviors.as_ref().map(|v| serde_json::to_string(v).unwrap_or_else(|_| "[]".to_string()));
+        let bestow_recipes_json = item.bestow_recipes.as_ref().map(|v| serde_json::to_string(v).unwrap_or_else(|_| "[]".to_string()));
+        let raw_json_str = item.raw_json.to_string();
+
+        stmt.execute(params![
+            id,
+            &item.name,
+            &item.description,
+            item.icon_id,
+            item.value,
+            item.max_stack_size,
+            keywords_json,
+            effects_json,
+            &item.internal_name,
+            &item.food_desc,
+            &item.equip_slot,
+            item.num_uses,
+            skill_reqs_json,
+            behaviors_json,
+            bestow_recipes_json,
+            &item.bestow_ability,
+            &item.bestow_quest,
+            item.bestow_title,
+            item.craft_points,
+            item.crafting_target_level,
+            &item.tsys_profile,
+            raw_json_str,
+        ])?;
+    }
+
+    Ok(())
+}
+
+/// Insert skills into database
+fn insert_skills(tx: &Transaction, skills: &std::collections::HashMap<u32, SkillInfo>) -> Result<()> {
+    let mut stmt = tx.prepare(
+        "INSERT INTO skills (id, name, description, icon_id, xp_table, keywords,
+                             combat, max_bonus_levels, parents, advancement_table,
+                             guest_level_cap, hide_when_zero, advancement_hints,
+                             rewards, reports, raw_json)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)"
+    )?;
+
+    for (id, skill) in skills {
+        let keywords_json = serde_json::to_string(&skill.keywords).unwrap_or_else(|_| "[]".to_string());
+        let parents_json = serde_json::to_string(&skill.parents).unwrap_or_else(|_| "[]".to_string());
+        let advancement_hints_json = skill.advancement_hints.as_ref().map(|v| v.to_string());
+        let rewards_json = skill.rewards.as_ref().map(|v| v.to_string());
+        let reports_json = skill.reports.as_ref().map(|v| serde_json::to_string(v).unwrap_or_else(|_| "[]".to_string()));
+        let raw_json_str = skill.raw_json.to_string();
+
+        stmt.execute(params![
+            id,
+            &skill.name,
+            &skill.description,
+            skill.icon_id,
+            &skill.xp_table,
+            keywords_json,
+            skill.combat,
+            skill.max_bonus_levels,
+            parents_json,
+            &skill.advancement_table,
+            skill.guest_level_cap,
+            skill.hide_when_zero,
+            advancement_hints_json,
+            rewards_json,
+            reports_json,
+            raw_json_str,
+        ])?;
+    }
+
+    Ok(())
+}
+
+/// Insert abilities into database
+fn insert_abilities(tx: &Transaction, abilities: &std::collections::HashMap<u32, AbilityInfo>) -> Result<()> {
+    let mut stmt = tx.prepare(
+        "INSERT INTO abilities (id, name, description, icon_id, skill, level_req, keywords,
+                                damage_type, reset_time, target, prerequisite, is_harmless,
+                                animation, special_info, works_underwater, works_while_falling,
+                                pve, pvp, mana_cost, power_cost, armor_cost, health_cost,
+                                range, raw_json)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24)"
+    )?;
+
+    for (id, ability) in abilities {
+        let keywords_json = serde_json::to_string(&ability.keywords).unwrap_or_else(|_| "[]".to_string());
+        let pve_json = ability.pve.as_ref().map(|v| v.to_string());
+        let pvp_json = ability.pvp.as_ref().map(|v| v.to_string());
+        let raw_json_str = ability.raw_json.to_string();
+
+        stmt.execute(params![
+            id,
+            &ability.name,
+            &ability.description,
+            ability.icon_id,
+            &ability.skill,
+            ability.level,
+            keywords_json,
+            &ability.damage_type,
+            ability.reset_time,
+            &ability.target,
+            &ability.prerequisite,
+            ability.is_harmless,
+            &ability.animation,
+            &ability.special_info,
+            ability.works_underwater,
+            ability.works_while_falling,
+            pve_json,
+            pvp_json,
+            ability.mana_cost,
+            ability.power_cost,
+            ability.armor_cost,
+            ability.health_cost,
+            ability.range,
+            raw_json_str,
+        ])?;
+    }
+
+    Ok(())
+}
+
+/// Insert recipes and their ingredients into database
+fn insert_recipes(tx: &Transaction, data: &GameData) -> Result<()> {
+    let mut recipe_stmt = tx.prepare(
+        "INSERT INTO recipes (id, name, skill, skill_level_req, icon_id, num_result_items,
+                              action_label, keywords, shares_name_with_item_id,
+                              result_item_ids, ingredient_item_ids,
+                              result_effects, usage_delay, reward_skill_xp_drop_off_level,
+                              sort_skill, raw_json)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)"
+    )?;
+
+    let mut ingredient_stmt = tx.prepare(
+        "INSERT INTO recipe_ingredients (recipe_id, item_id, item_keys, description, stack_size, chance_to_consume)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)"
+    )?;
+
+    for (id, recipe) in &data.recipes {
+        let keywords_json = serde_json::to_string(&recipe.keywords).unwrap_or_else(|_| "[]".to_string());
+        let result_ids_json = serde_json::to_string(&recipe.result_item_ids).unwrap_or_else(|_| "[]".to_string());
+        let ingredient_ids_json = serde_json::to_string(&recipe.ingredient_item_ids).unwrap_or_else(|_| "[]".to_string());
+        let result_effects_json = serde_json::to_string(&recipe.result_effects).unwrap_or_else(|_| "[]".to_string());
+        let raw_json_str = recipe.raw_json.to_string();
+
+        let num_result_items = recipe.result_items.len() as i64;
+
+        recipe_stmt.execute(params![
+            id,
+            &recipe.name,
+            &recipe.skill,
+            recipe.skill_level_req,
+            recipe.icon_id,
+            num_result_items,
+            &recipe.action_label,
+            keywords_json,
+            recipe.shares_name_with_item_id,
+            result_ids_json,
+            ingredient_ids_json,
+            result_effects_json,
+            recipe.usage_delay,
+            recipe.reward_skill_xp_drop_off_level,
+            &recipe.sort_skill,
+            raw_json_str,
+        ])?;
+
+        // Insert ingredients
+        for ingredient in &recipe.ingredients {
+            let item_keys_json = if ingredient.item_keys.is_empty() {
+                None
+            } else {
+                Some(serde_json::to_string(&ingredient.item_keys).unwrap_or_else(|_| "[]".to_string()))
+            };
+            ingredient_stmt.execute(params![
+                id,
+                ingredient.item_id,
+                item_keys_json,
+                ingredient.description,
+                ingredient.stack_size,
+                ingredient.chance_to_consume,
+            ])?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Insert NPCs and their trained skills into database
+fn insert_npcs(tx: &Transaction, data: &GameData) -> Result<()> {
+    let mut npc_stmt = tx.prepare(
+        "INSERT INTO npcs (key, name, area_name, area_description, preferences, pos, services, raw_json)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)"
+    )?;
+
+    let mut skill_stmt = tx.prepare(
+        "INSERT INTO npc_skills (npc_key, skill)
+         VALUES (?1, ?2)"
+    )?;
+
+    for (key, npc) in &data.npcs {
+        let preferences_json = serde_json::to_string(&npc.preferences).unwrap_or_else(|_| "[]".to_string());
+        let pos_json = npc.pos.as_ref().map(|v| v.to_string());
+        let services_json = npc.services.as_ref().map(|v| serde_json::to_string(v).unwrap_or_else(|_| "[]".to_string()));
+        let raw_json_str = npc.raw_json.to_string();
+
+        npc_stmt.execute(params![
+            key,
+            &npc.name,
+            &npc.area_name,
+            &npc.desc,
+            preferences_json,
+            pos_json,
+            services_json,
+            raw_json_str,
+        ])?;
+
+        // Insert trained skills
+        for skill in &npc.trains_skills {
+            skill_stmt.execute(params![key, skill])?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Insert quests into database
+fn insert_quests(tx: &Transaction, quests: &std::collections::HashMap<String, QuestInfo>) -> Result<()> {
+    let mut stmt = tx.prepare(
+        "INSERT INTO quests (internal_name, raw_data)
+         VALUES (?1, ?2)"
+    )?;
+
+    for (key, quest) in quests {
+        let raw_json = serde_json::to_string(&quest.raw).unwrap_or_else(|_| "{}".to_string());
+
+        stmt.execute(params![key, raw_json])?;
+    }
+
+    Ok(())
+}
+
+/// Insert XP tables into database
+fn insert_xp_tables(tx: &Transaction, xp_tables: &std::collections::HashMap<u32, XpTableInfo>) -> Result<()> {
+    let mut stmt = tx.prepare(
+        "INSERT INTO xp_tables (id, internal_name, xp_amounts, raw_json)
+         VALUES (?1, ?2, ?3, ?4)"
+    )?;
+
+    for (id, table) in xp_tables {
+        let xp_amounts_json = serde_json::to_string(&table.xp_amounts).unwrap_or_else(|_| "[]".to_string());
+        let raw_json_str = table.raw_json.to_string();
+
+        stmt.execute(params![
+            id,
+            &table.internal_name,
+            xp_amounts_json,
+            raw_json_str,
+        ])?;
+    }
+
+    Ok(())
+}
+
+/// Insert TSys client info into database
+fn insert_tsys_client_info(tx: &Transaction, client_info: &std::collections::HashMap<String, TsysClientInfo>) -> Result<()> {
+    let mut stmt = tx.prepare(
+        "INSERT INTO tsys_client_info (key, internal_name, skill, slots, prefix, suffix, tiers,
+                                       is_unavailable, is_hidden_from_transmutation, raw_json)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"
+    )?;
+
+    for (key, info) in client_info {
+        let slots_json = serde_json::to_string(&info.slots).unwrap_or_else(|_| "[]".to_string());
+        let tiers_json = info.tiers.as_ref().map(|v| v.to_string());
+        let raw_json_str = info.raw_json.to_string();
+
+        stmt.execute(params![
+            key,
+            &info.internal_name,
+            &info.skill,
+            slots_json,
+            &info.prefix,
+            &info.suffix,
+            tiers_json,
+            info.is_unavailable,
+            info.is_hidden_from_transmutation,
+            raw_json_str,
+        ])?;
+    }
+
+    Ok(())
+}
+
+/// Insert item uses into database
+fn insert_item_uses(tx: &Transaction, item_uses: &std::collections::HashMap<String, ItemUseInfo>) -> Result<()> {
+    let mut stmt = tx.prepare(
+        "INSERT INTO item_uses (key, recipes_that_use_item, raw_json)
+         VALUES (?1, ?2, ?3)"
+    )?;
+
+    for (key, info) in item_uses {
+        let recipes_json = serde_json::to_string(&info.recipes_that_use_item).unwrap_or_else(|_| "[]".to_string());
+        let raw_json_str = info.raw_json.to_string();
+
+        stmt.execute(params![
+            key,
+            recipes_json,
+            raw_json_str,
+        ])?;
+    }
+
+    Ok(())
+}
+
+/// Insert areas into database
+fn insert_areas(tx: &Transaction, areas: &std::collections::HashMap<String, AreaInfo>) -> Result<()> {
+    let mut stmt = tx.prepare(
+        "INSERT INTO areas (key, friendly_name, short_friendly_name, raw_json)
+         VALUES (?1, ?2, ?3, ?4)"
+    )?;
+
+    for (key, area) in areas {
+        let raw_json_str = area.raw_json.to_string();
+
+        stmt.execute(params![
+            key,
+            &area.friendly_name,
+            &area.short_friendly_name,
+            raw_json_str,
+        ])?;
+    }
+
+    Ok(())
+}
+
+/// Load CDN data from database (for initialization)
+pub fn load_cdn_data(conn: &Connection) -> Result<(u32, bool)> {
+    // Check if we have CDN data loaded
+    let version: Option<u32> = conn
+        .query_row("SELECT version FROM cdn_version WHERE id = 1", [], |row| {
+            row.get(0)
+        })
+        .optional()?;
+
+    if let Some(v) = version {
+        // Check if we have items (basic sanity check)
+        let count: i64 = conn.query_row("SELECT COUNT(*) FROM items", [], |row| row.get(0))?;
+        Ok((v, count > 0))
+    } else {
+        Ok((0, false))
+    }
+}

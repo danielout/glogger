@@ -1,0 +1,40 @@
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: theme(--color-surface-dark);
+    color: theme(--color-text-primary);
+    font-family: monospace;
+  }
+
+  button {
+    padding: 0.4rem 0.75rem;
+    background: theme(--color-surface-card);
+    color: theme(--color-text-primary);
+    border: 1px solid theme(--color-border-light);
+    cursor: pointer;
+    font-family: monospace;
+    border-radius: 4px;
+  }
+
+  button:hover:not(:disabled) {
+    background: theme(--color-surface-elevated);
+    border-color: theme(--color-border-hover);
+  }
+
+  button:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}

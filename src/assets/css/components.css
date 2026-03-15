@@ -1,0 +1,77 @@
+@layer components {
+  .btn {
+    @apply px-3 py-1.5 rounded text-sm font-medium transition-colors cursor-pointer font-mono;
+  }
+
+  .btn-primary {
+    @apply bg-accent-gold text-surface-dark hover:bg-accent-gold/80;
+  }
+
+  .btn-secondary {
+    @apply bg-surface-card text-text-secondary border border-border-default hover:bg-surface-elevated hover:border-border-hover hover:text-text-primary;
+  }
+
+  .btn:disabled {
+    @apply opacity-40 cursor-default;
+  }
+
+  .btn-warning {
+    @apply bg-[#3a2a1a] border-[#664422] hover:bg-[#4a3a2a] hover:border-[#885533];
+  }
+
+  .btn-danger {
+    @apply bg-[#2a1a1a] border-[#662222] hover:bg-[#3a2a2a] hover:border-[#883333];
+  }
+
+  .card {
+    @apply bg-surface-card border border-border-default rounded-lg;
+  }
+
+  .input {
+    @apply bg-surface-card border border-border-default rounded px-3 py-1.5 text-text-primary font-mono text-sm focus:outline-none focus:border-accent-gold;
+  }
+
+  .tab {
+    @apply px-4 py-2 text-text-secondary cursor-pointer border-b-2 border-transparent;
+  }
+
+  .tab-active {
+    @apply text-accent-gold border-accent-gold;
+  }
+
+  .settings-section {
+    @apply bg-surface-base border border-border-default rounded p-6 mb-4;
+  }
+
+  .settings-section h3 {
+    @apply text-text-primary mt-0 mb-4 text-lg;
+  }
+
+  .error-box {
+    @apply mt-4 p-3 bg-[#2a1a1a] border border-[#662222] rounded text-accent-red text-sm;
+  }
+
+  .success-box {
+    @apply mt-4 p-3 bg-[#1a2a1a] border border-[#226622] rounded text-accent-green text-sm;
+  }
+
+  .info-box {
+    @apply mt-4 p-3 bg-[#1a1a2a] border border-[#333366] rounded text-[#aac] text-sm;
+  }
+
+  .status-panel {
+    @apply bg-surface-dark border border-border-default rounded p-3 mb-4 font-mono text-xs;
+  }
+
+  .status-row {
+    @apply flex justify-between py-1;
+  }
+
+  .status-label {
+    @apply text-text-secondary;
+  }
+
+  .status-value {
+    @apply text-text-primary font-bold;
+  }
+}

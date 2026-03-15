@@ -1,0 +1,352 @@
+<template>
+  <div>
+    <div class="settings-section">
+      <h3>Manual Import</h3>
+
+      <div class="mb-4">
+        <button
+          @click="selectAndParseFile"
+          :disabled="props.parsing"
+          class="btn btn-secondary">
+          {{ props.parsing ? "Parsing..." : "Parse a Chat Log File" }}
+        </button>
+
+        <button
+          @click="parseFolder"
+          :disabled="props.parsing"
+          class="btn btn-secondary ml-2">
+          {{ props.parsing ? "Parsing..." : "Parse Entire Folder" }}
+        </button>
+
+        <p class="mt-2 text-text-muted text-xs leading-relaxed">
+          Import chat messages from individual log files or an entire ChatLogs folder.
+        </p>
+
+        <div v-if="parseResult" class="success-box">{{ parseResult }}</div>
+        <div v-if="props.error" class="error-box">{{ props.error }}</div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Excluded Channels</h3>
+      <p class="text-text-muted text-xs leading-relaxed mb-4">
+        Messages from these channels will not be imported when parsing chat logs.
+      </p>
+
+      <div class="flex flex-wrap gap-2 mb-4">
+        <div
+          v-for="(channel, index) in localExcludedChannels"
+          :key="index"
+          class="flex items-center gap-1 bg-surface-card border border-border-light rounded px-2 py-1 text-xs">
+          <span class="text-text-primary">{{ channel }}</span>
+          <button @click="removeChannel(index)" class="bg-transparent border-none text-text-secondary cursor-pointer text-lg px-1 py-0 leading-none hover:text-accent-red" title="Remove">&times;</button>
+        </div>
+      </div>
+
+      <div class="flex gap-2 items-center">
+        <input
+          v-model="newChannel"
+          @keyup.enter="addChannel"
+          placeholder="Channel name..."
+          class="input max-w-62" />
+        <button @click="addChannel" :disabled="!newChannel.trim()" class="btn btn-secondary">
+          Add Channel
+        </button>
+      </div>
+
+      <button @click="resetChannels" class="btn btn-secondary mt-3">
+        Reset to Defaults
+      </button>
+    </div>
+
+    <div class="settings-section">
+      <h3>Chat Log Storage</h3>
+
+      <div class="mb-4">
+        <div v-if="chatStats" class="status-panel">
+          <div class="status-row">
+            <span class="status-label">Chat Messages:</span>
+            <span class="status-value">{{ chatStats.messageCount?.toLocaleString() ?? '0' }}</span>
+          </div>
+          <div class="status-row">
+            <span class="status-label">Storage Used:</span>
+            <span class="status-value">{{ formatBytes(chatStats.sizeBytes ?? 0) }}</span>
+          </div>
+        </div>
+        <button @click="loadChatStats" class="btn btn-secondary" :disabled="loadingChatStats">
+          {{ loadingChatStats ? 'Loading...' : 'Refresh Stats' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Delete Chat Data</h3>
+
+      <div class="mb-4">
+        <button
+          @click="deleteAllChatMessages"
+          :disabled="deleting || !confirmDeleteAll"
+          class="btn btn-secondary btn-danger">
+          {{ deleting ? 'Deleting...' : 'Delete All Chat Messages' }}
+        </button>
+
+        <label class="flex items-center gap-2 cursor-pointer text-accent-red mt-2">
+          <input
+            type="checkbox"
+            v-model="confirmDeleteAll"
+            class="size-5 cursor-pointer" />
+          <span>I understand this will delete ALL chat messages permanently</span>
+        </label>
+
+        <label class="flex items-center gap-2 cursor-pointer text-text-primary mt-2">
+          <input
+            type="checkbox"
+            v-model="alsoDeleteWatchRules"
+            class="size-5 cursor-pointer" />
+          <span>Also delete all watch rules</span>
+        </label>
+
+        <p class="mt-2 text-text-muted text-xs leading-relaxed">
+          Permanently delete all chat messages and reset import positions so logs can be re-imported.
+          Optionally clear all watch rules as well.
+        </p>
+
+        <div v-if="deleteResult" class="success-box">{{ deleteResult }}</div>
+        <div v-if="deleteError" class="error-box">{{ deleteError }}</div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Chat Log Retention</h3>
+
+      <div class="mb-4">
+        <label class="block text-text-secondary mb-1">General channels retention:</label>
+        <div class="flex items-center gap-2 mt-2">
+          <input
+            type="number"
+            v-model.number="chatRetentionDays"
+            @blur="saveChatRetention"
+            min="1"
+            max="9999"
+            class="input w-25"
+            placeholder="Forever" />
+          <span class="text-text-secondary">days</span>
+          <span class="text-text-muted text-xs">(leave empty for forever)</span>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-text-secondary mb-1">Tells retention:</label>
+        <div class="flex items-center gap-2 mt-2">
+          <input
+            type="number"
+            v-model.number="tellsRetentionDays"
+            @blur="saveTellsRetention"
+            min="1"
+            max="9999"
+            class="input w-25"
+            placeholder="Forever" />
+          <span class="text-text-secondary">days</span>
+          <span class="text-text-muted text-xs">(leave empty for forever)</span>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-text-secondary mb-1">Guild chat retention:</label>
+        <div class="flex items-center gap-2 mt-2">
+          <input
+            type="number"
+            v-model.number="guildRetentionDays"
+            @blur="saveGuildRetention"
+            min="1"
+            max="9999"
+            class="input w-25"
+            placeholder="Forever" />
+          <span class="text-text-secondary">days</span>
+          <span class="text-text-muted text-xs">(leave empty for forever)</span>
+        </div>
+      </div>
+
+      <p class="text-text-muted text-xs leading-relaxed">
+        Tells and Guild chat can be configured with longer retention than other channels
+        since you may want to preserve those conversations.
+      </p>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from "vue";
+import { open } from "@tauri-apps/plugin-dialog";
+import { invoke } from "@tauri-apps/api/core";
+import { useSettingsStore } from "../../stores/settingsStore";
+
+const props = defineProps<{
+  parsing: boolean;
+  error: string;
+  onParseLog: () => void;
+}>();
+
+const settingsStore = useSettingsStore();
+
+const DEFAULT_EXCLUDED = [
+  "System", "Error", "Emotes", "Action Emotes", "NPC Chatter", "Status", "Combat"
+];
+
+// Excluded channels
+const localExcludedChannels = ref<string[]>([...settingsStore.settings.excludedChatChannels]);
+const newChannel = ref("");
+
+function addChannel() {
+  const name = newChannel.value.trim();
+  if (name && !localExcludedChannels.value.includes(name)) {
+    localExcludedChannels.value.push(name);
+    saveExcludedChannels();
+  }
+  newChannel.value = "";
+}
+
+function removeChannel(index: number) {
+  localExcludedChannels.value.splice(index, 1);
+  saveExcludedChannels();
+}
+
+function resetChannels() {
+  localExcludedChannels.value = [...DEFAULT_EXCLUDED];
+  saveExcludedChannels();
+}
+
+function saveExcludedChannels() {
+  settingsStore.updateSettings({ excludedChatChannels: [...localExcludedChannels.value] });
+}
+
+// Manual parsing
+const parseResult = ref<string | null>(null);
+
+async function selectAndParseFile() {
+  const selected = await open({
+    multiple: false,
+    filters: [{ name: "Chat Log Files", extensions: ["log", "txt"] }],
+  });
+  if (selected) {
+    parseResult.value = null;
+    try {
+      const result = await invoke<{ messages_imported: number }>('scan_chat_log_file', { path: selected });
+      parseResult.value = `Imported ${result.messages_imported} messages from file.`;
+    } catch (e: any) {
+      parseResult.value = null;
+      console.error('Failed to parse chat log file:', e);
+    }
+  }
+}
+
+async function parseFolder() {
+  const selected = await open({
+    directory: true,
+    multiple: false,
+  });
+  if (selected) {
+    parseResult.value = null;
+    try {
+      const result = await invoke<{ messages_imported: number }>('scan_chat_logs', { path: selected });
+      parseResult.value = `Imported ${result.messages_imported} messages from folder.`;
+    } catch (e: any) {
+      parseResult.value = null;
+      console.error('Failed to parse chat log folder:', e);
+    }
+  }
+}
+
+// Chat stats
+interface ChatStats {
+  messageCount: number;
+  sizeBytes: number;
+}
+
+const chatStats = ref<ChatStats | null>(null);
+const loadingChatStats = ref(false);
+
+async function loadChatStats() {
+  loadingChatStats.value = true;
+  try {
+    const stats = await invoke<{ total_messages: number; messages_size_bytes: number }>('get_chat_stats');
+    chatStats.value = {
+      messageCount: stats.total_messages,
+      sizeBytes: stats.messages_size_bytes,
+    };
+  } catch (e: any) {
+    console.error('Failed to load chat stats:', e);
+  } finally {
+    loadingChatStats.value = false;
+  }
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+}
+
+// Delete all chat data
+const confirmDeleteAll = ref(false);
+const alsoDeleteWatchRules = ref(false);
+const deleting = ref(false);
+const deleteResult = ref<string | null>(null);
+const deleteError = ref<string | null>(null);
+
+async function deleteAllChatMessages() {
+  if (!confirmDeleteAll.value) return;
+
+  deleting.value = true;
+  deleteResult.value = null;
+  deleteError.value = null;
+
+  try {
+    const deleted = await invoke<number>('delete_all_chat_messages');
+    let msg = `Deleted ${deleted.toLocaleString()} chat messages. Import positions have been reset.`;
+
+    if (alsoDeleteWatchRules.value) {
+      await settingsStore.updateSettings({ watchRules: [] });
+      msg += ' Watch rules have been cleared.';
+    }
+
+    deleteResult.value = msg;
+    confirmDeleteAll.value = false;
+    alsoDeleteWatchRules.value = false;
+    await loadChatStats();
+  } catch (e: any) {
+    deleteError.value = e.toString();
+  } finally {
+    deleting.value = false;
+  }
+}
+
+// Retention settings
+const chatRetentionDays = ref<number | null>(settingsStore.settings.chatRetentionDays);
+const tellsRetentionDays = ref<number | null>(settingsStore.settings.tellsRetentionDays);
+const guildRetentionDays = ref<number | null>(settingsStore.settings.guildRetentionDays);
+
+function saveChatRetention() {
+  const val = chatRetentionDays.value && chatRetentionDays.value > 0 ? chatRetentionDays.value : null;
+  chatRetentionDays.value = val;
+  settingsStore.updateSettings({ chatRetentionDays: val });
+}
+
+function saveTellsRetention() {
+  const val = tellsRetentionDays.value && tellsRetentionDays.value > 0 ? tellsRetentionDays.value : null;
+  tellsRetentionDays.value = val;
+  settingsStore.updateSettings({ tellsRetentionDays: val });
+}
+
+function saveGuildRetention() {
+  const val = guildRetentionDays.value && guildRetentionDays.value > 0 ? guildRetentionDays.value : null;
+  guildRetentionDays.value = val;
+  settingsStore.updateSettings({ guildRetentionDays: val });
+}
+
+onMounted(() => {
+  loadChatStats();
+});
+</script>

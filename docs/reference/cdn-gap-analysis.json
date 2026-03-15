@@ -1,0 +1,4564 @@
+{
+  "abilities.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 5877,
+    "total_cdn_fields": 72,
+    "parsed_fields_detected": 7,
+    "missing_count": 65,
+    "likely_truly_missing": 65,
+    "missing_fields": {
+      "AbilityGroup": {
+        "count": 214,
+        "pct": 3.6,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "AbilityGroupName": {
+        "count": 141,
+        "pct": 2.4,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "AmmoConsumeChance": {
+        "count": 95,
+        "pct": 1.6,
+        "types": [
+          "integer",
+          "number"
+        ],
+        "likely_missing": true
+      },
+      "AmmoDescription": {
+        "count": 613,
+        "pct": 10.4,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "AmmoKeywords": {
+        "count": 613,
+        "pct": 10.4,
+        "types": [
+          "array<object>"
+        ],
+        "likely_missing": true
+      },
+      "AmmoStickChance": {
+        "count": 267,
+        "pct": 4.5,
+        "types": [
+          "integer",
+          "number"
+        ],
+        "likely_missing": true
+      },
+      "Animation": {
+        "count": 5877,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "AoEIsCenteredOnCaster": {
+        "count": 28,
+        "pct": 0.5,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "AttributeThatPreventsDelayLoopAbortOnAttacked": {
+        "count": 44,
+        "pct": 0.7,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "AttributesThatDeltaCritChance": {
+        "count": 50,
+        "pct": 0.9,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "AttributesThatDeltaDelayLoopTime": {
+        "count": 83,
+        "pct": 1.4,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "AttributesThatDeltaPowerCost": {
+        "count": 4430,
+        "pct": 75.4,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "AttributesThatDeltaResetTime": {
+        "count": 5753,
+        "pct": 97.9,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "AttributesThatDeltaWorksWhileStunned": {
+        "count": 65,
+        "pct": 1.1,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "AttributesThatModAmmoConsumeChance": {
+        "count": 25,
+        "pct": 0.4,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "AttributesThatModPowerCost": {
+        "count": 4041,
+        "pct": 68.8,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "CanBeOnSidebar": {
+        "count": 460,
+        "pct": 7.8,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "CanSuppressMonsterShout": {
+        "count": 303,
+        "pct": 5.2,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "CanTargetUntargetableEnemies": {
+        "count": 9,
+        "pct": 0.2,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "CausesOfDeath": {
+        "count": 5380,
+        "pct": 91.5,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "CombatRefreshBaseAmount": {
+        "count": 379,
+        "pct": 6.4,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "ConditionalKeywords": {
+        "count": 922,
+        "pct": 15.7,
+        "types": [
+          "array<object>"
+        ],
+        "likely_missing": true
+      },
+      "Costs": {
+        "count": 6,
+        "pct": 0.1,
+        "types": [
+          "array<object>"
+        ],
+        "likely_missing": true
+      },
+      "DamageType": {
+        "count": 5877,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "DelayLoopIsAbortedIfAttacked": {
+        "count": 129,
+        "pct": 2.2,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "DelayLoopIsOnlyUsedInCombat": {
+        "count": 39,
+        "pct": 0.7,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "DelayLoopMessage": {
+        "count": 151,
+        "pct": 2.6,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "DelayLoopTime": {
+        "count": 162,
+        "pct": 2.8,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "EffectKeywordReqErrorMessage": {
+        "count": 3,
+        "pct": 0.1,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "EffectKeywordReqs": {
+        "count": 3,
+        "pct": 0.1,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "EffectKeywordsIndicatingEnabled": {
+        "count": 119,
+        "pct": 2.0,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "ExtraKeywordsForTooltips": {
+        "count": 77,
+        "pct": 1.3,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "IgnoreEffectErrors": {
+        "count": 60,
+        "pct": 1.0,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "InternalAbility": {
+        "count": 244,
+        "pct": 4.2,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "InternalName": {
+        "count": 5877,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "InventoryKeywordReqErrorMessage": {
+        "count": 13,
+        "pct": 0.2,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "InventoryKeywordReqs": {
+        "count": 13,
+        "pct": 0.2,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "IsCosmeticPet": {
+        "count": 42,
+        "pct": 0.7,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "IsHarmless": {
+        "count": 1894,
+        "pct": 32.2,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "IsTimerResetWhenDisabling": {
+        "count": 16,
+        "pct": 0.3,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "ItemKeywordReqErrorMessage": {
+        "count": 2294,
+        "pct": 39.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "ItemKeywordReqs": {
+        "count": 3602,
+        "pct": 61.3,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "PetTypeTagReq": {
+        "count": 216,
+        "pct": 3.7,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "PetTypeTagReqMax": {
+        "count": 216,
+        "pct": 3.7,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "Prerequisite": {
+        "count": 3692,
+        "pct": 62.8,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Projectile": {
+        "count": 1036,
+        "pct": 17.6,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Rank": {
+        "count": 128,
+        "pct": 2.2,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "ResetTime": {
+        "count": 5877,
+        "pct": 100.0,
+        "types": [
+          "integer",
+          "number"
+        ],
+        "likely_missing": true
+      },
+      "SelfParticle": {
+        "count": 478,
+        "pct": 8.1,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "SelfPreParticle": {
+        "count": 342,
+        "pct": 5.8,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "SharesResetTimerWith": {
+        "count": 3902,
+        "pct": 66.4,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "SpecialCasterRequirements": {
+        "count": 503,
+        "pct": 8.6,
+        "types": [
+          "array<object>",
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "SpecialCasterRequirementsErrorMessage": {
+        "count": 369,
+        "pct": 6.3,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "SpecialInfo": {
+        "count": 1997,
+        "pct": 34.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "SpecialTargetingTypeReq": {
+        "count": 32,
+        "pct": 0.5,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "Target": {
+        "count": 5877,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "TargetEffectKeywordReq": {
+        "count": 13,
+        "pct": 0.2,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "TargetParticle": {
+        "count": 3646,
+        "pct": 62.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "TargetTypeTagReq": {
+        "count": 2,
+        "pct": 0.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "UpgradeOf": {
+        "count": 3893,
+        "pct": 66.2,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "WorksInCombat": {
+        "count": 141,
+        "pct": 2.4,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "WorksUnderwater": {
+        "count": 1366,
+        "pct": 23.2,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "WorksWhileFalling": {
+        "count": 1025,
+        "pct": 17.4,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "WorksWhileMounted": {
+        "count": 14,
+        "pct": 0.2,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "WorksWhileStunned": {
+        "count": 62,
+        "pct": 1.1,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "abilitydynamicdots.json": {
+    "status": "FULLY PARSED",
+    "total_entries": 0,
+    "total_cdn_fields": 0,
+    "parsed_fields_detected": 0,
+    "missing_count": 0,
+    "likely_truly_missing": 0,
+    "missing_fields": null
+  },
+  "abilitydynamicspecialvalues.json": {
+    "status": "FULLY PARSED",
+    "total_entries": 0,
+    "total_cdn_fields": 0,
+    "parsed_fields_detected": 0,
+    "missing_count": 0,
+    "likely_truly_missing": 0,
+    "missing_fields": null
+  },
+  "abilitykeywords.json": {
+    "status": "FULLY PARSED",
+    "total_entries": 0,
+    "total_cdn_fields": 0,
+    "parsed_fields_detected": 0,
+    "missing_count": 0,
+    "likely_truly_missing": 0,
+    "missing_fields": null
+  },
+  "advancementtables.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 440,
+    "total_cdn_fields": 250,
+    "parsed_fields_detected": 0,
+    "missing_count": 250,
+    "likely_truly_missing": 250,
+    "missing_fields": {
+      "Level_01": {
+        "count": 390,
+        "pct": 88.6,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_02": {
+        "count": 186,
+        "pct": 42.3,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_03": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_04": {
+        "count": 193,
+        "pct": 43.9,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_05": {
+        "count": 194,
+        "pct": 44.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_06": {
+        "count": 184,
+        "pct": 41.8,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_07": {
+        "count": 198,
+        "pct": 45.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_08": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_09": {
+        "count": 179,
+        "pct": 40.7,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_10": {
+        "count": 223,
+        "pct": 50.7,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_100": {
+        "count": 211,
+        "pct": 48.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_101": {
+        "count": 163,
+        "pct": 37.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_102": {
+        "count": 138,
+        "pct": 31.4,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_103": {
+        "count": 154,
+        "pct": 35.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_104": {
+        "count": 135,
+        "pct": 30.7,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_105": {
+        "count": 155,
+        "pct": 35.2,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_106": {
+        "count": 154,
+        "pct": 35.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_107": {
+        "count": 136,
+        "pct": 30.9,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_108": {
+        "count": 153,
+        "pct": 34.8,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_109": {
+        "count": 154,
+        "pct": 35.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_11": {
+        "count": 174,
+        "pct": 39.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_110": {
+        "count": 155,
+        "pct": 35.2,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_111": {
+        "count": 136,
+        "pct": 30.9,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_112": {
+        "count": 155,
+        "pct": 35.2,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_113": {
+        "count": 154,
+        "pct": 35.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_114": {
+        "count": 135,
+        "pct": 30.7,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_115": {
+        "count": 155,
+        "pct": 35.2,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_116": {
+        "count": 137,
+        "pct": 31.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_117": {
+        "count": 153,
+        "pct": 34.8,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_118": {
+        "count": 153,
+        "pct": 34.8,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_119": {
+        "count": 137,
+        "pct": 31.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_12": {
+        "count": 201,
+        "pct": 45.7,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_120": {
+        "count": 155,
+        "pct": 35.2,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_121": {
+        "count": 136,
+        "pct": 30.9,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_122": {
+        "count": 155,
+        "pct": 35.2,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_123": {
+        "count": 137,
+        "pct": 31.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_124": {
+        "count": 152,
+        "pct": 34.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_125": {
+        "count": 155,
+        "pct": 35.2,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_126": {
+        "count": 105,
+        "pct": 23.9,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_127": {
+        "count": 121,
+        "pct": 27.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_128": {
+        "count": 121,
+        "pct": 27.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_129": {
+        "count": 105,
+        "pct": 23.9,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_13": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_130": {
+        "count": 123,
+        "pct": 28.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_131": {
+        "count": 121,
+        "pct": 27.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_132": {
+        "count": 106,
+        "pct": 24.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_133": {
+        "count": 122,
+        "pct": 27.7,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_134": {
+        "count": 120,
+        "pct": 27.3,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_135": {
+        "count": 123,
+        "pct": 28.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_136": {
+        "count": 105,
+        "pct": 23.9,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_137": {
+        "count": 121,
+        "pct": 27.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_138": {
+        "count": 121,
+        "pct": 27.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_139": {
+        "count": 105,
+        "pct": 23.9,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_14": {
+        "count": 193,
+        "pct": 43.9,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_140": {
+        "count": 123,
+        "pct": 28.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_141": {
+        "count": 121,
+        "pct": 27.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_142": {
+        "count": 123,
+        "pct": 28.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_143": {
+        "count": 122,
+        "pct": 27.7,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_144": {
+        "count": 103,
+        "pct": 23.4,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_145": {
+        "count": 123,
+        "pct": 28.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_146": {
+        "count": 105,
+        "pct": 23.9,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_147": {
+        "count": 121,
+        "pct": 27.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_148": {
+        "count": 121,
+        "pct": 27.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_149": {
+        "count": 105,
+        "pct": 23.9,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_15": {
+        "count": 217,
+        "pct": 49.3,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_150": {
+        "count": 123,
+        "pct": 28.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_151": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_152": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_153": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_154": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_155": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_156": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_157": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_158": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_159": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_16": {
+        "count": 177,
+        "pct": 40.2,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_160": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_161": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_162": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_163": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_164": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_165": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_166": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_167": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_168": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_169": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_17": {
+        "count": 179,
+        "pct": 40.7,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_170": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_171": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_172": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_173": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_174": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_175": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_176": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_177": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_178": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_179": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_18": {
+        "count": 183,
+        "pct": 41.6,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_180": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_181": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_182": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_183": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_184": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_185": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_186": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_187": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_188": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_189": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_19": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_190": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_191": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_192": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_193": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_194": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_195": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_196": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_197": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_198": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_199": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_20": {
+        "count": 225,
+        "pct": 51.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_200": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_201": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_202": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_203": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_204": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_205": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_206": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_207": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_208": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_209": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_21": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_210": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_211": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_212": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_213": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_214": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_215": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_216": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_217": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_218": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_219": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_22": {
+        "count": 177,
+        "pct": 40.2,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_220": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_221": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_222": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_223": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_224": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_225": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_226": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_227": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_228": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_229": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_23": {
+        "count": 191,
+        "pct": 43.4,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_230": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_231": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_232": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_233": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_234": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_235": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_236": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_237": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_238": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_239": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_24": {
+        "count": 183,
+        "pct": 41.6,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_240": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_241": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_242": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_243": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_244": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_245": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_246": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_247": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_248": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_249": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_25": {
+        "count": 218,
+        "pct": 49.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_250": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_26": {
+        "count": 176,
+        "pct": 40.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_27": {
+        "count": 198,
+        "pct": 45.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_28": {
+        "count": 180,
+        "pct": 40.9,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_29": {
+        "count": 176,
+        "pct": 40.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_30": {
+        "count": 225,
+        "pct": 51.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_31": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_32": {
+        "count": 180,
+        "pct": 40.9,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_33": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_34": {
+        "count": 177,
+        "pct": 40.2,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_35": {
+        "count": 221,
+        "pct": 50.2,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_36": {
+        "count": 185,
+        "pct": 42.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_37": {
+        "count": 197,
+        "pct": 44.8,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_38": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_39": {
+        "count": 179,
+        "pct": 40.7,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_40": {
+        "count": 226,
+        "pct": 51.4,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_41": {
+        "count": 181,
+        "pct": 41.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_42": {
+        "count": 204,
+        "pct": 46.4,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_43": {
+        "count": 179,
+        "pct": 40.7,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_44": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_45": {
+        "count": 220,
+        "pct": 50.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_46": {
+        "count": 175,
+        "pct": 39.8,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_47": {
+        "count": 198,
+        "pct": 45.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_48": {
+        "count": 185,
+        "pct": 42.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_49": {
+        "count": 182,
+        "pct": 41.4,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_50": {
+        "count": 228,
+        "pct": 51.8,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_51": {
+        "count": 199,
+        "pct": 45.2,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_52": {
+        "count": 176,
+        "pct": 40.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_53": {
+        "count": 194,
+        "pct": 44.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_54": {
+        "count": 184,
+        "pct": 41.8,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_55": {
+        "count": 217,
+        "pct": 49.3,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_56": {
+        "count": 196,
+        "pct": 44.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_57": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_58": {
+        "count": 193,
+        "pct": 43.9,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_59": {
+        "count": 194,
+        "pct": 44.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_60": {
+        "count": 217,
+        "pct": 49.3,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_61": {
+        "count": 181,
+        "pct": 41.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_62": {
+        "count": 192,
+        "pct": 43.6,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_63": {
+        "count": 193,
+        "pct": 43.9,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_64": {
+        "count": 180,
+        "pct": 40.9,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_65": {
+        "count": 214,
+        "pct": 48.6,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_66": {
+        "count": 184,
+        "pct": 41.8,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_67": {
+        "count": 194,
+        "pct": 44.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_68": {
+        "count": 194,
+        "pct": 44.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_69": {
+        "count": 179,
+        "pct": 40.7,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_70": {
+        "count": 216,
+        "pct": 49.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_71": {
+        "count": 180,
+        "pct": 40.9,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_72": {
+        "count": 200,
+        "pct": 45.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_73": {
+        "count": 177,
+        "pct": 40.2,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_74": {
+        "count": 194,
+        "pct": 44.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_75": {
+        "count": 216,
+        "pct": 49.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_76": {
+        "count": 176,
+        "pct": 40.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_77": {
+        "count": 194,
+        "pct": 44.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_78": {
+        "count": 200,
+        "pct": 45.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_79": {
+        "count": 177,
+        "pct": 40.2,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_80": {
+        "count": 214,
+        "pct": 48.6,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_81": {
+        "count": 197,
+        "pct": 44.8,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_82": {
+        "count": 175,
+        "pct": 39.8,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_83": {
+        "count": 194,
+        "pct": 44.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_84": {
+        "count": 201,
+        "pct": 45.7,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_85": {
+        "count": 212,
+        "pct": 48.2,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_86": {
+        "count": 176,
+        "pct": 40.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_87": {
+        "count": 195,
+        "pct": 44.3,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_88": {
+        "count": 196,
+        "pct": 44.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_89": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_90": {
+        "count": 212,
+        "pct": 48.2,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_91": {
+        "count": 197,
+        "pct": 44.8,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_92": {
+        "count": 191,
+        "pct": 43.4,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_93": {
+        "count": 193,
+        "pct": 43.9,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_94": {
+        "count": 175,
+        "pct": 39.8,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_95": {
+        "count": 211,
+        "pct": 48.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_96": {
+        "count": 182,
+        "pct": 41.4,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_97": {
+        "count": 195,
+        "pct": 44.3,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_98": {
+        "count": 194,
+        "pct": 44.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Level_99": {
+        "count": 177,
+        "pct": 40.2,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "ai.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 441,
+    "total_cdn_fields": 12,
+    "parsed_fields_detected": 0,
+    "missing_count": 12,
+    "likely_truly_missing": 12,
+    "missing_fields": {
+      "Abilities": {
+        "count": 441,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Comment": {
+        "count": 40,
+        "pct": 9.1,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Description": {
+        "count": 6,
+        "pct": 1.4,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "FlyOffset": {
+        "count": 2,
+        "pct": 0.5,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "Flying": {
+        "count": 51,
+        "pct": 11.6,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "MinDelayBetweenAbilities": {
+        "count": 26,
+        "pct": 5.9,
+        "types": [
+          "integer",
+          "number"
+        ],
+        "likely_missing": true
+      },
+      "MobilityType": {
+        "count": 55,
+        "pct": 12.5,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "ServerDriven": {
+        "count": 1,
+        "pct": 0.2,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "Strategy": {
+        "count": 299,
+        "pct": 67.8,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Swimming": {
+        "count": 83,
+        "pct": 18.8,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "UncontrolledPet": {
+        "count": 25,
+        "pct": 5.7,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "UseAbilitiesWithoutEnemyTarget": {
+        "count": 3,
+        "pct": 0.7,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "areas.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 36,
+    "total_cdn_fields": 2,
+    "parsed_fields_detected": 0,
+    "missing_count": 2,
+    "likely_truly_missing": 2,
+    "missing_fields": {
+      "FriendlyName": {
+        "count": 36,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "ShortFriendlyName": {
+        "count": 32,
+        "pct": 88.9,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "attributes.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 2121,
+    "total_cdn_fields": 7,
+    "parsed_fields_detected": 0,
+    "missing_count": 7,
+    "likely_truly_missing": 7,
+    "missing_fields": {
+      "DefaultValue": {
+        "count": 1460,
+        "pct": 68.8,
+        "types": [
+          "integer",
+          "number"
+        ],
+        "likely_missing": true
+      },
+      "DisplayRule": {
+        "count": 2121,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "DisplayType": {
+        "count": 2121,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "IconIds": {
+        "count": 1857,
+        "pct": 87.6,
+        "types": [
+          "array<integer>"
+        ],
+        "likely_missing": true
+      },
+      "IsHidden": {
+        "count": 26,
+        "pct": 1.2,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "Label": {
+        "count": 1914,
+        "pct": 90.2,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Tooltip": {
+        "count": 45,
+        "pct": 2.1,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "directedgoals.json": {
+    "status": "FULLY PARSED",
+    "total_entries": 0,
+    "total_cdn_fields": 0,
+    "parsed_fields_detected": 1,
+    "missing_count": 0,
+    "likely_truly_missing": 0,
+    "missing_fields": null
+  },
+  "effects.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 23056,
+    "total_cdn_fields": 11,
+    "parsed_fields_detected": 0,
+    "missing_count": 11,
+    "likely_truly_missing": 11,
+    "missing_fields": {
+      "AbilityKeywords": {
+        "count": 18749,
+        "pct": 81.3,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "Desc": {
+        "count": 23056,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "DisplayMode": {
+        "count": 23056,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Duration": {
+        "count": 22974,
+        "pct": 99.6,
+        "types": [
+          "integer",
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "IconId": {
+        "count": 23056,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "Keywords": {
+        "count": 23056,
+        "pct": 100.0,
+        "types": [
+          "array<empty>",
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "Name": {
+        "count": 23056,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Particle": {
+        "count": 1116,
+        "pct": 4.8,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "SpewText": {
+        "count": 16,
+        "pct": 0.1,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "StackingPriority": {
+        "count": 1732,
+        "pct": 7.5,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "StackingType": {
+        "count": 1663,
+        "pct": 7.2,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "items.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 10714,
+    "total_cdn_fields": 45,
+    "parsed_fields_detected": 10,
+    "missing_count": 35,
+    "likely_truly_missing": 35,
+    "missing_fields": {
+      "AllowInstallInGuildHalls": {
+        "count": 67,
+        "pct": 0.6,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "AllowInstallInHomes": {
+        "count": 67,
+        "pct": 0.6,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "AllowPrefix": {
+        "count": 1160,
+        "pct": 10.8,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "AllowSuffix": {
+        "count": 475,
+        "pct": 4.4,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "AttuneOnPickup": {
+        "count": 53,
+        "pct": 0.5,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "Behaviors": {
+        "count": 8041,
+        "pct": 75.1,
+        "types": [
+          "array<object>"
+        ],
+        "likely_missing": true
+      },
+      "BestowAbility": {
+        "count": 537,
+        "pct": 5.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "BestowLoreBook": {
+        "count": 18,
+        "pct": 0.2,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "BestowQuest": {
+        "count": 1324,
+        "pct": 12.4,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "BestowRecipes": {
+        "count": 683,
+        "pct": 6.4,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "BestowTitle": {
+        "count": 552,
+        "pct": 5.2,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "CraftPoints": {
+        "count": 2471,
+        "pct": 23.1,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "CraftingTargetLevel": {
+        "count": 2469,
+        "pct": 23.0,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "DestroyWhenUsedUp": {
+        "count": 42,
+        "pct": 0.4,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "DroppedAppearanceLookup": {
+        "count": 39,
+        "pct": 0.4,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "DyeColor": {
+        "count": 101,
+        "pct": 0.9,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "DynamicCraftingSummary": {
+        "count": 195,
+        "pct": 1.8,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "EquipAppearance": {
+        "count": 2299,
+        "pct": 21.5,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "EquipAppearance2": {
+        "count": 1448,
+        "pct": 13.5,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "EquipSlot": {
+        "count": 2959,
+        "pct": 27.6,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "IgnoreAlreadyKnownBestowals": {
+        "count": 9,
+        "pct": 0.1,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "InternalName": {
+        "count": 10714,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "IsCrafted": {
+        "count": 1093,
+        "pct": 10.2,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "IsSkillReqsDefaults": {
+        "count": 1363,
+        "pct": 12.7,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "IsTemporary": {
+        "count": 5,
+        "pct": 0.0,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "Lint_VendorNpc": {
+        "count": 1299,
+        "pct": 12.1,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "MacGuffinQuestName": {
+        "count": 230,
+        "pct": 2.1,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "MaxCarryable": {
+        "count": 307,
+        "pct": 2.9,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "MaxOnVendor": {
+        "count": 109,
+        "pct": 1.0,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "MountedAppearance": {
+        "count": 66,
+        "pct": 0.6,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "NumUses": {
+        "count": 7170,
+        "pct": 66.9,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "RequiredAppearance": {
+        "count": 261,
+        "pct": 2.4,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "SelfDestructDuration_Hours": {
+        "count": 5,
+        "pct": 0.0,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "StockDye": {
+        "count": 1490,
+        "pct": 13.9,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "TSysProfile": {
+        "count": 2469,
+        "pct": 23.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "itemuses.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 1121,
+    "total_cdn_fields": 1,
+    "parsed_fields_detected": 0,
+    "missing_count": 1,
+    "likely_truly_missing": 1,
+    "missing_fields": {
+      "RecipesThatUseItem": {
+        "count": 1121,
+        "pct": 100.0,
+        "types": [
+          "array<integer>"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "landmarks.json": {
+    "status": "FULLY PARSED",
+    "total_entries": 36,
+    "total_cdn_fields": 0,
+    "parsed_fields_detected": 0,
+    "missing_count": 0,
+    "likely_truly_missing": 0,
+    "missing_fields": null
+  },
+  "lorebookinfo.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 1,
+    "total_cdn_fields": 7,
+    "parsed_fields_detected": 0,
+    "missing_count": 7,
+    "likely_truly_missing": 7,
+    "missing_fields": {
+      "Gods": {
+        "count": 1,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "GuideProgram": {
+        "count": 1,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "History": {
+        "count": 1,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Misc": {
+        "count": 1,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "NotesAndSigns": {
+        "count": 1,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Plot": {
+        "count": 1,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Stories": {
+        "count": 1,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "lorebooks.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 64,
+    "total_cdn_fields": 8,
+    "parsed_fields_detected": 0,
+    "missing_count": 8,
+    "likely_truly_missing": 8,
+    "missing_fields": {
+      "Category": {
+        "count": 64,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "InternalName": {
+        "count": 64,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "IsClientLocal": {
+        "count": 64,
+        "pct": 100.0,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "Keywords": {
+        "count": 64,
+        "pct": 100.0,
+        "types": [
+          "array<empty>",
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "LocationHint": {
+        "count": 44,
+        "pct": 68.8,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Text": {
+        "count": 52,
+        "pct": 81.2,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Title": {
+        "count": 64,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Visibility": {
+        "count": 64,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "npcs.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 337,
+    "total_cdn_fields": 8,
+    "parsed_fields_detected": 0,
+    "missing_count": 8,
+    "likely_truly_missing": 2,
+    "missing_fields": {
+      "AreaFriendlyName": {
+        "count": 337,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": false
+      },
+      "AreaName": {
+        "count": 337,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": false
+      },
+      "Desc": {
+        "count": 337,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "ItemGifts": {
+        "count": 43,
+        "pct": 12.8,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": false
+      },
+      "Name": {
+        "count": 337,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": false
+      },
+      "Pos": {
+        "count": 308,
+        "pct": 91.4,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Preferences": {
+        "count": 233,
+        "pct": 69.1,
+        "types": [
+          "array<object>"
+        ],
+        "likely_missing": false
+      },
+      "Services": {
+        "count": 295,
+        "pct": 87.5,
+        "types": [
+          "array<object>"
+        ],
+        "likely_missing": false
+      }
+    }
+  },
+  "playertitles.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 677,
+    "total_cdn_fields": 5,
+    "parsed_fields_detected": 0,
+    "missing_count": 5,
+    "likely_truly_missing": 5,
+    "missing_fields": {
+      "AccountWide": {
+        "count": 36,
+        "pct": 5.3,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "Keywords": {
+        "count": 565,
+        "pct": 83.5,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "SoulWide": {
+        "count": 34,
+        "pct": 5.0,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "Title": {
+        "count": 677,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Tooltip": {
+        "count": 670,
+        "pct": 99.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "quests.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 2969,
+    "total_cdn_fields": 45,
+    "parsed_fields_detected": 0,
+    "missing_count": 45,
+    "likely_truly_missing": 45,
+    "missing_fields": {
+      "CheckRequirementsToSustainOnBestow": {
+        "count": 3,
+        "pct": 0.1,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "DeleteFromHistoryIfVersionChanged": {
+        "count": 58,
+        "pct": 2.0,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "Description": {
+        "count": 2969,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "DisplayedLocation": {
+        "count": 1223,
+        "pct": 41.2,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "FavorNpc": {
+        "count": 1214,
+        "pct": 40.9,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "FollowUpQuests": {
+        "count": 85,
+        "pct": 2.9,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "ForceBookOnWrapUp": {
+        "count": 104,
+        "pct": 3.5,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "GroupingName": {
+        "count": 56,
+        "pct": 1.9,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "InternalName": {
+        "count": 2969,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "IsAutoPreface": {
+        "count": 474,
+        "pct": 16.0,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "IsAutoWrapUp": {
+        "count": 539,
+        "pct": 18.2,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "IsCancellable": {
+        "count": 2624,
+        "pct": 88.4,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "IsGuildQuest": {
+        "count": 30,
+        "pct": 1.0,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "Keywords": {
+        "count": 1898,
+        "pct": 63.9,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "Level": {
+        "count": 15,
+        "pct": 0.5,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "MainNpcName": {
+        "count": 46,
+        "pct": 1.5,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "MidwayGiveItems": {
+        "count": 2,
+        "pct": 0.1,
+        "types": [
+          "array<object>"
+        ],
+        "likely_missing": true
+      },
+      "MidwayText": {
+        "count": 146,
+        "pct": 4.9,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Name": {
+        "count": 2969,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "NumExpectedParticipants": {
+        "count": 45,
+        "pct": 1.5,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "Objectives": {
+        "count": 2969,
+        "pct": 100.0,
+        "types": [
+          "array<object>"
+        ],
+        "likely_missing": true
+      },
+      "PreGiveEffects": {
+        "count": 36,
+        "pct": 1.2,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "PreGiveItems": {
+        "count": 43,
+        "pct": 1.4,
+        "types": [
+          "array<object>"
+        ],
+        "likely_missing": true
+      },
+      "PreGiveRecipes": {
+        "count": 22,
+        "pct": 0.7,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "PrefaceText": {
+        "count": 1566,
+        "pct": 52.7,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "PrerequisiteFavorLevel": {
+        "count": 3,
+        "pct": 0.1,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "QuestFailEffects": {
+        "count": 4,
+        "pct": 0.1,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "QuestNpc": {
+        "count": 32,
+        "pct": 1.1,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Requirements": {
+        "count": 2531,
+        "pct": 85.2,
+        "types": [
+          "array<array<object>>",
+          "array<object>",
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "RequirementsToSustain": {
+        "count": 330,
+        "pct": 11.1,
+        "types": [
+          "array<object>",
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "ReuseTime_Days": {
+        "count": 1640,
+        "pct": 55.2,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "ReuseTime_Hours": {
+        "count": 353,
+        "pct": 11.9,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "ReuseTime_Minutes": {
+        "count": 99,
+        "pct": 3.3,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "Reward_Favor": {
+        "count": 883,
+        "pct": 29.7,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "Reward_SkillLevels": {
+        "count": 1,
+        "pct": 0.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Rewards": {
+        "count": 2296,
+        "pct": 77.3,
+        "types": [
+          "array<object>"
+        ],
+        "likely_missing": true
+      },
+      "Rewards_Description": {
+        "count": 7,
+        "pct": 0.2,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Rewards_Effects": {
+        "count": 460,
+        "pct": 15.5,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "Rewards_Favor": {
+        "count": 3,
+        "pct": 0.1,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "Rewards_Items": {
+        "count": 752,
+        "pct": 25.3,
+        "types": [
+          "array<object>"
+        ],
+        "likely_missing": true
+      },
+      "Rewards_NamedLootProfile": {
+        "count": 236,
+        "pct": 7.9,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "SuccessText": {
+        "count": 2899,
+        "pct": 97.6,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "TSysLevel": {
+        "count": 360,
+        "pct": 12.1,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "Version": {
+        "count": 2969,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "WorkOrderSkill": {
+        "count": 1299,
+        "pct": 43.8,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "recipes.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 4424,
+    "total_cdn_fields": 42,
+    "parsed_fields_detected": 20,
+    "missing_count": 28,
+    "likely_truly_missing": 28,
+    "missing_fields": {
+      "ActionLabel": {
+        "count": 2696,
+        "pct": 60.9,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Costs": {
+        "count": 55,
+        "pct": 1.2,
+        "types": [
+          "array<object>"
+        ],
+        "likely_missing": true
+      },
+      "DyeColor": {
+        "count": 73,
+        "pct": 1.7,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "IsItemMenuKeywordReqSufficient": {
+        "count": 113,
+        "pct": 2.6,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "ItemMenuCategory": {
+        "count": 51,
+        "pct": 1.2,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "ItemMenuCategoryLevel": {
+        "count": 55,
+        "pct": 1.2,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "ItemMenuKeywordReq": {
+        "count": 181,
+        "pct": 4.1,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "ItemMenuLabel": {
+        "count": 205,
+        "pct": 4.6,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "LoopParticle": {
+        "count": 268,
+        "pct": 6.1,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "MaxUses": {
+        "count": 91,
+        "pct": 2.1,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "NumResultItems": {
+        "count": 6,
+        "pct": 0.1,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "OtherRequirements": {
+        "count": 73,
+        "pct": 1.7,
+        "types": [
+          "array<object>",
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Particle": {
+        "count": 260,
+        "pct": 5.9,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "RequiredAttributeNonZero": {
+        "count": 1,
+        "pct": 0.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "ResetTimeInSeconds": {
+        "count": 51,
+        "pct": 1.2,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "ResultEffects": {
+        "count": 2616,
+        "pct": 59.1,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "ResultEffectsThatCanFail": {
+        "count": 2,
+        "pct": 0.0,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "RewardAllowBonusXp": {
+        "count": 8,
+        "pct": 0.2,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "RewardSkillXpDropOffLevel": {
+        "count": 3719,
+        "pct": 84.1,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "RewardSkillXpDropOffPct": {
+        "count": 3719,
+        "pct": 84.1,
+        "types": [
+          "number"
+        ],
+        "likely_missing": true
+      },
+      "RewardSkillXpDropOffRate": {
+        "count": 3719,
+        "pct": 84.1,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "SharesResetTimerWith": {
+        "count": 21,
+        "pct": 0.5,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "SortSkill": {
+        "count": 357,
+        "pct": 8.1,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "UsageAnimation": {
+        "count": 2924,
+        "pct": 66.1,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "UsageAnimationEnd": {
+        "count": 2002,
+        "pct": 45.3,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "UsageDelay": {
+        "count": 2915,
+        "pct": 65.9,
+        "types": [
+          "integer",
+          "number"
+        ],
+        "likely_missing": true
+      },
+      "UsageDelayMessage": {
+        "count": 2914,
+        "pct": 65.9,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "ValidationIngredientKeywords": {
+        "count": 21,
+        "pct": 0.5,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "skills.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 182,
+    "total_cdn_fields": 29,
+    "parsed_fields_detected": 9,
+    "missing_count": 23,
+    "likely_truly_missing": 23,
+    "missing_fields": {
+      "ActiveAdvancementTable": {
+        "count": 30,
+        "pct": 16.5,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "AdvancementHints": {
+        "count": 93,
+        "pct": 51.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "AssociatedAppearances": {
+        "count": 8,
+        "pct": 4.4,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "AssociatedItemKeywords": {
+        "count": 14,
+        "pct": 7.7,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "AuxCombat": {
+        "count": 12,
+        "pct": 6.6,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "Combat": {
+        "count": 182,
+        "pct": 100.0,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "DisallowedAppearances": {
+        "count": 1,
+        "pct": 0.5,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "DisallowedItemKeywords": {
+        "count": 2,
+        "pct": 1.1,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "GuestLevelCap": {
+        "count": 182,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "InteractionFlagLevelCaps": {
+        "count": 93,
+        "pct": 51.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "IsFakeCombatSkill": {
+        "count": 13,
+        "pct": 7.1,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "IsUmbrellaSkill": {
+        "count": 5,
+        "pct": 2.7,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "MaxBonusLevels": {
+        "count": 182,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "Parents": {
+        "count": 115,
+        "pct": 63.2,
+        "types": [
+          "array<empty>",
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "PassiveAdvancementTable": {
+        "count": 34,
+        "pct": 18.7,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "ProdigyEnabledInteractionFlag": {
+        "count": 35,
+        "pct": 19.2,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "RecipeIngredientKeywords": {
+        "count": 6,
+        "pct": 3.3,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "Reports": {
+        "count": 10,
+        "pct": 5.5,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "SkillLevelDisparityApplies": {
+        "count": 1,
+        "pct": 0.5,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "SkipBonusLevelsIfSkillUnlearned": {
+        "count": 1,
+        "pct": 0.5,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "TSysCompatibleCombatSkills": {
+        "count": 31,
+        "pct": 17.0,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "XpEarnedAttributes": {
+        "count": 42,
+        "pct": 23.1,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "_RecipeIngredientKeywords": {
+        "count": 1,
+        "pct": 0.5,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "sources_abilities.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 4031,
+    "total_cdn_fields": 1,
+    "parsed_fields_detected": 0,
+    "missing_count": 1,
+    "likely_truly_missing": 1,
+    "missing_fields": {
+      "entries": {
+        "count": 4031,
+        "pct": 100.0,
+        "types": [
+          "array<empty>",
+          "array<object>"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "sources_items.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 9596,
+    "total_cdn_fields": 1,
+    "parsed_fields_detected": 0,
+    "missing_count": 1,
+    "likely_truly_missing": 1,
+    "missing_fields": {
+      "entries": {
+        "count": 9596,
+        "pct": 100.0,
+        "types": [
+          "array<empty>",
+          "array<object>"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "sources_recipes.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 4385,
+    "total_cdn_fields": 1,
+    "parsed_fields_detected": 0,
+    "missing_count": 1,
+    "likely_truly_missing": 1,
+    "missing_fields": {
+      "entries": {
+        "count": 4385,
+        "pct": 100.0,
+        "types": [
+          "array<empty>",
+          "array<object>"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "storagevaults.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 92,
+    "total_cdn_fields": 15,
+    "parsed_fields_detected": 0,
+    "missing_count": 15,
+    "likely_truly_missing": 15,
+    "missing_fields": {
+      "Area": {
+        "count": 92,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "EventLevels": {
+        "count": 1,
+        "pct": 1.1,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "Grouping": {
+        "count": 64,
+        "pct": 69.6,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "HasAssociatedNpc": {
+        "count": 15,
+        "pct": 16.3,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "ID": {
+        "count": 92,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "Levels": {
+        "count": 57,
+        "pct": 62.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "NpcFriendlyName": {
+        "count": 92,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "NumSlots": {
+        "count": 27,
+        "pct": 29.3,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "NumSlotsScriptAtomic": {
+        "count": 2,
+        "pct": 2.2,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "NumSlotsScriptAtomicMaxValue": {
+        "count": 2,
+        "pct": 2.2,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "NumSlotsScriptAtomicMinValue": {
+        "count": 2,
+        "pct": 2.2,
+        "types": [
+          "integer"
+        ],
+        "likely_missing": true
+      },
+      "RequiredItemKeywords": {
+        "count": 18,
+        "pct": 19.6,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "RequirementDescription": {
+        "count": 18,
+        "pct": 19.6,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Requirements": {
+        "count": 11,
+        "pct": 12.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      },
+      "SlotAttribute": {
+        "count": 5,
+        "pct": 5.4,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "tsysclientinfo.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 1946,
+    "total_cdn_fields": 8,
+    "parsed_fields_detected": 0,
+    "missing_count": 8,
+    "likely_truly_missing": 8,
+    "missing_fields": {
+      "InternalName": {
+        "count": 1946,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "IsHiddenFromTransmutation": {
+        "count": 12,
+        "pct": 0.6,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "IsUnavailable": {
+        "count": 19,
+        "pct": 1.0,
+        "types": [
+          "boolean"
+        ],
+        "likely_missing": true
+      },
+      "Prefix": {
+        "count": 320,
+        "pct": 16.4,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Skill": {
+        "count": 1946,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Slots": {
+        "count": 1946,
+        "pct": 100.0,
+        "types": [
+          "array<string>"
+        ],
+        "likely_missing": true
+      },
+      "Suffix": {
+        "count": 906,
+        "pct": 46.6,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "Tiers": {
+        "count": 1946,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "likely_missing": true
+      }
+    }
+  },
+  "tsysprofiles.json": {
+    "status": "FULLY PARSED",
+    "total_entries": 40,
+    "total_cdn_fields": 0,
+    "parsed_fields_detected": 0,
+    "missing_count": 0,
+    "likely_truly_missing": 0,
+    "missing_fields": null
+  },
+  "xptables.json": {
+    "status": "GAPS FOUND",
+    "total_entries": 53,
+    "total_cdn_fields": 2,
+    "parsed_fields_detected": 0,
+    "missing_count": 2,
+    "likely_truly_missing": 2,
+    "missing_fields": {
+      "InternalName": {
+        "count": 53,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "likely_missing": true
+      },
+      "XpAmounts": {
+        "count": 53,
+        "pct": 100.0,
+        "types": [
+          "array<integer>"
+        ],
+        "likely_missing": true
+      }
+    }
+  }
+}

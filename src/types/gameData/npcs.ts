@@ -14,4 +14,11 @@ export interface NpcInfo {
   trains_skills: string[]
   preferences: NpcPreference[]
   item_gifts: string[]
+
+  // Phase 4 typed fields
+  pos: unknown | null
+  services: unknown[] | null
+
+  // Full raw JSON
+  raw_json: Record<string, unknown>
 }

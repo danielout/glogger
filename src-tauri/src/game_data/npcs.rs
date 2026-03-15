@@ -1,21 +1,6 @@
 use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
-
-// ── Raw CDN shapes ────────────────────────────────────────────────────────────
-
-#[allow(dead_code)]
-#[derive(Debug, Deserialize, Clone)]
-pub struct RawNpcPreference {
-    #[serde(flatten)]
-    pub extra: serde_json::Value,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Deserialize, Clone)]
-pub struct RawNpcInfo {
-    #[serde(flatten)]
-    pub extra: serde_json::Value,
-}
+use serde::Serialize;
+use serde_json::Value;
 
 // ── Parsed structs (app shape) ───────────────────────────────────────────────
 
@@ -27,7 +12,7 @@ pub struct NpcPreference {
     pub pref: f32,
 }
 
-#[derive(Debug, Serialize, Clone, Default)]
+#[derive(Debug, Serialize, Clone)]
 pub struct NpcInfo {
     pub key: String,
     pub name: String,
@@ -37,6 +22,13 @@ pub struct NpcInfo {
     pub trains_skills: Vec<String>,
     pub preferences: Vec<NpcPreference>,
     pub item_gifts: Vec<String>,
+
+    // Phase 4 typed fields
+    pub pos: Option<Value>,
+    pub services: Option<Vec<Value>>,
+
+    // Full raw JSON
+    pub raw_json: Value,
 }
 
 // ── Parse function ───────────────────────────────────────────────────────────
@@ -127,6 +119,10 @@ pub fn parse(json: &str) -> Result<HashMap<String, NpcInfo>, String> {
                 .collect())
             .unwrap_or_default();
 
+        let pos = value.get("Pos").cloned();
+        let services = value.get("Services")
+            .and_then(|v| v.as_array().cloned());
+
         npcs.insert(key.clone(), NpcInfo {
             key,
             name,
@@ -136,6 +132,9 @@ pub fn parse(json: &str) -> Result<HashMap<String, NpcInfo>, String> {
             trains_skills,
             preferences,
             item_gifts,
+            pos,
+            services,
+            raw_json: value,
         });
     }
 

@@ -9,7 +9,10 @@ import type {
   RecipeInfo,
   QuestInfo,
   NpcInfo,
+  EffectInfo,
+  PlayerTitleInfo,
   CacheStatus,
+  EntitySources,
 } from "../types/gameData";
 
 export type DataStatus = "loading" | "ready" | "error" | "empty";
@@ -79,8 +82,22 @@ export const useGameDataStore = defineStore("gameData", () => {
     return invoke<ItemInfo | null>("get_item_by_name", { name });
   }
 
-  async function searchItems(query: string, limit = 20): Promise<ItemInfo[]> {
-    return invoke<ItemInfo[]>("search_items", { query, limit });
+  async function searchItems(
+    query: string,
+    limit = 20,
+    filters?: { equipSlot?: string; levelMin?: number; levelMax?: number },
+  ): Promise<ItemInfo[]> {
+    return invoke<ItemInfo[]>("search_items", {
+      query,
+      limit,
+      equipSlot: filters?.equipSlot ?? null,
+      levelMin: filters?.levelMin ?? null,
+      levelMax: filters?.levelMax ?? null,
+    });
+  }
+
+  async function getEquipSlots(): Promise<string[]> {
+    return invoke<string[]>("get_equip_slots");
   }
 
   // ── Skill queries ──────────────────────────────────────────────────────────
@@ -100,6 +117,10 @@ export const useGameDataStore = defineStore("gameData", () => {
   }
 
   // ── Recipe queries ─────────────────────────────────────────────────────────
+
+  async function getRecipeByName(name: string): Promise<RecipeInfo | null> {
+    return invoke<RecipeInfo | null>("get_recipe_by_name", { name });
+  }
 
   async function getRecipesForItem(itemId: number): Promise<RecipeInfo[]> {
     return invoke<RecipeInfo[]>("get_recipes_for_item", { itemId });
@@ -149,6 +170,63 @@ export const useGameDataStore = defineStore("gameData", () => {
     return invoke<NpcInfo[]>("get_npcs_in_area", { area });
   }
 
+  // ── Effect queries ─────────────────────────────────────────────────────────
+
+  async function searchEffects(query: string, limit = 50): Promise<EffectInfo[]> {
+    return invoke<EffectInfo[]>("search_effects", { query, limit });
+  }
+
+  async function getEffect(id: number): Promise<EffectInfo | null> {
+    return invoke<EffectInfo | null>("get_effect", { id });
+  }
+
+  // ── Player Title queries ──────────────────────────────────────────────────
+
+  async function getAllPlayerTitles(): Promise<PlayerTitleInfo[]> {
+    return invoke<PlayerTitleInfo[]>("get_all_player_titles");
+  }
+
+  async function searchPlayerTitles(query: string): Promise<PlayerTitleInfo[]> {
+    return invoke<PlayerTitleInfo[]>("search_player_titles", { query });
+  }
+
+  // ── Source queries ─────────────────────────────────────────────────────────
+
+  async function getAbilitySources(id: number): Promise<EntitySources> {
+    return invoke<EntitySources>("get_ability_sources", { id });
+  }
+
+  async function getItemSources(id: number): Promise<EntitySources> {
+    return invoke<EntitySources>("get_item_sources", { id });
+  }
+
+  async function getRecipeSources(id: number): Promise<EntitySources> {
+    return invoke<EntitySources>("get_recipe_sources", { id });
+  }
+
+  async function getQuestSources(key: string): Promise<EntitySources> {
+    return invoke<EntitySources>("get_quest_sources", { key });
+  }
+
+  // ── Storage vault queries ──────────────────────────────────────────────────
+
+  interface StorageVaultZoneInfo {
+    vault_key: string
+    area_key: string | null
+    area_name: string | null
+    npc_friendly_name: string | null
+    num_slots: number | null
+  }
+
+  const storageVaultZones = ref<StorageVaultZoneInfo[] | null>(null)
+
+  async function getStorageVaultZones(): Promise<StorageVaultZoneInfo[]> {
+    if (storageVaultZones.value) return storageVaultZones.value
+    const zones = await invoke<StorageVaultZoneInfo[]>('get_storage_vault_zones')
+    storageVaultZones.value = zones
+    return zones
+  }
+
   // ── Icon helpers ───────────────────────────────────────────────────────────
 
   /**
@@ -180,9 +258,11 @@ export const useGameDataStore = defineStore("gameData", () => {
     getItem,
     getItemByName,
     searchItems,
+    getEquipSlots,
     getAllSkills,
     getSkillByName,
     getAbilitiesForSkill,
+    getRecipeByName,
     getRecipesForItem,
     getRecipesUsingItem,
     searchRecipes,
@@ -194,6 +274,16 @@ export const useGameDataStore = defineStore("gameData", () => {
     getAllNpcs,
     searchNpcs,
     getNpcsInArea,
+    searchEffects,
+    getEffect,
+    getAllPlayerTitles,
+    searchPlayerTitles,
+    getAbilitySources,
+    getItemSources,
+    getRecipeSources,
+    getQuestSources,
+    getStorageVaultZones,
+    storageVaultZones,
     getIconPath,
   };
 });

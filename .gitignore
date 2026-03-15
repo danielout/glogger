@@ -23,4 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
+# Don't upload our sample data
+docs/samples/
+
 .claude
+CLAUDE.md

@@ -1,0 +1,46 @@
+@theme {
+  /* Dark UI palette */
+  --color-surface-base: #1a1a1a;
+  --color-surface-dark: #111111;
+  --color-surface-card: #222222;
+  --color-surface-elevated: #2a2a2a;
+
+  --color-border-default: #333333;
+  --color-border-light: #444444;
+  --color-border-hover: #555555;
+
+  --color-text-primary: #cccccc;
+  --color-text-secondary: #888888;
+  --color-text-muted: #666666;
+  --color-text-dim: #555555;
+  --color-text-system: #999999;
+
+  --color-accent-gold: #e0c060;
+  --color-accent-blue: #4a90e2;
+  --color-accent-green: #5cb85c;
+  --color-accent-red: #d9534f;
+  --color-accent-warning: #f0ad4e;
+
+  /* Channel colors */
+  --color-channel-global: #ffd700;
+  --color-channel-trade: #66cc66;
+  --color-channel-help: #66aaff;
+  --color-channel-guild: #cc66ff;
+  --color-channel-nearby: #ff9944;
+  --color-channel-status: #66dddd;
+  --color-channel-combat: #ff4444;
+  --color-channel-lfg: #ff66cc;
+  --color-channel-party: #88ff66;
+
+  --color-sender: #66aaff;
+
+  /* Entity type colors */
+  --color-entity-item: #7ec8e3;
+  --color-entity-quest: #e0c060;
+  --color-entity-skill: #5cb85c;
+  --color-entity-npc: #e0965c;
+  --color-entity-ability: #b07ce0;
+  --color-entity-area: #6a9fb5;
+  --color-entity-enemy: #d9534f;
+  --color-entity-recipe: #c8a05c;
+}

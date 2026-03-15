@@ -1,0 +1,6457 @@
+{
+  "abilities.json": {
+    "total_entries": 5877,
+    "structure": "map",
+    "fields": {
+      "AbilityGroup": {
+        "count": 214,
+        "pct": 3.6,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "SporeBomb1",
+          "SporeBomb1"
+        ]
+      },
+      "AbilityGroupName": {
+        "count": 141,
+        "pct": 2.4,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Spore Bomb",
+          "Spore Bomb"
+        ]
+      },
+      "AmmoConsumeChance": {
+        "count": 95,
+        "pct": 1.6,
+        "types": [
+          "integer",
+          "number"
+        ],
+        "samples": [
+          0.05,
+          0.05
+        ]
+      },
+      "AmmoDescription": {
+        "count": 613,
+        "pct": 10.4,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Basic Spore Bomb",
+          "Potent Spore Bomb"
+        ]
+      },
+      "AmmoKeywords": {
+        "count": 613,
+        "pct": 10.4,
+        "types": [
+          "array<object>"
+        ],
+        "samples": [
+          "[{\"Count\": 1, \"ItemKeyword\": \"SporeBomb1\"}]",
+          "[{\"Count\": 1, \"ItemKeyword\": \"SporeBomb2\"}]"
+        ]
+      },
+      "AmmoStickChance": {
+        "count": 267,
+        "pct": 4.5,
+        "types": [
+          "integer",
+          "number"
+        ],
+        "samples": [
+          0.8,
+          0.7
+        ]
+      },
+      "Animation": {
+        "count": 5877,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Attack",
+          "Attack2"
+        ]
+      },
+      "AoEIsCenteredOnCaster": {
+        "count": 28,
+        "pct": 0.5,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          false,
+          false
+        ]
+      },
+      "AttributeThatPreventsDelayLoopAbortOnAttacked": {
+        "count": 44,
+        "pct": 0.7,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "ABILITY_DELAYLOOP_IS_ABORTED_BY_ATTACKS_WEATHERWITCHING",
+          "ABILITY_DELAYLOOP_IS_ABORTED_BY_ATTACKS_WEATHERWITCHING"
+        ]
+      },
+      "AttributesThatDeltaCritChance": {
+        "count": 50,
+        "pct": 0.9,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"ABILITY_CRIT_CHANCE_DELTA_BLITZSHOT\"]",
+          "[\"ABILITY_CRIT_CHANCE_DELTA_BLITZSHOT\"]"
+        ]
+      },
+      "AttributesThatDeltaDelayLoopTime": {
+        "count": 83,
+        "pct": 1.4,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"ABILITY_DELAYLOOP_DELTA_PREMEDITATEDDOOM\"]",
+          "[\"ABILITY_DELAYLOOP_DELTA_PREMEDITATEDDOOM\"]"
+        ]
+      },
+      "AttributesThatDeltaPowerCost": {
+        "count": 4430,
+        "pct": 75.4,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"ABILITY_COST_DELTA\", \"ATTACK_COST_DELTA\", \"COCKATRICEDEBUFF_COST_DELTA\"]",
+          "[\"ABILITY_COST_DELTA\", \"ATTACK_COST_DELTA\", \"LAMIADEBUFF_COST_DELTA\"]"
+        ]
+      },
+      "AttributesThatDeltaResetTime": {
+        "count": 5753,
+        "pct": 97.9,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"ABILITY_RESETTIME_DELTA\"]",
+          "[\"ABILITY_RESETTIME_DELTA\"]"
+        ]
+      },
+      "AttributesThatDeltaWorksWhileStunned": {
+        "count": 65,
+        "pct": 1.1,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"ABILITY_WORKSWHILESTUNNED_DELTA_UNARMEDSTRIKE\"]",
+          "[\"ABILITY_WORKSWHILESTUNNED_DELTA_UNARMEDSTRIKE\"]"
+        ]
+      },
+      "AttributesThatModAmmoConsumeChance": {
+        "count": 25,
+        "pct": 0.4,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"ABILITY_CONSUMECHANCE_MOD_CHEWCUD\"]",
+          "[\"ABILITY_CONSUMECHANCE_MOD_CHEWCUD\"]"
+        ]
+      },
+      "AttributesThatModPowerCost": {
+        "count": 4041,
+        "pct": 68.8,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"UNARMED_COST_MOD\"]",
+          "[\"UNARMED_COST_MOD\"]"
+        ]
+      },
+      "CanBeOnSidebar": {
+        "count": 460,
+        "pct": 7.8,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "CanSuppressMonsterShout": {
+        "count": 303,
+        "pct": 5.2,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "CanTargetUntargetableEnemies": {
+        "count": 9,
+        "pct": 0.2,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "CausesOfDeath": {
+        "count": 5380,
+        "pct": 91.5,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"AttackWildAnimal\"]",
+          "[\"AttackWildAnimal\"]"
+        ]
+      },
+      "CombatRefreshBaseAmount": {
+        "count": 379,
+        "pct": 6.4,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          10,
+          14
+        ]
+      },
+      "ConditionalKeywords": {
+        "count": 922,
+        "pct": 15.7,
+        "types": [
+          "array<object>"
+        ],
+        "samples": [
+          "[{\"Default\": true, \"EffectKeywordMustNotExist\": \"BarrageAoE\", \"Keyword\": \"Melee\"}, {\"EffectKeywordMustExist\": \"BarrageAo...",
+          "[{\"Default\": true, \"EffectKeywordMustNotExist\": \"HipThrowAoE\", \"Keyword\": \"Melee\"}, {\"EffectKeywordMustExist\": \"HipThrow..."
+        ]
+      },
+      "Costs": {
+        "count": 6,
+        "pct": 0.1,
+        "types": [
+          "array<object>"
+        ],
+        "samples": [
+          "[{\"Currency\": \"GuildCredits\", \"Price\": 3}]",
+          "[{\"Currency\": \"GuildCredits\", \"Price\": 1}]"
+        ]
+      },
+      "DamageType": {
+        "count": 5877,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Crushing",
+          "Slashing"
+        ]
+      },
+      "DelayLoopIsAbortedIfAttacked": {
+        "count": 129,
+        "pct": 2.2,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "DelayLoopIsOnlyUsedInCombat": {
+        "count": 39,
+        "pct": 0.7,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "DelayLoopMessage": {
+        "count": 151,
+        "pct": 2.6,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Planting...",
+          "Planting..."
+        ]
+      },
+      "DelayLoopTime": {
+        "count": 162,
+        "pct": 2.8,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          5,
+          5
+        ]
+      },
+      "Description": {
+        "count": 5877,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Crushing Damage",
+          "Slashing Damage"
+        ]
+      },
+      "EffectKeywordReqErrorMessage": {
+        "count": 3,
+        "pct": 0.1,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Can't graffiti here",
+          "Can't graffiti here"
+        ]
+      },
+      "EffectKeywordReqs": {
+        "count": 3,
+        "pct": 0.1,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"GraffitiSpot\"]",
+          "[\"GraffitiSpot\"]"
+        ]
+      },
+      "EffectKeywordsIndicatingEnabled": {
+        "count": 119,
+        "pct": 2.0,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"AnglingMode\"]",
+          "[\"AnglingMode\"]"
+        ]
+      },
+      "ExtraKeywordsForTooltips": {
+        "count": 77,
+        "pct": 1.3,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"SummonDeer\"]",
+          "[\"SummonDeer\"]"
+        ]
+      },
+      "IconID": {
+        "count": 5877,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          2129,
+          2130
+        ]
+      },
+      "IgnoreEffectErrors": {
+        "count": 60,
+        "pct": 1.0,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "InternalAbility": {
+        "count": 244,
+        "pct": 4.2,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "InternalName": {
+        "count": 5877,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "AnimalBite",
+          "AnimalClaw"
+        ]
+      },
+      "InventoryKeywordReqErrorMessage": {
+        "count": 13,
+        "pct": 0.2,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "You need an Angling Pole in your inventory to do that.",
+          "You need an Angling Pole in your inventory to do that."
+        ]
+      },
+      "InventoryKeywordReqs": {
+        "count": 13,
+        "pct": 0.2,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"AnglingPole\"]",
+          "[\"AnglingPole\"]"
+        ]
+      },
+      "IsCosmeticPet": {
+        "count": 42,
+        "pct": 0.7,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "IsHarmless": {
+        "count": 1894,
+        "pct": 32.2,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "IsTimerResetWhenDisabling": {
+        "count": 16,
+        "pct": 0.3,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          false,
+          false
+        ]
+      },
+      "ItemKeywordReqErrorMessage": {
+        "count": 2294,
+        "pct": 39.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "One Hand Must Be Empty",
+          "Both Hands Must Be Empty"
+        ]
+      },
+      "ItemKeywordReqs": {
+        "count": 3602,
+        "pct": 61.3,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"EmptyHand\"]",
+          "[\"Unarmed\"]"
+        ]
+      },
+      "Keywords": {
+        "count": 5741,
+        "pct": 97.7,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"Attack\", \"Melee\", \"NonRageAttack\", \"CrushingAttack\", \"Lint_MonsterAbility\"]",
+          "[\"Attack\", \"Melee\", \"NonRageAttack\", \"SlashingAttack\", \"Lint_MonsterAbility\"]"
+        ]
+      },
+      "Level": {
+        "count": 5877,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          0,
+          0
+        ]
+      },
+      "Name": {
+        "count": 5877,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Bite",
+          "Claw"
+        ]
+      },
+      "PetTypeTagReq": {
+        "count": 216,
+        "pct": 3.7,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "SummonedDeer",
+          "SummonedDeer"
+        ]
+      },
+      "PetTypeTagReqMax": {
+        "count": 216,
+        "pct": 3.7,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          1,
+          1
+        ]
+      },
+      "Prerequisite": {
+        "count": 3692,
+        "pct": 62.8,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Punch",
+          "FrontKick"
+        ]
+      },
+      "Projectile": {
+        "count": 1036,
+        "pct": 17.6,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Projectile_Fireball_NoLight",
+          "Projectile_Darkness"
+        ]
+      },
+      "PvE": {
+        "count": 5877,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"AttributesThatDeltaDamage\": [\"BOOST_ABILITY_NONRAGEATTACK\"], \"AttributesThatModCritDamage\": [\"MOD_CRITICAL_HIT_DAMAGE_...",
+          "{\"AttributesThatDeltaDamage\": [\"BOOST_ABILITY_NONRAGEATTACK\"], \"AttributesThatModCritDamage\": [\"MOD_CRITICAL_HIT_DAMAGE_..."
+        ]
+      },
+      "Rank": {
+        "count": 128,
+        "pct": 2.2,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "1",
+          "2"
+        ]
+      },
+      "ResetTime": {
+        "count": 5877,
+        "pct": 100.0,
+        "types": [
+          "integer",
+          "number"
+        ],
+        "samples": [
+          1.5,
+          1.5
+        ]
+      },
+      "SelfParticle": {
+        "count": 478,
+        "pct": 8.1,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "ElectricityBurst",
+          "DeathExplosion"
+        ]
+      },
+      "SelfPreParticle": {
+        "count": 342,
+        "pct": 5.8,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "FishingRod",
+          "FishingRod"
+        ]
+      },
+      "SharesResetTimerWith": {
+        "count": 3902,
+        "pct": 66.4,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Punch",
+          "FrontKick"
+        ]
+      },
+      "Skill": {
+        "count": 5877,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Unknown",
+          "Unknown"
+        ]
+      },
+      "SpecialCasterRequirements": {
+        "count": 503,
+        "pct": 8.6,
+        "types": [
+          "array<object>",
+          "object"
+        ],
+        "samples": [
+          "[{\"Keyword\": \"NoralaGift_HuntingSpeed1\", \"T\": \"HasEffectKeyword\"}, {\"T\": \"IsNotInCombat\"}]",
+          "[{\"Keyword\": \"NoralaGift_HuntingSpeed2\", \"T\": \"HasEffectKeyword\"}, {\"T\": \"IsNotInCombat\"}]"
+        ]
+      },
+      "SpecialCasterRequirementsErrorMessage": {
+        "count": 369,
+        "pct": 6.3,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "You can't summon skeletons while in combat!",
+          "You can't summon skeletons while in combat!"
+        ]
+      },
+      "SpecialInfo": {
+        "count": 1997,
+        "pct": 34.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Flings opponent backwards",
+          "Stuns opponent"
+        ]
+      },
+      "SpecialTargetingTypeReq": {
+        "count": 32,
+        "pct": 0.5,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          1,
+          1
+        ]
+      },
+      "Target": {
+        "count": 5877,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Enemy",
+          "Enemy"
+        ]
+      },
+      "TargetEffectKeywordReq": {
+        "count": 13,
+        "pct": 0.2,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "MindRevealed",
+          "MindRevealed"
+        ]
+      },
+      "TargetParticle": {
+        "count": 3646,
+        "pct": 62.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Bite",
+          "ClawMarks"
+        ]
+      },
+      "TargetTypeTagReq": {
+        "count": 2,
+        "pct": 0.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "AnatomyType_Arthropods",
+          "AnatomyType_Ungulates"
+        ]
+      },
+      "UpgradeOf": {
+        "count": 3893,
+        "pct": 66.2,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Punch",
+          "FrontKick"
+        ]
+      },
+      "WorksInCombat": {
+        "count": 141,
+        "pct": 2.4,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          false,
+          false
+        ]
+      },
+      "WorksUnderwater": {
+        "count": 1366,
+        "pct": 23.2,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          false,
+          false
+        ]
+      },
+      "WorksWhileFalling": {
+        "count": 1025,
+        "pct": 17.4,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          false,
+          false
+        ]
+      },
+      "WorksWhileMounted": {
+        "count": 14,
+        "pct": 0.2,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "WorksWhileStunned": {
+        "count": 62,
+        "pct": 1.1,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      }
+    }
+  },
+  "abilitydynamicdots.json": {
+    "total_entries": 0,
+    "structure": "top-level is not object",
+    "fields": {}
+  },
+  "abilitydynamicspecialvalues.json": {
+    "total_entries": 0,
+    "structure": "top-level is not object",
+    "fields": {}
+  },
+  "abilitykeywords.json": {
+    "total_entries": 0,
+    "structure": "top-level is not object",
+    "fields": {}
+  },
+  "advancementtables.json": {
+    "total_entries": 440,
+    "structure": "map",
+    "fields": {
+      "Level_01": {
+        "count": 390,
+        "pct": 88.6,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"VULN_CRUSHING\": 0.25, \"VULN_DARKNESS\": -0.5, \"VULN_FIRE\": 0.25, \"VULN_NATURE\": 0.25, \"VULN_POISON\": -0.5, \"VULN_TRAUMA...",
+          "{\"VULN_ACID\": 0.25, \"VULN_CRUSHING\": -0.25, \"VULN_ELECTRICITY\": 0.25, \"VULN_TRAUMA\": -0.25}"
+        ]
+      },
+      "Level_02": {
+        "count": 186,
+        "pct": 42.3,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 3}"
+        ]
+      },
+      "Level_03": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_04": {
+        "count": 193,
+        "pct": 43.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 3}"
+        ]
+      },
+      "Level_05": {
+        "count": 194,
+        "pct": 44.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_06": {
+        "count": 184,
+        "pct": 41.8,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 3}"
+        ]
+      },
+      "Level_07": {
+        "count": 198,
+        "pct": 45.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 2}",
+          "{\"COMBAT_REGEN_HEALTH_DELTA\": 1, \"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_08": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 3}"
+        ]
+      },
+      "Level_09": {
+        "count": 179,
+        "pct": 40.7,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_10": {
+        "count": 223,
+        "pct": 50.7,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 5}",
+          "{\"BOOST_POISON_INDIRECT\": 1}"
+        ]
+      },
+      "Level_100": {
+        "count": 211,
+        "pct": 48.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_POISON_INDIRECT\": 3}",
+          "{\"BOOST_POISON_INDIRECT\": 3}"
+        ]
+      },
+      "Level_101": {
+        "count": 163,
+        "pct": 37.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 1}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_102": {
+        "count": 138,
+        "pct": 31.4,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_103": {
+        "count": 154,
+        "pct": 35.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 1}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_104": {
+        "count": 135,
+        "pct": 30.7,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_105": {
+        "count": 155,
+        "pct": 35.2,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 1}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_106": {
+        "count": 154,
+        "pct": 35.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_107": {
+        "count": 136,
+        "pct": 30.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 1}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_108": {
+        "count": 153,
+        "pct": 34.8,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_109": {
+        "count": 154,
+        "pct": 35.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 1}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_11": {
+        "count": 174,
+        "pct": 39.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_110": {
+        "count": 155,
+        "pct": 35.2,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_111": {
+        "count": 136,
+        "pct": 30.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 1}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_112": {
+        "count": 155,
+        "pct": 35.2,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_113": {
+        "count": 154,
+        "pct": 35.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 1}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_114": {
+        "count": 135,
+        "pct": 30.7,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_115": {
+        "count": 155,
+        "pct": 35.2,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 1}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_116": {
+        "count": 137,
+        "pct": 31.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_117": {
+        "count": 153,
+        "pct": 34.8,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 1}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_118": {
+        "count": 153,
+        "pct": 34.8,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_119": {
+        "count": 137,
+        "pct": 31.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 1}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_12": {
+        "count": 201,
+        "pct": 45.7,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_120": {
+        "count": 155,
+        "pct": 35.2,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_121": {
+        "count": 136,
+        "pct": 30.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 1}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_122": {
+        "count": 155,
+        "pct": 35.2,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_123": {
+        "count": 137,
+        "pct": 31.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 1}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_124": {
+        "count": 152,
+        "pct": 34.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_125": {
+        "count": 155,
+        "pct": 35.2,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 1}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_126": {
+        "count": 105,
+        "pct": 23.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"MAX_RAGE\": 1, \"MOD_CRITICAL_HIT_DAMAGE_NONRAGEATTACK\": 0.01, \"MONSTER_CRIT_CHANCE\": 0.0025}"
+        ]
+      },
+      "Level_127": {
+        "count": 121,
+        "pct": 27.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_128": {
+        "count": 121,
+        "pct": 27.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_129": {
+        "count": 105,
+        "pct": 23.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"MOD_CRITICAL_HIT_DAMAGE_NONRAGEATTACK\": 0.01, \"MONSTER_CRIT_CHANCE\": 0.0025}"
+        ]
+      },
+      "Level_13": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_130": {
+        "count": 123,
+        "pct": 28.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 2}"
+        ]
+      },
+      "Level_131": {
+        "count": 121,
+        "pct": 27.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_132": {
+        "count": 106,
+        "pct": 24.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"MAX_RAGE\": 1, \"MOD_CRITICAL_HIT_DAMAGE_NONRAGEATTACK\": 0.01, \"MONSTER_CRIT_CHANCE\": 0.0025}"
+        ]
+      },
+      "Level_133": {
+        "count": 122,
+        "pct": 27.7,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_134": {
+        "count": 120,
+        "pct": 27.3,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_135": {
+        "count": 123,
+        "pct": 28.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 2}"
+        ]
+      },
+      "Level_136": {
+        "count": 105,
+        "pct": 23.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"MAX_RAGE\": 1, \"MOD_CRITICAL_HIT_DAMAGE_NONRAGEATTACK\": 0.01, \"MONSTER_CRIT_CHANCE\": 0.0025}"
+        ]
+      },
+      "Level_137": {
+        "count": 121,
+        "pct": 27.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_138": {
+        "count": 121,
+        "pct": 27.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_139": {
+        "count": 105,
+        "pct": 23.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"MOD_CRITICAL_HIT_DAMAGE_NONRAGEATTACK\": 0.01, \"MONSTER_CRIT_CHANCE\": 0.0025}"
+        ]
+      },
+      "Level_14": {
+        "count": 193,
+        "pct": 43.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}",
+          "{\"COMBAT_REGEN_HEALTH_DELTA\": 1, \"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_140": {
+        "count": 123,
+        "pct": 28.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 2}"
+        ]
+      },
+      "Level_141": {
+        "count": 121,
+        "pct": 27.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_142": {
+        "count": 123,
+        "pct": 28.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_143": {
+        "count": 122,
+        "pct": 27.7,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_144": {
+        "count": 103,
+        "pct": 23.4,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"MAX_RAGE\": 1, \"MOD_CRITICAL_HIT_DAMAGE_NONRAGEATTACK\": 0.01, \"MONSTER_CRIT_CHANCE\": 0.0025}"
+        ]
+      },
+      "Level_145": {
+        "count": 123,
+        "pct": 28.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 2}"
+        ]
+      },
+      "Level_146": {
+        "count": 105,
+        "pct": 23.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"MAX_RAGE\": 1, \"MOD_CRITICAL_HIT_DAMAGE_NONRAGEATTACK\": 0.01, \"MONSTER_CRIT_CHANCE\": 0.0025}"
+        ]
+      },
+      "Level_147": {
+        "count": 121,
+        "pct": 27.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_148": {
+        "count": 121,
+        "pct": 27.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_149": {
+        "count": 105,
+        "pct": 23.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"MOD_CRITICAL_HIT_DAMAGE_NONRAGEATTACK\": 0.01, \"MONSTER_CRIT_CHANCE\": 0.0025}"
+        ]
+      },
+      "Level_15": {
+        "count": 217,
+        "pct": 49.3,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_POISON_INDIRECT\": 1}",
+          "{\"BOOST_POISON_INDIRECT\": 1}"
+        ]
+      },
+      "Level_150": {
+        "count": 123,
+        "pct": 28.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 2}"
+        ]
+      },
+      "Level_151": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_SKILL_HAMMER\": 1}",
+          "{\"BOOST_SKILL_UNARMED\": 1}"
+        ]
+      },
+      "Level_152": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_153": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_154": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_155": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_156": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_157": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_158": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_159": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_16": {
+        "count": 177,
+        "pct": 40.2,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_160": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_161": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_SKILL_HAMMER\": 1}",
+          "{\"BOOST_SKILL_UNARMED\": 1}"
+        ]
+      },
+      "Level_162": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_163": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_164": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_165": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_166": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_167": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_168": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_169": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_17": {
+        "count": 179,
+        "pct": 40.7,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_170": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_171": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_SKILL_HAMMER\": 1}",
+          "{\"BOOST_SKILL_UNARMED\": 1}"
+        ]
+      },
+      "Level_172": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_173": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_174": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_175": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_176": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_177": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_178": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_179": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_18": {
+        "count": 183,
+        "pct": 41.6,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_180": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_181": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_SKILL_HAMMER\": 1}",
+          "{\"BOOST_SKILL_UNARMED\": 1}"
+        ]
+      },
+      "Level_182": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_183": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_184": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_185": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_186": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_187": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_188": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_189": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_19": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_190": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_191": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_SKILL_HAMMER\": 1}",
+          "{\"BOOST_SKILL_UNARMED\": 1}"
+        ]
+      },
+      "Level_192": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_193": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_194": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_195": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_196": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_197": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_198": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_199": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_20": {
+        "count": 225,
+        "pct": 51.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 5}",
+          "{\"BOOST_POISON_INDIRECT\": 2}"
+        ]
+      },
+      "Level_200": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_201": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_SKILL_HAMMER\": 1}",
+          "{\"BOOST_SKILL_UNARMED\": 1}"
+        ]
+      },
+      "Level_202": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_203": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_204": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_205": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_206": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_207": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_208": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_209": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_21": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 2}",
+          "{\"COMBAT_REGEN_HEALTH_DELTA\": 1, \"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_210": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_211": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_SKILL_HAMMER\": 1}",
+          "{\"BOOST_SKILL_UNARMED\": 1}"
+        ]
+      },
+      "Level_212": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_213": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_214": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_215": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_216": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_217": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_218": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_219": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_22": {
+        "count": 177,
+        "pct": 40.2,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_220": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_221": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_SKILL_HAMMER\": 1}",
+          "{\"BOOST_SKILL_UNARMED\": 1}"
+        ]
+      },
+      "Level_222": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_223": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_224": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_225": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_226": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_227": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_228": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_229": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_23": {
+        "count": 191,
+        "pct": 43.4,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_230": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_231": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_SKILL_HAMMER\": 1}",
+          "{\"BOOST_SKILL_UNARMED\": 1}"
+        ]
+      },
+      "Level_232": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_233": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_234": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_235": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_236": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_237": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_238": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_239": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_24": {
+        "count": 183,
+        "pct": 41.6,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_240": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_241": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_SKILL_HAMMER\": 1}",
+          "{\"BOOST_SKILL_UNARMED\": 1}"
+        ]
+      },
+      "Level_242": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_243": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_244": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_245": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_246": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_247": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.002}"
+        ]
+      },
+      "Level_248": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}",
+          "{\"MOD_UNIVERSAL_DIRECT\": 0.001}"
+        ]
+      },
+      "Level_249": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MOD_SKILL_HAMMER\": 0.01}",
+          "{\"MOD_SKILL_UNARMED\": 0.01}"
+        ]
+      },
+      "Level_25": {
+        "count": 218,
+        "pct": 49.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_POISON_INDIRECT\": 2}",
+          "{\"BOOST_POISON_INDIRECT\": 2}"
+        ]
+      },
+      "Level_250": {
+        "count": 18,
+        "pct": 4.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}",
+          "{\"BOOST_UNIVERSAL_DIRECT\": 1}"
+        ]
+      },
+      "Level_26": {
+        "count": 176,
+        "pct": 40.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_27": {
+        "count": 198,
+        "pct": 45.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_28": {
+        "count": 180,
+        "pct": 40.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}",
+          "{\"COMBAT_REGEN_HEALTH_DELTA\": 1, \"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_29": {
+        "count": 176,
+        "pct": 40.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_30": {
+        "count": 225,
+        "pct": 51.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 5}",
+          "{\"BOOST_POISON_INDIRECT\": 2}"
+        ]
+      },
+      "Level_31": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_32": {
+        "count": 180,
+        "pct": 40.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_33": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_34": {
+        "count": 177,
+        "pct": 40.2,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}"
+        ]
+      },
+      "Level_35": {
+        "count": 221,
+        "pct": 50.2,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_POISON_INDIRECT\": 2}",
+          "{\"BOOST_POISON_INDIRECT\": 2}"
+        ]
+      },
+      "Level_36": {
+        "count": 185,
+        "pct": 42.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}"
+        ]
+      },
+      "Level_37": {
+        "count": 197,
+        "pct": 44.8,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}"
+        ]
+      },
+      "Level_38": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}"
+        ]
+      },
+      "Level_39": {
+        "count": 179,
+        "pct": 40.7,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}"
+        ]
+      },
+      "Level_40": {
+        "count": 226,
+        "pct": 51.4,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 5}",
+          "{\"BOOST_POISON_INDIRECT\": 2}"
+        ]
+      },
+      "Level_41": {
+        "count": 181,
+        "pct": 41.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}"
+        ]
+      },
+      "Level_42": {
+        "count": 204,
+        "pct": 46.4,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}",
+          "{\"COMBAT_REGEN_HEALTH_DELTA\": 1, \"MAX_HEALTH\": 2, \"MAX_POWER\": 1}"
+        ]
+      },
+      "Level_43": {
+        "count": 179,
+        "pct": 40.7,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}"
+        ]
+      },
+      "Level_44": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}"
+        ]
+      },
+      "Level_45": {
+        "count": 220,
+        "pct": 50.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_POISON_INDIRECT\": 2}",
+          "{\"BOOST_POISON_INDIRECT\": 2}"
+        ]
+      },
+      "Level_46": {
+        "count": 175,
+        "pct": 39.8,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}"
+        ]
+      },
+      "Level_47": {
+        "count": 198,
+        "pct": 45.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}"
+        ]
+      },
+      "Level_48": {
+        "count": 185,
+        "pct": 42.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}"
+        ]
+      },
+      "Level_49": {
+        "count": 182,
+        "pct": 41.4,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 1}",
+          "{\"COMBAT_REGEN_HEALTH_DELTA\": 1, \"MAX_HEALTH\": 2, \"MAX_POWER\": 1}"
+        ]
+      },
+      "Level_50": {
+        "count": 228,
+        "pct": 51.8,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 5, \"NUM_INVENTORY_FOLDERS\": 1}",
+          "{\"BOOST_POISON_INDIRECT\": 2}"
+        ]
+      },
+      "Level_51": {
+        "count": 199,
+        "pct": 45.2,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}"
+        ]
+      },
+      "Level_52": {
+        "count": 176,
+        "pct": 40.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2, \"MITIGATION_POISON\": 1}"
+        ]
+      },
+      "Level_53": {
+        "count": 194,
+        "pct": 44.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}"
+        ]
+      },
+      "Level_54": {
+        "count": 184,
+        "pct": 41.8,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_55": {
+        "count": 217,
+        "pct": 49.3,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_POISON_INDIRECT\": 3}",
+          "{\"BOOST_POISON_INDIRECT\": 3}"
+        ]
+      },
+      "Level_56": {
+        "count": 196,
+        "pct": 44.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_57": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 1}",
+          "{\"MAX_HEALTH\": 2, \"MAX_POWER\": 1}"
+        ]
+      },
+      "Level_58": {
+        "count": 193,
+        "pct": 43.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_59": {
+        "count": 194,
+        "pct": 44.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3, \"MAX_POWER\": 1}",
+          "{\"COMBAT_REGEN_HEALTH_DELTA\": 1, \"MAX_HEALTH\": 2, \"MAX_POWER\": 1}"
+        ]
+      },
+      "Level_60": {
+        "count": 217,
+        "pct": 49.3,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_POISON_INDIRECT\": 3}",
+          "{\"BOOST_POISON_INDIRECT\": 3}"
+        ]
+      },
+      "Level_61": {
+        "count": 181,
+        "pct": 41.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_62": {
+        "count": 192,
+        "pct": 43.6,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_63": {
+        "count": 193,
+        "pct": 43.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_64": {
+        "count": 180,
+        "pct": 40.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_65": {
+        "count": 214,
+        "pct": 48.6,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_POISON_INDIRECT\": 3}",
+          "{\"BOOST_POISON_INDIRECT\": 3}"
+        ]
+      },
+      "Level_66": {
+        "count": 184,
+        "pct": 41.8,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_67": {
+        "count": 194,
+        "pct": 44.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_68": {
+        "count": 194,
+        "pct": 44.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_69": {
+        "count": 179,
+        "pct": 40.7,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3}",
+          "{\"COMBAT_REGEN_HEALTH_DELTA\": 1, \"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_70": {
+        "count": 216,
+        "pct": 49.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_POISON_INDIRECT\": 3}",
+          "{\"BOOST_POISON_INDIRECT\": 3}"
+        ]
+      },
+      "Level_71": {
+        "count": 180,
+        "pct": 40.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_72": {
+        "count": 200,
+        "pct": 45.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_73": {
+        "count": 177,
+        "pct": 40.2,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_74": {
+        "count": 194,
+        "pct": 44.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_75": {
+        "count": 216,
+        "pct": 49.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_POISON_INDIRECT\": 3}",
+          "{\"BOOST_POISON_INDIRECT\": 3}"
+        ]
+      },
+      "Level_76": {
+        "count": 176,
+        "pct": 40.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_77": {
+        "count": 194,
+        "pct": 44.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_78": {
+        "count": 200,
+        "pct": 45.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_79": {
+        "count": 177,
+        "pct": 40.2,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3}",
+          "{\"COMBAT_REGEN_HEALTH_DELTA\": 1, \"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_80": {
+        "count": 214,
+        "pct": 48.6,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_POISON_INDIRECT\": 3}",
+          "{\"BOOST_POISON_INDIRECT\": 3}"
+        ]
+      },
+      "Level_81": {
+        "count": 197,
+        "pct": 44.8,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_82": {
+        "count": 175,
+        "pct": 39.8,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_83": {
+        "count": 194,
+        "pct": 44.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_84": {
+        "count": 201,
+        "pct": 45.7,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_85": {
+        "count": 212,
+        "pct": 48.2,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_POISON_INDIRECT\": 3}",
+          "{\"BOOST_POISON_INDIRECT\": 3}"
+        ]
+      },
+      "Level_86": {
+        "count": 176,
+        "pct": 40.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_87": {
+        "count": 195,
+        "pct": 44.3,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_88": {
+        "count": 196,
+        "pct": 44.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_89": {
+        "count": 178,
+        "pct": 40.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3}",
+          "{\"COMBAT_REGEN_HEALTH_DELTA\": 1, \"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_90": {
+        "count": 212,
+        "pct": 48.2,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_POISON_INDIRECT\": 3}",
+          "{\"BOOST_POISON_INDIRECT\": 3}"
+        ]
+      },
+      "Level_91": {
+        "count": 197,
+        "pct": 44.8,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_92": {
+        "count": 191,
+        "pct": 43.4,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_93": {
+        "count": 193,
+        "pct": 43.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_94": {
+        "count": 175,
+        "pct": 39.8,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_95": {
+        "count": 211,
+        "pct": 48.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BOOST_POISON_INDIRECT\": 3}",
+          "{\"BOOST_POISON_INDIRECT\": 3}"
+        ]
+      },
+      "Level_96": {
+        "count": 182,
+        "pct": 41.4,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_97": {
+        "count": 195,
+        "pct": 44.3,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_98": {
+        "count": 194,
+        "pct": 44.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 2}",
+          "{\"MAX_HEALTH\": 2}"
+        ]
+      },
+      "Level_99": {
+        "count": 177,
+        "pct": 40.2,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"MAX_HEALTH\": 3}",
+          "{\"COMBAT_REGEN_HEALTH_DELTA\": 1, \"MAX_HEALTH\": 2}"
+        ]
+      }
+    }
+  },
+  "ai.json": {
+    "total_entries": 441,
+    "structure": "map",
+    "fields": {
+      "Abilities": {
+        "count": 441,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"AcidAuraBall1\": {\"maxLevel\": 20}, \"AcidAuraBall2\": {\"maxLevel\": 40, \"minLevel\": 21}, \"AcidAuraBall3\": {\"maxLevel\": 50,...",
+          "{\"AcidFountainExplode\": {}, \"AcidFountainSplash\": {}}"
+        ]
+      },
+      "Comment": {
+        "count": 40,
+        "pct": 9.1,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Destroyed By Knockback",
+          "Destroyed By Knockback"
+        ]
+      },
+      "Description": {
+        "count": 6,
+        "pct": 1.4,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Poison and Poison Debuff",
+          "Ranged Piercing Debuff and Burst Piercing"
+        ]
+      },
+      "FlyOffset": {
+        "count": 2,
+        "pct": 0.5,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          5,
+          5
+        ]
+      },
+      "Flying": {
+        "count": 51,
+        "pct": 11.6,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "MinDelayBetweenAbilities": {
+        "count": 26,
+        "pct": 5.9,
+        "types": [
+          "integer",
+          "number"
+        ],
+        "samples": [
+          1,
+          10
+        ]
+      },
+      "MobilityType": {
+        "count": 55,
+        "pct": 12.5,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Immobile",
+          "Immobile"
+        ]
+      },
+      "ServerDriven": {
+        "count": 1,
+        "pct": 0.2,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true
+        ]
+      },
+      "Strategy": {
+        "count": 299,
+        "pct": 67.8,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Melee",
+          "Melee"
+        ]
+      },
+      "Swimming": {
+        "count": 83,
+        "pct": 18.8,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "UncontrolledPet": {
+        "count": 25,
+        "pct": 5.7,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "UseAbilitiesWithoutEnemyTarget": {
+        "count": 3,
+        "pct": 0.7,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      }
+    }
+  },
+  "areas.json": {
+    "total_entries": 36,
+    "structure": "map",
+    "fields": {
+      "FriendlyName": {
+        "count": 36,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Player Apartment",
+          "Red Wing Casino"
+        ]
+      },
+      "ShortFriendlyName": {
+        "count": 32,
+        "pct": 88.9,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Home",
+          "Casino"
+        ]
+      }
+    }
+  },
+  "attributes.json": {
+    "total_entries": 2121,
+    "structure": "map",
+    "fields": {
+      "DefaultValue": {
+        "count": 1460,
+        "pct": 68.8,
+        "types": [
+          "integer",
+          "number"
+        ],
+        "samples": [
+          0,
+          0
+        ]
+      },
+      "DisplayRule": {
+        "count": 2121,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "IfNotDefault",
+          "IfNotDefault"
+        ]
+      },
+      "DisplayType": {
+        "count": 2121,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "AsBuffMod",
+          "AsDoubleTimes100"
+        ]
+      },
+      "IconIds": {
+        "count": 1857,
+        "pct": 87.6,
+        "types": [
+          "array<integer>"
+        ],
+        "samples": [
+          "[3934]",
+          "[108]"
+        ]
+      },
+      "IsHidden": {
+        "count": 26,
+        "pct": 1.2,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "Label": {
+        "count": 1914,
+        "pct": 90.2,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Mark Weakness Debuff Boost %",
+          "Chance for Thrown Knives to Stick in Corpse"
+        ]
+      },
+      "Tooltip": {
+        "count": 45,
+        "pct": 2.1,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "When looting a corpse, other corpses within this radius will also be lootable",
+          "When you miraculously avoid death, this is the amount of armor you recover."
+        ]
+      }
+    }
+  },
+  "directedgoals.json": {
+    "total_entries": 0,
+    "structure": "top-level is not object",
+    "fields": {}
+  },
+  "effects.json": {
+    "total_entries": 23056,
+    "structure": "map",
+    "fields": {
+      "AbilityKeywords": {
+        "count": 18749,
+        "pct": 81.3,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"Attack\"]",
+          "[\"Attack\"]"
+        ]
+      },
+      "Desc": {
+        "count": 23056,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "You are covered in lemon juice and it is super sticky! Your movements are hinder...",
+          "You have been blessed with the luck of the lemon!\nYou have an extra 5% chance to..."
+        ]
+      },
+      "DisplayMode": {
+        "count": 23056,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Effect",
+          "Effect"
+        ]
+      },
+      "Duration": {
+        "count": 22974,
+        "pct": 99.6,
+        "types": [
+          "integer",
+          "string"
+        ],
+        "samples": [
+          -2,
+          3600
+        ]
+      },
+      "IconId": {
+        "count": 23056,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          5622,
+          5622
+        ]
+      },
+      "Keywords": {
+        "count": 23056,
+        "pct": 100.0,
+        "types": [
+          "array<empty>",
+          "array<string>"
+        ],
+        "samples": [
+          "[\"Debuff\"]",
+          "[\"Buff\"]"
+        ]
+      },
+      "Name": {
+        "count": 23056,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Sticky!",
+          "Luck of the Legendary Lemon"
+        ]
+      },
+      "Particle": {
+        "count": 1116,
+        "pct": 4.8,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "FloatingGem6",
+          "FloatingGem4"
+        ]
+      },
+      "SpewText": {
+        "count": 16,
+        "pct": 0.1,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "%NAME% feels vulnerable!",
+          "REGENERATION"
+        ]
+      },
+      "StackingPriority": {
+        "count": 1732,
+        "pct": 7.5,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          101,
+          102
+        ]
+      },
+      "StackingType": {
+        "count": 1663,
+        "pct": 7.2,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "WordOfPowerInventory",
+          "WordOfPowerInventory"
+        ]
+      }
+    }
+  },
+  "items.json": {
+    "total_entries": 10714,
+    "structure": "map",
+    "fields": {
+      "AllowInstallInGuildHalls": {
+        "count": 67,
+        "pct": 0.6,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "AllowInstallInHomes": {
+        "count": 67,
+        "pct": 0.6,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "AllowPrefix": {
+        "count": 1160,
+        "pct": 10.8,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          false,
+          false
+        ]
+      },
+      "AllowSuffix": {
+        "count": 475,
+        "pct": 4.4,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          false,
+          false
+        ]
+      },
+      "AttuneOnPickup": {
+        "count": 53,
+        "pct": 0.5,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "Behaviors": {
+        "count": 8041,
+        "pct": 75.1,
+        "types": [
+          "array<object>"
+        ],
+        "samples": [
+          "[{\"UseRequirements\": [\"InWater\"], \"UseVerb\": \"Fill\"}]",
+          "[{\"UseVerb\": \"Empty Bottle\"}, {\"MinStackSizeNeeded\": 2, \"UseVerb\": \"Empty All Bottles\"}]"
+        ]
+      },
+      "BestowAbility": {
+        "count": 537,
+        "pct": 5.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "FoxInABox",
+          "SmallBoxOfSpace"
+        ]
+      },
+      "BestowLoreBook": {
+        "count": 18,
+        "pct": 0.2,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          115,
+          116
+        ]
+      },
+      "BestowQuest": {
+        "count": 1324,
+        "pct": 12.4,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Unknown_StrangeDirt",
+          "Unknown_Antlers"
+        ]
+      },
+      "BestowRecipes": {
+        "count": 683,
+        "pct": 6.4,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"RepairTransmutationDamageAmulite\"]",
+          "[\"AttachRibbonToReins\"]"
+        ]
+      },
+      "BestowTitle": {
+        "count": 552,
+        "pct": 5.2,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          5001,
+          5002
+        ]
+      },
+      "CraftPoints": {
+        "count": 2471,
+        "pct": 23.1,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          100,
+          100
+        ]
+      },
+      "CraftingTargetLevel": {
+        "count": 2469,
+        "pct": 23.0,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          5,
+          15
+        ]
+      },
+      "Description": {
+        "count": 10714,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "There's nothing in this bottle.",
+          "This bottle is full of fertilizer."
+        ]
+      },
+      "DestroyWhenUsedUp": {
+        "count": 42,
+        "pct": 0.4,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          false,
+          false
+        ]
+      },
+      "DroppedAppearance": {
+        "count": 4017,
+        "pct": 37.5,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "LootBottle1",
+          "MilkJug2"
+        ]
+      },
+      "DroppedAppearanceLookup": {
+        "count": 39,
+        "pct": 0.4,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Biscuit",
+          "BreadPlatedDarkSliced"
+        ]
+      },
+      "DyeColor": {
+        "count": 101,
+        "pct": 0.9,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "00BFFF",
+          "FF6347"
+        ]
+      },
+      "DynamicCraftingSummary": {
+        "count": 195,
+        "pct": 1.8,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "This can be used in equipment-crafting recipes to create items that have surviva...",
+          "This can be used in equipment-crafting recipes to create items that have mind-re..."
+        ]
+      },
+      "EffectDescs": {
+        "count": 4333,
+        "pct": 40.4,
+        "types": [
+          "array<empty>",
+          "array<string>"
+        ],
+        "samples": [
+          "[\"Death by iocaine poison\"]",
+          "[\"Suffer severe stomach pain\"]"
+        ]
+      },
+      "EquipAppearance": {
+        "count": 2299,
+        "pct": 21.5,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "@Feet=@eq-{sex}-stalker-feet-01(^Armor=stalker-comp;DyeOrder=CAB%DYE%)",
+          "@Feet=@eq-{sex}-stalker-feet-01(^Armor=stalker-comp;DyeOrder=CAB%DYE%)"
+        ]
+      },
+      "EquipAppearance2": {
+        "count": 1448,
+        "pct": 13.5,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "@Feet=@eq-{sex}2-feet-boots-thigh-01(^Armor={sex}2-feet-boots-thigh-01%DYE%)",
+          "@Feet=@eq-{sex}2-feet-boots-thigh-01(^Armor={sex}2-feet-boots-thigh-01%DYE%)"
+        ]
+      },
+      "EquipSlot": {
+        "count": 2959,
+        "pct": 27.6,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Feet",
+          "Feet"
+        ]
+      },
+      "FoodDesc": {
+        "count": 575,
+        "pct": 5.4,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Level 0 Instant-Snack",
+          "Level 5 Instant-Snack"
+        ]
+      },
+      "IconId": {
+        "count": 10714,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          5009,
+          5092
+        ]
+      },
+      "IgnoreAlreadyKnownBestowals": {
+        "count": 9,
+        "pct": 0.1,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "InternalName": {
+        "count": 10714,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "EmptyBottle",
+          "BottleOfFertilizer"
+        ]
+      },
+      "IsCrafted": {
+        "count": 1093,
+        "pct": 10.2,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "IsSkillReqsDefaults": {
+        "count": 1363,
+        "pct": 12.7,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "IsTemporary": {
+        "count": 5,
+        "pct": 0.0,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "Keywords": {
+        "count": 10699,
+        "pct": 99.9,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"AbilityIngredient\", \"BottledItem\", \"Consumable\", \"CookingIngredient\", \"EmptyBottle\", \"GardeningRelated\"]",
+          "[\"AlchemyIngredient\", \"BottledItem\", \"GardeningRelated\"]"
+        ]
+      },
+      "Lint_VendorNpc": {
+        "count": 1299,
+        "pct": 12.1,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "SerbuleWorkOrderSign",
+          "SerbuleWorkOrderSign"
+        ]
+      },
+      "MacGuffinQuestName": {
+        "count": 230,
+        "pct": 2.1,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "UrsulasCreepyBear",
+          "RitasSoap"
+        ]
+      },
+      "MaxCarryable": {
+        "count": 307,
+        "pct": 2.9,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          1,
+          1
+        ]
+      },
+      "MaxOnVendor": {
+        "count": 109,
+        "pct": 1.0,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          5,
+          5
+        ]
+      },
+      "MaxStackSize": {
+        "count": 10714,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          10,
+          5
+        ]
+      },
+      "MountedAppearance": {
+        "count": 66,
+        "pct": 0.6,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "@Saddle=@eq-horse-saddle-low-0(^Armor=horse-saddle-low%DYE%)",
+          "@Saddle=@eq-horse-saddle-low-0(^Armor=horse-saddle-low%DYE%)"
+        ]
+      },
+      "Name": {
+        "count": 10714,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Empty Bottle",
+          "Bottle of Fertilizer"
+        ]
+      },
+      "NumUses": {
+        "count": 7170,
+        "pct": 66.9,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          1,
+          1
+        ]
+      },
+      "RequiredAppearance": {
+        "count": 261,
+        "pct": 2.4,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Cow",
+          "PotbellyPig"
+        ]
+      },
+      "SelfDestructDuration_Hours": {
+        "count": 5,
+        "pct": 0.0,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          72,
+          72
+        ]
+      },
+      "SkillReqs": {
+        "count": 5877,
+        "pct": 54.9,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"Gardening\": 5}",
+          "{\"Gardening\": 10}"
+        ]
+      },
+      "StockDye": {
+        "count": 1490,
+        "pct": 13.9,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          ";Color1=999933;Color2=888833;Color3=777733",
+          ""
+        ]
+      },
+      "TSysProfile": {
+        "count": 2469,
+        "pct": 23.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Newb",
+          "Newb"
+        ]
+      },
+      "Value": {
+        "count": 10714,
+        "pct": 100.0,
+        "types": [
+          "integer",
+          "number"
+        ],
+        "samples": [
+          10,
+          30
+        ]
+      }
+    }
+  },
+  "itemuses.json": {
+    "total_entries": 1121,
+    "structure": "map",
+    "fields": {
+      "RecipesThatUseItem": {
+        "count": 1121,
+        "pct": 100.0,
+        "types": [
+          "array<integer>"
+        ],
+        "samples": [
+          "[1078, 26017]",
+          "[7032, 7033, 7034]"
+        ]
+      }
+    }
+  },
+  "landmarks.json": {
+    "total_entries": 36,
+    "structure": "map of arrays (sample key: AreaApartment1)",
+    "fields": {}
+  },
+  "lorebookinfo.json": {
+    "total_entries": 1,
+    "structure": "map",
+    "fields": {
+      "Gods": {
+        "count": 1,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"SortTitle\": \"Gods\", \"SubTitle\": \"Gods, Myths, and Legends\", \"Title\": \"The Gods\"}"
+        ]
+      },
+      "GuideProgram": {
+        "count": 1,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"Title\": \"Volunteer Guides\"}"
+        ]
+      },
+      "History": {
+        "count": 1,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"SubTitle\": \"Historical Volumes\", \"Title\": \"History\"}"
+        ]
+      },
+      "Misc": {
+        "count": 1,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"SortTitle\": \"zzzMiscellaneous\", \"Title\": \"Miscellaneous\"}"
+        ]
+      },
+      "NotesAndSigns": {
+        "count": 1,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"Title\": \"Notes and Signs\"}"
+        ]
+      },
+      "Plot": {
+        "count": 1,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"SortTitle\": \"zzzPlot\", \"SubTitle\": \"... and stuff\", \"Title\": \"Plot Books\"}"
+        ]
+      },
+      "Stories": {
+        "count": 1,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"SubTitle\": \"With Debatable Real-World Accuracy\", \"Title\": \"Stories\"}"
+        ]
+      }
+    }
+  },
+  "lorebooks.json": {
+    "total_entries": 64,
+    "structure": "map",
+    "fields": {
+      "Category": {
+        "count": 64,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Stories",
+          "Gods"
+        ]
+      },
+      "InternalName": {
+        "count": 64,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "TheWastedWishes",
+          "ArisetsuAndVol"
+        ]
+      },
+      "IsClientLocal": {
+        "count": 64,
+        "pct": 100.0,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "Keywords": {
+        "count": 64,
+        "pct": 100.0,
+        "types": [
+          "array<empty>",
+          "array<string>"
+        ],
+        "samples": [
+          "[\"AreaSerbule\"]",
+          "[\"AreaGazlukCaves\"]"
+        ]
+      },
+      "LocationHint": {
+        "count": 44,
+        "pct": 68.8,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Found in a house in Serbule",
+          "Found in a cave in Gazluk"
+        ]
+      },
+      "Text": {
+        "count": 52,
+        "pct": 81.2,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "<h1>The Wasted Wishes</h1>\n\n... the creature appeared before her and Leeka quick...",
+          "<h1>Classic Stories: Arisetsu and Vol</h1>\n\n<i>With storytelling tips for beginn..."
+        ]
+      },
+      "Title": {
+        "count": 64,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "The Wasted Wishes",
+          "Classic Stories: Arisetsu and Vol"
+        ]
+      },
+      "Visibility": {
+        "count": 64,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "HiddenUntilFound",
+          "GhostedUntilFound"
+        ]
+      }
+    }
+  },
+  "npcs.json": {
+    "total_entries": 337,
+    "structure": "map",
+    "fields": {
+      "AreaFriendlyName": {
+        "count": 337,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Sun Vale",
+          "Kur Mountains"
+        ]
+      },
+      "AreaName": {
+        "count": 337,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "AreaSunVale",
+          "AreaKurMountains"
+        ]
+      },
+      "Desc": {
+        "count": 337,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "A specialized altar.",
+          "It's inscribed with little etchings of bears."
+        ]
+      },
+      "ItemGifts": {
+        "count": 43,
+        "pct": 12.8,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"CloseFriends\", \"BestFriends\", \"LikeFamily\", \"SoulMates\"]",
+          "[\"Friends\", \"CloseFriends\", \"BestFriends\", \"LikeFamily\", \"SoulMates\"]"
+        ]
+      },
+      "Name": {
+        "count": 337,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Altar",
+          "Sacrificial Bowl"
+        ]
+      },
+      "Pos": {
+        "count": 308,
+        "pct": 91.4,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "x:88.68 y:2.38315 z:172.600006",
+          "x:-723.900024 y:71.419998 z:-399.079987"
+        ]
+      },
+      "Preferences": {
+        "count": 233,
+        "pct": 69.1,
+        "types": [
+          "array<object>"
+        ],
+        "samples": [
+          "[{\"Desire\": \"Love\", \"Keywords\": [\"FairyWing\"], \"Name\": \"Fairy Wings\", \"Pref\": 3.5}, {\"Desire\": \"Love\", \"Keywords\": [\"Clu...",
+          "[{\"Desire\": \"Love\", \"Keywords\": [\"SkillPrereq:Archery\", \"Equipment\", \"Loot\"], \"Name\": \"Magic Equipment with Archery prer..."
+        ]
+      },
+      "Services": {
+        "count": 295,
+        "pct": 87.5,
+        "types": [
+          "array<object>"
+        ],
+        "samples": [
+          "[{\"Favor\": \"Despised\", \"Type\": \"Store\"}, {\"Favor\": \"Despised\", \"Skills\": [\"Unknown\", \"Teleportation\"], \"Type\": \"Training...",
+          "[{\"Favor\": \"Despised\", \"Type\": \"Store\"}]"
+        ]
+      }
+    }
+  },
+  "playertitles.json": {
+    "total_entries": 677,
+    "structure": "map",
+    "fields": {
+      "AccountWide": {
+        "count": 36,
+        "pct": 5.3,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "Keywords": {
+        "count": 565,
+        "pct": 83.5,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"Lint_NotObtainable\"]",
+          "[\"Lint_NotObtainable\"]"
+        ]
+      },
+      "SoulWide": {
+        "count": 34,
+        "pct": 5.0,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "Title": {
+        "count": 677,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "<color=cyan>Game Admin</color>",
+          "<color=white>Content Creator</color>"
+        ]
+      },
+      "Tooltip": {
+        "count": 670,
+        "pct": 99.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Earned by winning both prize packs from the MEGA Raffles.",
+          "Bestowed directly by a Grand Duke (a Kickstarter backer), or via a title-scroll ..."
+        ]
+      }
+    }
+  },
+  "quests.json": {
+    "total_entries": 2969,
+    "structure": "map",
+    "fields": {
+      "CheckRequirementsToSustainOnBestow": {
+        "count": 3,
+        "pct": 0.1,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          false,
+          false
+        ]
+      },
+      "DeleteFromHistoryIfVersionChanged": {
+        "count": 58,
+        "pct": 2.0,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "Description": {
+        "count": 2969,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "(No longer used or given out!)",
+          "Kill 2 fey panthers and return to Kalaba."
+        ]
+      },
+      "DisplayedLocation": {
+        "count": 1223,
+        "pct": 41.2,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Eltibule",
+          "Serbule"
+        ]
+      },
+      "FavorNpc": {
+        "count": 1214,
+        "pct": 40.9,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "AreaSerbule/NPC_Joe",
+          "AreaSerbule/NPC_Joe"
+        ]
+      },
+      "FollowUpQuests": {
+        "count": 85,
+        "pct": 2.9,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"DontForgetTheEgg\"]",
+          "[\"PileOfParasolFlakes\"]"
+        ]
+      },
+      "ForceBookOnWrapUp": {
+        "count": 104,
+        "pct": 3.5,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "GroupingName": {
+        "count": 56,
+        "pct": 1.9,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "CasinoExcursion",
+          "CasinoExcursion"
+        ]
+      },
+      "InternalName": {
+        "count": 2969,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "KillSkeletons",
+          "KillPanthers2"
+        ]
+      },
+      "IsAutoPreface": {
+        "count": 474,
+        "pct": 16.0,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "IsAutoWrapUp": {
+        "count": 539,
+        "pct": 18.2,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "IsCancellable": {
+        "count": 2624,
+        "pct": 88.4,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "IsGuildQuest": {
+        "count": 30,
+        "pct": 1.0,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "Keywords": {
+        "count": 1898,
+        "pct": 63.9,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"ActivityQuest\", \"Lint_RewardOnly\"]",
+          "[\"ActivityQuest\", \"Lint_RewardOnly\"]"
+        ]
+      },
+      "Level": {
+        "count": 15,
+        "pct": 0.5,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          30,
+          30
+        ]
+      },
+      "MainNpcName": {
+        "count": 46,
+        "pct": 1.5,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Franklin Mallus",
+          "Franklin Mallus"
+        ]
+      },
+      "MidwayGiveItems": {
+        "count": 2,
+        "pct": 0.1,
+        "types": [
+          "array<object>"
+        ],
+        "samples": [
+          "[{\"Item\": \"MacGuffin_DwarvenElectricianBook\", \"StackSize\": 1}]",
+          "[{\"Item\": \"MacGuffin_KhyruleksPlanarPlanner3\", \"StackSize\": 1}]"
+        ]
+      },
+      "MidwayText": {
+        "count": 146,
+        "pct": 4.9,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Well hello! What? My hair? Oh that's easy: I use an alchemical potion twice a mo...",
+          "A gift from Rita? Thanks! I guess she had fun at the... what is this, soap?!\n\n....."
+        ]
+      },
+      "Name": {
+        "count": 2969,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Kill Skeletons",
+          "Kill Fey Panthers"
+        ]
+      },
+      "NumExpectedParticipants": {
+        "count": 45,
+        "pct": 1.5,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          10,
+          25
+        ]
+      },
+      "Objectives": {
+        "count": 2969,
+        "pct": 100.0,
+        "types": [
+          "array<object>"
+        ],
+        "samples": [
+          "[{\"Description\": \"Kill Skeletons\", \"Number\": 5, \"Target\": \"Skeleton\", \"Type\": \"Kill\"}, {\"Description\": \"Talk to Rita\", \"...",
+          "[{\"Description\": \"Kill Fey Panthers\", \"Number\": 2, \"Target\": \"FeyPanther\", \"Type\": \"Kill\"}, {\"Description\": \"Talk to Kal..."
+        ]
+      },
+      "PreGiveEffects": {
+        "count": 36,
+        "pct": 1.2,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"DeleteWarCacheMapFog\", \"DeleteWarCacheMapPins\", \"CreateIlmariWarCacheMap(MacGuffin_IlmariWarCacheMap_Scorp1,WarCache_S...",
+          "[\"DeleteWarCacheMapFog\", \"DeleteWarCacheMapPins\", \"CreateIlmariWarCacheMap(MacGuffin_IlmariWarCacheMap_Scorp2,WarCache_S..."
+        ]
+      },
+      "PreGiveItems": {
+        "count": 43,
+        "pct": 1.4,
+        "types": [
+          "array<object>"
+        ],
+        "samples": [
+          "[{\"Item\": \"MacGuffin_HerbalSoap\", \"StackSize\": 1}]",
+          "[{\"Item\": \"MacGuffin_UnrefinedCraniumPowder\", \"StackSize\": 1}]"
+        ]
+      },
+      "PreGiveRecipes": {
+        "count": 22,
+        "pct": 0.7,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"BirdFeed\"]",
+          "[\"RawEggBlend\"]"
+        ]
+      },
+      "PrefaceText": {
+        "count": 1566,
+        "pct": 52.7,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "There's a lot of tigers around here! The sewer system's a mess of poorly-planned...",
+          "I need a pig snout. A really good one. You need to be a pretty good skinner in o..."
+        ]
+      },
+      "PrerequisiteFavorLevel": {
+        "count": 3,
+        "pct": 0.1,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Neutral",
+          "Comfortable"
+        ]
+      },
+      "QuestFailEffects": {
+        "count": 4,
+        "pct": 0.1,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"ClearInteractionFlag(RixiesChallengeTimer1)\", \"RingFailureMessage\"]",
+          "[\"ClearInteractionFlag(RixiesChallengeTimer2)\", \"RingFailureMessage\"]"
+        ]
+      },
+      "QuestNpc": {
+        "count": 32,
+        "pct": 1.1,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "AreaEltibule/NPC_Jesina",
+          "AreaEltibule/NPC_SieAntry"
+        ]
+      },
+      "Requirements": {
+        "count": 2531,
+        "pct": 85.2,
+        "types": [
+          "array<array<object>>",
+          "array<object>",
+          "object"
+        ],
+        "samples": [
+          "[{\"Quest\": \"KillPanthers\", \"T\": \"QuestCompleted\"}]",
+          "[{\"Level\": \"Hated\", \"Npc\": \"AreaSerbule/NPC_Joe\", \"T\": \"MinFavorLevel\"}]"
+        ]
+      },
+      "RequirementsToSustain": {
+        "count": 330,
+        "pct": 11.1,
+        "types": [
+          "array<object>",
+          "object"
+        ],
+        "samples": [
+          "{\"Shape\": \"ScaryBeast\", \"T\": \"GeneralShape\"}",
+          "{\"MoonPhase\": \"FullMoon\", \"T\": \"MoonPhase\"}"
+        ]
+      },
+      "ReuseTime_Days": {
+        "count": 1640,
+        "pct": 55.2,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          30,
+          30
+        ]
+      },
+      "ReuseTime_Hours": {
+        "count": 353,
+        "pct": 11.9,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          22,
+          3
+        ]
+      },
+      "ReuseTime_Minutes": {
+        "count": 99,
+        "pct": 3.3,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          180,
+          0
+        ]
+      },
+      "Reward_Favor": {
+        "count": 883,
+        "pct": 29.7,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          50,
+          100
+        ]
+      },
+      "Reward_SkillLevels": {
+        "count": 1,
+        "pct": 0.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"Bard\": 1}"
+        ]
+      },
+      "Rewards": {
+        "count": 2296,
+        "pct": 77.3,
+        "types": [
+          "array<object>"
+        ],
+        "samples": [
+          "[{\"Skill\": \"Sword\", \"T\": \"SkillXp\", \"Xp\": 100}, {\"Skill\": \"Mycology\", \"T\": \"SkillXp\", \"Xp\": 25}]",
+          "[{\"Skill\": \"Unarmed\", \"T\": \"SkillXp\", \"Xp\": 1000}]"
+        ]
+      },
+      "Rewards_Description": {
+        "count": 7,
+        "pct": 0.2,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Incorporeal Spawn Premonition",
+          "Activation of Device"
+        ]
+      },
+      "Rewards_Effects": {
+        "count": 460,
+        "pct": 15.5,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"HelpMsg_VidariaRenown\", \"DeltaScriptAtomicInt(SerbuleCommunityChestPoints,1)\"]",
+          "[\"HelpMsg_VidariaRenown\", \"DeltaScriptAtomicInt(SerbuleCommunityChestPoints,1)\"]"
+        ]
+      },
+      "Rewards_Favor": {
+        "count": 3,
+        "pct": 0.1,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          50,
+          100
+        ]
+      },
+      "Rewards_Items": {
+        "count": 752,
+        "pct": 25.3,
+        "types": [
+          "array<object>"
+        ],
+        "samples": [
+          "[{\"Item\": \"DiscoverWordOfPower1\", \"StackSize\": 1}, {\"Item\": \"Potato\", \"StackSize\": 5}]",
+          "[{\"Item\": \"RacingReins2\", \"StackSize\": 1}]"
+        ]
+      },
+      "Rewards_NamedLootProfile": {
+        "count": 236,
+        "pct": 7.9,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Racing_Kur",
+          "Racing_Kur"
+        ]
+      },
+      "SuccessText": {
+        "count": 2899,
+        "pct": 97.6,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Great! I mean, these are incredibly disgusting, but great, thanks for doing that...",
+          "Hey, a pig snout! Thank you! It's an ingredient in a rare ink I'm making."
+        ]
+      },
+      "TSysLevel": {
+        "count": 360,
+        "pct": 12.1,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          50,
+          50
+        ]
+      },
+      "Version": {
+        "count": 2969,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          3,
+          1
+        ]
+      },
+      "WorkOrderSkill": {
+        "count": 1299,
+        "pct": 43.8,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Unknown",
+          "Unknown"
+        ]
+      }
+    }
+  },
+  "recipes.json": {
+    "total_entries": 4424,
+    "structure": "map",
+    "fields": {
+      "ActionLabel": {
+        "count": 2696,
+        "pct": 60.9,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Decompose Item",
+          "Decompose Item"
+        ]
+      },
+      "Costs": {
+        "count": 55,
+        "pct": 1.2,
+        "types": [
+          "array<object>"
+        ],
+        "samples": [
+          "[{\"Currency\": \"FaeEnergy\", \"Price\": 7}]",
+          "[{\"Currency\": \"FaeEnergy\", \"Price\": 10}]"
+        ]
+      },
+      "Description": {
+        "count": 4424,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Create basic butter. Bland but buttery. (Requires a stove or fire pit.)",
+          "Grinds orcish wheat into flour, carefully avoiding the toxic bits."
+        ]
+      },
+      "DyeColor": {
+        "count": 73,
+        "pct": 1.7,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "00BFFF",
+          "FF6347"
+        ]
+      },
+      "IconId": {
+        "count": 4424,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          5794,
+          6737
+        ]
+      },
+      "Ingredients": {
+        "count": 4424,
+        "pct": 100.0,
+        "types": [
+          "array<empty>",
+          "array<object>"
+        ],
+        "samples": [
+          "[{\"ItemCode\": 5010, \"StackSize\": 2}, {\"ItemCode\": 5001, \"StackSize\": 1}, {\"ChanceToConsume\": 0.2, \"ItemCode\": 12551, \"St...",
+          "[{\"ChanceToConsume\": 0.03, \"ItemCode\": 4181, \"StackSize\": 1}, {\"ItemCode\": 5332, \"StackSize\": 1}]"
+        ]
+      },
+      "InternalName": {
+        "count": 4424,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Butter",
+          "OrcishFlour"
+        ]
+      },
+      "IsItemMenuKeywordReqSufficient": {
+        "count": 113,
+        "pct": 2.6,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "ItemMenuCategory": {
+        "count": 51,
+        "pct": 1.2,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "TSysExtract",
+          "TSysExtract"
+        ]
+      },
+      "ItemMenuCategoryLevel": {
+        "count": 55,
+        "pct": 1.2,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          1,
+          1
+        ]
+      },
+      "ItemMenuKeywordReq": {
+        "count": 181,
+        "pct": 4.1,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "OrcishWheat",
+          "Equipment"
+        ]
+      },
+      "ItemMenuLabel": {
+        "count": 205,
+        "pct": 4.6,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Grind Flour",
+          "Decompose into Beads"
+        ]
+      },
+      "Keywords": {
+        "count": 3034,
+        "pct": 68.6,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"MealRecipe\"]",
+          "[\"MealRecipe\"]"
+        ]
+      },
+      "LoopParticle": {
+        "count": 268,
+        "pct": 6.1,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "TransmuteLoop(Color=#00FF80,#80FF80)",
+          "TransmuteLoop(Color=#00FFFF,#40FFC4)"
+        ]
+      },
+      "MaxUses": {
+        "count": 91,
+        "pct": 2.1,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          2,
+          4
+        ]
+      },
+      "Name": {
+        "count": 4424,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Butter",
+          "Orcish Flour"
+        ]
+      },
+      "NumResultItems": {
+        "count": 6,
+        "pct": 0.1,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          1,
+          1
+        ]
+      },
+      "OtherRequirements": {
+        "count": 73,
+        "pct": 1.7,
+        "types": [
+          "array<object>",
+          "object"
+        ],
+        "samples": [
+          "{\"T\": \"AlwaysFail\"}",
+          "{\"T\": \"AlwaysFail\"}"
+        ]
+      },
+      "Particle": {
+        "count": 260,
+        "pct": 5.9,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "TransmuteFlash(Color=#00FF80,#80FF80)",
+          "TransmuteFlash(Color=#00FFFF,#40FFC4)"
+        ]
+      },
+      "PrereqRecipe": {
+        "count": 2004,
+        "pct": 45.3,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Arrow5",
+          "Arrow6"
+        ]
+      },
+      "ProtoResultItems": {
+        "count": 1850,
+        "pct": 41.8,
+        "types": [
+          "array<object>"
+        ],
+        "samples": [
+          "[{\"ItemCode\": 56304, \"StackSize\": 1}]",
+          "[{\"ItemCode\": 56305, \"StackSize\": 1}]"
+        ]
+      },
+      "RequiredAttributeNonZero": {
+        "count": 1,
+        "pct": 0.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "ALLOW_SADDLEBAG_TELEPORT"
+        ]
+      },
+      "ResetTimeInSeconds": {
+        "count": 51,
+        "pct": 1.2,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          2700,
+          300
+        ]
+      },
+      "ResultEffects": {
+        "count": 2616,
+        "pct": 59.1,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"DecomposeMainHandItemIntoAugmentResources\"]",
+          "[\"DecomposeOffHandItemIntoAugmentResources\"]"
+        ]
+      },
+      "ResultEffectsThatCanFail": {
+        "count": 2,
+        "pct": 0.0,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"TryToStartStatehelmGraveyardEvent\"]",
+          "[\"TryToStartStatehelmGraveyardEvent\"]"
+        ]
+      },
+      "ResultItems": {
+        "count": 4424,
+        "pct": 100.0,
+        "types": [
+          "array<empty>",
+          "array<object>"
+        ],
+        "samples": [
+          "[{\"ItemCode\": 5011, \"StackSize\": 3}, {\"ItemCode\": 1, \"StackSize\": 2}]",
+          "[{\"ItemCode\": 5334, \"StackSize\": 1}, {\"ItemCode\": 5334, \"PercentChance\": 0.2, \"StackSize\": 1}]"
+        ]
+      },
+      "RewardAllowBonusXp": {
+        "count": 8,
+        "pct": 0.2,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          false,
+          false
+        ]
+      },
+      "RewardSkill": {
+        "count": 4424,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Cheesemaking",
+          "Cooking"
+        ]
+      },
+      "RewardSkillXp": {
+        "count": 4424,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          10,
+          320
+        ]
+      },
+      "RewardSkillXpDropOffLevel": {
+        "count": 3719,
+        "pct": 84.1,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          10,
+          90
+        ]
+      },
+      "RewardSkillXpDropOffPct": {
+        "count": 3719,
+        "pct": 84.1,
+        "types": [
+          "number"
+        ],
+        "samples": [
+          0.1,
+          0.1
+        ]
+      },
+      "RewardSkillXpDropOffRate": {
+        "count": 3719,
+        "pct": 84.1,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          5,
+          5
+        ]
+      },
+      "RewardSkillXpFirstTime": {
+        "count": 4424,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          40,
+          1280
+        ]
+      },
+      "SharesResetTimerWith": {
+        "count": 21,
+        "pct": 0.5,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Augury1",
+          "Augury1"
+        ]
+      },
+      "Skill": {
+        "count": 4424,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Cheesemaking",
+          "Cooking"
+        ]
+      },
+      "SkillLevelReq": {
+        "count": 4424,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          0,
+          80
+        ]
+      },
+      "SortSkill": {
+        "count": 357,
+        "pct": 8.1,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Cooking",
+          "Cooking"
+        ]
+      },
+      "UsageAnimation": {
+        "count": 2924,
+        "pct": 66.1,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "BlacksmithHammering",
+          "BlacksmithHammering"
+        ]
+      },
+      "UsageAnimationEnd": {
+        "count": 2002,
+        "pct": 45.3,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Idle",
+          "Idle"
+        ]
+      },
+      "UsageDelay": {
+        "count": 2915,
+        "pct": 65.9,
+        "types": [
+          "integer",
+          "number"
+        ],
+        "samples": [
+          3,
+          3
+        ]
+      },
+      "UsageDelayMessage": {
+        "count": 2914,
+        "pct": 65.9,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Grinding",
+          "Decomposing Item"
+        ]
+      },
+      "ValidationIngredientKeywords": {
+        "count": 21,
+        "pct": 0.5,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"CookingIngredient\"]",
+          "[\"CookingIngredient\"]"
+        ]
+      }
+    }
+  },
+  "skills.json": {
+    "total_entries": 182,
+    "structure": "map",
+    "fields": {
+      "ActiveAdvancementTable": {
+        "count": 30,
+        "pct": 16.5,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Balanced",
+          "Balanced"
+        ]
+      },
+      "AdvancementHints": {
+        "count": 93,
+        "pct": 51.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"50\": \"To earn more XP in Alchemy, defeat a fabled dragon of yore, or gain favor with Strom Farblood in Statehelm.\", \"6...",
+          "{}"
+        ]
+      },
+      "AssociatedAppearances": {
+        "count": 8,
+        "pct": 4.4,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"Cow\"]",
+          "[\"Deer\"]"
+        ]
+      },
+      "AssociatedItemKeywords": {
+        "count": 14,
+        "pct": 7.7,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"Bow\"]",
+          "[\"BardLute\", \"BardHorn\", \"BardInstrument\"]"
+        ]
+      },
+      "AuxCombat": {
+        "count": 12,
+        "pct": 6.6,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          false
+        ]
+      },
+      "Combat": {
+        "count": 182,
+        "pct": 100.0,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          false,
+          false
+        ]
+      },
+      "Description": {
+        "count": 182,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "The art of combining esoteric things together to make potions and poisons.",
+          "This 'skill' represents your ability to ward off the adverse effects of alcohol...."
+        ]
+      },
+      "DisallowedAppearances": {
+        "count": 1,
+        "pct": 0.5,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"Normal\"]"
+        ]
+      },
+      "DisallowedItemKeywords": {
+        "count": 2,
+        "pct": 1.1,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"HolySymbol\"]",
+          "[\"NecromancyGem\"]"
+        ]
+      },
+      "GuestLevelCap": {
+        "count": 182,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          15,
+          15
+        ]
+      },
+      "HideWhenZero": {
+        "count": 8,
+        "pct": 4.4,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          false,
+          true
+        ]
+      },
+      "Id": {
+        "count": 182,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          34,
+          146
+        ]
+      },
+      "InteractionFlagLevelCaps": {
+        "count": 93,
+        "pct": 51.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"LevelCap_Alchemy_100\": 90, \"LevelCap_Alchemy_60\": 50, \"LevelCap_Alchemy_70\": 60, \"LevelCap_Alchemy_80\": 70, \"LevelCap_...",
+          "{}"
+        ]
+      },
+      "IsFakeCombatSkill": {
+        "count": 13,
+        "pct": 7.1,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "IsUmbrellaSkill": {
+        "count": 5,
+        "pct": 2.7,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "MaxBonusLevels": {
+        "count": 182,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          25,
+          25
+        ]
+      },
+      "Name": {
+        "count": 142,
+        "pct": 78.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Alcohol Tolerance",
+          "Anatomy"
+        ]
+      },
+      "Parents": {
+        "count": 115,
+        "pct": 63.2,
+        "types": [
+          "array<empty>",
+          "array<string>"
+        ],
+        "samples": [
+          "[]",
+          "[\"Anatomy\"]"
+        ]
+      },
+      "PassiveAdvancementTable": {
+        "count": 34,
+        "pct": 18.7,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "ModestPassive",
+          "AlcoholTolerance"
+        ]
+      },
+      "ProdigyEnabledInteractionFlag": {
+        "count": 35,
+        "pct": 19.2,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Prodigy_AnimalHandling",
+          "Prodigy_Archery"
+        ]
+      },
+      "RecipeIngredientKeywords": {
+        "count": 6,
+        "pct": 3.3,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"AlchemyIngredient\"]",
+          "[\"BrewingIngredient\"]"
+        ]
+      },
+      "Reports": {
+        "count": 10,
+        "pct": 5.5,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"1\": \"Check Alcohol Barrels\"}",
+          "{\"1\": \"Map Exploration Stats\"}"
+        ]
+      },
+      "Rewards": {
+        "count": 182,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"10\": {\"Ability\": \"PoisonBlade1\"}, \"15\": {\"BonusToSkill\": \"Mycology\"}, \"20\": {\"Ability\": \"PoisonBlade2\"}, \"25\": {\"Bonus...",
+          "{\"10_Dwarf\": {\"BonusToSkill\": \"Anatomy_Dwarves\"}, \"10_Elf\": {\"BonusToSkill\": \"Anatomy_Elves\"}, \"10_Fae\": {\"BonusToSkill\"..."
+        ]
+      },
+      "SkillLevelDisparityApplies": {
+        "count": 1,
+        "pct": 0.5,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          false
+        ]
+      },
+      "SkipBonusLevelsIfSkillUnlearned": {
+        "count": 1,
+        "pct": 0.5,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          false
+        ]
+      },
+      "TSysCompatibleCombatSkills": {
+        "count": 31,
+        "pct": 17.0,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"Sword\", \"Axe\", \"FireMagic\", \"Staff\", \"Hammer\", \"Druid\", \"IceMagic\", \"Knife\", \"WeatherWitching\", \"Archery\", \"Shield\", \"...",
+          "[\"Sword\", \"Axe\", \"FireMagic\", \"Staff\", \"Hammer\", \"Druid\", \"IceMagic\", \"Knife\", \"WeatherWitching\", \"Archery\", \"Bard\", \"Un..."
+        ]
+      },
+      "XpEarnedAttributes": {
+        "count": 42,
+        "pct": 23.1,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"ANATOMY_XP_EARNED_MOD\"]",
+          "[\"ANATOMY_XP_EARNED_MOD\"]"
+        ]
+      },
+      "XpTable": {
+        "count": 182,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "TypicalNoncombatSkill",
+          "AlcoholTolerance"
+        ]
+      },
+      "_RecipeIngredientKeywords": {
+        "count": 1,
+        "pct": 0.5,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"CookingIngredient\"]"
+        ]
+      }
+    }
+  },
+  "sources_abilities.json": {
+    "total_entries": 4031,
+    "structure": "map",
+    "fields": {
+      "entries": {
+        "count": 4031,
+        "pct": 100.0,
+        "types": [
+          "array<empty>",
+          "array<object>"
+        ],
+        "samples": [
+          "[{\"skill\": \"Unarmed\", \"type\": \"Skill\"}]",
+          "[{\"skill\": \"Unarmed\", \"type\": \"Skill\"}]"
+        ]
+      }
+    }
+  },
+  "sources_items.json": {
+    "total_entries": 9596,
+    "structure": "map",
+    "fields": {
+      "entries": {
+        "count": 9596,
+        "pct": 100.0,
+        "types": [
+          "array<empty>",
+          "array<object>"
+        ],
+        "samples": [
+          "[{\"npc\": \"NPC_SerHackley\", \"type\": \"Barter\"}, {\"npc\": \"NPC_TheFloriculturist\", \"type\": \"Barter\"}, {\"type\": \"Effect\"}, {\"...",
+          "[{\"hangOutId\": 10303, \"npc\": \"NPC_Ivyn\", \"type\": \"HangOut\"}, {\"questId\": 10303, \"type\": \"Quest\"}, {\"recipeId\": 901, \"typ..."
+        ]
+      }
+    }
+  },
+  "sources_recipes.json": {
+    "total_entries": 4385,
+    "structure": "map",
+    "fields": {
+      "entries": {
+        "count": 4385,
+        "pct": 100.0,
+        "types": [
+          "array<empty>",
+          "array<object>"
+        ],
+        "samples": [
+          "[{\"npc\": \"NPC_Braigon\", \"type\": \"Training\"}]",
+          "[{\"type\": \"Effect\"}]"
+        ]
+      }
+    }
+  },
+  "storagevaults.json": {
+    "total_entries": 92,
+    "structure": "map",
+    "fields": {
+      "Area": {
+        "count": 92,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "AreaSunVale",
+          "AreaCasino"
+        ]
+      },
+      "EventLevels": {
+        "count": 1,
+        "pct": 1.1,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"RiShinShrine_Storage1On\": 25, \"RiShinShrine_Storage2On\": 50}"
+        ]
+      },
+      "Grouping": {
+        "count": 64,
+        "pct": 69.6,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "AreaSerbule",
+          "Apartment"
+        ]
+      },
+      "HasAssociatedNpc": {
+        "count": 15,
+        "pct": 16.3,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          false,
+          false
+        ]
+      },
+      "ID": {
+        "count": 92,
+        "pct": 100.0,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          110,
+          111
+        ]
+      },
+      "Levels": {
+        "count": 57,
+        "pct": 62.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"BestFriends\": 28, \"CloseFriends\": 24, \"Comfortable\": 16, \"Despised\": 0, \"Friends\": 20, \"LikeFamily\": 32, \"SoulMates\": ...",
+          "{\"BestFriends\": 32, \"CloseFriends\": 24, \"Comfortable\": 8, \"Despised\": 0, \"Friends\": 16, \"LikeFamily\": 40, \"SoulMates\": 4..."
+        ]
+      },
+      "NpcFriendlyName": {
+        "count": 92,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Animal Town Transfer Chest",
+          "Red Wing Casino Transfer Chest"
+        ]
+      },
+      "NumSlots": {
+        "count": 27,
+        "pct": 29.3,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          0,
+          0
+        ]
+      },
+      "NumSlotsScriptAtomic": {
+        "count": 2,
+        "pct": 2.2,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "SerbuleCommunityChestSize",
+          "StatehelmCommunityChestSize"
+        ]
+      },
+      "NumSlotsScriptAtomicMaxValue": {
+        "count": 2,
+        "pct": 2.2,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          150,
+          150
+        ]
+      },
+      "NumSlotsScriptAtomicMinValue": {
+        "count": 2,
+        "pct": 2.2,
+        "types": [
+          "integer"
+        ],
+        "samples": [
+          1,
+          1
+        ]
+      },
+      "RequiredItemKeywords": {
+        "count": 18,
+        "pct": 19.6,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"Alchemy\", \"AlchemyIngredient\", \"AlchemyRelated\", \"Potion\", \"BottledItem\"]",
+          "[\"Alchemy\", \"Potion\", \"AlchemyIngredient\", \"AlchemyRelated\", \"BottledItem\", \"CheesemakingIngredient\", \"Cheese\", \"Butter\"..."
+        ]
+      },
+      "RequirementDescription": {
+        "count": 18,
+        "pct": 19.6,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Potions and Alchemy Ingredients",
+          "Potions, Alchemy, and Cheesemaking"
+        ]
+      },
+      "Requirements": {
+        "count": 11,
+        "pct": 12.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"Flag\": \"DesertDream\", \"T\": \"ServerRulesFlagSet\"}",
+          "{\"InteractionFlag\": \"Ivyn_Gave_Passcode\", \"T\": \"InteractionFlagSet\"}"
+        ]
+      },
+      "SlotAttribute": {
+        "count": 5,
+        "pct": 5.4,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "MAX_PRIMARY_HOME_VAULT_SIZE",
+          "MAX_CASINO_VAULT_SIZE"
+        ]
+      }
+    }
+  },
+  "tsysclientinfo.json": {
+    "total_entries": 1946,
+    "structure": "map",
+    "fields": {
+      "InternalName": {
+        "count": 1946,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "ArcheryBoost",
+          "ArcheryFlatBoost"
+        ]
+      },
+      "IsHiddenFromTransmutation": {
+        "count": 12,
+        "pct": 0.6,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "IsUnavailable": {
+        "count": 19,
+        "pct": 1.0,
+        "types": [
+          "boolean"
+        ],
+        "samples": [
+          true,
+          true
+        ]
+      },
+      "Prefix": {
+        "count": 320,
+        "pct": 16.4,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Crit-Lover's",
+          "Arrow-Resistant"
+        ]
+      },
+      "Skill": {
+        "count": 1946,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "Archery",
+          "Archery"
+        ]
+      },
+      "Slots": {
+        "count": 1946,
+        "pct": 100.0,
+        "types": [
+          "array<string>"
+        ],
+        "samples": [
+          "[\"Head\", \"OffHand\"]",
+          "[\"Hands\", \"MainHand\"]"
+        ]
+      },
+      "Suffix": {
+        "count": 906,
+        "pct": 46.6,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "of Archery",
+          "of Power Archery"
+        ]
+      },
+      "Tiers": {
+        "count": 1946,
+        "pct": 100.0,
+        "types": [
+          "object"
+        ],
+        "samples": [
+          "{\"id_1\": {\"EffectDescs\": [\"{BOOST_SKILL_ARCHERY}{5}\"], \"MaxLevel\": 30, \"MinLevel\": 10, \"MinRarity\": \"Uncommon\", \"SkillLe...",
+          "{\"id_1\": {\"EffectDescs\": [\"{BOOST_SKILL_ARCHERY}{5}\"], \"MaxLevel\": 20, \"MinLevel\": 5, \"MinRarity\": \"Uncommon\", \"SkillLev..."
+        ]
+      }
+    }
+  },
+  "tsysprofiles.json": {
+    "total_entries": 40,
+    "structure": "map of arrays (sample key: All)",
+    "fields": {}
+  },
+  "xptables.json": {
+    "total_entries": 53,
+    "structure": "map",
+    "fields": {
+      "InternalName": {
+        "count": 53,
+        "pct": 100.0,
+        "types": [
+          "string"
+        ],
+        "samples": [
+          "TypicalCombatSkill",
+          "PetAdvancement"
+        ]
+      },
+      "XpAmounts": {
+        "count": 53,
+        "pct": 100.0,
+        "types": [
+          "array<integer>"
+        ],
+        "samples": [
+          "[10, 17, 38, 61, 102, 138, 198, 242, 321, 384, 482, 548, 675, 775, 938, 1072, 1284, 1474, 1749, 1951, 2304, 2618, 3039, ...",
+          "[8, 13, 30, 48, 81, 110, 158, 193, 256, 307, 385, 438, 540, 620, 750, 857, 1027, 1179, 1399, 1560, 1843, 2094, 2431, 272..."
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,151 @@
+# Startup Flow
+
+## Status: Implemented
+
+## Overview
+
+The app uses a phase-gated startup flow managed by a Pinia state machine (`startupStore`).
+On first launch, a 3-step setup wizard runs. On subsequent launches, the app either auto-loads
+the last character or presents a character picker.
+
+## Startup Phases
+
+```
+First launch:
+  splash → setup-path → setup-watchers → setup-character → loading → ready
+
+Returning user (auto-load enabled):
+  splash → loading → ready
+
+Returning user (auto-load disabled):
+  splash → select-character → loading → ready
+```
+
+Phase transitions are controlled by `startupStore.goToPhase()` and driven by
+`startupStore.initialize()` which reads settings to determine the starting phase.
+
+## First-Time Setup Wizard
+
+### Step 1: Game Folder (`SetupPathStep.vue`)
+- Auto-detects `%AppData%\..\LocalLow\Elder Game\Project Gorgon\` on Windows
+- User can browse or type a path
+- Backend validates the path via `validate_game_data_path` and returns booleans for:
+  - Folder exists
+  - Player.log found
+  - ChatLogs/ found
+  - Reports/ found
+- Green checkmarks shown for each found item
+- "Next" requires the folder to exist
+
+### Step 2: Watchers (`SetupWatchersStep.vue`)
+- Toggle: auto-watch Player.log on startup (default on)
+- Toggle: auto-watch Chat logs on startup (default on)
+- Saves to `autoTailPlayerLog` and `autoTailChat` settings
+
+### Step 3: Character (`SetupCharacterStep.vue`)
+- If Reports/ was found in step 1, scans for `Character_*.json` files via
+  `scan_reports_for_characters` and shows discovered characters as selectable buttons
+- Manual entry: character name + server dropdown (servers from `get_server_list`)
+- Toggle: auto-load last character on startup (default on)
+- "Finish Setup" saves the character to `user_characters`, sets it active, and
+  calls `complete_setup` which sets `setup_completed = true`
+
+## Returning User Flow
+
+### Auto-load (`autoLoadLastCharacter = true`)
+Settings already have `activeCharacterName` and `activeServerName` from last session.
+`initialize()` skips straight to the `loading` phase, runs startup tasks, then enters `ready`.
+
+### Character selection (`autoLoadLastCharacter = false`)
+`initialize()` loads all `user_characters` from the database and shows `CharacterSelect.vue`.
+Users pick from known characters or add a new one manually.
+
+## Settings Fields (settings.rs / settingsStore.ts)
+
+| Field | Type | Default | Purpose |
+|-------|------|---------|---------|
+| `setup_completed` | bool | false | Gates first-time wizard vs normal launch |
+| `active_character_name` | Option<String> | None | Last-used character name |
+| `active_server_name` | Option<String> | None | Last-used server name |
+| `auto_load_last_character` | bool | true | Skip character picker on launch |
+
+## Database: user_characters Table (migration_v2)
+
+```sql
+CREATE TABLE user_characters (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    character_name TEXT NOT NULL,
+    server_name TEXT NOT NULL,
+    source TEXT NOT NULL CHECK (source IN ('report', 'manual', 'login')),
+    is_active BOOLEAN NOT NULL DEFAULT 0,
+    latest_report_time TIMESTAMP,
+    last_login_time TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(character_name, server_name)
+);
+```
+
+The `UNIQUE(character_name, server_name)` constraint handles deduplication across sources.
+If a user manually enters "Zenith/Dreva" and later a report or login is detected for the
+same pair, the row is updated via `ON CONFLICT DO UPDATE` rather than creating a duplicate.
+
+### Sources
+- `report` — discovered from a `Character_*.json` file in the Reports folder
+- `manual` — entered by the user during setup or character selection
+- `login` — detected from Player.log via the coordinator's CharacterLogin event
+
+## Backend Commands (setup_commands.rs)
+
+| Command | Purpose |
+|---------|---------|
+| `validate_game_data_path(path)` | Returns which expected files/folders exist at the path |
+| `scan_reports_for_characters(path)` | Parses Character_*.json files, returns deduplicated character list |
+| `save_user_character(name, server, source)` | Upserts into user_characters |
+| `get_user_characters()` | Returns all characters ordered by active first, then most recent |
+| `set_active_character(name, server)` | Sets one character active, clears others, updates settings |
+| `complete_setup()` | Sets `setup_completed = true` in settings |
+| `get_server_list()` | Returns hardcoded PG server names (Dreva, Arisetsu, Laeth, Miraverre, Strekios) |
+
+## Auto-Registration on Login (coordinator.rs)
+
+When the `PlayerLogWatcher` detects a `CharacterLogin` event, the coordinator:
+1. Upserts the character into `user_characters` with `source='login'`
+2. Updates `active_character_name` in settings
+
+This means characters are automatically discovered as the user plays, without
+requiring manual entry or report imports.
+
+## Active Character Display (MenuBar.vue)
+
+The MenuBar shows the active character name and server on the right side next to the
+settings gear. Character name uses `text-text-primary`, server uses `text-text-muted`.
+
+## Component Structure
+
+```
+src/components/Startup/
+├── StartupSplash.vue        — Splash screen (app name + spinner)
+├── StartupLayout.vue        — Wizard wrapper with step indicators
+├── StartupProgress.vue      — Loading phase task list
+├── SetupPathStep.vue        — Step 1: game folder picker
+├── SetupWatchersStep.vue    — Step 2: auto-watch toggles
+├── SetupCharacterStep.vue   — Step 3: character selection
+├── CharacterSelect.vue      — Returning user character picker
+└── ValidationRow.vue        — Reusable checkmark/x row
+```
+
+## App.vue Integration
+
+`App.vue` renders based on `startupStore.phase`:
+- `splash` → `StartupSplash`
+- `setup-*` → `StartupLayout` wrapping the appropriate step component
+- `select-character` → `CharacterSelect`
+- `loading` → `StartupProgress`
+- `ready` → Main app (MenuBar + view components)
+
+The main app initialization (coordinator polling, event listeners, auto-start watchers)
+only runs when phase transitions to `ready`, via a watcher on `startup.phase`.
+
+CDN game data loading is non-blocking — it runs in the background and does not
+gate the startup flow.

@@ -1,0 +1,414 @@
+/// Tauri commands for inventory report import and querying
+
+use std::collections::HashMap;
+use tauri::State;
+use serde::{Deserialize, Serialize};
+use super::DbPool;
+
+// ── JSON Deserialization Structs (match game's /outputitems format) ───────────
+
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct StorageReport {
+    pub character: String,
+    pub server_name: String,
+    pub timestamp: String,
+    pub report: String,
+    pub report_version: u32,
+    pub items: Vec<StorageItem>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct StorageItem {
+    #[serde(rename = "TypeID")]
+    pub type_id: i64,
+    #[serde(default)]
+    pub storage_vault: String,
+    pub stack_size: i64,
+    pub value: Option<i64>,
+    pub name: String,
+    pub pet_husbandry_state: Option<String>,
+    pub is_in_inventory: Option<bool>,
+    pub is_crafted: Option<bool>,
+    pub crafter: Option<String>,
+    pub rarity: Option<String>,
+    pub slot: Option<String>,
+    pub level: Option<i64>,
+    #[serde(rename = "TSysPowers")]
+    pub tsys_powers: Option<Vec<TsysPower>>,
+    #[serde(rename = "TSysImbuePower")]
+    pub tsys_imbue_power: Option<String>,
+    #[serde(rename = "TSysImbuePowerTier")]
+    pub tsys_imbue_power_tier: Option<i64>,
+    pub durability: Option<f64>,
+    pub craft_points: Option<i64>,
+    pub uses_remaining: Option<i64>,
+    pub transmute_count: Option<i64>,
+    pub attuned_to: Option<String>,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct TsysPower {
+    pub tier: i64,
+    pub power: String,
+}
+
+// ── Command Response Types ───────────────────────────────────────────────────
+
+#[derive(Serialize)]
+pub struct InventoryImportResult {
+    pub character_name: String,
+    pub server_name: String,
+    pub snapshot_timestamp: String,
+    pub items_imported: usize,
+    pub was_duplicate: bool,
+}
+
+#[derive(Serialize)]
+pub struct InventorySnapshotSummary {
+    pub id: i64,
+    pub character_name: String,
+    pub server_name: String,
+    pub snapshot_timestamp: String,
+    pub import_date: String,
+    pub item_count: i64,
+}
+
+#[derive(Serialize)]
+pub struct SnapshotItem {
+    pub id: i64,
+    pub type_id: i64,
+    pub storage_vault: String,
+    pub is_in_inventory: bool,
+    pub stack_size: i64,
+    pub value: Option<i64>,
+    pub item_name: String,
+    pub rarity: Option<String>,
+    pub slot: Option<String>,
+    pub level: Option<i64>,
+    pub is_crafted: bool,
+    pub crafter: Option<String>,
+    pub durability: Option<f64>,
+    pub craft_points: Option<i64>,
+    pub uses_remaining: Option<i64>,
+    pub transmute_count: Option<i64>,
+    pub attuned_to: Option<String>,
+    pub tsys_powers: Option<String>,
+    pub tsys_imbue_power: Option<String>,
+    pub tsys_imbue_power_tier: Option<i64>,
+    pub pet_husbandry_state: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct InventorySummary {
+    pub total_items: i64,
+    pub total_stacks: i64,
+    pub total_value: i64,
+    pub unique_items: i64,
+    pub items_by_vault: HashMap<String, i64>,
+    pub items_by_rarity: HashMap<String, i64>,
+}
+
+// ── Commands ─────────────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn import_inventory_report(
+    db: State<'_, DbPool>,
+    file_path: String,
+) -> Result<InventoryImportResult, String> {
+    import_inventory_report_internal(&db, &file_path)
+}
+
+/// Internal import logic, callable without Tauri State wrapper
+pub fn import_inventory_report_internal(
+    db: &DbPool,
+    file_path: &str,
+) -> Result<InventoryImportResult, String> {
+    // 1. Read file
+    let raw_json = std::fs::read_to_string(file_path)
+        .map_err(|e| format!("Failed to read file: {e}"))?;
+
+    // 2. Deserialize
+    let report: StorageReport = serde_json::from_str(&raw_json)
+        .map_err(|e| format!("Failed to parse inventory report: {e}"))?;
+
+    // 3. Validate report type
+    if report.report != "Storage" {
+        return Err(format!(
+            "Wrong report type: expected \"Storage\", got \"{}\"",
+            report.report
+        ));
+    }
+
+    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+
+    // 4. Begin transaction
+    conn.execute("BEGIN", [])
+        .map_err(|e| format!("Failed to begin transaction: {e}"))?;
+
+    let result = (|| -> Result<InventoryImportResult, String> {
+        // 5. Insert snapshot (skip duplicates)
+        conn.execute(
+            "INSERT INTO character_item_snapshots (character_name, server_name, snapshot_timestamp, raw_json)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(character_name, server_name, snapshot_timestamp) DO NOTHING",
+            rusqlite::params![
+                report.character,
+                report.server_name,
+                report.timestamp,
+                raw_json,
+            ],
+        ).map_err(|e| format!("Failed to insert item snapshot: {e}"))?;
+
+        // 6. Check if insert created a new row
+        let changes = conn.changes();
+        if changes == 0 {
+            return Ok(InventoryImportResult {
+                character_name: report.character.clone(),
+                server_name: report.server_name.clone(),
+                snapshot_timestamp: report.timestamp.clone(),
+                items_imported: 0,
+                was_duplicate: true,
+            });
+        }
+
+        let snapshot_id = conn.last_insert_rowid();
+
+        // 7. Batch insert items
+        let mut item_stmt = conn.prepare(
+            "INSERT INTO character_snapshot_items (
+                item_snapshot_id, type_id, storage_vault, is_in_inventory,
+                stack_size, value, item_name, rarity, slot, level,
+                is_crafted, crafter, durability, craft_points, uses_remaining,
+                transmute_count, attuned_to, tsys_powers, tsys_imbue_power,
+                tsys_imbue_power_tier, pet_husbandry_state
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)"
+        ).map_err(|e| format!("Failed to prepare item insert: {e}"))?;
+
+        for item in &report.items {
+            let is_inv = item.is_in_inventory.unwrap_or(false);
+            let is_crafted = item.is_crafted.unwrap_or(false);
+
+            // Serialize TSysPowers to JSON string if present
+            let tsys_powers_json = item.tsys_powers.as_ref().map(|powers| {
+                serde_json::to_string(powers).unwrap_or_default()
+            });
+
+            item_stmt.execute(rusqlite::params![
+                snapshot_id,
+                item.type_id,
+                item.storage_vault,
+                is_inv,
+                item.stack_size,
+                item.value,
+                item.name,
+                item.rarity,
+                item.slot,
+                item.level,
+                is_crafted,
+                item.crafter,
+                item.durability,
+                item.craft_points,
+                item.uses_remaining,
+                item.transmute_count,
+                item.attuned_to,
+                tsys_powers_json,
+                item.tsys_imbue_power,
+                item.tsys_imbue_power_tier,
+                item.pet_husbandry_state,
+            ]).map_err(|e| format!("Failed to insert item {}: {e}", item.name))?;
+        }
+
+        Ok(InventoryImportResult {
+            character_name: report.character.clone(),
+            server_name: report.server_name.clone(),
+            snapshot_timestamp: report.timestamp.clone(),
+            items_imported: report.items.len(),
+            was_duplicate: false,
+        })
+    })();
+
+    // 8. Commit or rollback
+    match &result {
+        Ok(_) => {
+            conn.execute("COMMIT", [])
+                .map_err(|e| format!("Failed to commit transaction: {e}"))?;
+        }
+        Err(_) => {
+            conn.execute("ROLLBACK", []).ok();
+        }
+    }
+
+    result
+}
+
+#[tauri::command]
+pub fn get_inventory_snapshots(
+    db: State<'_, DbPool>,
+    character_name: String,
+    server_name: Option<String>,
+) -> Result<Vec<InventorySnapshotSummary>, String> {
+    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+
+    let (sql, params): (&str, Vec<Box<dyn rusqlite::types::ToSql>>) = if let Some(ref server) = server_name {
+        (
+            "SELECT cis.id, cis.character_name, cis.server_name, cis.snapshot_timestamp,
+                    datetime(cis.import_date) as import_date,
+                    (SELECT COUNT(*) FROM character_snapshot_items WHERE item_snapshot_id = cis.id) as item_count
+             FROM character_item_snapshots cis
+             WHERE cis.character_name = ?1 AND cis.server_name = ?2
+             ORDER BY cis.snapshot_timestamp DESC",
+            vec![
+                Box::new(character_name.clone()) as Box<dyn rusqlite::types::ToSql>,
+                Box::new(server.clone()),
+            ],
+        )
+    } else {
+        (
+            "SELECT cis.id, cis.character_name, cis.server_name, cis.snapshot_timestamp,
+                    datetime(cis.import_date) as import_date,
+                    (SELECT COUNT(*) FROM character_snapshot_items WHERE item_snapshot_id = cis.id) as item_count
+             FROM character_item_snapshots cis
+             WHERE cis.character_name = ?1
+             ORDER BY cis.snapshot_timestamp DESC",
+            vec![Box::new(character_name.clone()) as Box<dyn rusqlite::types::ToSql>],
+        )
+    };
+
+    let mut stmt = conn.prepare(sql)
+        .map_err(|e| format!("Failed to prepare query: {e}"))?;
+
+    let param_refs: Vec<&dyn rusqlite::types::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+
+    let rows = stmt.query_map(param_refs.as_slice(), |row| {
+        Ok(InventorySnapshotSummary {
+            id: row.get(0)?,
+            character_name: row.get(1)?,
+            server_name: row.get(2)?,
+            snapshot_timestamp: row.get(3)?,
+            import_date: row.get(4)?,
+            item_count: row.get(5)?,
+        })
+    }).map_err(|e| format!("Query failed: {e}"))?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Failed to read results: {e}"))
+}
+
+#[tauri::command]
+pub fn get_snapshot_items(
+    db: State<'_, DbPool>,
+    snapshot_id: i64,
+) -> Result<Vec<SnapshotItem>, String> {
+    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, type_id, storage_vault, is_in_inventory, stack_size, value,
+                item_name, rarity, slot, level, is_crafted, crafter, durability,
+                craft_points, uses_remaining, transmute_count, attuned_to,
+                tsys_powers, tsys_imbue_power, tsys_imbue_power_tier, pet_husbandry_state
+         FROM character_snapshot_items
+         WHERE item_snapshot_id = ?1
+         ORDER BY item_name"
+    ).map_err(|e| format!("Failed to prepare query: {e}"))?;
+
+    let rows = stmt.query_map([snapshot_id], |row| {
+        Ok(SnapshotItem {
+            id: row.get(0)?,
+            type_id: row.get(1)?,
+            storage_vault: row.get(2)?,
+            is_in_inventory: row.get(3)?,
+            stack_size: row.get(4)?,
+            value: row.get(5)?,
+            item_name: row.get(6)?,
+            rarity: row.get(7)?,
+            slot: row.get(8)?,
+            level: row.get(9)?,
+            is_crafted: row.get(10)?,
+            crafter: row.get(11)?,
+            durability: row.get(12)?,
+            craft_points: row.get(13)?,
+            uses_remaining: row.get(14)?,
+            transmute_count: row.get(15)?,
+            attuned_to: row.get(16)?,
+            tsys_powers: row.get(17)?,
+            tsys_imbue_power: row.get(18)?,
+            tsys_imbue_power_tier: row.get(19)?,
+            pet_husbandry_state: row.get(20)?,
+        })
+    }).map_err(|e| format!("Query failed: {e}"))?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Failed to read results: {e}"))
+}
+
+#[tauri::command]
+pub fn get_inventory_summary(
+    db: State<'_, DbPool>,
+    snapshot_id: i64,
+) -> Result<InventorySummary, String> {
+    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+
+    // Get aggregate stats
+    let (total_stacks, total_items, total_value, unique_items): (i64, i64, i64, i64) = conn.query_row(
+        "SELECT COUNT(*), COALESCE(SUM(stack_size), 0),
+                COALESCE(SUM(COALESCE(value, 0) * stack_size), 0),
+                COUNT(DISTINCT type_id)
+         FROM character_snapshot_items
+         WHERE item_snapshot_id = ?1",
+        [snapshot_id],
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+    ).map_err(|e| format!("Failed to query summary: {e}"))?;
+
+    // Items by vault
+    let mut vault_stmt = conn.prepare(
+        "SELECT CASE WHEN is_in_inventory THEN 'Inventory'
+                     WHEN storage_vault = '' THEN 'Unknown'
+                     ELSE storage_vault END as vault,
+                SUM(stack_size)
+         FROM character_snapshot_items
+         WHERE item_snapshot_id = ?1
+         GROUP BY vault
+         ORDER BY vault"
+    ).map_err(|e| format!("Failed to prepare vault query: {e}"))?;
+
+    let mut items_by_vault = HashMap::new();
+    let vault_rows = vault_stmt.query_map([snapshot_id], |row| {
+        Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+    }).map_err(|e| format!("Vault query failed: {e}"))?;
+
+    for row in vault_rows {
+        let (vault, count) = row.map_err(|e| format!("Failed to read vault row: {e}"))?;
+        items_by_vault.insert(vault, count);
+    }
+
+    // Items by rarity
+    let mut rarity_stmt = conn.prepare(
+        "SELECT COALESCE(rarity, 'Common'), SUM(stack_size)
+         FROM character_snapshot_items
+         WHERE item_snapshot_id = ?1
+         GROUP BY COALESCE(rarity, 'Common')
+         ORDER BY COALESCE(rarity, 'Common')"
+    ).map_err(|e| format!("Failed to prepare rarity query: {e}"))?;
+
+    let mut items_by_rarity = HashMap::new();
+    let rarity_rows = rarity_stmt.query_map([snapshot_id], |row| {
+        Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+    }).map_err(|e| format!("Rarity query failed: {e}"))?;
+
+    for row in rarity_rows {
+        let (rarity, count) = row.map_err(|e| format!("Failed to read rarity row: {e}"))?;
+        items_by_rarity.insert(rarity, count);
+    }
+
+    Ok(InventorySummary {
+        total_items,
+        total_stacks,
+        total_value,
+        unique_items,
+        items_by_vault,
+        items_by_rarity,
+    })
+}

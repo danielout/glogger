@@ -1,0 +1,73 @@
+<template>
+  <div class="flex gap-2 items-start mb-2">
+    <img
+      v-if="iconSrc"
+      :src="iconSrc"
+      :alt="recipe.name"
+      class="w-8 h-8 object-contain bg-black/30 border border-border-light rounded shrink-0" />
+    <div class="flex-1">
+      <div class="font-bold text-entity-recipe text-sm mb-0.5">{{ recipe.name }}</div>
+      <div v-if="recipe.skill" class="text-text-muted text-xs">
+        {{ recipe.skill }}<span v-if="recipe.skill_level_req"> · Lv {{ recipe.skill_level_req }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="recipe.description" class="text-text-secondary text-xs leading-relaxed mb-2 italic">
+    {{ recipe.description }}
+  </div>
+
+  <div v-if="recipe.ingredients.length" class="mb-2">
+    <div class="text-text-muted text-[0.65rem] uppercase tracking-wide mb-1">Ingredients</div>
+    <div
+      v-for="(ing, i) in recipe.ingredients"
+      :key="i"
+      class="text-text-secondary text-xs leading-relaxed pl-2 relative before:content-['•'] before:absolute before:left-0"
+    >
+      ×{{ ing.stack_size }}
+      <span v-if="ing.chance_to_consume !== null" class="text-text-muted">
+        ({{ ing.chance_to_consume }}% consumed)
+      </span>
+    </div>
+  </div>
+
+  <div v-if="recipe.result_items.length" class="mb-2">
+    <div class="text-text-muted text-[0.65rem] uppercase tracking-wide mb-1">Results</div>
+    <div
+      v-for="(res, i) in recipe.result_items"
+      :key="i"
+      class="text-accent-green text-xs leading-relaxed pl-2 relative before:content-['•'] before:absolute before:left-0"
+    >
+      ×{{ res.stack_size }}
+      <span v-if="res.percent_chance !== null" class="text-text-muted">
+        ({{ res.percent_chance }}%)
+      </span>
+    </div>
+  </div>
+
+  <div v-if="recipe.reward_skill_xp" class="text-text-muted text-[0.7rem] mt-2 pt-2 border-t border-[#2a2a3e]">
+    {{ recipe.reward_skill ?? recipe.skill }} +{{ recipe.reward_skill_xp }} XP
+    <span v-if="recipe.reward_skill_xp_first_time" class="text-text-dim">
+      (first time: +{{ recipe.reward_skill_xp_first_time }})
+    </span>
+  </div>
+
+  <div v-if="recipe.keywords?.length" class="flex flex-wrap gap-1 mt-2">
+    <span
+      v-for="keyword in recipe.keywords"
+      :key="keyword"
+      class="bg-entity-recipe/10 text-entity-recipe px-1.5 py-0.5 rounded-sm text-[0.65rem] uppercase tracking-wide"
+    >
+      {{ keyword }}
+    </span>
+  </div>
+</template>
+
+<script setup lang="ts">
+import type { RecipeInfo } from "../../../types/gameData";
+
+defineProps<{
+  recipe: RecipeInfo;
+  iconSrc: string | null;
+}>();
+</script>

@@ -1,0 +1,264 @@
+<template>
+  <div class="h-[calc(100vh-130px)] flex flex-col">
+    <!-- Status banner if data not ready -->
+    <div v-if="store.status !== 'ready'" class="p-4 text-sm">
+      <span v-if="store.status === 'loading'" class="text-accent-gold"
+        >⟳ Loading game data…</span
+      >
+      <span v-else-if="store.status === 'error'" class="text-accent-red"
+        >✕ {{ store.errorMessage }}</span
+      >
+    </div>
+
+    <div v-else class="flex gap-4 h-full overflow-hidden">
+      <!-- Left panel: search + results -->
+      <div class="w-75 shrink-0 flex flex-col gap-2 overflow-hidden">
+        <div class="flex items-center gap-2 relative">
+          <input
+            v-model="query"
+            class="input flex-1"
+            placeholder="Search skills…"
+            autofocus />
+          <span v-if="loading" class="text-accent-gold text-sm animate-spin">⟳</span>
+          <span v-else-if="filteredSkills.length" class="text-text-dim text-xs min-w-6 text-right">{{
+            filteredSkills.length
+          }}</span>
+        </div>
+
+        <div v-if="!allSkills.length && !loading" class="text-text-dim text-xs italic py-1">
+          No skills loaded
+        </div>
+
+        <div v-else-if="filteredSkills.length === 0 && query" class="text-text-dim text-xs italic py-1">
+          No skills found for "{{ query }}"
+        </div>
+
+        <ul v-else class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated">
+          <li
+            v-for="skill in filteredSkills"
+            :key="skill.id"
+            class="flex items-baseline gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
+            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === skill.id }"
+            @click="selectSkill(skill)">
+            <span class="text-text-dim text-[0.72rem] min-w-12 shrink-0">#{{ skill.id }}</span>
+            <span class="text-text-primary/75 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ skill.name }}</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Right panel: skill detail -->
+      <div
+        class="flex-1 overflow-y-auto border border-surface-elevated p-4 flex flex-col gap-4"
+        :class="{ 'items-center justify-center': !selected }">
+        <div v-if="!selected" class="text-border-default italic">
+          Select a skill to inspect
+        </div>
+
+        <template v-else>
+          <div class="flex gap-3 items-start">
+            <!-- Icon -->
+            <div class="shrink-0">
+              <img
+                v-if="iconSrc"
+                :src="iconSrc"
+                class="w-12 h-12 [image-rendering:pixelated] border border-border-default"
+                alt="skill icon" />
+              <div v-else-if="iconLoading" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[0.65rem] text-accent-gold animate-spin">
+                ⟳
+              </div>
+              <div v-else-if="selected.icon_id" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[0.65rem] text-text-dim">
+                {{ selected.icon_id }}
+              </div>
+              <div v-else class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[0.65rem] text-border-default">—</div>
+            </div>
+
+            <div class="flex-1 min-w-0">
+              <div class="text-accent-gold text-base font-bold mb-1">{{ selected.name }}</div>
+              <div class="text-xs text-text-dim mb-1">
+                ID: <span class="text-text-secondary font-mono">{{ selected.id }}</span>
+                <template v-if="selected.icon_id">
+                  · Icon:
+                  <span class="text-text-secondary font-mono">{{ selected.icon_id }}</span></template
+                >
+                <template v-if="selected.xp_table">
+                  · XP Table:
+                  <span class="text-text-secondary font-mono">{{ selected.xp_table }}</span></template
+                >
+              </div>
+              <div v-if="selected.description" class="text-xs text-text-secondary italic">
+                {{ selected.description }}
+              </div>
+            </div>
+
+            <button class="bg-transparent border-none text-text-dim cursor-pointer px-1 py-0 text-sm shrink-0 hover:text-accent-red" @click="clearSelection">✕</button>
+          </div>
+
+          <!-- Skill Details -->
+          <div class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Details</div>
+            <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-1.5">
+              <div class="text-xs flex gap-2">
+                <span class="text-text-muted min-w-24">Type:</span>
+                <span class="text-text-secondary">{{ selected.combat ? 'Combat' : 'Non-Combat' }}</span>
+              </div>
+              <div v-if="selected.max_bonus_levels" class="text-xs flex gap-2">
+                <span class="text-text-muted min-w-24">Max Bonus Lvl:</span>
+                <span class="text-text-secondary">{{ selected.max_bonus_levels }}</span>
+              </div>
+              <div v-if="selected.guest_level_cap" class="text-xs flex gap-2">
+                <span class="text-text-muted min-w-24">Guest Cap:</span>
+                <span class="text-text-secondary">{{ selected.guest_level_cap }}</span>
+              </div>
+              <div v-if="selected.advancement_table" class="text-xs flex gap-2">
+                <span class="text-text-muted min-w-24">Advancement:</span>
+                <span class="text-text-secondary font-mono">{{ selected.advancement_table }}</span>
+              </div>
+              <div v-if="selected.parents?.length" class="text-xs flex gap-2">
+                <span class="text-text-muted min-w-24">Parents:</span>
+                <span class="text-text-secondary">{{ selected.parents.join(', ') }}</span>
+              </div>
+              <div v-if="selected.hide_when_zero" class="text-xs flex gap-2">
+                <span class="text-text-muted min-w-24">Hidden at 0:</span>
+                <span class="text-text-secondary">Yes</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Advancement Hints -->
+          <div v-if="selected.advancement_hints && Object.keys(selected.advancement_hints).length" class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Advancement Hints</div>
+            <div class="flex flex-col gap-1">
+              <div
+                v-for="(hint, level) in selected.advancement_hints"
+                :key="level"
+                class="text-xs flex gap-2 px-2 py-0.5 bg-[#151515]">
+                <span class="text-text-muted min-w-14 shrink-0">Lv {{ level }}:</span>
+                <span class="text-text-secondary">{{ hint }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Related Abilities -->
+          <div v-if="relatedAbilities.length" class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Related Abilities ({{ relatedAbilities.length }})</div>
+            <ul class="m-0 p-0 list-none max-h-75 overflow-y-auto border border-surface-dark">
+              <li
+                v-for="ability in relatedAbilities"
+                :key="ability.id"
+                class="text-xs text-text-secondary px-2 py-0.5 flex gap-2 border-b border-[#151515] hover:bg-surface-base">
+                <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ ability.level || 0 }}]</span>
+                <span class="text-[#7ec8e3] flex-1">{{ ability.name }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Keywords -->
+          <div v-if="selected.keywords.length" class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
+            <div class="flex flex-wrap gap-1">
+              <span
+                v-for="kw in selected.keywords"
+                :key="kw"
+                class="text-[0.72rem] px-1.5 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-[#7ec8e3]"
+                :class="{ 'bg-[#1e1a10]! border-[#3a3010]! text-[#887040]!': kw.startsWith('Lint_') }"
+                >{{ kw }}</span
+              >
+            </div>
+          </div>
+
+          <!-- Raw JSON -->
+          <div class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
+            <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, watch } from "vue";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { useGameDataStore } from "../../stores/gameDataStore";
+import type { SkillInfo, AbilityInfo } from "../../types/gameData";
+
+const store = useGameDataStore();
+
+const query = ref("");
+const allSkills = ref<SkillInfo[]>([]);
+const filteredSkills = ref<SkillInfo[]>([]);
+const selected = ref<SkillInfo | null>(null);
+const relatedAbilities = ref<AbilityInfo[]>([]);
+const iconSrc = ref<string | null>(null);
+const iconLoading = ref(false);
+const loading = ref(false);
+
+onMounted(async () => {
+  if (store.status === "ready") {
+    await loadAllSkills();
+  }
+});
+
+watch(() => store.status, async (newStatus) => {
+  if (newStatus === "ready") {
+    await loadAllSkills();
+  }
+});
+
+async function loadAllSkills() {
+  loading.value = true;
+  try {
+    const skills = await store.getAllSkills();
+    allSkills.value = skills.sort((a, b) => a.name.localeCompare(b.name));
+    filteredSkills.value = allSkills.value;
+  } finally {
+    loading.value = false;
+  }
+}
+
+watch(query, (val) => {
+  if (!val.trim()) {
+    filteredSkills.value = allSkills.value;
+    return;
+  }
+  const q = val.toLowerCase();
+  filteredSkills.value = allSkills.value.filter(skill =>
+    skill.name.toLowerCase().includes(q) ||
+    skill.description?.toLowerCase().includes(q)
+  );
+});
+
+async function selectSkill(skill: SkillInfo) {
+  selected.value = skill;
+  iconSrc.value = null;
+  relatedAbilities.value = [];
+
+  // Load icon if present
+  if (skill.icon_id) {
+    iconLoading.value = true;
+    try {
+      const path = await store.getIconPath(skill.icon_id);
+      iconSrc.value = convertFileSrc(path);
+    } catch (e) {
+      console.warn("Icon fetch failed:", e);
+    } finally {
+      iconLoading.value = false;
+    }
+  }
+
+  // Load related abilities
+  try {
+    relatedAbilities.value = await store.getAbilitiesForSkill(skill.name);
+    relatedAbilities.value.sort((a, b) => (a.level || 0) - (b.level || 0));
+  } catch (e) {
+    console.warn("Failed to load abilities:", e);
+  }
+}
+
+function clearSelection() {
+  selected.value = null;
+  iconSrc.value = null;
+  relatedAbilities.value = [];
+}
+</script>

@@ -12,6 +12,9 @@ export type {
   QuestRequirement
 } from './quests'
 export type { NpcPreference, NpcInfo } from './npcs'
+export type { EffectInfo } from './effects'
+export type { PlayerTitleInfo } from './playerTitles'
+export type { SourceEntry, QuestSummary, EntitySources } from './sources'
 
 // CacheStatus lives here since it's not really a game data type
 export interface CacheStatus {

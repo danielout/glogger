@@ -1,39 +1,6 @@
 use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
-use super::parse_string_map;
-
-// ── Raw CDN shapes ────────────────────────────────────────────────────────────
-
-#[allow(dead_code)]
-#[derive(Debug, Deserialize, Clone)]
-pub struct RawSkill {
-    #[serde(rename = "Id")]
-    pub id: u32,
-
-    #[serde(rename = "Name")]
-    pub name: Option<String>,
-
-    #[serde(rename = "Description")]
-    pub description: Option<String>,
-
-    #[serde(rename = "IconId")]
-    pub icon_id: Option<u32>,
-
-    #[serde(rename = "HideWhenZero")]
-    pub hide_when_zero: Option<bool>,
-
-    #[serde(rename = "XpTable")]
-    pub xp_table: Option<String>,
-
-    #[serde(rename = "AdvancementTable")]
-    pub advancement_table: Option<String>,
-
-    #[serde(rename = "Keywords")]
-    pub keywords: Option<Vec<String>>,
-
-    #[serde(rename = "Rewards")]
-    pub rewards: Option<serde_json::Value>,
-}
+use serde::Serialize;
+use serde_json::Value;
 
 // ── Parsed structs (app shape) ───────────────────────────────────────────────
 
@@ -42,10 +9,25 @@ pub struct RawSkill {
 pub struct SkillInfo {
     pub id: u32,
     pub name: String,
+    pub internal_name: String,
     pub description: Option<String>,
     pub icon_id: Option<u32>,
     pub xp_table: Option<String>,
     pub keywords: Vec<String>,
+
+    // Phase 2 typed fields
+    pub combat: Option<bool>,
+    pub max_bonus_levels: Option<u32>,
+    pub parents: Vec<Value>,
+    pub advancement_table: Option<String>,
+    pub guest_level_cap: Option<u32>,
+    pub hide_when_zero: Option<bool>,
+    pub advancement_hints: Option<Value>,
+    pub rewards: Option<Value>,
+    pub reports: Option<Vec<Value>>,
+
+    // Full raw JSON
+    pub raw_json: Value,
 }
 
 // ── Parse function ───────────────────────────────────────────────────────────
@@ -53,23 +35,75 @@ pub struct SkillInfo {
 pub fn parse(json: &str) -> Result<HashMap<u32, SkillInfo>, String> {
     // Skills.json uses skill names as keys (e.g., "Alchemy", "Cooking")
     // Each skill has an "Id" field inside
-    let raw_skills: HashMap<String, RawSkill> = parse_string_map(json, "skills.json")?;
-    eprintln!("skills.json: Parsed {} raw skills", raw_skills.len());
+    let raw: HashMap<String, Value> = serde_json::from_str(json).map_err(|e| {
+        format!("skills.json: parse error at line {}, col {}: {e}", e.line(), e.column())
+    })?;
 
-    let mut skills = HashMap::with_capacity(raw_skills.len());
-    for (skill_name, raw) in raw_skills {
-        let id = raw.id;
+    eprintln!("skills.json: Parsed {} raw skills", raw.len());
+
+    let mut skills = HashMap::with_capacity(raw.len());
+    let mut skipped = 0;
+
+    for (skill_name, value) in raw {
+        let id = match value.get("Id").and_then(|v| v.as_u64()) {
+            Some(id) => id as u32,
+            None => { skipped += 1; continue; }
+        };
+
         skills.insert(id, SkillInfo {
             id,
-            // Prefer the Name field, fall back to the key name
-            name: raw.name.unwrap_or(skill_name),
-            description: raw.description,
-            icon_id: raw.icon_id,
-            xp_table: raw.xp_table,
-            keywords: raw.keywords.unwrap_or_default(),
+            name: str_field(&value, "Name").unwrap_or_else(|| skill_name.clone()),
+            internal_name: skill_name,
+            description: str_field(&value, "Description"),
+            icon_id: u32_field(&value, "IconId"),
+            xp_table: str_field(&value, "XpTable"),
+            keywords: str_array_field(&value, "Keywords"),
+
+            // Phase 2 typed fields
+            combat: bool_field(&value, "Combat"),
+            max_bonus_levels: u32_field(&value, "MaxBonusLevels"),
+            parents: value.get("Parents")
+                .and_then(|v| v.as_array().cloned())
+                .unwrap_or_default(),
+            advancement_table: str_field(&value, "AdvancementTable"),
+            guest_level_cap: u32_field(&value, "GuestLevelCap"),
+            hide_when_zero: bool_field(&value, "HideWhenZero"),
+            advancement_hints: value.get("AdvancementHints").cloned(),
+            rewards: value.get("Rewards").cloned(),
+            reports: value.get("Reports").and_then(|v| v.as_array().cloned()),
+
+            raw_json: value,
         });
     }
 
+    if skipped > 0 {
+        eprintln!("skills.json: Warning: skipped {skipped} entries without valid Id");
+    }
     eprintln!("skills.json: Created {} SkillInfo entries", skills.len());
     Ok(skills)
+}
+
+// ── Field extraction helpers ─────────────────────────────────────────────────
+
+fn str_field(value: &Value, key: &str) -> Option<String> {
+    value.get(key)?.as_str().map(|s| s.to_string())
+}
+
+fn u32_field(value: &Value, key: &str) -> Option<u32> {
+    value.get(key)?.as_u64().map(|n| n as u32)
+}
+
+fn bool_field(value: &Value, key: &str) -> Option<bool> {
+    value.get(key)?.as_bool()
+}
+
+fn str_array_field(value: &Value, key: &str) -> Vec<String> {
+    value.get(key)
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default()
 }

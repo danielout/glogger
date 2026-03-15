@@ -1,28 +1,39 @@
 use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
-use super::parse_string_map;
-
-// ── Raw CDN shapes ────────────────────────────────────────────────────────────
-
-#[allow(dead_code)]
-#[derive(Debug, Deserialize, Clone)]
-pub struct RawAreaInfo {
-    #[serde(flatten)]
-    pub extra: serde_json::Value,
-}
+use serde::Serialize;
+use serde_json::Value;
 
 // ── Parsed structs (app shape) ───────────────────────────────────────────────
 
-#[derive(Debug, Serialize, Clone, Default)]
+#[derive(Debug, Serialize, Clone)]
 pub struct AreaInfo {
-    pub raw: serde_json::Value,
+    pub friendly_name: Option<String>,
+    pub short_friendly_name: Option<String>,
+
+    // Full raw JSON
+    pub raw_json: Value,
 }
 
 // ── Parse function ───────────────────────────────────────────────────────────
 
 pub fn parse(json: &str) -> Result<HashMap<String, AreaInfo>, String> {
-    let raw: HashMap<String, serde_json::Value> = parse_string_map(json, "areas.json")?;
+    let raw: HashMap<String, Value> = serde_json::from_str(json).map_err(|e| {
+        format!("areas.json: parse error at line {}, col {}: {e}", e.line(), e.column())
+    })?;
+
     Ok(raw.into_iter()
-        .map(|(k, v)| (k, AreaInfo { raw: v }))
+        .map(|(key, value)| {
+            let friendly_name = value.get("FriendlyName")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let short_friendly_name = value.get("ShortFriendlyName")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+
+            (key, AreaInfo {
+                friendly_name,
+                short_friendly_name,
+                raw_json: value,
+            })
+        })
         .collect())
 }

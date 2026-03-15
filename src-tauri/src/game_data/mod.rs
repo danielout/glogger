@@ -39,6 +39,13 @@ pub use abilities::AbilityInfo;
 pub use recipes::{RecipeInfo, RecipeIngredient, RecipeResultItem};
 pub use quests::QuestInfo;
 pub use npcs::{NpcInfo, NpcPreference};
+pub use xp_tables::XpTableInfo;
+pub use tsys::TsysClientInfo;
+pub use item_uses::ItemUseInfo;
+pub use areas::AreaInfo;
+pub use effects::EffectInfo;
+pub use player_titles::PlayerTitleInfo;
+pub use sources::{SourceEntry, SourceInfo};
 
 // ── Shared utilities ─────────────────────────────────────────────────────────
 
@@ -127,7 +134,18 @@ pub struct GameData {
     pub recipes_by_skill:      HashMap<String, Vec<u32>>,
     pub recipes_producing_item: HashMap<u32, Vec<u32>>,
     pub recipes_using_item:    HashMap<u32, Vec<u32>>,
+    pub recipe_name_index:     HashMap<String, u32>,
     pub npcs_by_skill:         HashMap<String, Vec<String>>,
+
+    // ── Source cross-reference indices ───────────────────────────────────
+    /// ability key (e.g. "ability_1002") → item IDs that bestow it
+    pub items_bestowing_ability: HashMap<String, Vec<u32>>,
+    /// recipe key string from BestowRecipes → item IDs that bestow it
+    pub items_bestowing_recipe:  HashMap<String, Vec<u32>>,
+    /// quest key → item IDs that bestow it
+    pub items_bestowing_quest:   HashMap<String, Vec<u32>>,
+    /// item key (e.g. "item_12345") → quest keys that reward it
+    pub quests_rewarding_item:   HashMap<String, Vec<String>>,
 }
 
 impl GameData {
@@ -161,7 +179,12 @@ impl GameData {
             recipes_by_skill: HashMap::new(),
             recipes_producing_item: HashMap::new(),
             recipes_using_item: HashMap::new(),
+            recipe_name_index: HashMap::new(),
             npcs_by_skill: HashMap::new(),
+            items_bestowing_ability: HashMap::new(),
+            items_bestowing_recipe: HashMap::new(),
+            items_bestowing_quest: HashMap::new(),
+            quests_rewarding_item: HashMap::new(),
         }
     }
 
@@ -173,6 +196,11 @@ impl GameData {
     pub fn skill_by_name(&self, name: &str) -> Option<&skills::SkillInfo> {
         let id = self.skill_name_index.get(name)?;
         self.skills.get(id)
+    }
+
+    pub fn recipe_by_name(&self, name: &str) -> Option<&recipes::RecipeInfo> {
+        let id = self.recipe_name_index.get(name)?;
+        self.recipes.get(id)
     }
 }
 
@@ -276,13 +304,22 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         .map(|(id, skill)| (skill.name.clone(), *id))
         .collect();
 
+    // Map internal skill names (e.g. "JewelryCrafting") to display names (e.g. "Jewelry Crafting")
+    let skill_internal_to_display: HashMap<String, String> = skills
+        .values()
+        .map(|skill| (skill.internal_name.clone(), skill.name.clone()))
+        .collect();
+
     let mut recipes_by_skill: HashMap<String, Vec<u32>> = HashMap::new();
     let mut recipes_producing_item: HashMap<u32, Vec<u32>> = HashMap::new();
     let mut recipes_using_item: HashMap<u32, Vec<u32>> = HashMap::new();
 
     for (recipe_id, recipe) in &recipes {
         if let Some(skill) = &recipe.skill {
-            recipes_by_skill.entry(skill.clone()).or_default().push(*recipe_id);
+            // Use display name if available, fall back to raw skill name
+            let display_name = skill_internal_to_display.get(skill).cloned()
+                .unwrap_or_else(|| skill.clone());
+            recipes_by_skill.entry(display_name).or_default().push(*recipe_id);
         }
         for item_id in &recipe.result_item_ids {
             recipes_producing_item.entry(*item_id).or_default().push(*recipe_id);
@@ -292,10 +329,48 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         }
     }
 
+    let recipe_name_index: HashMap<String, u32> = recipes
+        .iter()
+        .map(|(id, recipe)| (recipe.name.clone(), *id))
+        .collect();
+
     let mut npcs_by_skill: HashMap<String, Vec<String>> = HashMap::new();
     for (npc_key, npc) in &npcs {
         for skill in &npc.trains_skills {
             npcs_by_skill.entry(skill.clone()).or_default().push(npc_key.clone());
+        }
+    }
+
+    // Build source cross-reference indices
+    let mut items_bestowing_ability: HashMap<String, Vec<u32>> = HashMap::new();
+    let mut items_bestowing_recipe: HashMap<String, Vec<u32>> = HashMap::new();
+    let mut items_bestowing_quest: HashMap<String, Vec<u32>> = HashMap::new();
+
+    for (item_id, item) in &items {
+        if let Some(ref ability_key) = item.bestow_ability {
+            items_bestowing_ability.entry(ability_key.clone()).or_default().push(*item_id);
+        }
+        if let Some(ref quest_key) = item.bestow_quest {
+            items_bestowing_quest.entry(quest_key.clone()).or_default().push(*item_id);
+        }
+        if let Some(ref bestow_recipes) = item.bestow_recipes {
+            for recipe_val in bestow_recipes {
+                // BestowRecipes entries can be strings like "recipe_1234"
+                if let Some(recipe_key) = recipe_val.as_str() {
+                    items_bestowing_recipe.entry(recipe_key.to_string()).or_default().push(*item_id);
+                }
+            }
+        }
+    }
+
+    let mut quests_rewarding_item: HashMap<String, Vec<String>> = HashMap::new();
+    for (quest_key, quest) in &quests {
+        if let Some(reward_items) = quest.raw.get("Rewards_Items").and_then(|v| v.as_array()) {
+            for reward in reward_items {
+                if let Some(item_key) = reward.get("Item").and_then(|v| v.as_str()) {
+                    quests_rewarding_item.entry(item_key.to_string()).or_default().push(quest_key.clone());
+                }
+            }
         }
     }
 
@@ -328,6 +403,11 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         recipes_by_skill,
         recipes_producing_item,
         recipes_using_item,
+        recipe_name_index,
         npcs_by_skill,
+        items_bestowing_ability,
+        items_bestowing_recipe,
+        items_bestowing_quest,
+        quests_rewarding_item,
     })
 }
