@@ -64,6 +64,27 @@
         </p>
       </div>
     </div>
+
+    <div class="settings-section">
+      <h3>Crafting</h3>
+
+      <div>
+        <label class="flex items-center gap-2 cursor-pointer text-text-primary">
+          <input
+            type="checkbox"
+            v-model="excludeMaxEnchanted"
+            @change="handleExcludeMaxEnchantedToggle"
+            class="size-5 cursor-pointer" />
+          <span>Exclude "Max-Enchanted" recipes from automated selection</span>
+        </label>
+        <p class="mt-2 text-text-muted text-xs leading-relaxed">
+          When enabled, Max-Enchanted recipe variants are excluded from the leveling optimizer,
+          work order matching, and intermediate craft resolution. These recipes use extremely rare
+          ingredients and are unlikely choices for leveling or work orders. You can still add them
+          to projects manually.
+        </p>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -76,6 +97,7 @@ const settingsStore = useSettingsStore();
 const localGameDataPath = ref(settingsStore.settings.gameDataPath);
 const autoTailChat = ref(settingsStore.settings.autoTailChat);
 const autoTailPlayerLog = ref(settingsStore.settings.autoTailPlayerLog);
+const excludeMaxEnchanted = ref(settingsStore.settings.excludeMaxEnchantedRecipes);
 
 watch(
   () => settingsStore.settings.gameDataPath,
@@ -92,6 +114,11 @@ watch(
 watch(
   () => settingsStore.settings.autoTailPlayerLog,
   (val) => { autoTailPlayerLog.value = val; }
+);
+
+watch(
+  () => settingsStore.settings.excludeMaxEnchantedRecipes,
+  (val) => { excludeMaxEnchanted.value = val; }
 );
 
 async function browseGameDataFolder() {
@@ -120,5 +147,9 @@ function handleAutoTailChatToggle() {
 
 function handleAutoTailPlayerLogToggle() {
   settingsStore.updateSettings({ autoTailPlayerLog: autoTailPlayerLog.value });
+}
+
+function handleExcludeMaxEnchantedToggle() {
+  settingsStore.updateSettings({ excludeMaxEnchantedRecipes: excludeMaxEnchanted.value });
 }
 </script>

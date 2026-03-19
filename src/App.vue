@@ -15,12 +15,15 @@
 
     <!-- Main app -->
     <template v-else-if="startup.phase === 'ready'">
-      <div class="p-4 flex-1 flex flex-col">
+      <div class="flex-1 flex flex-col">
         <MenuBar :currentView="currentView" @navigate="navigateToView" />
 
-        <div class="flex-1 flex flex-col">
+        <div class="flex-1 flex flex-col p-4 pt-20">
           <div class="flex-1">
-            <template v-if="currentView === 'skills'">
+            <template v-if="currentView === 'dashboard'">
+              <DashboardView />
+            </template>
+            <template v-else-if="currentView === 'skills'">
               <SkillGrid />
             </template>
             <template v-else-if="currentView === 'surveying'">
@@ -30,7 +33,7 @@
               <CharacterView />
             </template>
             <template v-else-if="currentView === 'inventory'">
-              <InventoryView />
+              <InventoryWrapper />
             </template>
             <template v-else-if="currentView === 'data-browser'">
               <DataBrowser :nav-target="entityNavTarget" />
@@ -38,12 +41,19 @@
             <template v-else-if="currentView === 'chat'">
               <ChatView />
             </template>
+            <template v-else-if="currentView === 'gourmand'">
+              <GourmandView />
+            </template>
+            <template v-else-if="currentView === 'farming'">
+              <FarmingView />
+            </template>
+            <template v-else-if="currentView === 'crafting'">
+              <CraftingView />
+            </template>
             <template v-else-if="currentView === 'settings'">
               <Settings
-                :watching="watching"
                 :parsing="parsing"
                 :error="error"
-                :onStartWatching="startWatching"
                 :onParseLog="parseLog" />
             </template>
           </div>
@@ -70,7 +80,12 @@ import SurveyView from "./components/Surveying/SurveyView.vue";
 import DataBrowser from "./components/DataBrowser/DataBrowser.vue";
 import ChatView from "./components/Chat/ChatView.vue";
 import CharacterView from "./components/Character/CharacterView.vue";
-import InventoryView from "./components/Character/InventoryView.vue";
+import InventoryWrapper from "./components/Inventory/InventoryWrapper.vue";
+import { useInventoryStore } from "./stores/inventoryStore";
+import GourmandView from "./components/Gourmand/GourmandView.vue";
+import FarmingView from "./components/Farming/FarmingView.vue";
+import CraftingView from "./components/Crafting/CraftingView.vue";
+import DashboardView from "./components/Dashboard/DashboardView.vue";
 import Settings from "./components/Settings.vue";
 import StartupSplash from "./components/Startup/StartupSplash.vue";
 import StartupLayout from "./components/Startup/StartupLayout.vue";
@@ -80,18 +95,23 @@ import SetupWatchersStep from "./components/Startup/SetupWatchersStep.vue";
 import SetupCharacterStep from "./components/Startup/SetupCharacterStep.vue";
 import CharacterSelect from "./components/Startup/CharacterSelect.vue";
 
+import { useFarmingStore } from "./stores/farmingStore";
+import type { PlayerEvent } from "./types/playerEvents";
+
 const skillStore = useSkillStore();
 const surveyStore = useSurveyStore();
+const farmingStore = useFarmingStore();
 const settingsStore = useSettingsStore();
 const coordinator = useCoordinatorStore();
 const characterStore = useCharacterStore();
+// Instantiate to activate event listeners (side-effect only)
+useInventoryStore();
 const startup = useStartupStore();
 
 const logPath = ref("");
 const error = ref("");
-const watching = ref(false);
 const parsing = ref(false);
-const currentView = ref<AppView>("skills");
+const currentView = ref<AppView>("dashboard");
 const entityNavTarget = ref<EntityNavigationTarget | null>(null);
 
 provideEntityNavigation((target) => {
@@ -119,15 +139,19 @@ async function initializeMainApp() {
   await listen("skill-update", (event: any) => {
     skillStore.handleUpdate(event.payload);
     surveyStore.handleSkillUpdate(event.payload);
+    farmingStore.handleSkillUpdate(event.payload);
   });
   await listen("survey-event", (event: any) => {
+    console.log("[survey-event] Received:", event.payload);
     surveyStore.handleSurveyEvent(event.payload);
   });
-
-  // Auto-watch on startup if enabled (legacy)
-  if (settingsStore.settings.autoWatchOnStartup && logPath.value) {
-    await startWatching();
-  }
+  await listen<number>("survey-session-ended", (event) => {
+    console.log("[survey-session-ended] Session finalized:", event.payload);
+    surveyStore.handleSessionEnded(event.payload);
+  });
+  await listen<PlayerEvent>("player-event", (event) => {
+    farmingStore.handlePlayerEvent(event.payload);
+  });
 
   // Start coordinator polling for log watchers
   coordinator.startPolling(1500);
@@ -153,25 +177,15 @@ async function initializeMainApp() {
   characterStore.startReportWatching();
 }
 
-async function startWatching() {
-  error.value = "";
-  skillStore.reset();
-  surveyStore.reset();
-  try {
-    await invoke("start_watching", { path: logPath.value });
-    watching.value = true;
-  } catch (e) {
-    error.value = String(e);
-  }
-}
-
 async function parseLog() {
   error.value = "";
   skillStore.reset();
   surveyStore.reset();
   parsing.value = true;
   try {
-    await invoke("parse_log", { path: logPath.value });
+    // Use the latest path from settings (may have been updated by file picker)
+    const path = settingsStore.settings.logFilePath || logPath.value;
+    await invoke("parse_log", { path });
   } catch (e) {
     error.value = String(e);
   } finally {

@@ -165,6 +165,15 @@ pub async fn get_item_by_name(
     Ok(state.read().await.item_by_name(&name).cloned())
 }
 
+/// Look up a single item by its internal name (exact match).
+#[tauri::command]
+pub async fn get_item_by_internal_name(
+    name: String,
+    state: State<'_, GameDataState>,
+) -> Result<Option<ItemInfo>, String> {
+    Ok(state.read().await.item_by_internal_name(&name).cloned())
+}
+
 /// Search items whose name contains the query string (case-insensitive).
 /// Returns up to `limit` results (default 20).
 /// Optional filters: equip_slot (exact match), min/max crafting_target_level.
@@ -217,6 +226,23 @@ pub async fn search_items(
     Ok(results)
 }
 
+/// Return all items whose keywords list contains the given keyword.
+#[tauri::command]
+pub async fn get_items_by_keyword(
+    keyword: String,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<ItemInfo>, String> {
+    let data = state.read().await;
+    let mut results: Vec<ItemInfo> = data
+        .items
+        .values()
+        .filter(|item| item.keywords.contains(&keyword))
+        .cloned()
+        .collect();
+    results.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(results)
+}
+
 /// Return a sorted list of all distinct equip_slot values across all items.
 #[tauri::command]
 pub async fn get_equip_slots(
@@ -254,6 +280,33 @@ pub async fn get_skill_by_name(
     state: State<'_, GameDataState>,
 ) -> Result<Option<SkillInfo>, String> {
     Ok(state.read().await.skill_by_name(&name).cloned())
+}
+
+/// Get the XP amounts array for a skill's XP table.
+/// Returns the cumulative XP needed per level, or empty if not found.
+#[tauri::command]
+pub async fn get_xp_table_for_skill(
+    skill_name: String,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<u64>, String> {
+    let data = state.read().await;
+
+    // Find the skill
+    let skill = data.skill_by_name(&skill_name)
+        .ok_or_else(|| format!("Skill not found: {skill_name}"))?;
+
+    // Get the XP table name
+    let table_name = skill.xp_table.as_deref()
+        .ok_or_else(|| format!("Skill {skill_name} has no XP table"))?;
+
+    // Find the matching XP table by internal name
+    for table in data.xp_tables.values() {
+        if table.internal_name.as_deref() == Some(table_name) {
+            return Ok(table.xp_amounts.clone());
+        }
+    }
+
+    Err(format!("XP table '{table_name}' not found for skill {skill_name}"))
 }
 
 // ── Ability query commands ────────────────────────────────────────────────────
@@ -451,6 +504,16 @@ pub async fn get_quest_by_key(
 ) -> Result<Option<QuestInfo>, String> {
     let data = state.read().await;
     Ok(data.quests.get(&key).cloned())
+}
+
+/// Get a quest by its InternalName (e.g. "Carpentry_QualityMeleeStaves").
+#[tauri::command]
+pub async fn get_quest_by_internal_name(
+    name: String,
+    state: State<'_, GameDataState>,
+) -> Result<Option<QuestInfo>, String> {
+    let data = state.read().await;
+    Ok(data.quest_by_internal_name(&name).cloned())
 }
 
 // ── NPC query commands ────────────────────────────────────────────────────────

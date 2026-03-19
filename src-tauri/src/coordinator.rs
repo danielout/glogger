@@ -7,6 +7,7 @@
 /// - Database write coordination
 /// - Progress event emission to frontend
 
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::path::PathBuf;
 use tauri::{AppHandle, Emitter};
@@ -16,6 +17,8 @@ use crate::db::chat_commands::insert_chat_messages;
 use crate::db::queries::log_positions;
 use crate::settings::SettingsManager;
 use crate::watch_rules::evaluate_rules;
+use crate::survey_persistence::SurveySessionTracker;
+use crate::survey_parser::KnownSurveyType;
 use serde::Serialize;
 use chrono::Datelike;
 
@@ -70,6 +73,7 @@ pub struct DataIngestCoordinator {
     db_pool: DbPool,
     settings: Arc<SettingsManager>,
     app_handle: AppHandle,
+    survey_tracker: SurveySessionTracker,
 }
 
 impl DataIngestCoordinator {
@@ -86,6 +90,7 @@ impl DataIngestCoordinator {
             db_pool,
             settings,
             app_handle,
+            survey_tracker: SurveySessionTracker::new(),
         })
     }
 
@@ -129,13 +134,16 @@ impl DataIngestCoordinator {
         // Load saved position from database
         let conn = self.db_pool.get().map_err(|e| format!("Database error: {}", e))?;
         let position = log_positions::get_position(&conn, player_log_path.to_str().unwrap_or("")).unwrap_or(0);
+
+        // Load known survey types for the survey parser
+        let known_surveys = load_known_surveys(&conn);
         drop(conn);
 
         // Create watcher
         let mut watcher = if position > 0 {
-            PlayerLogWatcher::from_position(player_log_path, position)
+            PlayerLogWatcher::from_position(player_log_path, position, known_surveys)
         } else {
-            PlayerLogWatcher::new(player_log_path)
+            PlayerLogWatcher::new(player_log_path, known_surveys)
         };
 
         // Start watching
@@ -309,6 +317,26 @@ impl DataIngestCoordinator {
                 LogEvent::AreaTransition { area, .. } => {
                     self.app_handle.emit("area-transition", &area).ok();
                 }
+                LogEvent::SkillUpdated(update) => {
+                    self.app_handle.emit("skill-update", &update).ok();
+                }
+                LogEvent::SurveyParsed(survey_event) => {
+                    // Persist to DB synchronously first, then emit to frontend
+                    let result = self.survey_tracker.process_event(&survey_event, &self.db_pool);
+                    self.app_handle.emit("survey-event", &survey_event).ok();
+
+                    // If the session auto-ended, notify frontend so it can patch in
+                    // elapsed/XP data that only the frontend knows about
+                    if result.session_ended {
+                        if let Some(sid) = result.session_id {
+                            self.app_handle.emit("survey-session-ended", sid).ok();
+                        }
+                    }
+                }
+                LogEvent::PlayerEventParsed(player_event) => {
+                    // Emit to frontend — no DB persistence yet, features will add their own
+                    self.app_handle.emit("player-event", &player_event).ok();
+                }
                 _ => {
                     // Other events not yet implemented
                 }
@@ -440,4 +468,44 @@ pub fn poll_watchers(
 ) -> Result<(), String> {
     let mut coord = coordinator.lock().unwrap();
     coord.poll()
+}
+
+// ============================================================
+// Helpers
+// ============================================================
+
+/// Load known survey types from the database for the survey parser.
+/// Returns a HashMap keyed by internal_name.
+fn load_known_surveys(conn: &rusqlite::Connection) -> HashMap<String, KnownSurveyType> {
+    let mut map = HashMap::new();
+    let mut stmt = match conn.prepare(
+        "SELECT internal_name, name, is_motherlode FROM survey_types"
+    ) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("[coordinator] Failed to load survey types: {e}");
+            return map;
+        }
+    };
+
+    let rows = stmt.query_map([], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            row.get::<_, String>(1)?,
+            row.get::<_, bool>(2)?,
+        ))
+    });
+
+    if let Ok(rows) = rows {
+        for row in rows.flatten() {
+            let (internal_name, display_name, is_motherlode) = row;
+            map.insert(internal_name, KnownSurveyType {
+                display_name,
+                is_motherlode,
+            });
+        }
+    }
+
+    eprintln!("[coordinator] Loaded {} known survey types", map.len());
+    map
 }

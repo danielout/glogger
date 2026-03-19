@@ -13,21 +13,15 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
 
     let current_version = super::get_schema_version(conn)?;
 
-    // Single unified schema - starts fresh if no version
     if current_version < 1 {
         migration_v1_unified_schema(conn)?;
         super::record_migration(conn, 1)?;
     }
 
-    if current_version < 2 {
-        migration_v2_user_characters(conn)?;
-        super::record_migration(conn, 2)?;
-    }
-
     Ok(())
 }
 
-/// Migration V1: Unified schema with all tables
+/// Migration V1: Complete unified schema with all tables
 fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "
@@ -235,6 +229,21 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
         -- PLAYER DATA TABLES (user-generated data)
         -- ============================================================
 
+        -- User Characters
+        CREATE TABLE user_characters (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            source TEXT NOT NULL CHECK (source IN ('report', 'manual', 'login')),
+            is_active BOOLEAN NOT NULL DEFAULT 0,
+            latest_report_time TIMESTAMP,
+            last_login_time TIMESTAMP,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(character_name, server_name)
+        );
+        CREATE INDEX idx_user_characters_active ON user_characters(is_active);
+
         -- Vendor Prices
         CREATE TABLE vendor_prices (
             npc_key TEXT NOT NULL,
@@ -294,53 +303,32 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
         -- SURVEY DATA TABLES
         -- ============================================================
 
-        -- Survey Sessions (legacy table, may deprecate)
-        CREATE TABLE survey_sessions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            map_item_id INTEGER NOT NULL,
-            map_name TEXT NOT NULL,
-            zone TEXT,
-            start_time TIMESTAMP NOT NULL,
-            end_time TIMESTAMP,
-            total_surveys INTEGER DEFAULT 0,
-            quality_sum INTEGER DEFAULT 0,
-            best_quality INTEGER,
-            completed BOOLEAN DEFAULT 0,
-            notes TEXT,
-            FOREIGN KEY (map_item_id) REFERENCES items(id) ON DELETE CASCADE
+        -- Pre-parsed survey types (derived from items + recipes during CDN ingestion)
+        CREATE TABLE survey_types (
+            item_id          INTEGER PRIMARY KEY,
+            internal_name    TEXT NOT NULL,
+            name             TEXT NOT NULL,
+            zone             TEXT,
+            icon_id          INTEGER,
+            survey_category  TEXT NOT NULL,
+            is_motherlode    BOOLEAN NOT NULL DEFAULT 0,
+            skill_req_name   TEXT,
+            skill_req_level  INTEGER,
+            survey_skill_req INTEGER,
+            recipe_id        INTEGER,
+            survey_xp        REAL,
+            survey_xp_first_time REAL,
+            crafting_cost    REAL
         );
-        CREATE INDEX idx_survey_sessions_map ON survey_sessions(map_item_id);
-        CREATE INDEX idx_survey_sessions_start ON survey_sessions(start_time DESC);
-        CREATE INDEX idx_survey_sessions_zone ON survey_sessions(zone);
+        CREATE INDEX idx_survey_types_zone ON survey_types(zone);
+        CREATE INDEX idx_survey_types_category ON survey_types(survey_category);
+        CREATE INDEX idx_survey_types_name ON survey_types(name COLLATE NOCASE);
 
-        -- Survey Results (legacy table)
-        CREATE TABLE survey_results (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            session_id INTEGER NOT NULL,
-            survey_number INTEGER NOT NULL,
-            quality INTEGER NOT NULL,
-            surveyed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (session_id) REFERENCES survey_sessions(id) ON DELETE CASCADE
-        );
-        CREATE INDEX idx_survey_results_session ON survey_results(session_id);
-        CREATE INDEX idx_survey_results_quality ON survey_results(quality);
-
-        -- Survey Loot (legacy table)
-        CREATE TABLE survey_loot (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            session_id INTEGER NOT NULL,
-            item_id INTEGER NOT NULL,
-            quantity INTEGER NOT NULL DEFAULT 1,
-            obtained_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (session_id) REFERENCES survey_sessions(id) ON DELETE CASCADE,
-            FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
-        );
-        CREATE INDEX idx_survey_loot_session ON survey_loot(session_id);
-        CREATE INDEX idx_survey_loot_item ON survey_loot(item_id);
-
-        -- Survey Session Stats - aggregate summary for historical browsing
+        -- Survey Session Stats - pre-computed aggregate summary for historical browsing
         CREATE TABLE survey_session_stats (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL DEFAULT 'Survey Session',
+            notes TEXT NOT NULL DEFAULT '',
             start_time TIMESTAMP NOT NULL,
             end_time TIMESTAMP,
             maps_started INTEGER NOT NULL DEFAULT 0,
@@ -355,6 +343,9 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
             profit_per_hour INTEGER NOT NULL DEFAULT 0,
             elapsed_seconds INTEGER NOT NULL DEFAULT 0,
             is_manual BOOLEAN DEFAULT 0,
+            speed_bonus_count INTEGER NOT NULL DEFAULT 0,
+            survey_types_used TEXT,
+            maps_used_summary TEXT,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
         CREATE INDEX idx_survey_session_stats_start ON survey_session_stats(start_time DESC);
@@ -365,7 +356,7 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp TIMESTAMP NOT NULL,
             session_id INTEGER,
-            event_type TEXT NOT NULL CHECK (event_type IN ('session_start', 'completed')),
+            event_type TEXT NOT NULL CHECK (event_type IN ('session_start', 'completed', 'map_crafted', 'survey_used')),
             map_type TEXT,
             survey_type TEXT,
             speed_bonus_earned BOOLEAN DEFAULT 0,
@@ -375,7 +366,6 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
         CREATE INDEX idx_survey_events_timestamp ON survey_events(timestamp DESC);
         CREATE INDEX idx_survey_events_session ON survey_events(session_id);
         CREATE INDEX idx_survey_events_type ON survey_events(event_type);
-        CREATE INDEX idx_survey_events_created ON survey_events(created_at DESC);
 
         -- Survey Loot Items - individual items obtained from surveys
         CREATE TABLE survey_loot_items (
@@ -610,29 +600,111 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
         );
         CREATE INDEX idx_character_currencies_snapshot ON character_currencies(snapshot_id);
         CREATE INDEX idx_character_currencies_key ON character_currencies(currency_key, snapshot_id);
-        "
-    )?;
 
-    Ok(())
-}
+        -- ============================================================
+        -- GOURMAND TRACKER TABLES
+        -- ============================================================
 
-/// Migration V2: User characters table for startup flow
-fn migration_v2_user_characters(conn: &Connection) -> Result<()> {
-    conn.execute_batch(
-        "
-        CREATE TABLE user_characters (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            character_name TEXT NOT NULL,
-            server_name TEXT NOT NULL,
-            source TEXT NOT NULL CHECK (source IN ('report', 'manual', 'login')),
-            is_active BOOLEAN NOT NULL DEFAULT 0,
-            latest_report_time TIMESTAMP,
-            last_login_time TIMESTAMP,
-            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(character_name, server_name)
+        -- Pre-parsed food items (derived from items table during CDN ingestion)
+        CREATE TABLE foods (
+            item_id     INTEGER PRIMARY KEY,
+            name        TEXT NOT NULL,
+            icon_id     INTEGER,
+            food_category TEXT NOT NULL,
+            food_level  INTEGER NOT NULL,
+            gourmand_req INTEGER,
+            effect_descs TEXT NOT NULL,
+            keywords    TEXT NOT NULL,
+            value       REAL
         );
-        CREATE INDEX idx_user_characters_active ON user_characters(is_active);
+        CREATE INDEX idx_foods_category ON foods(food_category);
+        CREATE INDEX idx_foods_level ON foods(food_level);
+        CREATE INDEX idx_foods_name ON foods(name COLLATE NOCASE);
+
+        -- Last-known gourmand report (single snapshot, overwritten on each import)
+        CREATE TABLE gourmand_eaten_foods (
+            food_name   TEXT PRIMARY KEY,
+            times_eaten INTEGER NOT NULL,
+            imported_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        -- ============================================================
+        -- FARMING CALCULATOR TABLES
+        -- ============================================================
+
+        -- Farming session summary
+        CREATE TABLE farming_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL DEFAULT 'Farming Session',
+            notes TEXT NOT NULL DEFAULT '',
+            start_time TEXT NOT NULL,
+            end_time TEXT,
+            elapsed_seconds INTEGER NOT NULL DEFAULT 0,
+            total_paused_seconds INTEGER NOT NULL DEFAULT 0,
+            vendor_gold INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX idx_farming_sessions_created ON farming_sessions(created_at DESC);
+
+        -- XP gains per skill per session
+        CREATE TABLE farming_session_skills (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER NOT NULL,
+            skill_name TEXT NOT NULL,
+            xp_gained INTEGER NOT NULL DEFAULT 0,
+            levels_gained INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (session_id) REFERENCES farming_sessions(id) ON DELETE CASCADE
+        );
+        CREATE INDEX idx_farming_skills_session ON farming_session_skills(session_id);
+
+        -- Net item changes per session
+        CREATE TABLE farming_session_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER NOT NULL,
+            item_name TEXT NOT NULL,
+            net_quantity INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (session_id) REFERENCES farming_sessions(id) ON DELETE CASCADE
+        );
+        CREATE INDEX idx_farming_items_session ON farming_session_items(session_id);
+
+        -- Favor changes per session
+        CREATE TABLE farming_session_favors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER NOT NULL,
+            npc_name TEXT NOT NULL,
+            npc_id INTEGER,
+            delta REAL NOT NULL DEFAULT 0,
+            FOREIGN KEY (session_id) REFERENCES farming_sessions(id) ON DELETE CASCADE
+        );
+        CREATE INDEX idx_farming_favors_session ON farming_session_favors(session_id);
+
+        -- ============================================================
+        -- CRAFTING HELPER TABLES
+        -- ============================================================
+
+        -- Saved crafting projects
+        CREATE TABLE crafting_projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            notes TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX idx_crafting_projects_updated ON crafting_projects(updated_at DESC);
+
+        -- Recipes within a project
+        CREATE TABLE crafting_project_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            recipe_id INTEGER NOT NULL,
+            recipe_name TEXT NOT NULL,
+            quantity INTEGER NOT NULL DEFAULT 1,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            expanded_ingredient_ids TEXT NOT NULL DEFAULT '[]',
+            FOREIGN KEY (project_id) REFERENCES crafting_projects(id) ON DELETE CASCADE,
+            FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
+        );
+        CREATE INDEX idx_cpe_project ON crafting_project_entries(project_id);
         "
     )?;
 

@@ -184,7 +184,6 @@ import { useSettingsStore } from "../../stores/settingsStore";
 const props = defineProps<{
   parsing: boolean;
   error: string;
-  onParseLog: () => void;
 }>();
 
 const settingsStore = useSettingsStore();

@@ -1,5 +1,5 @@
 use rusqlite::{params, Connection, Result, Transaction, OptionalExtension};
-use crate::game_data::{GameData, ItemInfo, SkillInfo, AbilityInfo, QuestInfo, XpTableInfo, TsysClientInfo, ItemUseInfo, AreaInfo};
+use crate::game_data::{GameData, ItemInfo, SkillInfo, AbilityInfo, QuestInfo, XpTableInfo, TsysClientInfo, ItemUseInfo, AreaInfo, RecipeInfo};
 
 /// Persist all CDN data to the database
 pub fn persist_cdn_data(conn: &mut Connection, data: &GameData) -> Result<()> {
@@ -19,6 +19,8 @@ pub fn persist_cdn_data(conn: &mut Connection, data: &GameData) -> Result<()> {
     insert_tsys_client_info(&tx, &data.tsys.client_info)?;
     insert_item_uses(&tx, &data.item_uses)?;
     insert_areas(&tx, &data.areas)?;
+    insert_foods(&tx, &data.items)?;
+    insert_survey_types(&tx, &data.items, &data.recipes)?;
 
     // Update CDN version
     tx.execute(
@@ -44,7 +46,28 @@ fn clear_cdn_data(tx: &Transaction) -> Result<()> {
          DELETE FROM xp_tables;
          DELETE FROM tsys_client_info;
          DELETE FROM item_uses;
-         DELETE FROM areas;"
+         DELETE FROM areas;
+         DELETE FROM foods;
+         DROP TABLE IF EXISTS survey_types;
+         CREATE TABLE survey_types (
+             item_id          INTEGER PRIMARY KEY,
+             internal_name    TEXT NOT NULL,
+             name             TEXT NOT NULL,
+             zone             TEXT,
+             icon_id          INTEGER,
+             survey_category  TEXT NOT NULL,
+             is_motherlode    BOOLEAN NOT NULL DEFAULT 0,
+             skill_req_name   TEXT,
+             skill_req_level  INTEGER,
+             survey_skill_req INTEGER,
+             recipe_id        INTEGER,
+             survey_xp        REAL,
+             survey_xp_first_time REAL,
+             crafting_cost    REAL
+         );
+         CREATE INDEX idx_survey_types_zone ON survey_types(zone);
+         CREATE INDEX idx_survey_types_category ON survey_types(survey_category);
+         CREATE INDEX idx_survey_types_name ON survey_types(name COLLATE NOCASE);"
     )?;
     Ok(())
 }
@@ -397,6 +420,183 @@ fn insert_areas(tx: &Transaction, areas: &std::collections::HashMap<String, Area
     }
 
     Ok(())
+}
+
+/// Insert pre-parsed food items derived from items with food_desc
+fn insert_foods(tx: &Transaction, items: &std::collections::HashMap<u32, ItemInfo>) -> Result<()> {
+    let mut stmt = tx.prepare(
+        "INSERT INTO foods (item_id, name, icon_id, food_category, food_level, gourmand_req, effect_descs, keywords, value)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
+    )?;
+
+    for (id, item) in items {
+        let food_desc = match &item.food_desc {
+            Some(fd) => fd,
+            None => continue,
+        };
+
+        // Parse "Level {N} {Category}" from food_desc
+        let (food_level, food_category) = match parse_food_desc(food_desc) {
+            Some(parsed) => parsed,
+            None => {
+                eprintln!("foods: skipping item {} — unparseable food_desc: {food_desc}", item.name);
+                continue;
+            }
+        };
+
+        // Extract Gourmand skill requirement from SkillReqs
+        let gourmand_req = item.skill_reqs.as_ref()
+            .and_then(|v| v.get("Gourmand"))
+            .and_then(|v| v.as_u64())
+            .map(|n| n as i64);
+
+        let effects_json = serde_json::to_string(&item.effect_descs).unwrap_or_else(|_| "[]".to_string());
+        let keywords_json = serde_json::to_string(&item.keywords).unwrap_or_else(|_| "[]".to_string());
+
+        stmt.execute(params![
+            id,
+            &item.name,
+            item.icon_id,
+            food_category,
+            food_level,
+            gourmand_req,
+            effects_json,
+            keywords_json,
+            item.value,
+        ])?;
+    }
+
+    Ok(())
+}
+
+/// Parse a food_desc string like "Level 20 Meal" into (level, category)
+fn parse_food_desc(food_desc: &str) -> Option<(i64, String)> {
+    let rest = food_desc.strip_prefix("Level ")?;
+    let space_idx = rest.find(' ')?;
+    let level: i64 = rest[..space_idx].parse().ok()?;
+    let category = rest[space_idx + 1..].to_string();
+    Some((level, category))
+}
+
+/// Insert pre-parsed survey types derived from items with MineralSurvey or MiningSurvey keywords
+fn insert_survey_types(
+    tx: &Transaction,
+    items: &std::collections::HashMap<u32, ItemInfo>,
+    recipes: &std::collections::HashMap<u32, RecipeInfo>,
+) -> Result<()> {
+    let mut stmt = tx.prepare(
+        "INSERT INTO survey_types (item_id, internal_name, name, zone, icon_id,
+                                   survey_category, is_motherlode, skill_req_name,
+                                   skill_req_level, survey_skill_req, recipe_id,
+                                   survey_xp, survey_xp_first_time, crafting_cost)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)"
+    )?;
+
+    for (id, item) in items {
+        let is_mineral = item.keywords.contains(&"MineralSurvey".to_string());
+        let is_mining = item.keywords.contains(&"MiningSurvey".to_string());
+
+        if !is_mineral && !is_mining {
+            continue;
+        }
+
+        let internal_name = match &item.internal_name {
+            Some(name) => name.clone(),
+            None => continue,
+        };
+
+        let survey_category = if is_mineral { "mineral" } else { "mining" };
+        let is_motherlode = item.keywords.contains(&"MotherlodeMap".to_string());
+
+        // Extract skill requirement — Geology for mineral surveys, Mining for mining surveys
+        let (skill_req_name, skill_req_level) = if is_mineral {
+            ("Geology", item.skill_reqs.as_ref()
+                .and_then(|v| v.get("Geology"))
+                .and_then(|v| v.as_u64())
+                .map(|n| n as i64))
+        } else {
+            ("Mining", item.skill_reqs.as_ref()
+                .and_then(|v| v.get("Mining"))
+                .and_then(|v| v.as_u64())
+                .map(|n| n as i64))
+        };
+
+        // Find the matching recipe by internal_name
+        let matching_recipe = recipes.values()
+            .find(|r| r.internal_name.as_deref() == Some(&internal_name));
+
+        let recipe_id = matching_recipe.map(|r| r.id);
+        let survey_skill_req = matching_recipe.and_then(|r| r.skill_level_req).map(|v| v as i64);
+        let survey_xp = matching_recipe.and_then(|r| r.reward_skill_xp);
+        let survey_xp_first_time = matching_recipe.and_then(|r| r.reward_skill_xp_first_time);
+
+        // Parse zone from internal_name
+        let zone = parse_survey_zone(&internal_name);
+
+        // Compute crafting cost from always-consumed recipe ingredients (paper & ink).
+        // Vendor buy price = item.value * 1.5 (NPC vendor markup).
+        // Skip ingredients with partial chance_to_consume (crystals, etc.) for now.
+        let crafting_cost: Option<f64> = matching_recipe.map(|recipe| {
+            recipe.ingredients.iter()
+                .filter(|ing| {
+                    // Only include ingredients that are always consumed (no ChanceToConsume or 1.0)
+                    ing.chance_to_consume.is_none() || ing.chance_to_consume == Some(1.0)
+                })
+                .map(|ing| {
+                    let item_value = ing.item_id
+                        .and_then(|iid| items.get(&iid))
+                        .and_then(|i| i.value)
+                        .unwrap_or(0.0);
+                    let vendor_price = item_value as f64 * 1.5;
+                    ing.stack_size as f64 * vendor_price
+                }).sum()
+        });
+
+        stmt.execute(params![
+            id,
+            &internal_name,
+            &item.name,
+            zone,
+            item.icon_id,
+            survey_category,
+            is_motherlode,
+            skill_req_name,
+            skill_req_level,
+            survey_skill_req,
+            recipe_id,
+            survey_xp,
+            survey_xp_first_time,
+            crafting_cost,
+        ])?;
+    }
+
+    Ok(())
+}
+
+/// Parse zone name from a survey internal_name.
+/// Examples:
+///   "GeologySurveyEltibule2" → "Eltibule"
+///   "MiningSurveySouthSerbule1X" → "SouthSerbule"
+///   "GeologySurveyKurMountains3" → "KurMountains"
+fn parse_survey_zone(internal_name: &str) -> Option<String> {
+    // Strip the prefix
+    let rest = if let Some(r) = internal_name.strip_prefix("GeologySurvey") {
+        r
+    } else if let Some(r) = internal_name.strip_prefix("MiningSurvey") {
+        r
+    } else {
+        return None;
+    };
+
+    if rest.is_empty() {
+        return None;
+    }
+
+    // Strip trailing non-alpha characters (digits, and 'X' suffix on mining surveys)
+    let zone: String = rest.trim_end_matches(|c: char| c.is_ascii_digit() || c == 'X')
+        .to_string();
+
+    if zone.is_empty() { None } else { Some(zone) }
 }
 
 /// Load CDN data from database (for initialization)

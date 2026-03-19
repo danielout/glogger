@@ -27,6 +27,7 @@ export interface AppSettings {
   autoLoadLastCharacter: boolean;
   autoWatchReports: boolean;
   reportWatchIntervalSeconds: number;
+  excludeMaxEnchantedRecipes: boolean;
 }
 
 // Backend settings format (snake_case)
@@ -54,6 +55,7 @@ interface BackendSettings {
   auto_load_last_character: boolean;
   auto_watch_reports: boolean;
   report_watch_interval_seconds: number;
+  exclude_max_enchanted_recipes: boolean;
 }
 
 // Convert frontend format to backend format
@@ -82,6 +84,7 @@ function toBackendSettings(settings: AppSettings): BackendSettings {
     auto_load_last_character: settings.autoLoadLastCharacter,
     auto_watch_reports: settings.autoWatchReports,
     report_watch_interval_seconds: settings.reportWatchIntervalSeconds,
+    exclude_max_enchanted_recipes: settings.excludeMaxEnchantedRecipes,
   };
 }
 
@@ -115,6 +118,7 @@ function fromBackendSettings(settings: BackendSettings): AppSettings {
     autoLoadLastCharacter: settings.auto_load_last_character ?? true,
     autoWatchReports: settings.auto_watch_reports ?? true,
     reportWatchIntervalSeconds: settings.report_watch_interval_seconds ?? 10,
+    excludeMaxEnchantedRecipes: settings.exclude_max_enchanted_recipes ?? true,
   };
 }
 
@@ -144,6 +148,7 @@ function getDefaultSettings(): AppSettings {
     autoLoadLastCharacter: true,
     autoWatchReports: true,
     reportWatchIntervalSeconds: 10,
+    excludeMaxEnchantedRecipes: true,
   };
 }
 

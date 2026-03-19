@@ -1,6 +1,6 @@
 // Pure parsing logic — no Tauri dependencies here
 
-#[derive(serde::Serialize, Clone)]
+#[derive(Debug, serde::Serialize, Clone)]
 pub struct SkillUpdate {
     pub skill_type: String,
     pub level: u32,
@@ -39,4 +39,88 @@ pub fn extract_field(line: &str, key: &str) -> Option<String> {
     let rest = &line[start..];
     let end = rest.find(|c| c == ',' || c == '}').unwrap_or(rest.len());
     Some(rest[..end].to_string())
+}
+
+// ============================================================
+// Loot Text Parsing (reusable across features)
+// ============================================================
+
+/// Individual loot item parsed from screen text
+#[derive(Debug, serde::Serialize, Clone)]
+pub struct LootItem {
+    pub item_name: String,
+    pub quantity: u32,
+    pub is_speed_bonus: bool,
+    pub is_primary: bool,
+}
+
+/// Parse loot text into individual items.
+/// Example: "Tsavorite collected! Also found Moss Agate x2, Onyx (speed bonus!)"
+/// Returns (Vec<LootItem>, speed_bonus_earned)
+pub fn parse_loot_items(loot_text: &str) -> (Vec<LootItem>, bool) {
+    let mut items = Vec::new();
+    let speed_bonus_earned = loot_text.contains("(speed bonus!)");
+
+    // Primary item: everything before " collected!"
+    if let Some(collected_idx) = loot_text.find(" collected!") {
+        let primary_name = loot_text[..collected_idx].trim();
+        items.push(LootItem {
+            item_name: primary_name.to_string(),
+            quantity: 1,
+            is_speed_bonus: false,
+            is_primary: true,
+        });
+    }
+
+    // Secondary items: after "Also found "
+    if let Some(also_idx) = loot_text.find("Also found ") {
+        // Strip trailing "(speed bonus!)" or similar parentheticals
+        let mut secondary = &loot_text[also_idx + "Also found ".len()..];
+
+        // Check if these are speed bonus items
+        let is_bonus = if let Some(bonus_idx) = secondary.find(" (speed bonus!)") {
+            secondary = &secondary[..bonus_idx];
+            true
+        } else {
+            // Remove any other parentheticals
+            if let Some(paren_idx) = secondary.find(" (") {
+                secondary = &secondary[..paren_idx];
+            }
+            false
+        };
+
+        // Split on commas and parse each item
+        for part in secondary.split(',') {
+            let piece = part.trim();
+            if piece.is_empty() {
+                continue;
+            }
+
+            // Match "Item Name x3" or just "Item Name"
+            if let Some((name, qty)) = parse_item_with_quantity(piece) {
+                items.push(LootItem {
+                    item_name: name,
+                    quantity: qty,
+                    is_speed_bonus: is_bonus,
+                    is_primary: false,
+                });
+            }
+        }
+    }
+
+    (items, speed_bonus_earned)
+}
+
+/// Parse "Item Name x3" or "Item Name" into (name, quantity)
+pub fn parse_item_with_quantity(text: &str) -> Option<(String, u32)> {
+    // Match "Item Name x3"
+    if let Some(x_pos) = text.rfind(" x") {
+        let name = text[..x_pos].trim();
+        let qty_str = &text[x_pos + 2..];
+        if let Ok(qty) = qty_str.parse::<u32>() {
+            return Some((name.to_string(), qty));
+        }
+    }
+    // Just "Item Name"
+    Some((text.to_string(), 1))
 }

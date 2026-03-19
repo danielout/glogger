@@ -64,37 +64,6 @@ export interface SaleRecord {
   notes?: string;
 }
 
-// Survey types
-export interface StartSurveyInput {
-  map_item_id: number;
-  map_name: string;
-  zone?: string;
-}
-
-export interface AddSurveyResultInput {
-  session_id: number;
-  survey_number: number;
-  quality: number;
-}
-
-export interface AddSurveyLootInput {
-  session_id: number;
-  item_id: number;
-  quantity: number;
-}
-
-export interface SurveySessionSummary {
-  id: number;
-  map_name: string;
-  zone?: string;
-  start_time: string;
-  end_time?: string;
-  total_surveys: number;
-  average_quality?: number;
-  best_quality?: number;
-  completed: boolean;
-}
-
 // Event log types
 export interface LogEventInput {
   event_type: string;
@@ -136,6 +105,15 @@ export interface HistoricalSession {
   total_cost: number;
   total_profit: number;
   profit_per_hour: number;
+  elapsed_seconds: number;
+  speed_bonus_count: number;
+  survey_types_used: string | null;
+  maps_used_summary: string | null;
+  name: string;
+  notes: string;
+  surveying_xp_gained: number;
+  mining_xp_gained: number;
+  geology_xp_gained: number;
 }
 
 // Survey event types

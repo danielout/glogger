@@ -22,6 +22,8 @@ Core structure, patterns, and standards used across the app.
 - [implementation-checklist.md](architecture/implementation-checklist.md) — Step-by-step checklists for common dev tasks (new parsers, DB tables, CDN fields, commands).
 - [working-with-data-architecture.md](architecture/working-with-data-architecture.md) — Quick guide for adding new event types and extending the data layer.
 - [player-log-pattern-registration.md](architecture/player-log-pattern-registration.md) — How to register custom pattern matchers for detecting game events in Player.log.
+- [player-log-events.md](architecture/player-log-events.md) — Complete reference for all Player.log event types: item, skill, NPC, vendor, storage, and screen events with encoding formats and practical patterns.
+- [player-event-parser.md](architecture/player-event-parser.md) — Foundational `PlayerEventParser` module: event types, internal state, pending delete buffer, encoded value decoding, frontend listening, and how to extend.
 
 ## Features
 
@@ -34,12 +36,15 @@ Documentation for individual features, both built and in-progress.
 - [chat-parser.md](features/chat-parser.md) — Spec for the chat log parser: file format, line parsing, incremental reading.
 - [chat-item-linking.md](features/chat-item-linking.md) — Spec for detecting and linking item references in chat messages to CDN data.
 - [advanced-settings.md](features/advanced-settings.md) — Advanced Settings tab: log reparsing, database statistics, and diagnostics.
+- [gourmand-tracker.md](features/gourmand-tracker.md) — Gourmand food tracker: progress tracking, report import, food buff comparison, item tooltips.
+- [farming-calculator.md](features/farming-calculator.md) — Farming Calculator: manual session tracking for XP, items, favor, and vendor gold with live rate metrics.
+- [crafting-helper.md](features/crafting-helper.md) — Crafting Helper: project planning, ingredient resolution, XP leveling optimizer, live craft detection, work orders, and crafting history.
 
 ## Plans
 
 In-progress or future work. Create a `plans/` folder when needed. Delete plans when no longer relevant.
 
-_(No active plans)_
+- [surveying-summary.md](plans/surveying-summary.md) — Surveying Tracker implementation plan: CDN metadata, log parsing, session management, frontend views, analytics.
 
 ## Samples
 

@@ -11,6 +11,10 @@ pub mod admin_commands;
 pub mod chat_commands;
 pub mod character_commands;
 pub mod inventory_commands;
+pub mod gourmand_commands;
+pub mod survey_commands;
+pub mod farming_commands;
+pub mod crafting_commands;
 
 pub type DbPool = r2d2::Pool<SqliteConnectionManager>;
 pub type DbConnection = r2d2::PooledConnection<SqliteConnectionManager>;

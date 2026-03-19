@@ -24,8 +24,7 @@
         <ChatLogsSettings
           v-else-if="activeTab === 'chat-logs'"
           :parsing="props.parsing"
-          :error="props.error"
-          :onParseLog="props.onParseLog" />
+          :error="props.error" />
 
         <NotificationsSettings
           v-else-if="activeTab === 'notifications'" />
@@ -64,10 +63,8 @@ import AdvancedSettings from "./Settings/AdvancedSettings.vue";
 const settingsStore = useSettingsStore();
 
 const props = defineProps<{
-  watching: boolean;
   parsing: boolean;
   error: string;
-  onStartWatching: () => void;
   onParseLog: () => void;
 }>();
 

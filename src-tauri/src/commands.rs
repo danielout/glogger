@@ -1,47 +1,17 @@
-use std::io::{BufRead, BufReader, Seek, SeekFrom};
+use std::collections::HashMap;
+use std::io::BufRead;
 use std::fs::File;
 use std::path::PathBuf;
-use std::time::Duration;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 use crate::parsers::parse_skill_update;
-use crate::survey_parser::SurveyParser;
+use crate::survey_parser::{SurveyParser, KnownSurveyType};
+use crate::survey_persistence::SurveySessionTracker;
+use crate::player_event_parser::PlayerEventParser;
+use crate::db::DbPool;
 
-#[tauri::command]
-pub async fn start_watching(path: String, app: AppHandle) -> Result<(), String> {
-    let path = PathBuf::from(&path);
-    if !path.exists() {
-        return Err(format!("File not found: {}", path.display()));
-    }
-
-    tokio::spawn(async move {
-        let mut file = File::open(&path).expect("could not open log file");
-        file.seek(SeekFrom::End(0)).expect("could not seek to end");
-        let mut reader = BufReader::new(file);
-        let mut line = String::new();
-        let mut survey_parser = SurveyParser::new();
-
-        loop {
-            line.clear();
-            match reader.read_line(&mut line) {
-                Ok(0) => {
-                    tokio::time::sleep(Duration::from_millis(100)).await;
-                }
-                Ok(_) => {
-                    let l = line.trim_end().to_string();
-                    emit_events(&app, &l, &mut survey_parser);
-                }
-                Err(e) => {
-                    eprintln!("Read error: {}", e);
-                    tokio::time::sleep(Duration::from_millis(500)).await;
-                }
-            }
-        }
-    });
-
-    Ok(())
-}
-
+/// Parse an entire Player.log file at once (used by "Upload Player.log" in Advanced Settings).
+/// Runs all parsers: skill updates, survey events, and player events.
 #[tauri::command]
 pub async fn parse_log(path: String, app: AppHandle) -> Result<(), String> {
     let path = PathBuf::from(&path);
@@ -49,31 +19,103 @@ pub async fn parse_log(path: String, app: AppHandle) -> Result<(), String> {
         return Err(format!("File not found: {}", path.display()));
     }
 
+    // Load known survey types from DB before spawning the parse task
+    let known_surveys = if let Some(db) = app.try_state::<DbPool>() {
+        let conn = db.get().map_err(|e| format!("Database error: {}", e))?;
+        load_known_surveys_for_parse(&conn)
+    } else {
+        HashMap::new()
+    };
+
     tokio::spawn(async move {
         let file = File::open(&path).expect("could not open log file");
-        let reader = BufReader::new(file);
-        let mut survey_parser = SurveyParser::new();
+        let reader = std::io::BufReader::new(file);
+        let mut survey_parser = SurveyParser::new(known_surveys);
+        let mut survey_tracker = SurveySessionTracker::new();
+        let mut player_parser = PlayerEventParser::new();
 
         for line in reader.lines() {
             match line {
                 Ok(l) => {
                     let l = l.trim_end().to_string();
-                    emit_events(&app, &l, &mut survey_parser);
+                    emit_events(&app, &l, &mut survey_parser, &mut survey_tracker, &mut player_parser);
                 }
                 Err(e) => eprintln!("Read error: {}", e),
             }
+        }
+
+        // Flush any pending player events at end of file
+        let flush_events = player_parser.flush_all_pending();
+        for event in flush_events {
+            app.emit("player-event", &event).ok();
         }
     });
 
     Ok(())
 }
 
-/// Central dispatch: parse one line for all event types and emit any that fire
-fn emit_events(app: &AppHandle, line: &str, survey_parser: &mut SurveyParser) {
+/// Central dispatch: parse one line through all parsers and emit events
+fn emit_events(
+    app: &AppHandle,
+    line: &str,
+    survey_parser: &mut SurveyParser,
+    survey_tracker: &mut SurveySessionTracker,
+    player_parser: &mut PlayerEventParser,
+) {
+    // Skill updates (ProcessUpdateSkill)
     if let Some(update) = parse_skill_update(line) {
         app.emit("skill-update", update).ok();
     }
-    for event in survey_parser.process_line(line) {
+
+    // Player events first (items, skills, NPC, vendor, storage, screen text, books, delay loops)
+    let player_events = player_parser.process_line(line);
+
+    // Survey events consume PlayerEvents + raw line (for ProcessMapFx)
+    let survey_events = survey_parser.process_events(&player_events, line);
+    for event in &survey_events {
+        if let Some(db) = app.try_state::<DbPool>() {
+            let result = survey_tracker.process_event(event, db.inner());
+            if result.session_ended {
+                if let Some(sid) = result.session_id {
+                    app.emit("survey-session-ended", sid).ok();
+                }
+            }
+        }
         app.emit("survey-event", event).ok();
     }
+
+    for event in player_events {
+        app.emit("player-event", &event).ok();
+    }
+}
+
+/// Load known survey types from DB for the parse_log command
+fn load_known_surveys_for_parse(conn: &rusqlite::Connection) -> HashMap<String, KnownSurveyType> {
+    let mut map = HashMap::new();
+    let mut stmt = match conn.prepare(
+        "SELECT internal_name, name, is_motherlode FROM survey_types"
+    ) {
+        Ok(s) => s,
+        Err(_) => return map,
+    };
+
+    let rows = stmt.query_map([], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            row.get::<_, String>(1)?,
+            row.get::<_, bool>(2)?,
+        ))
+    });
+
+    if let Ok(rows) = rows {
+        for row in rows.flatten() {
+            let (internal_name, display_name, is_motherlode) = row;
+            map.insert(internal_name, KnownSurveyType {
+                display_name,
+                is_motherlode,
+            });
+        }
+    }
+
+    map
 }

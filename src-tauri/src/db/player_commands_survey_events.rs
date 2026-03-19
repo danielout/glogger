@@ -447,110 +447,91 @@ pub fn get_survey_type_metrics(
 
     let mut results = Vec::new();
 
-    if let Some(sid) = session_id {
-        let mut stmt = conn
-            .prepare(
-                "SELECT
-                    se.survey_type,
-                    COUNT(*) as total_completed,
-                    SUM(CASE WHEN se.speed_bonus_earned = 1 THEN 1 ELSE 0 END) as speed_bonus_count,
-                    COUNT(DISTINCT sli.id) as total_items,
-                    SUM(CASE WHEN sli.is_speed_bonus = 1 THEN sli.quantity ELSE 0 END) as total_bonus_items
-                 FROM survey_events se
-                 LEFT JOIN survey_loot_items sli ON sli.event_id = se.id
-                 WHERE se.event_type = 'completed' AND se.survey_type IS NOT NULL AND se.session_id = ?1
-                 GROUP BY se.survey_type
-                 ORDER BY total_completed DESC"
-            )
-            .map_err(|e| format!("Failed to prepare survey type metrics query: {e}"))?;
+    // Use two separate queries to avoid row multiplication from LEFT JOIN:
+    // 1. Event-level stats (completed count, speed bonus count) from survey_events
+    // 2. Loot-level stats (total items, bonus items) from survey_loot_items via events
+    let session_filter = if session_id.is_some() { "AND se.session_id = ?1" } else { "" };
 
-        let rows = stmt
-            .query_map([sid], |row| {
-                let survey_type: String = row.get(0)?;
-                let total_completed: i64 = row.get(1)?;
-                let speed_bonus_count: i64 = row.get(2)?;
-                let total_items: i64 = row.get(3)?;
-                let total_bonus_items: i64 = row.get(4)?;
+    // Event-level stats
+    let event_query = format!(
+        "SELECT se.survey_type,
+                COUNT(*) as total_completed,
+                SUM(CASE WHEN se.speed_bonus_earned = 1 THEN 1 ELSE 0 END) as speed_bonus_count
+         FROM survey_events se
+         WHERE se.event_type = 'completed' AND se.survey_type IS NOT NULL {session_filter}
+         GROUP BY se.survey_type
+         ORDER BY total_completed DESC"
+    );
+    let mut event_stmt = conn.prepare(&event_query)
+        .map_err(|e| format!("Failed to prepare survey type metrics query: {e}"))?;
 
-                let speed_bonus_rate = if total_completed > 0 {
-                    (speed_bonus_count as f64 / total_completed as f64) * 100.0
-                } else {
-                    0.0
-                };
-
-                let avg_items_per_survey = if total_completed > 0 {
-                    total_items as f64 / total_completed as f64
-                } else {
-                    0.0
-                };
-
-                Ok(SurveyTypeMetrics {
-                    survey_type,
-                    total_completed,
-                    speed_bonus_count,
-                    speed_bonus_rate,
-                    total_items,
-                    total_bonus_items,
-                    avg_items_per_survey,
-                })
-            })
-            .map_err(|e| format!("Survey type metrics query failed: {e}"))?;
-
-        for row in rows {
-            results.push(row.map_err(|e| format!("Row parse error: {e}"))?);
+    let mut event_rows: Vec<(String, i64, i64)> = Vec::new();
+    {
+        let map_row = |row: &rusqlite::Row| -> rusqlite::Result<(String, i64, i64)> {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+        };
+        let rows = if let Some(sid) = session_id {
+            event_stmt.query_map([sid], map_row)
+        } else {
+            event_stmt.query_map([], map_row)
+        }.map_err(|e| format!("Survey type metrics query failed: {e}"))?;
+        for r in rows {
+            if let Ok(row) = r { event_rows.push(row); }
         }
-    } else {
-        let mut stmt = conn
-            .prepare(
-                "SELECT
-                    se.survey_type,
-                    COUNT(*) as total_completed,
-                    SUM(CASE WHEN se.speed_bonus_earned = 1 THEN 1 ELSE 0 END) as speed_bonus_count,
-                    COUNT(DISTINCT sli.id) as total_items,
-                    SUM(CASE WHEN sli.is_speed_bonus = 1 THEN sli.quantity ELSE 0 END) as total_bonus_items
-                 FROM survey_events se
-                 LEFT JOIN survey_loot_items sli ON sli.event_id = se.id
-                 WHERE se.event_type = 'completed' AND se.survey_type IS NOT NULL
-                 GROUP BY se.survey_type
-                 ORDER BY total_completed DESC"
-            )
-            .map_err(|e| format!("Failed to prepare survey type metrics query: {e}"))?;
+    }
 
-        let rows = stmt
-            .query_map([], |row| {
-                let survey_type: String = row.get(0)?;
-                let total_completed: i64 = row.get(1)?;
-                let speed_bonus_count: i64 = row.get(2)?;
-                let total_items: i64 = row.get(3)?;
-                let total_bonus_items: i64 = row.get(4)?;
+    // Loot-level stats
+    let loot_query = format!(
+        "SELECT se.survey_type,
+                COALESCE(SUM(sli.quantity), 0) as total_items,
+                COALESCE(SUM(CASE WHEN sli.is_speed_bonus = 1 THEN sli.quantity ELSE 0 END), 0) as total_bonus_items
+         FROM survey_events se
+         JOIN survey_loot_items sli ON sli.event_id = se.id
+         WHERE se.event_type = 'completed' AND se.survey_type IS NOT NULL {session_filter}
+         GROUP BY se.survey_type"
+    );
+    let mut loot_stmt = conn.prepare(&loot_query)
+        .map_err(|e| format!("Failed to prepare loot metrics query: {e}"))?;
 
-                let speed_bonus_rate = if total_completed > 0 {
-                    (speed_bonus_count as f64 / total_completed as f64) * 100.0
-                } else {
-                    0.0
-                };
-
-                let avg_items_per_survey = if total_completed > 0 {
-                    total_items as f64 / total_completed as f64
-                } else {
-                    0.0
-                };
-
-                Ok(SurveyTypeMetrics {
-                    survey_type,
-                    total_completed,
-                    speed_bonus_count,
-                    speed_bonus_rate,
-                    total_items,
-                    total_bonus_items,
-                    avg_items_per_survey,
-                })
-            })
-            .map_err(|e| format!("Survey type metrics query failed: {e}"))?;
-
-        for row in rows {
-            results.push(row.map_err(|e| format!("Row parse error: {e}"))?);
+    let mut loot_map: std::collections::HashMap<String, (i64, i64)> = std::collections::HashMap::new();
+    {
+        let map_row = |row: &rusqlite::Row| -> rusqlite::Result<(String, i64, i64)> {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+        };
+        let rows = if let Some(sid) = session_id {
+            loot_stmt.query_map([sid], map_row)
+        } else {
+            loot_stmt.query_map([], map_row)
+        }.map_err(|e| format!("Loot metrics query failed: {e}"))?;
+        for r in rows {
+            if let Ok((st, total, bonus)) = r { loot_map.insert(st, (total, bonus)); }
         }
+    }
+
+    for (survey_type, total_completed, speed_bonus_count) in event_rows {
+        let (total_items, total_bonus_items) = loot_map.get(&survey_type).copied().unwrap_or((0, 0));
+
+        let speed_bonus_rate = if total_completed > 0 {
+            (speed_bonus_count as f64 / total_completed as f64) * 100.0
+        } else {
+            0.0
+        };
+
+        let avg_items_per_survey = if total_completed > 0 {
+            total_items as f64 / total_completed as f64
+        } else {
+            0.0
+        };
+
+        results.push(SurveyTypeMetrics {
+            survey_type,
+            total_completed,
+            speed_bonus_count,
+            speed_bonus_rate,
+            total_items,
+            total_bonus_items,
+            avg_items_per_survey,
+        });
     }
 
     Ok(results)

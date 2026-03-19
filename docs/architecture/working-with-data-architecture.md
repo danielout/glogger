@@ -4,7 +4,18 @@ Quick guide for developers working with glogger's data architecture.
 
 ## Quick Start
 
-### Adding a New Event Type
+### Using the Player Event Parser (Preferred for Game Events)
+
+Most game events (`ProcessAddItem`, `ProcessUpdateItemCode`, `ProcessDeleteItem`, `ProcessLoadSkills`, `ProcessStartInteraction`, `ProcessDeltaFavor`, vendor events, storage events, `ProcessScreenText`, `ProcessBook`) are already parsed by the **PlayerEventParser**. Features should subscribe to these events rather than writing their own parsers.
+
+See [`player-event-parser.md`](player-event-parser.md) for the full API, event types, and how to:
+- Listen to events on the frontend via `"player-event"` Tauri events
+- Add persistence for specific event types in the coordinator
+- Extend the parser with new `ProcessXxx` event types
+
+### Adding a New Event Type (Simple Pattern Matcher)
+
+For non-`Process*` lines (e.g., free-text log messages), use the pattern matcher system:
 
 1. **Add LogEvent variant** in [`log_watchers.rs`](../../src-tauri/src/log_watchers.rs):
 ```rust

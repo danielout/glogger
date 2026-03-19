@@ -95,6 +95,11 @@ pub struct AppSettings {
     /// Interval in seconds for checking the Reports folder
     #[serde(default = "default_report_watch_interval")]
     pub report_watch_interval_seconds: u32,
+
+    /// Exclude "Max-Enchanted" recipes from automated recipe selection
+    /// (leveling optimizer, work order matching, intermediate resolution)
+    #[serde(default = "default_true")]
+    pub exclude_max_enchanted_recipes: bool,
 }
 
 /// How conditions within a rule are combined
@@ -200,6 +205,7 @@ impl Default for AppSettings {
             auto_load_last_character: true,
             auto_watch_reports: true,
             report_watch_interval_seconds: 10,
+            exclude_max_enchanted_recipes: true,
         }
     }
 }

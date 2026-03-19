@@ -1,6 +1,8 @@
 mod parsers;
 mod commands;
 mod survey_parser;
+mod survey_persistence;
+mod player_event_parser;
 mod cdn;
 mod game_data;
 mod cdn_commands;
@@ -17,7 +19,7 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
 use tauri::{Emitter, Manager};
 
-use commands::{start_watching, parse_log};
+use commands::parse_log;
 use cdn_commands::{
     GameDataState,
     init_game_data,
@@ -25,7 +27,9 @@ use cdn_commands::{
     force_refresh_cdn,
     get_item,
     get_item_by_name,
+    get_item_by_internal_name,
     search_items,
+    get_items_by_keyword,
     get_equip_slots,
     get_all_skills,
     get_skill_by_name,
@@ -39,6 +43,7 @@ use cdn_commands::{
     get_all_quests,
     search_quests,
     get_quest_by_key,
+    get_quest_by_internal_name,
     get_all_npcs,
     search_npcs,
     get_npcs_in_area,
@@ -54,19 +59,17 @@ use cdn_commands::{
     resolve_effect_descs,
     get_tsys_power_info,
     get_storage_vault_zones,
+    get_xp_table_for_skill,
 };
 use db::player_commands::{
     add_market_price,
     get_market_prices_for_item,
     add_sale,
     get_recent_sales,
-    start_survey_session,
-    add_survey_result,
-    add_survey_loot,
-    complete_survey_session,
-    get_survey_sessions,
     save_survey_session_stats,
+    patch_survey_session,
     get_historical_sessions,
+    update_survey_session,
     log_event,
     get_recent_events,
 };
@@ -100,6 +103,39 @@ use db::inventory_commands::{
     get_inventory_snapshots,
     get_snapshot_items,
     get_inventory_summary,
+};
+use db::gourmand_commands::{
+    get_all_foods,
+    import_gourmand_report,
+    import_cooks_helper_file,
+    get_gourmand_eaten_foods,
+    export_text_file,
+    import_latest_gourmand_report,
+};
+use db::survey_commands::{
+    get_all_survey_types,
+};
+use db::farming_commands::{
+    save_farming_session,
+    get_farming_sessions,
+    update_farming_session,
+    delete_farming_session,
+};
+use db::crafting_commands::{
+    create_crafting_project,
+    get_crafting_projects,
+    get_crafting_project,
+    update_crafting_project,
+    delete_crafting_project,
+    add_project_entry,
+    update_project_entry,
+    remove_project_entry,
+    reorder_project_entries,
+    duplicate_crafting_project,
+    check_material_availability,
+    get_latest_recipe_completions,
+    get_latest_skill_level,
+    get_work_orders_from_snapshot,
 };
 use settings::{
     SettingsManager,
@@ -225,8 +261,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            // Log watching
-            start_watching,
+            // Log parsing (manual upload)
             parse_log,
             // CDN management
             get_cache_status,
@@ -234,7 +269,9 @@ pub fn run() {
             // Item queries
             get_item,
             get_item_by_name,
+            get_item_by_internal_name,
             search_items,
+            get_items_by_keyword,
             get_equip_slots,
             // Skill queries
             get_all_skills,
@@ -252,6 +289,7 @@ pub fn run() {
             get_all_quests,
             search_quests,
             get_quest_by_key,
+            get_quest_by_internal_name,
             // NPC queries
             get_all_npcs,
             search_npcs,
@@ -279,15 +317,11 @@ pub fn run() {
             // Player data - Sales
             add_sale,
             get_recent_sales,
-            // Player data - Surveys
-            start_survey_session,
-            add_survey_result,
-            add_survey_loot,
-            complete_survey_session,
-            get_survey_sessions,
             // Player data - Survey session stats
             save_survey_session_stats,
+            patch_survey_session,
             get_historical_sessions,
+            update_survey_session,
             // Player data - Survey events
             log_survey_event,
             get_survey_events,
@@ -352,6 +386,36 @@ pub fn run() {
             get_inventory_snapshots,
             get_snapshot_items,
             get_inventory_summary,
+            // Gourmand tracker
+            get_all_foods,
+            import_gourmand_report,
+            import_cooks_helper_file,
+            get_gourmand_eaten_foods,
+            export_text_file,
+            import_latest_gourmand_report,
+            get_all_survey_types,
+            // Farming calculator
+            save_farming_session,
+            get_farming_sessions,
+            update_farming_session,
+            delete_farming_session,
+            // Crafting helper
+            create_crafting_project,
+            get_crafting_projects,
+            get_crafting_project,
+            update_crafting_project,
+            delete_crafting_project,
+            add_project_entry,
+            update_project_entry,
+            remove_project_entry,
+            reorder_project_entries,
+            duplicate_crafting_project,
+            check_material_availability,
+            get_latest_recipe_completions,
+            get_latest_skill_level,
+            get_work_orders_from_snapshot,
+            // CDN - XP tables
+            get_xp_table_for_skill,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -82,6 +82,10 @@ export const useGameDataStore = defineStore("gameData", () => {
     return invoke<ItemInfo | null>("get_item_by_name", { name });
   }
 
+  async function getItemByInternalName(name: string): Promise<ItemInfo | null> {
+    return invoke<ItemInfo | null>("get_item_by_internal_name", { name });
+  }
+
   async function searchItems(
     query: string,
     limit = 20,
@@ -94,6 +98,10 @@ export const useGameDataStore = defineStore("gameData", () => {
       levelMin: filters?.levelMin ?? null,
       levelMax: filters?.levelMax ?? null,
     });
+  }
+
+  async function getItemsByKeyword(keyword: string): Promise<ItemInfo[]> {
+    return invoke<ItemInfo[]>("get_items_by_keyword", { keyword });
   }
 
   async function getEquipSlots(): Promise<string[]> {
@@ -154,6 +162,10 @@ export const useGameDataStore = defineStore("gameData", () => {
 
   async function getQuestByKey(key: string): Promise<QuestInfo | null> {
     return invoke<QuestInfo | null>("get_quest_by_key", { key });
+  }
+
+  async function getQuestByInternalName(name: string): Promise<QuestInfo | null> {
+    return invoke<QuestInfo | null>("get_quest_by_internal_name", { name });
   }
 
   // ── NPC queries ────────────────────────────────────────────────────────────
@@ -257,7 +269,9 @@ export const useGameDataStore = defineStore("gameData", () => {
     forceRefreshCdn,
     getItem,
     getItemByName,
+    getItemByInternalName,
     searchItems,
+    getItemsByKeyword,
     getEquipSlots,
     getAllSkills,
     getSkillByName,
@@ -271,6 +285,7 @@ export const useGameDataStore = defineStore("gameData", () => {
     getAllQuests,
     searchQuests,
     getQuestByKey,
+    getQuestByInternalName,
     getAllNpcs,
     searchNpcs,
     getNpcsInArea,

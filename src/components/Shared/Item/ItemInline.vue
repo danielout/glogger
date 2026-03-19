@@ -8,7 +8,7 @@
       @click="handleClick"
     >
       <GameIcon v-if="showIcon" :icon-id="itemData?.icon_id" :alt="name" size="xs" />
-      <span class="text-entity-item text-xs font-medium">{{ itemId ? name : (itemData?.name ?? name) }}</span>
+      <span class="text-entity-item text-xs font-medium">{{ itemData?.name ?? name }}</span>
     </button>
     <template #tooltip>
       <ItemTooltip v-if="itemData" :item="itemData" :icon-src="iconSrc" />
@@ -43,9 +43,16 @@ const iconSrc = ref<string | null>(null);
 async function loadData() {
   if (itemData.value) return;
   try {
-    const item = props.itemId
-      ? await store.getItem(props.itemId)
-      : await store.getItemByName(props.name);
+    let item: ItemInfo | null = null;
+    if (props.itemId) {
+      item = await store.getItem(props.itemId);
+    } else {
+      // Try display name first, then fall back to internal name
+      item = await store.getItemByName(props.name);
+      if (!item) {
+        item = await store.getItemByInternalName(props.name);
+      }
+    }
     if (!item) return;
     itemData.value = item;
     if (item.icon_id) {

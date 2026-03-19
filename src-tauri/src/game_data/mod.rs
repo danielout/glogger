@@ -130,12 +130,14 @@ pub struct GameData {
 
     // ── Cross-type indices ─────────────────────────────────────────────
     pub item_name_index:       HashMap<String, u32>,
+    pub item_internal_name_index: HashMap<String, u32>,
     pub skill_name_index:      HashMap<String, u32>,
     pub recipes_by_skill:      HashMap<String, Vec<u32>>,
     pub recipes_producing_item: HashMap<u32, Vec<u32>>,
     pub recipes_using_item:    HashMap<u32, Vec<u32>>,
     pub recipe_name_index:     HashMap<String, u32>,
     pub npcs_by_skill:         HashMap<String, Vec<String>>,
+    pub quest_internal_name_index: HashMap<String, String>,
 
     // ── Source cross-reference indices ───────────────────────────────────
     /// ability key (e.g. "ability_1002") → item IDs that bestow it
@@ -175,12 +177,14 @@ impl GameData {
             storage_vaults: HashMap::new(),
             tsys: tsys::TsysData::empty(),
             item_name_index: HashMap::new(),
+            item_internal_name_index: HashMap::new(),
             skill_name_index: HashMap::new(),
             recipes_by_skill: HashMap::new(),
             recipes_producing_item: HashMap::new(),
             recipes_using_item: HashMap::new(),
             recipe_name_index: HashMap::new(),
             npcs_by_skill: HashMap::new(),
+            quest_internal_name_index: HashMap::new(),
             items_bestowing_ability: HashMap::new(),
             items_bestowing_recipe: HashMap::new(),
             items_bestowing_quest: HashMap::new(),
@@ -191,6 +195,16 @@ impl GameData {
     pub fn item_by_name(&self, name: &str) -> Option<&items::ItemInfo> {
         let id = self.item_name_index.get(name)?;
         self.items.get(id)
+    }
+
+    pub fn item_by_internal_name(&self, name: &str) -> Option<&items::ItemInfo> {
+        let id = self.item_internal_name_index.get(name)?;
+        self.items.get(id)
+    }
+
+    pub fn quest_by_internal_name(&self, name: &str) -> Option<&quests::QuestInfo> {
+        let key = self.quest_internal_name_index.get(name)?;
+        self.quests.get(key)
     }
 
     pub fn skill_by_name(&self, name: &str) -> Option<&skills::SkillInfo> {
@@ -299,6 +313,11 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         .map(|(id, item)| (item.name.clone(), *id))
         .collect();
 
+    let item_internal_name_index: HashMap<String, u32> = items
+        .iter()
+        .filter_map(|(id, item)| item.internal_name.as_ref().map(|n| (n.clone(), *id)))
+        .collect();
+
     let skill_name_index: HashMap<String, u32> = skills
         .iter()
         .map(|(id, skill)| (skill.name.clone(), *id))
@@ -338,6 +357,14 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
     for (npc_key, npc) in &npcs {
         for skill in &npc.trains_skills {
             npcs_by_skill.entry(skill.clone()).or_default().push(npc_key.clone());
+        }
+    }
+
+    // Build quest internal name → key index
+    let mut quest_internal_name_index: HashMap<String, String> = HashMap::new();
+    for (quest_key, quest) in &quests {
+        if !quest.internal_name.is_empty() {
+            quest_internal_name_index.insert(quest.internal_name.clone(), quest_key.clone());
         }
     }
 
@@ -399,12 +426,14 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         storage_vaults,
         tsys,
         item_name_index,
+        item_internal_name_index,
         skill_name_index,
         recipes_by_skill,
         recipes_producing_item,
         recipes_using_item,
         recipe_name_index,
         npcs_by_skill,
+        quest_internal_name_index,
         items_bestowing_ability,
         items_bestowing_recipe,
         items_bestowing_quest,

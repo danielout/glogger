@@ -1,0 +1,311 @@
+// ── Backend types (match Rust structs) ───────────────────────────────────────
+
+export interface CraftingProjectSummary {
+  id: number
+  name: string
+  notes: string
+  created_at: string
+  updated_at: string
+  entry_count: number
+}
+
+export interface CraftingProjectEntry {
+  id: number
+  project_id: number
+  recipe_id: number
+  recipe_name: string
+  quantity: number
+  sort_order: number
+  expanded_ingredient_ids: number[]
+}
+
+export interface CraftingProject {
+  id: number
+  name: string
+  notes: string
+  created_at: string
+  updated_at: string
+  entries: CraftingProjectEntry[]
+}
+
+// ── Dependency resolver types ────────────────────────────────────────────────
+
+export interface ResolvedIngredient {
+  /** CDN item ID (null for dynamic/keyword ingredients) */
+  item_id: number | null
+  /** Display name */
+  item_name: string
+  /** Quantity required per single craft */
+  per_craft: number
+  /** Total quantity needed (per_craft × craft_count) */
+  quantity_needed: number
+  /** Chance each unit is consumed (1.0 = always) */
+  chance_to_consume: number
+  /** Expected consumption accounting for chance */
+  expected_quantity: number
+  /** Whether this ingredient can itself be crafted */
+  is_craftable: boolean
+  /** If expanded, the recipe used to produce this ingredient */
+  source_recipe_id: number | null
+  source_recipe_name: string | null
+  /** Child ingredients (if this intermediate is expanded) */
+  children: ResolvedIngredient[]
+  /** Number of crafts needed to produce this ingredient */
+  crafts_needed: number
+  /** Keyword keys for dynamic ingredients (e.g., ["Crystal", "ToxicFrogSkin"]) */
+  item_keys: string[]
+  /** True when this ingredient is keyword-based (no specific item_id) */
+  is_dynamic: boolean
+}
+
+export interface ResolvedRecipe {
+  recipe_id: number
+  recipe_name: string
+  /** How many times to craft this recipe */
+  craft_count: number
+  /** Desired output quantity */
+  desired_quantity: number
+  /** Actual output per craft (batch size) */
+  output_per_craft: number
+  /** XP per craft */
+  xp_per_craft: number
+  /** First-time bonus XP (0 if already crafted) */
+  xp_first_time: number
+  /** Total XP for all crafts */
+  total_xp: number
+  /** Skill that receives XP */
+  reward_skill: string | null
+  /** Flat ingredient list (leaf nodes only) */
+  ingredients: ResolvedIngredient[]
+  /** Estimated vendor cost for all ingredients */
+  estimated_cost: number
+}
+
+// ── Flattened material types ─────────────────────────────────────────────────
+
+export interface FlattenedMaterial {
+  /** Unique key: item ID as string, or "kw:KeywordName" for dynamic */
+  key: string
+  /** CDN item ID (null for dynamic) */
+  item_id: number | null
+  /** Display name */
+  item_name: string
+  /** Raw quantity needed (before chance-to-consume) */
+  quantity: number
+  /** Chance each unit is consumed (1.0 = always) */
+  chance_to_consume: number
+  /** Expected consumption accounting for chance */
+  expected_quantity: number
+  /** Whether this is a keyword-based ingredient */
+  is_dynamic: boolean
+  /** Keywords for dynamic ingredients */
+  item_keys: string[]
+}
+
+export interface IntermediateCraft {
+  recipe_name: string
+  recipe_id: number
+  item_name: string
+  item_id: number
+  crafts_needed: number
+  quantity_produced: number
+}
+
+// ── Inventory integration types ──────────────────────────────────────────────
+
+export interface VaultStock {
+  vault_name: string
+  quantity: number
+}
+
+export interface MaterialAvailability {
+  item_type_id: number
+  item_name: string
+  inventory_quantity: number
+  storage_quantity: number
+  vault_breakdown: VaultStock[]
+  total_available: number
+}
+
+export interface MaterialNeed {
+  item_id: number
+  item_name: string
+  quantity_needed: number
+  /** From live inventory */
+  inventory_have: number
+  /** From storage vaults (snapshot) */
+  storage_have: number
+  /** Per-vault breakdown */
+  vault_breakdown: VaultStock[]
+  /** How many more the player needs to acquire */
+  shortfall: number
+  /** Estimated vendor buy price per unit (value * 1.5) */
+  vendor_price: number | null
+}
+
+// ── Leveling optimizer types ────────────────────────────────────────────────
+
+export type LevelingStrategy = "first-time-rush" | "cost-efficient" | "combined"
+
+export interface LevelingPlanStep {
+  recipe_id: number
+  recipe_name: string
+  /** Number of times to craft this recipe */
+  craft_count: number
+  /** XP gained per craft */
+  xp_per_craft: number
+  /** First-time bonus XP (only for first craft) */
+  xp_first_time: number
+  /** Total XP from this step */
+  total_xp: number
+  /** Estimated ingredient cost for all crafts */
+  estimated_cost: number
+  /** Skill level required */
+  skill_level_req: number | null
+  /** Whether this recipe has been crafted before */
+  already_crafted: boolean
+  /** Whether the player has learned this recipe (appears in completion data) */
+  is_known: boolean
+  /** XP drop-off level — recipe becomes less efficient past this */
+  xp_drop_off_level: number | null
+}
+
+export interface LevelingPlanLevel {
+  /** Level at the start of this segment */
+  from_level: number
+  /** Level at the end of this segment */
+  to_level: number
+  /** XP needed for this level transition */
+  xp_needed: number
+  /** Steps to complete this level */
+  steps: LevelingPlanStep[]
+  /** Total XP from steps in this level */
+  total_xp: number
+  /** Total crafts in this level */
+  total_crafts: number
+  /** Total cost in this level */
+  total_cost: number
+}
+
+export interface LevelingPlan {
+  skill_name: string
+  current_level: number
+  target_level: number
+  strategy: LevelingStrategy
+  /** Total XP needed to reach target */
+  xp_needed: number
+  /** XP provided by first-time bonuses */
+  xp_from_first_time: number
+  /** XP provided by grinding */
+  xp_from_grinding: number
+  /** Plan grouped by level transitions */
+  levels: LevelingPlanLevel[]
+  /** Flat list of all steps (for backward compat) */
+  steps: LevelingPlanStep[]
+  /** Total estimated cost across all steps */
+  total_cost: number
+  /** Total crafts across all steps */
+  total_crafts: number
+}
+
+export interface RecipeCompletionEntry {
+  recipe_key: string
+  completions: number
+}
+
+// ── Crafting history types ──────────────────────────────────────────────────
+
+export interface CraftingHistoryRecipe {
+  recipe_key: string
+  recipe_name: string
+  completions: number
+  skill: string | null
+  reward_skill: string | null
+  skill_level_req: number | null
+}
+
+export interface SkillCraftingStats {
+  skill_name: string
+  total_recipes: number
+  crafted_recipes: number
+  total_completions: number
+  uncrafted_count: number
+  completion_percent: number
+}
+
+// ── Live crafting detection types ───────────────────────────────────────────
+
+export interface CraftingTracker {
+  /** Which project is being tracked (null for quick-calc) */
+  project_id: number | null
+  /** Recipe entries being tracked */
+  entries: TrackedRecipeEntry[]
+  /** When tracking started */
+  started_at: string
+  /** Whether tracking is active */
+  active: boolean
+}
+
+export interface TrackedRecipeEntry {
+  recipe_id: number
+  recipe_name: string
+  /** Item name of the primary output */
+  output_item_name: string
+  /** Item type ID of the primary output (for matching) */
+  output_item_type_id: number | null
+  /** Output per craft (batch size) */
+  output_per_craft: number
+  /** Target quantity (from project entry) */
+  target_quantity: number
+  /** How many output items detected so far */
+  detected_output: number
+  /** Estimated crafts completed */
+  crafts_completed: number
+}
+
+export interface CraftDetectionEvent {
+  timestamp: string
+  recipe_name: string
+  item_name: string
+  quantity: number
+}
+
+// ── Work order types ────────────────────────────────────────────────────────
+
+/** Raw work order data from character snapshot */
+export interface WorkOrderSnapshotData {
+  active: string[]
+  completed: string[]
+  inventory_item_ids: number[]
+}
+
+/** Enriched work order for display */
+export interface EnrichedWorkOrder {
+  /** Quest internal name (e.g., "Carpentry_QualityMeleeStaves") */
+  quest_key: string
+  /** Display name from quest data */
+  name: string
+  /** Crafting skill this work order is for */
+  craft_skill: string | null
+  /** Item internal name to deliver */
+  item_internal_name: string | null
+  /** Item display name */
+  item_name: string | null
+  /** Quantity of items to deliver */
+  quantity: number
+  /** Industry XP reward */
+  industry_xp: number
+  /** Gold reward */
+  gold_reward: number
+  /** Industry level requirement */
+  industry_level_req: number | null
+  /** Whether the player has memorized/accepted this work order */
+  is_active: boolean
+  /** Whether the player has completed this work order before */
+  is_completed: boolean
+  /** Whether the scroll item is in inventory/storage (not yet memorized) */
+  is_in_inventory: boolean
+  /** Recipe that produces the required item (if found) */
+  recipe_id: number | null
+  recipe_name: string | null
+}

@@ -1,0 +1,295 @@
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
+import { useGameDataStore } from './gameDataStore'
+import { useCraftingStore } from './craftingStore'
+import { useSettingsStore } from './settingsStore'
+import type { RecipeInfo } from '../types/gameData/recipes'
+import type { FoodItem } from '../types/gourmand'
+import type { MaterialNeed, RecipeCompletionEntry } from '../types/crafting'
+
+export interface HelpfulRecipe {
+  recipe: RecipeInfo
+  food: FoodItem
+}
+
+export const useCooksHelperStore = defineStore('cooksHelper', () => {
+  const gameData = useGameDataStore()
+  const crafting = useCraftingStore()
+
+  // ── State ──────────────────────────────────────────────────────────────────
+
+  const importedEatenNames = ref<Set<string>>(new Set())
+  const allFoods = ref<FoodItem[]>([])
+  const cookingRecipes = ref<RecipeInfo[]>([])
+  const sushiRecipes = ref<RecipeInfo[]>([])
+  const knownRecipeKeys = ref<Set<string>>(new Set())
+
+  const selectedRecipeIds = ref<Set<number>>(new Set())
+  const materialNeedsMap = ref<Map<number, MaterialNeed[]>>(new Map())
+
+  const filterSkill = ref<'all' | 'Cooking' | 'Sushi Making'>('all')
+  const filterAvailability = ref<'all' | 'can-craft' | 'missing-materials'>('all')
+  const searchQuery = ref('')
+  const sortMode = ref<'name' | 'skill-level' | 'food-level'>('name')
+
+  const loading = ref(false)
+  const checkingMaterials = ref(false)
+  const error = ref<string | null>(null)
+
+  // ── Computed ───────────────────────────────────────────────────────────────
+
+  const isImported = computed(() => importedEatenNames.value.size > 0)
+
+  const uneatenFoods = computed(() =>
+    allFoods.value.filter(f => !importedEatenNames.value.has(f.name))
+  )
+
+  const allCookableRecipes = computed(() => [
+    ...cookingRecipes.value,
+    ...sushiRecipes.value,
+  ])
+
+  /** Recipes the cook knows that produce at least one uneaten food */
+  const helpfulRecipes = computed<HelpfulRecipe[]>(() => {
+    if (!isImported.value) return []
+
+    // Build item_id → food lookup from uneaten foods
+    const foodById = new Map<number, FoodItem>()
+    for (const food of uneatenFoods.value) {
+      foodById.set(food.item_id, food)
+    }
+
+    const known = knownRecipeKeys.value
+    const results: HelpfulRecipe[] = []
+    for (const recipe of allCookableRecipes.value) {
+      // Only include recipes the cook has learned
+      if (known.size > 0 && !known.has(recipe.internal_name ?? '')) continue
+
+      for (const resultId of recipe.result_item_ids) {
+        const food = foodById.get(resultId)
+        if (food) {
+          results.push({ recipe, food })
+          break // one match per recipe is enough
+        }
+      }
+    }
+
+    return results
+  })
+
+  /** Apply filters and search */
+  const filteredRecipes = computed<HelpfulRecipe[]>(() => {
+    let list = helpfulRecipes.value
+
+    // Skill filter
+    if (filterSkill.value !== 'all') {
+      list = list.filter(h => h.recipe.skill === filterSkill.value)
+    }
+
+    // Availability filter
+    if (filterAvailability.value !== 'all') {
+      list = list.filter(h => {
+        const needs = materialNeedsMap.value.get(h.recipe.id)
+        if (!needs) return filterAvailability.value === 'missing-materials'
+        const canCraft = needs.every(n => n.shortfall === 0)
+        return filterAvailability.value === 'can-craft' ? canCraft : !canCraft
+      })
+    }
+
+    // Search
+    if (searchQuery.value.trim()) {
+      const q = searchQuery.value.toLowerCase()
+      list = list.filter(h =>
+        h.recipe.name.toLowerCase().includes(q) ||
+        h.food.name.toLowerCase().includes(q)
+      )
+    }
+
+    // Sort
+    list = [...list]
+    switch (sortMode.value) {
+      case 'name':
+        list.sort((a, b) => a.food.name.localeCompare(b.food.name))
+        break
+      case 'skill-level':
+        list.sort((a, b) => (a.recipe.skill_level_req ?? 0) - (b.recipe.skill_level_req ?? 0))
+        break
+      case 'food-level':
+        list.sort((a, b) => a.food.food_level - b.food.food_level)
+        break
+    }
+
+    return list
+  })
+
+  const selectionCount = computed(() => selectedRecipeIds.value.size)
+
+  const stats = computed(() => ({
+    totalFoods: allFoods.value.length,
+    eaten: importedEatenNames.value.size,
+    uneaten: uneatenFoods.value.length,
+    craftable: helpfulRecipes.value.length,
+  }))
+
+  // ── Actions ────────────────────────────────────────────────────────────────
+
+  async function importFile() {
+    error.value = null
+
+    const filePath = await open({
+      filters: [{ name: 'Gourmand Skill Report', extensions: ['txt'] }],
+    })
+
+    if (!filePath) return
+
+    try {
+      loading.value = true
+      const names = await invoke<string[]>('import_cooks_helper_file', {
+        filePath: filePath as string,
+      })
+      importedEatenNames.value = new Set(names)
+
+      // Load food + recipe data
+      await loadFoodsAndRecipes()
+
+      // Reset selection and materials
+      selectedRecipeIds.value = new Set()
+      materialNeedsMap.value = new Map()
+    } catch (e) {
+      error.value = String(e)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function loadFoodsAndRecipes() {
+    const settingsStore = useSettingsStore()
+    const characterName = settingsStore.settings.activeCharacterName
+    const serverName = settingsStore.settings.activeServerName
+
+    const [foods, cooking, sushi] = await Promise.all([
+      invoke<FoodItem[]>('get_all_foods'),
+      gameData.getRecipesForSkill('Cooking'),
+      gameData.getRecipesForSkill('Sushi Making'),
+    ])
+
+    allFoods.value = foods
+    cookingRecipes.value = cooking
+    sushiRecipes.value = sushi
+
+    // Load the cook's known recipes from character snapshot
+    if (characterName && serverName) {
+      try {
+        const completions = await invoke<RecipeCompletionEntry[]>('get_latest_recipe_completions', {
+          characterName,
+          serverName,
+        })
+        knownRecipeKeys.value = new Set(completions.map(c => c.recipe_key))
+      } catch {
+        // No snapshot — show all recipes (can't filter)
+        knownRecipeKeys.value = new Set()
+      }
+    } else {
+      knownRecipeKeys.value = new Set()
+    }
+  }
+
+  async function checkAllMaterials() {
+    checkingMaterials.value = true
+    error.value = null
+
+    try {
+      const newMap = new Map<number, MaterialNeed[]>()
+
+      for (const { recipe } of helpfulRecipes.value) {
+        const resolved = await crafting.resolveRecipeIngredients(recipe, 1)
+        const flat = crafting.flattenIngredients(resolved.ingredients)
+        const needs = await crafting.checkMaterialAvailability(flat)
+        newMap.set(recipe.id, needs)
+      }
+
+      materialNeedsMap.value = newMap
+    } catch (e) {
+      error.value = `Material check failed: ${e}`
+    } finally {
+      checkingMaterials.value = false
+    }
+  }
+
+  function toggleSelection(recipeId: number) {
+    const next = new Set(selectedRecipeIds.value)
+    if (next.has(recipeId)) {
+      next.delete(recipeId)
+    } else {
+      next.add(recipeId)
+    }
+    selectedRecipeIds.value = next
+  }
+
+  function selectAll() {
+    selectedRecipeIds.value = new Set(filteredRecipes.value.map(h => h.recipe.id))
+  }
+
+  function deselectAll() {
+    selectedRecipeIds.value = new Set()
+  }
+
+  async function addToProject(projectId: number) {
+    for (const { recipe } of helpfulRecipes.value) {
+      if (selectedRecipeIds.value.has(recipe.id)) {
+        await crafting.addEntry(projectId, recipe.id, recipe.name, 1)
+      }
+    }
+    selectedRecipeIds.value = new Set()
+  }
+
+  async function createProjectFromSelection(name?: string) {
+    const projectName = name || `Cook's Helper — ${new Date().toLocaleDateString()}`
+    const projectId = await crafting.createProject(projectName)
+    await addToProject(projectId)
+    return projectId
+  }
+
+  function clear() {
+    importedEatenNames.value = new Set()
+    allFoods.value = []
+    cookingRecipes.value = []
+    sushiRecipes.value = []
+    knownRecipeKeys.value = new Set()
+    selectedRecipeIds.value = new Set()
+    materialNeedsMap.value = new Map()
+    error.value = null
+  }
+
+  return {
+    // State
+    importedEatenNames,
+    selectedRecipeIds,
+    materialNeedsMap,
+    filterSkill,
+    filterAvailability,
+    searchQuery,
+    sortMode,
+    loading,
+    checkingMaterials,
+    error,
+    // Computed
+    isImported,
+    uneatenFoods,
+    helpfulRecipes,
+    filteredRecipes,
+    selectionCount,
+    stats,
+    // Actions
+    importFile,
+    checkAllMaterials,
+    toggleSelection,
+    selectAll,
+    deselectAll,
+    addToProject,
+    createProjectFromSelection,
+    clear,
+  }
+})

@@ -180,156 +180,6 @@ pub fn get_recent_sales(
 
 // ── Survey Commands ───────────────────────────────────────────────────────────
 
-#[derive(Deserialize)]
-pub struct StartSurveyInput {
-    pub map_item_id: u32,
-    pub map_name: String,
-    pub zone: Option<String>,
-}
-
-#[tauri::command]
-pub fn start_survey_session(
-    db: State<'_, DbPool>,
-    input: StartSurveyInput,
-) -> Result<i64, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
-
-    let start_time = chrono::Utc::now().to_rfc3339();
-
-    queries::survey::create_session(
-        &conn,
-        input.map_item_id,
-        &input.map_name,
-        input.zone.as_deref(),
-        &start_time,
-    )
-    .map_err(|e| format!("Failed to create survey session: {e}"))
-}
-
-#[derive(Deserialize)]
-pub struct AddSurveyResultInput {
-    pub session_id: i64,
-    pub survey_number: u32,
-    pub quality: u32,
-}
-
-#[tauri::command]
-pub fn add_survey_result(
-    db: State<'_, DbPool>,
-    input: AddSurveyResultInput,
-) -> Result<(), String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
-
-    queries::survey::add_survey_result(
-        &conn,
-        input.session_id,
-        input.survey_number,
-        input.quality,
-    )
-    .map_err(|e| format!("Failed to add survey result: {e}"))
-}
-
-#[derive(Deserialize)]
-pub struct AddSurveyLootInput {
-    pub session_id: i64,
-    pub item_id: u32,
-    pub quantity: u32,
-}
-
-#[tauri::command]
-pub fn add_survey_loot(
-    db: State<'_, DbPool>,
-    input: AddSurveyLootInput,
-) -> Result<(), String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
-
-    queries::survey::add_survey_loot(
-        &conn,
-        input.session_id,
-        input.item_id,
-        input.quantity,
-    )
-    .map_err(|e| format!("Failed to add survey loot: {e}"))
-}
-
-#[tauri::command]
-pub fn complete_survey_session(
-    db: State<'_, DbPool>,
-    session_id: i64,
-) -> Result<(), String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
-
-    let end_time = chrono::Utc::now().to_rfc3339();
-
-    queries::survey::complete_session(&conn, session_id, &end_time)
-        .map_err(|e| format!("Failed to complete survey session: {e}"))
-}
-
-#[derive(Serialize)]
-pub struct SurveySessionSummary {
-    pub id: i64,
-    pub map_name: String,
-    pub zone: Option<String>,
-    pub start_time: String,
-    pub end_time: Option<String>,
-    pub total_surveys: u32,
-    pub average_quality: Option<f64>,
-    pub best_quality: Option<u32>,
-    pub completed: bool,
-}
-
-#[tauri::command]
-pub fn get_survey_sessions(
-    db: State<'_, DbPool>,
-    limit: Option<usize>,
-) -> Result<Vec<SurveySessionSummary>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
-
-    let limit = limit.unwrap_or(20);
-
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, map_name, zone, datetime(start_time) as start_time,
-                    datetime(end_time) as end_time, total_surveys, quality_sum,
-                    best_quality, completed
-             FROM survey_sessions
-             ORDER BY start_time DESC
-             LIMIT ?1"
-        )
-        .map_err(|e| format!("Failed to prepare query: {e}"))?;
-
-    let rows = stmt
-        .query_map([limit], |row| {
-            let total_surveys: u32 = row.get(5)?;
-            let quality_sum: i64 = row.get(6)?;
-            let average_quality = if total_surveys > 0 {
-                Some(quality_sum as f64 / total_surveys as f64)
-            } else {
-                None
-            };
-
-            Ok(SurveySessionSummary {
-                id: row.get(0)?,
-                map_name: row.get(1)?,
-                zone: row.get(2)?,
-                start_time: row.get(3)?,
-                end_time: row.get(4)?,
-                total_surveys,
-                average_quality,
-                best_quality: row.get(7)?,
-                completed: row.get(8)?,
-            })
-        })
-        .map_err(|e| format!("Query failed: {e}"))?;
-
-    let mut results = Vec::new();
-    for row in rows {
-        results.push(row.map_err(|e| format!("Row parse error: {e}"))?);
-    }
-
-    Ok(results)
-}
-
 // ── Event Log Commands ────────────────────────────────────────────────────────
 
 #[derive(Deserialize)]
@@ -490,6 +340,60 @@ pub fn save_survey_session_stats(
     Ok(conn.last_insert_rowid())
 }
 
+/// Patch frontend-known fields onto a session that was already finalized by the backend.
+/// The backend computes revenue/cost/profit; the frontend patches in elapsed time (with
+/// pause accounting), XP gains, and manual flag.
+#[derive(Deserialize)]
+pub struct PatchSessionInput {
+    pub elapsed_seconds: i64,
+    pub surveying_xp_gained: u32,
+    pub mining_xp_gained: u32,
+    pub geology_xp_gained: u32,
+    pub is_manual: bool,
+}
+
+#[tauri::command]
+pub fn patch_survey_session(
+    db: State<'_, DbPool>,
+    session_id: i64,
+    input: PatchSessionInput,
+) -> Result<(), String> {
+    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+
+    // Update elapsed and recompute profit_per_hour with the frontend's accurate elapsed time
+    let total_profit: f64 = conn.query_row(
+        "SELECT total_profit FROM survey_session_stats WHERE id = ?1",
+        [session_id],
+        |row| row.get(0),
+    ).map_err(|e| format!("Failed to read session: {e}"))?;
+
+    let hours = input.elapsed_seconds as f64 / 3600.0;
+    let profit_per_hour = if hours > 0.0 { total_profit / hours } else { 0.0 };
+
+    conn.execute(
+        "UPDATE survey_session_stats SET
+            elapsed_seconds = ?1,
+            surveying_xp_gained = ?2,
+            mining_xp_gained = ?3,
+            geology_xp_gained = ?4,
+            is_manual = ?5,
+            profit_per_hour = ?6
+         WHERE id = ?7",
+        rusqlite::params![
+            input.elapsed_seconds,
+            input.surveying_xp_gained,
+            input.mining_xp_gained,
+            input.geology_xp_gained,
+            input.is_manual,
+            profit_per_hour,
+            session_id,
+        ],
+    )
+    .map_err(|e| format!("Failed to patch session stats: {e}"))?;
+
+    Ok(())
+}
+
 #[derive(Serialize)]
 pub struct HistoricalSession {
     pub id: i64,
@@ -497,10 +401,19 @@ pub struct HistoricalSession {
     pub end_time: Option<String>,
     pub maps_started: u32,
     pub surveys_completed: u32,
-    pub total_revenue: u32,
-    pub total_cost: u32,
-    pub total_profit: i32,
-    pub profit_per_hour: i32,
+    pub total_revenue: f64,
+    pub total_cost: f64,
+    pub total_profit: f64,
+    pub profit_per_hour: f64,
+    pub elapsed_seconds: i64,
+    pub speed_bonus_count: i64,
+    pub survey_types_used: Option<String>,
+    pub maps_used_summary: Option<String>,
+    pub name: String,
+    pub notes: String,
+    pub surveying_xp_gained: u32,
+    pub mining_xp_gained: u32,
+    pub geology_xp_gained: u32,
 }
 
 #[tauri::command]
@@ -512,11 +425,28 @@ pub fn get_historical_sessions(
 
     let limit = limit.unwrap_or(50);
 
+    // All summary data is pre-computed in survey_session_stats by finalize_session()
     let mut stmt = conn
         .prepare(
-            "SELECT id, datetime(start_time) as start_time, datetime(end_time) as end_time,
-                    maps_started, surveys_completed, total_revenue, total_cost,
-                    total_profit, profit_per_hour
+            "SELECT
+                id,
+                datetime(start_time) as start_time,
+                datetime(end_time) as end_time,
+                maps_started,
+                surveys_completed,
+                total_revenue,
+                total_cost,
+                total_profit,
+                profit_per_hour,
+                elapsed_seconds,
+                speed_bonus_count,
+                survey_types_used,
+                maps_used_summary,
+                name,
+                notes,
+                surveying_xp_gained,
+                mining_xp_gained,
+                geology_xp_gained
              FROM survey_session_stats
              WHERE surveys_completed > 0
              ORDER BY start_time DESC
@@ -536,6 +466,15 @@ pub fn get_historical_sessions(
                 total_cost: row.get(6)?,
                 total_profit: row.get(7)?,
                 profit_per_hour: row.get(8)?,
+                elapsed_seconds: row.get(9)?,
+                speed_bonus_count: row.get(10)?,
+                survey_types_used: row.get(11)?,
+                maps_used_summary: row.get(12)?,
+                name: row.get(13)?,
+                notes: row.get(14)?,
+                surveying_xp_gained: row.get(15)?,
+                mining_xp_gained: row.get(16)?,
+                geology_xp_gained: row.get(17)?,
             })
         })
         .map_err(|e| format!("Query failed: {e}"))?;
@@ -546,5 +485,21 @@ pub fn get_historical_sessions(
     }
 
     Ok(results)
+}
+
+#[tauri::command]
+pub fn update_survey_session(
+    db: State<'_, DbPool>,
+    session_id: i64,
+    name: String,
+    notes: String,
+) -> Result<(), String> {
+    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    conn.execute(
+        "UPDATE survey_session_stats SET name = ?1, notes = ?2 WHERE id = ?3",
+        rusqlite::params![name, notes, session_id],
+    )
+    .map_err(|e| format!("Failed to update session: {e}"))?;
+    Ok(())
 }
 
