@@ -70,9 +70,11 @@
     </div>
 
     <!-- No food data yet -->
-    <div v-if="!store.loading && allFoods.length === 0" class="text-text-muted text-center py-8">
-      No food data available. Make sure game data has been loaded.
-    </div>
+    <EmptyState
+      v-if="!store.loading && allFoods.length === 0"
+      variant="panel"
+      primary="No food data available"
+      secondary="Make sure game data has been loaded." />
 
     <!-- Main content (only when foods loaded) -->
     <template v-if="allFoods.length > 0">
@@ -244,6 +246,7 @@
 import { ref, onMounted, computed, nextTick } from 'vue'
 import { useGourmandStore } from '../../stores/gourmandStore'
 import type { FoodItem } from '../../types/gourmand'
+import EmptyState from '../Shared/EmptyState.vue'
 import GourmandProgressBar from './GourmandProgressBar.vue'
 import FoodComparisonPanel from './FoodComparisonPanel.vue'
 import FoodCategorySection from './FoodCategorySection.vue'

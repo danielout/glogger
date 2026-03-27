@@ -2,9 +2,11 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { save } from "@tauri-apps/plugin-dialog";
 import { useGameDataStore } from "./gameDataStore";
 import { useSettingsStore } from "./settingsStore";
-import { useInventoryStore } from "./inventoryStore";
+import { useGameStateStore } from "./gameStateStore";
+import { useMarketStore } from "./marketStore";
 import type {
   CraftDetectionEvent,
   CraftingHistoryRecipe,
@@ -13,24 +15,35 @@ import type {
   CraftingTracker,
   FlattenedMaterial,
   IntermediateCraft,
-  LevelingPlan,
-  LevelingPlanStep,
-  LevelingStrategy,
   MaterialAvailability,
   MaterialNeed,
-  RecipeCompletionEntry,
   ResolvedIngredient,
   ResolvedRecipe,
   SkillCraftingStats,
   TrackedRecipeEntry,
   WorkOrderSnapshotData,
   EnrichedWorkOrder,
+  LevelingPlanLevel,
 } from "../types/crafting";
 import type { RecipeInfo } from "../types/gameData/recipes";
 import type { PlayerEvent } from "../types/playerEvents";
 
 export const useCraftingStore = defineStore("crafting", () => {
   const gameData = useGameDataStore();
+  const marketStore = useMarketStore();
+
+  // ── Price helpers ──────────────────────────────────────────────────────────
+
+  /**
+   * Get the best known price for an item: market price if set, otherwise vendor price * 1.5.
+   * Returns null if no price is known.
+   */
+  function getItemPrice(itemId: number, vendorValue: number | null | undefined): number | null {
+    const market = marketStore.valuesByItemId[itemId];
+    if (market) return market.market_value;
+    if (vendorValue) return vendorValue * 1.5;
+    return null;
+  }
 
   // ── Recipe filtering helpers ────────────────────────────────────────────────
 
@@ -184,7 +197,7 @@ export const useCraftingStore = defineStore("crafting", () => {
       // Get item name
       let itemName = ing.description ?? "Unknown item";
       if (ing.item_id) {
-        const item = await gameData.getItem(ing.item_id);
+        const item = await gameData.resolveItem(ing.item_id);
         if (item) itemName = item.name;
       }
 
@@ -205,19 +218,20 @@ export const useCraftingStore = defineStore("crafting", () => {
       });
     }
 
-    // Estimate cost: sum of ingredient vendor values
+    // Estimate cost: sum of market prices (falling back to vendor price * 1.5)
     const itemIds = ingredients
       .filter((i) => i.item_id !== null && i.children.length === 0)
       .map((i) => i.item_id!);
 
     let estimatedCost = 0;
     if (itemIds.length > 0) {
-      const items = await gameData.getItemsBatch(itemIds);
+      const items = await gameData.resolveItemsBatch(itemIds.map(String));
       for (const ing of ingredients) {
         if (ing.item_id && ing.children.length === 0) {
-          const item = items[ing.item_id];
-          if (item?.value) {
-            estimatedCost += item.value * 1.5 * ing.expected_quantity;
+          const item = items[String(ing.item_id)];
+          const price = getItemPrice(ing.item_id, item?.value);
+          if (price) {
+            estimatedCost += price * ing.expected_quantity;
           }
         }
       }
@@ -276,6 +290,7 @@ export const useCraftingStore = defineStore("crafting", () => {
               expected_quantity: ing.expected_quantity,
               is_dynamic: ing.is_dynamic,
               item_keys: ing.item_keys,
+              is_craftable: ing.is_craftable,
             });
           }
         }
@@ -325,7 +340,6 @@ export const useCraftingStore = defineStore("crafting", () => {
     materials: Map<string, FlattenedMaterial>,
   ): Promise<MaterialNeed[]> {
     const settingsStore = useSettingsStore();
-    const inventoryStore = useInventoryStore();
 
     // Filter to only concrete items (skip dynamic/keyword entries)
     const concreteMaterials = Array.from(materials.values()).filter(
@@ -351,38 +365,27 @@ export const useCraftingStore = defineStore("crafting", () => {
       }
     }
 
-    // Build lookup from storage results
-    const storageMap = new Map<number, MaterialAvailability>();
+    // Build lookup from backend results (now includes game_state_inventory + storage snapshot)
+    const availMap = new Map<number, MaterialAvailability>();
     for (const item of storageData) {
-      storageMap.set(item.item_type_id, item);
+      availMap.set(item.item_type_id, item);
     }
 
-    // 2. Check live inventory
-    const liveInventory = new Map<number, number>();
-    for (const item of inventoryStore.items) {
-      if (item.item_type_id && itemIds.includes(item.item_type_id)) {
-        liveInventory.set(
-          item.item_type_id,
-          (liveInventory.get(item.item_type_id) ?? 0) + item.stack_size,
-        );
-      }
-    }
+    // 2. Get vendor prices for cost estimation
+    const itemData = await gameData.resolveItemsBatch(itemIds.map(String));
 
-    // 3. Get vendor prices for cost estimation
-    const itemData = await gameData.getItemsBatch(itemIds);
-
-    // 4. Build MaterialNeed list
+    // 3. Build MaterialNeed list
     const needs: MaterialNeed[] = [];
     for (const mat of concreteMaterials) {
       const itemId = mat.item_id!;
-      const storage = storageMap.get(itemId);
-      const invQty = liveInventory.get(itemId) ?? 0;
-      const storageQty = storage?.storage_quantity ?? 0;
+      const avail = availMap.get(itemId);
+      const invQty = avail?.inventory_quantity ?? 0;
+      const storageQty = avail?.storage_quantity ?? 0;
       const totalHave = invQty + storageQty;
       const shortfall = Math.max(0, mat.expected_quantity - totalHave);
 
-      const item = itemData[itemId];
-      const vendorPrice = item?.value ? item.value * 1.5 : null;
+      const item = itemData[String(itemId)];
+      const price = getItemPrice(itemId, item?.value);
 
       needs.push({
         item_id: itemId,
@@ -390,47 +393,21 @@ export const useCraftingStore = defineStore("crafting", () => {
         quantity_needed: mat.expected_quantity,
         inventory_have: invQty,
         storage_have: storageQty,
-        vault_breakdown: storage?.vault_breakdown ?? [],
+        vault_breakdown: avail?.vault_breakdown ?? [],
         shortfall,
-        vendor_price: vendorPrice,
+        vendor_price: price,
+        is_craftable: mat.is_craftable,
       });
     }
 
     return needs.sort((a, b) => a.item_name.localeCompare(b.item_name));
   }
 
-  // ── Leveling Optimizer ───────────────────────────────────────────────────
+  // ── Leveling Helper ──────────────────────────────────────────────────────
 
   /**
-   * Build a cumulative XP array from the per-level XP amounts.
-   * Input: xpAmounts[i] = XP needed to go from level i to level i+1
-   * Output: cumXp[i] = total XP needed to reach level i+1 from level 0
-   */
-  function buildCumulativeXp(xpAmounts: number[]): number[] {
-    const cumXp: number[] = [];
-    let total = 0;
-    for (const amount of xpAmounts) {
-      total += amount;
-      cumXp.push(total);
-    }
-    return cumXp;
-  }
-
-  /**
-   * Calculate XP needed to go from currentLevel to targetLevel using per-level XP table.
-   * xpAmounts[i] = XP needed to go from level i to level i+1
-   */
-  function calculateXpNeeded(xpAmounts: number[], currentLevel: number, targetLevel: number): number {
-    if (targetLevel <= currentLevel || targetLevel > xpAmounts.length) return 0;
-    let total = 0;
-    for (let i = currentLevel; i < targetLevel && i < xpAmounts.length; i++) {
-      total += xpAmounts[i];
-    }
-    return total;
-  }
-
-  /**
-   * Estimate the ingredient cost for one craft of a recipe.
+   * Estimate the total ingredient cost for one craft of a recipe,
+   * using app-wide pricing (market → vendor × 1.5 fallback).
    */
   async function estimateRecipeCost(recipe: RecipeInfo): Promise<number> {
     const itemIds = recipe.ingredients
@@ -438,14 +415,15 @@ export const useCraftingStore = defineStore("crafting", () => {
       .map((i) => i.item_id!);
     if (itemIds.length === 0) return 0;
 
-    const items = await gameData.getItemsBatch(itemIds);
+    const items = await gameData.resolveItemsBatch(itemIds.map(String));
     let cost = 0;
     for (const ing of recipe.ingredients) {
       if (ing.item_id) {
-        const item = items[ing.item_id];
-        if (item?.value) {
+        const item = items[String(ing.item_id)];
+        const price = getItemPrice(ing.item_id, item?.value);
+        if (price) {
           const chanceToConsume = ing.chance_to_consume ?? 1;
-          cost += item.value * 1.5 * ing.stack_size * chanceToConsume;
+          cost += price * ing.stack_size * chanceToConsume;
         }
       }
     }
@@ -453,336 +431,75 @@ export const useCraftingStore = defineStore("crafting", () => {
   }
 
   /**
-   * Generate a leveling plan for a skill from currentLevel to targetLevel.
-   */
-  async function generateLevelingPlan(
-    skillName: string,
-    currentLevel: number,
-    targetLevel: number,
-    strategy: LevelingStrategy,
-    includeUnlearnedRecipes: boolean = true,
-    excludedRecipeIds: Set<number> = new Set(),
-  ): Promise<LevelingPlan> {
-    const settingsStore = useSettingsStore();
-    const characterName = settingsStore.settings.activeCharacterName;
-    const serverName = settingsStore.settings.activeServerName;
-
-    // 1. Get XP table for this skill (per-level amounts → cumulative)
-    const xpAmounts = await invoke<number[]>("get_xp_table_for_skill", { skillName });
-    const xpTable = buildCumulativeXp(xpAmounts);
-    const xpNeeded = calculateXpNeeded(xpAmounts, currentLevel, targetLevel);
-
-    if (xpNeeded <= 0) {
-      return {
-        skill_name: skillName,
-        current_level: currentLevel,
-        target_level: targetLevel,
-        strategy,
-        xp_needed: 0,
-        xp_from_first_time: 0,
-        xp_from_grinding: 0,
-        levels: [],
-        steps: [],
-        total_cost: 0,
-        total_crafts: 0,
-      };
-    }
-
-    // 2. Get all recipes that reward XP in this skill
-    // reward_skill on recipes uses internal names (e.g., "JewelryCrafting"),
-    // but skillName is the display name (e.g., "Jewelry Crafting").
-    // Look up the internal name for proper matching.
-    const skillInfo = await gameData.getSkillByName(skillName);
-    const skillInternalName = skillInfo?.internal_name ?? skillName;
-
-    const allRecipes = filterRecipes(await gameData.getRecipesForSkill(skillName));
-    const relevantRecipes = allRecipes.filter(
-      (r) => r.reward_skill === skillInternalName && ((r.reward_skill_xp ?? 0) > 0 || (r.reward_skill_xp_first_time ?? 0) > 0),
-    );
-
-    // 3. Get recipe completions to identify first-time bonus opportunities
-    let completions: RecipeCompletionEntry[] = [];
-    if (characterName && serverName) {
-      try {
-        completions = await invoke<RecipeCompletionEntry[]>("get_latest_recipe_completions", {
-          characterName,
-          serverName,
-        });
-      } catch {
-        // No snapshot available — treat all as unknown
-      }
-    }
-    const completionMap = new Map(completions.map((c) => [c.recipe_key, c.completions]));
-    const hasCompletionData = completions.length > 0;
-
-    // 4. Build candidate list with costs
-    interface RecipeCandidate {
-      recipe: RecipeInfo
-      xpPerCraft: number
-      firstTimeXp: number
-      alreadyCrafted: boolean
-      isKnown: boolean
-      costPerCraft: number
-      xpPerGold: number
-    }
-
-    const candidates: RecipeCandidate[] = [];
-    for (const recipe of relevantRecipes) {
-      // Skip manually excluded recipes
-      if (excludedRecipeIds.has(recipe.id)) continue;
-      // Skip recipes above target level (never reachable in this plan)
-      if ((recipe.skill_level_req ?? 0) > targetLevel) continue;
-
-      const internalName = recipe.internal_name ?? "";
-      const isKnown = !hasCompletionData || completionMap.has(internalName);
-      const alreadyCrafted = completionMap.has(internalName) && (completionMap.get(internalName)! > 0);
-
-      // Skip unlearned recipes if toggle is off
-      if (!includeUnlearnedRecipes && hasCompletionData && !isKnown) {
-        continue;
-      }
-
-      const xpPerCraft = recipe.reward_skill_xp ?? 0;
-      const firstTimeXp = alreadyCrafted ? 0 : (recipe.reward_skill_xp_first_time ?? 0);
-      const costPerCraft = await estimateRecipeCost(recipe);
-      const xpPerGold = costPerCraft > 0 ? xpPerCraft / costPerCraft : Infinity;
-
-      candidates.push({
-        recipe,
-        xpPerCraft,
-        firstTimeXp,
-        alreadyCrafted,
-        isKnown,
-        costPerCraft,
-        xpPerGold,
-      });
-    }
-
-    // 5. Level-by-level planning
-    // At each level, pick the best option:
-    //   - First-time bonus available? Craft the highest-XP one once.
-    //   - No bonuses (or cost-efficient only)? Grind the best XP/gold recipe until we level.
-    // Re-evaluate at each level-up since new recipes unlock and others drop off.
-
-    const levels: import("../types/crafting").LevelingPlanLevel[] = [];
-    const usedFirstTime = new Set<number>();
-    let xpFromFirstTime = 0;
-    let xpFromGrinding = 0;
-    let simLevel = currentLevel;
-    let cumulativeXp = currentLevel > 0 ? (xpTable[currentLevel - 1] ?? 0) : 0;
-    const targetCumulativeXp = xpTable[targetLevel - 1] ?? 0;
-
-    /** Helper: get candidates available at a given level */
-    function candidatesAtLevel(level: number) {
-      return candidates.filter((c) => {
-        if ((c.recipe.skill_level_req ?? 0) > level) return false;
-        const dropOff = c.recipe.reward_skill_xp_drop_off_level;
-        if (dropOff && level >= dropOff) return false;
-        // Must give XP from crafting or from first-time bonus
-        return c.xpPerCraft > 0 || c.firstTimeXp > 0;
-      });
-    }
-
-    /** Helper: pick best grind recipe at a level by strategy (must have repeatable XP) */
-    function pickGrindRecipe(level: number) {
-      const available = candidatesAtLevel(level).filter((c) => c.xpPerCraft > 0);
-      if (strategy === "first-time-rush") {
-        return available.sort((a, b) => b.xpPerCraft - a.xpPerCraft)[0] ?? null;
-      }
-      return available.sort((a, b) => {
-        if (a.costPerCraft === 0 && b.costPerCraft === 0) return b.xpPerCraft - a.xpPerCraft;
-        if (a.costPerCraft === 0) return -1;
-        if (b.costPerCraft === 0) return 1;
-        return b.xpPerGold - a.xpPerGold;
-      })[0] ?? null;
-    }
-
-    // Current level segment being built
-    let currentLevelSteps: LevelingPlanStep[] = [];
-    let levelSegmentStart = simLevel;
-
-    /** Finalize the current level segment and start a new one */
-    function finalizeLevelSegment(newLevel: number) {
-      if (currentLevelSteps.length > 0) {
-        const xpForLevel = xpAmounts[levelSegmentStart] ?? 0;
-        levels.push({
-          from_level: levelSegmentStart,
-          to_level: levelSegmentStart + 1,
-          xp_needed: xpForLevel,
-          steps: currentLevelSteps,
-          total_xp: currentLevelSteps.reduce((s, st) => s + st.total_xp, 0),
-          total_crafts: currentLevelSteps.reduce((s, st) => s + st.craft_count, 0),
-          total_cost: currentLevelSteps.reduce((s, st) => s + st.estimated_cost, 0),
-        });
-        currentLevelSteps = [];
-      }
-      levelSegmentStart = newLevel;
-    }
-
-    const MAX_ITERATIONS = 500;
-    let iterations = 0;
-
-    while (cumulativeXp < targetCumulativeXp && iterations++ < MAX_ITERATIONS) {
-      // Try first-time bonuses at this level (unless cost-efficient only)
-      if (strategy !== "cost-efficient") {
-        const bonusCandidates = candidatesAtLevel(simLevel)
-          .filter((c) => !c.alreadyCrafted && c.firstTimeXp > 0 && !usedFirstTime.has(c.recipe.id))
-          .sort((a, b) => (b.xpPerCraft + b.firstTimeXp) - (a.xpPerCraft + a.firstTimeXp));
-
-        for (const c of bonusCandidates) {
-          if (cumulativeXp >= targetCumulativeXp) break;
-          const stepXp = c.xpPerCraft + c.firstTimeXp;
-          usedFirstTime.add(c.recipe.id);
-
-          currentLevelSteps.push({
-            recipe_id: c.recipe.id,
-            recipe_name: c.recipe.name,
-            craft_count: 1,
-            xp_per_craft: c.xpPerCraft,
-            xp_first_time: c.firstTimeXp,
-            total_xp: stepXp,
-            estimated_cost: c.costPerCraft,
-            skill_level_req: c.recipe.skill_level_req,
-            already_crafted: false,
-            is_known: c.isKnown,
-            xp_drop_off_level: c.recipe.reward_skill_xp_drop_off_level ?? null,
-          });
-
-          cumulativeXp += stepXp;
-          xpFromFirstTime += stepXp;
-
-          // Check if we leveled up
-          if (simLevel < xpTable.length && cumulativeXp >= (xpTable[simLevel] ?? Infinity)) {
-            simLevel++;
-            finalizeLevelSegment(simLevel);
-            break; // restart the while loop at new level
-          }
-        }
-      }
-
-      if (cumulativeXp >= targetCumulativeXp) break;
-
-      // Re-check level after bonuses
-      while (simLevel < xpTable.length && cumulativeXp >= (xpTable[simLevel] ?? Infinity)) {
-        finalizeLevelSegment(simLevel + 1);
-        simLevel++;
-      }
-
-      // Grind: pick best recipe, craft until we level up or reach target
-      const grindRecipe = pickGrindRecipe(simLevel);
-      if (!grindRecipe) break;
-
-      const xpRemaining = Math.min(
-        targetCumulativeXp - cumulativeXp,
-        simLevel < xpTable.length ? (xpTable[simLevel] ?? targetCumulativeXp) - cumulativeXp : targetCumulativeXp - cumulativeXp,
-      );
-
-      if (xpRemaining <= 0) break;
-
-      const craftsNeeded = Math.ceil(xpRemaining / grindRecipe.xpPerCraft);
-      const stepXp = craftsNeeded * grindRecipe.xpPerCraft;
-
-      currentLevelSteps.push({
-        recipe_id: grindRecipe.recipe.id,
-        recipe_name: grindRecipe.recipe.name,
-        craft_count: craftsNeeded,
-        xp_per_craft: grindRecipe.xpPerCraft,
-        xp_first_time: 0,
-        total_xp: stepXp,
-        estimated_cost: craftsNeeded * grindRecipe.costPerCraft,
-        skill_level_req: grindRecipe.recipe.skill_level_req,
-        already_crafted: grindRecipe.alreadyCrafted,
-        is_known: grindRecipe.isKnown,
-        xp_drop_off_level: grindRecipe.recipe.reward_skill_xp_drop_off_level ?? null,
-      });
-
-      cumulativeXp += stepXp;
-      xpFromGrinding += stepXp;
-
-      // Update simulated level
-      while (simLevel < xpTable.length && cumulativeXp >= (xpTable[simLevel] ?? Infinity)) {
-        simLevel++;
-        finalizeLevelSegment(simLevel);
-      }
-    }
-
-    // Finalize any remaining steps
-    if (currentLevelSteps.length > 0) {
-      const xpForLevel = xpAmounts[levelSegmentStart] ?? 0;
-      levels.push({
-        from_level: levelSegmentStart,
-        to_level: Math.min(levelSegmentStart + 1, targetLevel),
-        xp_needed: xpForLevel,
-        steps: currentLevelSteps,
-        total_xp: currentLevelSteps.reduce((s, st) => s + st.total_xp, 0),
-        total_crafts: currentLevelSteps.reduce((s, st) => s + st.craft_count, 0),
-        total_cost: currentLevelSteps.reduce((s, st) => s + st.estimated_cost, 0),
-      });
-    }
-
-    // Merge adjacent levels that use the exact same recipe set (for cleaner display)
-    const mergedLevels: typeof levels = [];
-    for (const lvl of levels) {
-      const prev = mergedLevels[mergedLevels.length - 1];
-      if (
-        prev
-        && prev.steps.length === 1 && lvl.steps.length === 1
-        && prev.steps[0].recipe_id === lvl.steps[0].recipe_id
-        && prev.steps[0].xp_first_time === 0 && lvl.steps[0].xp_first_time === 0
-      ) {
-        // Merge: same grind recipe across consecutive levels
-        prev.to_level = lvl.to_level;
-        prev.xp_needed += lvl.xp_needed;
-        prev.steps[0].craft_count += lvl.steps[0].craft_count;
-        prev.steps[0].total_xp += lvl.steps[0].total_xp;
-        prev.steps[0].estimated_cost += lvl.steps[0].estimated_cost;
-        prev.total_xp += lvl.total_xp;
-        prev.total_crafts += lvl.total_crafts;
-        prev.total_cost += lvl.total_cost;
-      } else {
-        mergedLevels.push(lvl);
-      }
-    }
-
-    const allSteps = mergedLevels.flatMap((l) => l.steps);
-    const totalCost = allSteps.reduce((sum, s) => sum + s.estimated_cost, 0);
-    const totalCrafts = allSteps.reduce((sum, s) => sum + s.craft_count, 0);
-
-    return {
-      skill_name: skillName,
-      current_level: currentLevel,
-      target_level: targetLevel,
-      strategy,
-      xp_needed: xpNeeded,
-      xp_from_first_time: xpFromFirstTime,
-      xp_from_grinding: xpFromGrinding,
-      levels: mergedLevels,
-      steps: allSteps,
-      total_cost: totalCost,
-      total_crafts: totalCrafts,
-    };
-  }
-
-  /**
-   * Get the player's current skill level from the latest character snapshot.
+   * Get the player's current skill level from game state.
+   * Resolves display name → CDN internal name → game state lookup.
    */
   async function getSkillLevel(skillName: string): Promise<{ level: number; xpTowardNext: number; xpNeededForNext: number } | null> {
-    const settingsStore = useSettingsStore();
-    const characterName = settingsStore.settings.activeCharacterName;
-    const serverName = settingsStore.settings.activeServerName;
-    if (!characterName || !serverName) return null;
+    const gameStateStore = useGameStateStore()
 
-    try {
-      const result = await invoke<[number, number, number] | null>("get_latest_skill_level", {
-        characterName,
-        serverName,
-        skillName,
-      });
-      if (!result) return null;
-      return { level: result[0], xpTowardNext: result[1], xpNeededForNext: result[2] };
-    } catch {
-      return null;
+    function toResult(skill: { level: number; bonus_levels: number; xp: number; tnl: number }) {
+      return { level: skill.level + skill.bonus_levels, xpTowardNext: skill.xp, xpNeededForNext: skill.tnl }
     }
+
+    // Try direct lookup first (works if skillName is already an internal name)
+    let skill = gameStateStore.skillsByName[skillName]
+    if (skill) return toResult(skill)
+
+    // Resolve display name → internal name via CDN
+    const skillInfo = await gameData.resolveSkill(skillName)
+    if (skillInfo?.internal_name) {
+      skill = gameStateStore.skillsByName[skillInfo.internal_name]
+      if (skill) return toResult(skill)
+    }
+
+    return null
+  }
+
+  // ── Leveling Tab State (persists across tab switches) ───────────────────
+
+  const levelingState = ref<{
+    selectedSkill: string
+    currentLevel: number
+    snapshotLevel: number | null
+    xpBuffPercent: number
+    xpTable: number[]
+    planLevels: LevelingPlanLevel[]
+  }>({
+    selectedSkill: "",
+    currentLevel: 0,
+    snapshotLevel: null,
+    xpBuffPercent: 0,
+    xpTable: [],
+    planLevels: [],
+  })
+
+  /**
+   * Create a crafting project from the current leveling plan.
+   * Aggregates entries across all levels by recipe_id, summing craft counts.
+   */
+  async function createProjectFromLevelingPlan(planName: string): Promise<number> {
+    const plan = levelingState.value.planLevels
+    // Aggregate entries across all levels by recipe_id
+    const recipeMap = new Map<number, { recipe_name: string; total_quantity: number }>()
+    for (const lvl of plan) {
+      for (const entry of lvl.entries) {
+        const existing = recipeMap.get(entry.recipe_id)
+        if (existing) {
+          existing.total_quantity += entry.craft_count
+        } else {
+          recipeMap.set(entry.recipe_id, {
+            recipe_name: entry.recipe_name,
+            total_quantity: entry.craft_count,
+          })
+        }
+      }
+    }
+
+    const projectId = await createProject(planName)
+    for (const [recipeId, data] of recipeMap) {
+      await addEntry(projectId, recipeId, data.recipe_name, data.total_quantity)
+    }
+    return projectId
   }
 
   // ── Crafting History ─────────────────────────────────────────────────────
@@ -792,29 +509,18 @@ export const useCraftingStore = defineStore("crafting", () => {
    * Returns enriched list sorted by completions (descending).
    */
   async function getCraftingHistory(): Promise<CraftingHistoryRecipe[]> {
-    const settingsStore = useSettingsStore();
-    const characterName = settingsStore.settings.activeCharacterName;
-    const serverName = settingsStore.settings.activeServerName;
-    if (!characterName || !serverName) return [];
-
-    let completions: RecipeCompletionEntry[] = [];
-    try {
-      completions = await invoke<RecipeCompletionEntry[]>("get_latest_recipe_completions", {
-        characterName,
-        serverName,
-      });
-    } catch {
-      return [];
-    }
+    const gameStateStore = useGameStateStore();
+    const completionMap = gameStateStore.recipeCompletions;
+    if (Object.keys(completionMap).length === 0) return [];
 
     // Enrich with CDN recipe data
     const results: CraftingHistoryRecipe[] = [];
-    for (const entry of completions) {
-      const recipe = await gameData.getRecipeByName(entry.recipe_key);
+    for (const [recipeKey, completions] of Object.entries(completionMap)) {
+      const recipe = await gameData.resolveRecipe(recipeKey);
       results.push({
-        recipe_key: entry.recipe_key,
-        recipe_name: recipe?.name ?? entry.recipe_key,
-        completions: entry.completions,
+        recipe_key: recipeKey,
+        recipe_name: recipe?.name ?? recipeKey,
+        completions,
         skill: recipe?.skill ?? null,
         reward_skill: recipe?.reward_skill ?? null,
         skill_level_req: recipe?.skill_level_req ?? null,
@@ -829,26 +535,9 @@ export const useCraftingStore = defineStore("crafting", () => {
    * how many the player has crafted, completion percentages.
    */
   async function getSkillCraftingStats(): Promise<SkillCraftingStats[]> {
-    const settingsStore = useSettingsStore();
-    const characterName = settingsStore.settings.activeCharacterName;
-    const serverName = settingsStore.settings.activeServerName;
-    if (!characterName || !serverName) return [];
-
-    // Get completions
-    let completions: RecipeCompletionEntry[] = [];
-    try {
-      completions = await invoke<RecipeCompletionEntry[]>("get_latest_recipe_completions", {
-        characterName,
-        serverName,
-      });
-    } catch {
-      return [];
-    }
-
-    const completionSet = new Set(
-      completions.filter((c) => c.completions > 0).map((c) => c.recipe_key),
-    );
-    const completionMap = new Map(completions.map((c) => [c.recipe_key, c.completions]));
+    const gameStateStore = useGameStateStore();
+    const completionMap = gameStateStore.recipeCompletions;
+    const completionSet = gameStateStore.knownRecipeKeys;
 
     // Get all skills with XP tables (crafting-capable skills)
     const allSkills = await gameData.getAllSkills();
@@ -864,10 +553,10 @@ export const useCraftingStore = defineStore("crafting", () => {
       let craftedCount = 0;
       let totalCompletions = 0;
       for (const r of relevantRecipes) {
-        const key = r.internal_name ?? r.name;
+        const key = `Recipe_${r.id}`;
         if (completionSet.has(key)) {
           craftedCount++;
-          totalCompletions += completionMap.get(key) ?? 0;
+          totalCompletions += completionMap[key] ?? 0;
         }
       }
 
@@ -919,7 +608,7 @@ export const useCraftingStore = defineStore("crafting", () => {
       if (!primaryOutput) continue;
 
       // Get the item name for matching
-      const item = await gameData.getItem(primaryOutput.item_id);
+      const item = await gameData.resolveItem(primaryOutput.item_id);
       if (!item) continue;
 
       entries.push({
@@ -951,7 +640,7 @@ export const useCraftingStore = defineStore("crafting", () => {
 
     const recipes: { recipe: RecipeInfo; targetQuantity: number }[] = [];
     for (const entry of activeProject.value.entries) {
-      const recipe = await gameData.getRecipeByName(entry.recipe_name);
+      const recipe = await gameData.resolveRecipe(entry.recipe_name);
       if (recipe) {
         recipes.push({ recipe, targetQuantity: entry.quantity });
       }
@@ -1069,7 +758,7 @@ export const useCraftingStore = defineStore("crafting", () => {
     const inventoryQuestKeys = new Set<string>();
     if (includeInventoryScrolls && snapshot.inventory_item_ids.length > 0) {
       for (const typeId of snapshot.inventory_item_ids) {
-        const item = await gameData.getItem(typeId);
+        const item = await gameData.resolveItem(typeId);
         if (item?.bestow_quest) {
           // bestow_quest is the quest InternalName (e.g. "Toolcrafting_GrandShapingHammers")
           const questInternalName = item.bestow_quest;
@@ -1084,7 +773,7 @@ export const useCraftingStore = defineStore("crafting", () => {
     // Enrich each work order with quest + item + recipe data
     const results: EnrichedWorkOrder[] = [];
     for (const questKey of questKeys) {
-      const quest = await gameData.getQuestByInternalName(questKey);
+      const quest = await gameData.resolveQuest(questKey);
       if (!quest) continue;
       const raw = quest.raw;
 
@@ -1102,7 +791,7 @@ export const useCraftingStore = defineStore("crafting", () => {
       let recipeName: string | null = null;
 
       if (itemInternalName) {
-        const item = await gameData.getItemByInternalName(itemInternalName);
+        const item = await gameData.resolveItem(itemInternalName);
         if (item) {
           itemName = item.name;
           // Find a recipe that produces this item (filtering Max-Enchanted)
@@ -1163,6 +852,45 @@ export const useCraftingStore = defineStore("crafting", () => {
     return results;
   }
 
+  /**
+   * Export material needs as a shareable text file via save dialog.
+   */
+  async function exportMaterialList(
+    projectName: string,
+    needs: MaterialNeed[],
+  ): Promise<void> {
+    const filePath = await save({
+      filters: [{ name: "Text File", extensions: ["txt"] }],
+      defaultPath: `${projectName.replace(/[^a-zA-Z0-9_-]/g, '_')}-materials.txt`,
+    })
+
+    if (!filePath) return
+
+    const lines: string[] = [`Materials for: ${projectName}`, ""]
+
+    // Items you need to acquire
+    const shortfalls = needs.filter(n => n.shortfall > 0)
+    if (shortfalls.length > 0) {
+      lines.push("=== Still Needed ===")
+      for (const n of shortfalls) {
+        const cost = n.vendor_price ? ` (~${Math.round(n.vendor_price * n.shortfall).toLocaleString()}g from vendor)` : ""
+        lines.push(`  ${n.item_name} x${n.shortfall}${cost}`)
+      }
+      lines.push("")
+    }
+
+    // Full material summary
+    lines.push("=== Full Material List ===")
+    for (const n of needs) {
+      const have = n.inventory_have + n.storage_have
+      const status = have >= n.quantity_needed ? "[OK]" : `[Need ${n.shortfall} more]`
+      lines.push(`  ${n.item_name}: need ${n.quantity_needed}, have ${have} ${status}`)
+    }
+
+    const content = lines.join("\n") + "\n"
+    await invoke("export_text_file", { filePath, content })
+  }
+
   return {
     // Project state
     projects,
@@ -1182,9 +910,12 @@ export const useCraftingStore = defineStore("crafting", () => {
     collectIntermediates,
     // Material availability
     checkMaterialAvailability,
-    // Leveling optimizer
-    generateLevelingPlan,
+    exportMaterialList,
+    // Leveling helper
+    estimateRecipeCost,
     getSkillLevel,
+    levelingState,
+    createProjectFromLevelingPlan,
     // Crafting history
     getCraftingHistory,
     getSkillCraftingStats,

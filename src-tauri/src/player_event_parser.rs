@@ -83,6 +83,7 @@ pub enum PlayerEvent {
     StorageDeposit {
         timestamp: String,
         npc_id: u32,
+        vault_key: Option<String>,
         slot: i32,
         item_name: String,
         instance_id: u64,
@@ -90,6 +91,7 @@ pub enum PlayerEvent {
     StorageWithdrawal {
         timestamp: String,
         npc_id: u32,
+        vault_key: Option<String>,
         instance_id: u64,
         quantity: u32,
     },
@@ -116,6 +118,99 @@ pub enum PlayerEvent {
         content: String,
         book_type: String,
     },
+
+    // === Interaction Events ===
+    InteractionEnded {
+        timestamp: String,
+        entity_id: i32,
+    },
+
+    // === Skill Bar Events ===
+    ActiveSkillsChanged {
+        timestamp: String,
+        skill1: String,
+        skill2: String,
+    },
+
+    // === Mount Events ===
+    MountStateChanged {
+        timestamp: String,
+        entity_id: u32,
+        is_mounting: bool,
+    },
+
+    // === Weather Events ===
+    WeatherChanged {
+        timestamp: String,
+        weather_name: String,
+        is_active: bool,
+    },
+
+    // === Recipe Events ===
+    RecipeUpdated {
+        timestamp: String,
+        recipe_id: u32,
+        completion_count: u32,
+    },
+
+    // === Combat Events ===
+    CombatStateChanged {
+        timestamp: String,
+        in_combat: bool,
+    },
+
+    // === Vendor Gold Events ===
+    VendorGoldChanged {
+        timestamp: String,
+        current_gold: u32,
+        server_id: u64,
+        max_gold: u32,
+    },
+
+    // === Attribute Events ===
+    AttributesChanged {
+        timestamp: String,
+        entity_id: u32,
+        attributes: Vec<AttributeValue>,
+    },
+
+    // === Login Snapshot Events ===
+    AbilitiesLoaded {
+        timestamp: String,
+        skill1: String,
+        skill2: String,
+    },
+    RecipesLoaded {
+        timestamp: String,
+    },
+    EquipmentChanged {
+        timestamp: String,
+        entity_id: u32,
+        appearance: String,
+        equipment: Vec<EquipmentSlot>,
+    },
+
+    // === Effect Events ===
+    EffectsAdded {
+        timestamp: String,
+        entity_id: u32,
+        source_entity_id: u32,
+        effect_ids: Vec<u32>,
+        is_login_batch: bool,
+    },
+    /// Signal-only: ProcessRemoveEffects prints opaque System.Int32[] so we can't
+    /// extract which IDs were removed. We still emit the event so consumers know
+    /// *something* changed.
+    EffectsRemoved {
+        timestamp: String,
+        entity_id: u32,
+    },
+    EffectNameUpdated {
+        timestamp: String,
+        entity_id: u32,
+        effect_instance_id: u32,
+        display_name: String,
+    },
 }
 
 #[derive(serde::Serialize, Clone, Debug, PartialEq)]
@@ -134,6 +229,18 @@ pub struct SkillSnapshot {
     pub xp: u32,
     pub tnl: i32,
     pub max: u32,
+}
+
+#[derive(serde::Serialize, Clone, Debug)]
+pub struct AttributeValue {
+    pub name: String,
+    pub value: f32,
+}
+
+#[derive(serde::Serialize, Clone, Debug, PartialEq)]
+pub struct EquipmentSlot {
+    pub slot: String,
+    pub appearance_key: String,
 }
 
 // ============================================================
@@ -268,6 +375,76 @@ impl PlayerEventParser {
         } else if line.contains("ProcessBook(") {
             self.flush_pending_deletes(&mut events);
             if let Some(ev) = self.parse_book(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessEndInteraction(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_end_interaction(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessSetActiveSkills(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_set_active_skills(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessPlayerMount(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_player_mount(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessSetWeather(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_set_weather(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessUpdateRecipe(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_update_recipe(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessCombatModeStatus(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_combat_mode_status(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessVendorUpdateAvailableGold(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_vendor_update_gold(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessSetAttributes(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_set_attributes(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessLoadAbilities(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_load_abilities(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessLoadRecipes(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_load_recipes(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessSetEquippedItems(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_set_equipped_items(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessAddEffects(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_add_effects(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessRemoveEffects(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_remove_effects(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessUpdateEffectName(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_update_effect_name(line) {
                 events.push(ev);
             }
         } else {
@@ -672,9 +849,12 @@ impl PlayerEventParser {
         let id_end = name_part[id_start..].find(')')? + id_start;
         let instance_id: u64 = name_part[id_start..id_end].parse().ok()?;
 
+        let vault_key = self.current_interaction.as_ref().map(|ctx| ctx.npc_name.clone());
+
         Some(PlayerEvent::StorageDeposit {
             timestamp: ts,
             npc_id,
+            vault_key,
             slot,
             item_name,
             instance_id,
@@ -694,9 +874,12 @@ impl PlayerEventParser {
         let instance_id: u64 = parts.get(2)?.trim().parse().ok()?;
         let quantity: u32 = parts.get(3)?.trim().parse().ok()?;
 
+        let vault_key = self.current_interaction.as_ref().map(|ctx| ctx.npc_name.clone());
+
         Some(PlayerEvent::StorageWithdrawal {
             timestamp: ts,
             npc_id,
+            vault_key,
             instance_id,
             quantity,
         })
@@ -783,6 +966,417 @@ impl PlayerEventParser {
             book_type,
         })
     }
+
+    /// ProcessEndInteraction(entityId)
+    fn parse_end_interaction(&mut self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let args_start = line.find("ProcessEndInteraction(")? + "ProcessEndInteraction(".len();
+        let args_end = line[args_start..].find(')')? + args_start;
+        let entity_id: i32 = line[args_start..args_end].trim().parse().ok()?;
+
+        // Clear interaction context
+        self.current_interaction = None;
+
+        Some(PlayerEvent::InteractionEnded {
+            timestamp: ts,
+            entity_id,
+        })
+    }
+
+    /// ProcessSetActiveSkills(Skill1, Skill2)
+    fn parse_set_active_skills(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let args_start = line.find("ProcessSetActiveSkills(")? + "ProcessSetActiveSkills(".len();
+        let args_end = line[args_start..].find(')')? + args_start;
+        let args = &line[args_start..args_end];
+
+        let parts: Vec<&str> = args.split(',').collect();
+        let skill1 = parts.get(0)?.trim().to_string();
+        let skill2 = parts.get(1)?.trim().to_string();
+
+        Some(PlayerEvent::ActiveSkillsChanged {
+            timestamp: ts,
+            skill1,
+            skill2,
+        })
+    }
+
+    /// ProcessPlayerMount(entityId, isMounting)
+    fn parse_player_mount(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let args_start = line.find("ProcessPlayerMount(")? + "ProcessPlayerMount(".len();
+        let args_end = line[args_start..].find(')')? + args_start;
+        let args = &line[args_start..args_end];
+
+        let parts: Vec<&str> = args.split(',').collect();
+        let entity_id: u32 = parts.get(0)?.trim().parse().ok()?;
+        let is_mounting = parts.get(1)?.trim() == "True";
+
+        Some(PlayerEvent::MountStateChanged {
+            timestamp: ts,
+            entity_id,
+            is_mounting,
+        })
+    }
+
+    /// ProcessSetWeather("WeatherName", boolFlag)
+    fn parse_set_weather(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let args_start = line.find("ProcessSetWeather(")? + "ProcessSetWeather(".len();
+        let args = &line[args_start..];
+
+        // Extract quoted weather name
+        let weather_name = extract_quoted_string(args, 0)?;
+
+        // Find bool after the closing quote
+        let after_quote = args.rfind('"')? + 1;
+        let rest = &args[after_quote..];
+        let last_comma = rest.find(',')?;
+        let bool_str = rest[last_comma + 1..].trim().trim_end_matches(')');
+        let is_active = bool_str == "True";
+
+        Some(PlayerEvent::WeatherChanged {
+            timestamp: ts,
+            weather_name,
+            is_active,
+        })
+    }
+
+    /// ProcessUpdateRecipe(recipeId, completionCount)
+    fn parse_update_recipe(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let args_start = line.find("ProcessUpdateRecipe(")? + "ProcessUpdateRecipe(".len();
+        let args_end = line[args_start..].find(')')? + args_start;
+        let args = &line[args_start..args_end];
+
+        let parts: Vec<&str> = args.split(',').collect();
+        let recipe_id: u32 = parts.get(0)?.trim().parse().ok()?;
+        let completion_count: u32 = parts.get(1)?.trim().parse().ok()?;
+
+        Some(PlayerEvent::RecipeUpdated {
+            timestamp: ts,
+            recipe_id,
+            completion_count,
+        })
+    }
+
+    /// ProcessCombatModeStatus(status, System.Int32[])
+    fn parse_combat_mode_status(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let args_start = line.find("ProcessCombatModeStatus(")? + "ProcessCombatModeStatus(".len();
+        let args = &line[args_start..];
+
+        // First arg before the comma is the status enum
+        let first_comma = args.find(',')?;
+        let status = args[..first_comma].trim();
+
+        let in_combat = match status {
+            "InCombat" => true,
+            "NotInCombat" => false,
+            _ => return None,
+        };
+
+        Some(PlayerEvent::CombatStateChanged {
+            timestamp: ts,
+            in_combat,
+        })
+    }
+
+    /// ProcessVendorUpdateAvailableGold(currentGold, serverId, maxGold)
+    fn parse_vendor_update_gold(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let args_start = line.find("ProcessVendorUpdateAvailableGold(")? + "ProcessVendorUpdateAvailableGold(".len();
+        let args_end = line[args_start..].find(')')? + args_start;
+        let args = &line[args_start..args_end];
+
+        let parts: Vec<&str> = args.split(',').collect();
+        let current_gold: u32 = parts.get(0)?.trim().parse().ok()?;
+        let server_id: u64 = parts.get(1)?.trim().parse().ok()?;
+        let max_gold: u32 = parts.get(2)?.trim().parse().ok()?;
+
+        Some(PlayerEvent::VendorGoldChanged {
+            timestamp: ts,
+            current_gold,
+            server_id,
+            max_gold,
+        })
+    }
+
+    /// ProcessSetAttributes(entityId, "[KEY1, KEY2, ...], [val1, val2, ...]")
+    fn parse_set_attributes(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let args_start = line.find("ProcessSetAttributes(")? + "ProcessSetAttributes(".len();
+        let args = &line[args_start..];
+
+        // Extract entityId (everything before the first comma that precedes the first '[')
+        let first_bracket = args.find('[')?;
+        let entity_part = &args[..first_bracket];
+        // entityId is the first number, separated by ", " from the rest
+        let first_comma = entity_part.find(',')?;
+        let entity_id: u32 = args[..first_comma].trim().parse().ok()?;
+
+        // Find the keys array: first '[' to first ']'
+        let keys_start = first_bracket + 1;
+        let keys_end = args[keys_start..].find(']')? + keys_start;
+        let keys_str = &args[keys_start..keys_end];
+
+        let keys: Vec<String> = keys_str.split(',')
+            .map(|k| k.trim().to_string())
+            .filter(|k| !k.is_empty())
+            .collect();
+
+        // Find the values array: second '[' to second ']'
+        let after_first_array = &args[keys_end + 1..];
+        let vals_bracket = after_first_array.find('[')?;
+        let vals_start = vals_bracket + 1;
+        let vals_end = after_first_array[vals_start..].find(']')? + vals_start;
+        let vals_str = &after_first_array[vals_start..vals_end];
+
+        let values: Vec<f32> = vals_str.split(',')
+            .map(|v| v.trim())
+            .filter(|v| !v.is_empty())
+            .map(|v| v.parse::<f32>())
+            .collect::<Result<Vec<_>, _>>()
+            .ok()?;
+
+        // Arrays must match in length
+        if keys.len() != values.len() {
+            return None;
+        }
+
+        let attributes: Vec<AttributeValue> = keys.into_iter()
+            .zip(values.into_iter())
+            .map(|(name, value)| AttributeValue { name, value })
+            .collect();
+
+        Some(PlayerEvent::AttributesChanged {
+            timestamp: ts,
+            entity_id,
+            attributes,
+        })
+    }
+    /// ProcessLoadAbilities(System.Int32[], Skill1, Skill2, AbilityBarContents[])
+    /// The Int32[] and AbilityBarContents[] are opaque C# serialized types.
+    /// We extract only the two skill names.
+    fn parse_load_abilities(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let args_start = line.find("ProcessLoadAbilities(")? + "ProcessLoadAbilities(".len();
+        let args_end = line.rfind(')')?;
+        let args = &line[args_start..args_end];
+
+        // Format: "System.Int32[], Skill1, Skill2, AbilityBarContents[]"
+        let parts: Vec<&str> = args.split(',').map(|s| s.trim()).collect();
+        // parts[0] = "System.Int32[]", parts[1] = Skill1, parts[2] = Skill2, parts[3] = "AbilityBarContents[]"
+        if parts.len() < 4 {
+            return None;
+        }
+
+        let skill1 = parts[1].to_string();
+        let skill2 = parts[2].to_string();
+
+        Some(PlayerEvent::AbilitiesLoaded {
+            timestamp: ts,
+            skill1,
+            skill2,
+        })
+    }
+
+    /// ProcessLoadRecipes(System.Int32[], System.Int32[])
+    /// Both arrays are opaque C# serialized types — no data extractable.
+    /// We emit a signal event with just the timestamp.
+    fn parse_load_recipes(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        // Verify the line actually contains the event
+        line.find("ProcessLoadRecipes(")?;
+
+        Some(PlayerEvent::RecipesLoaded {
+            timestamp: ts,
+        })
+    }
+
+    /// ProcessSetEquippedItems(System.Int32[], System.Int32[], System.Int32[], "appearanceString", entityId)
+    /// The Int32[] arrays are opaque. We extract the appearance string and entity ID,
+    /// then parse equipment slot assignments from the appearance string.
+    fn parse_set_equipped_items(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let args_start = line.find("ProcessSetEquippedItems(")? + "ProcessSetEquippedItems(".len();
+
+        // The appearance string is quoted — find it
+        let appearance = extract_quoted_string(&line[args_start..], 0)?;
+
+        // Entity ID is after the closing quote + ", "
+        let quote_end = line[args_start..].rfind('"')? + args_start;
+        let after_quote = &line[quote_end + 1..];
+        // after_quote looks like: ", 11921435)"
+        let entity_str = after_quote.trim().trim_start_matches(',').trim().trim_end_matches(')');
+        let entity_id: u32 = entity_str.parse().ok()?;
+
+        // Parse equipment slots from appearance string
+        let equipment = parse_equipment_slots(&appearance);
+
+        Some(PlayerEvent::EquipmentChanged {
+            timestamp: ts,
+            entity_id,
+            appearance,
+            equipment,
+        })
+    }
+
+    /// ProcessAddEffects(entityId, sourceEntityId, "[effectId1, effectId2, ...]", boolFlag)
+    fn parse_add_effects(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let args_start = line.find("ProcessAddEffects(")? + "ProcessAddEffects(".len();
+        let args = &line[args_start..];
+
+        let first_comma = args.find(',')?;
+        let entity_id: u32 = args[..first_comma].trim().parse().ok()?;
+
+        let rest = &args[first_comma + 1..];
+        let second_comma = rest.find(',')?;
+        let source_entity_id: u32 = rest[..second_comma].trim().parse().ok()?;
+
+        // Effect IDs are in "[...]" — may contain quoted brackets like "[302, 303, ...]"
+        let bracket_start = rest.find('[')?;
+        let bracket_end = rest.find(']')?;
+        let ids_str = &rest[bracket_start + 1..bracket_end];
+
+        let effect_ids: Vec<u32> = ids_str
+            .split(',')
+            .filter_map(|s| s.trim().parse::<u32>().ok())
+            .collect();
+
+        // boolFlag is after the "]" bracket — e.g. `", False)` or `], False)`
+        let rest_after = &rest[bracket_end + 1..];
+        // Strip quotes, commas, parens to isolate the bool token
+        let bool_str = rest_after
+            .trim()
+            .trim_start_matches('"')
+            .trim_start_matches(',')
+            .trim()
+            .trim_end_matches(')')
+            .trim_end_matches('"')
+            .trim();
+        let is_login_batch = bool_str == "False";
+
+        Some(PlayerEvent::EffectsAdded {
+            timestamp: ts,
+            entity_id,
+            source_entity_id,
+            effect_ids,
+            is_login_batch,
+        })
+    }
+
+    /// ProcessRemoveEffects(entityId, System.Int32[])
+    /// The int array is C#'s opaque ToString() — we can't extract individual IDs.
+    fn parse_remove_effects(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let args_start = line.find("ProcessRemoveEffects(")? + "ProcessRemoveEffects(".len();
+        let args = &line[args_start..];
+
+        let first_comma = args.find(',')?;
+        let entity_id: u32 = args[..first_comma].trim().parse().ok()?;
+
+        Some(PlayerEvent::EffectsRemoved {
+            timestamp: ts,
+            entity_id,
+        })
+    }
+
+    /// ProcessUpdateEffectName(entityId, effectInstanceId, "Effect Name, Level N")
+    fn parse_update_effect_name(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let args_start = line.find("ProcessUpdateEffectName(")? + "ProcessUpdateEffectName(".len();
+        let args = &line[args_start..];
+
+        let first_comma = args.find(',')?;
+        let entity_id: u32 = args[..first_comma].trim().parse().ok()?;
+
+        let rest = &args[first_comma + 1..];
+        let second_comma = rest.find(',')?;
+        let effect_instance_id: u32 = rest[..second_comma].trim().parse().ok()?;
+
+        // Display name is in quotes
+        let display_name = extract_quoted_string(rest, 0)?;
+
+        Some(PlayerEvent::EffectNameUpdated {
+            timestamp: ts,
+            entity_id,
+            effect_instance_id,
+            display_name,
+        })
+    }
+}
+
+/// Parse equipment slot assignments from an appearance string.
+/// Looks for patterns like `@Chest=...;`, `@MainHand=...;`, `MainHandEquip=...;`
+fn parse_equipment_slots(appearance: &str) -> Vec<EquipmentSlot> {
+    let slot_prefixes = [
+        "@Chest=", "@Head=", "@Legs=", "@Feet=", "@Hands=",
+        "@MainHand=", "@OffHandShield=", "@Racial=",
+    ];
+    let equip_type_prefixes = [
+        "MainHandEquip=", "OffHandEquip=",
+    ];
+
+    let mut slots = Vec::new();
+
+    for prefix in &slot_prefixes {
+        if let Some(start) = appearance.find(prefix) {
+            let value_start = start + prefix.len();
+            // Value runs until the next ';' or ')' at the same nesting depth
+            let value = extract_slot_value(&appearance[value_start..]);
+            if !value.is_empty() {
+                slots.push(EquipmentSlot {
+                    slot: prefix.trim_start_matches('@').trim_end_matches('=').to_string(),
+                    appearance_key: value,
+                });
+            }
+        }
+    }
+
+    for prefix in &equip_type_prefixes {
+        if let Some(start) = appearance.find(prefix) {
+            let value_start = start + prefix.len();
+            let value = extract_slot_value(&appearance[value_start..]);
+            if !value.is_empty() {
+                slots.push(EquipmentSlot {
+                    slot: prefix.trim_end_matches('=').to_string(),
+                    appearance_key: value,
+                });
+            }
+        }
+    }
+
+    slots
+}
+
+/// Extract a value from an appearance string starting at a position.
+/// Handles nested parentheses: `@eq-f2-chest-steel-02(^Armor=...;Color1=...)`
+/// Returns everything up to the `;` or end that closes the value at depth 0.
+fn extract_slot_value(s: &str) -> String {
+    let mut depth = 0i32;
+    let mut end = s.len();
+
+    for (i, ch) in s.char_indices() {
+        match ch {
+            '(' => depth += 1,
+            ')' => {
+                if depth == 0 {
+                    end = i;
+                    break;
+                }
+                depth -= 1;
+            }
+            ';' if depth == 0 => {
+                end = i;
+                break;
+            }
+            _ => {}
+        }
+    }
+
+    s[..end].to_string()
 }
 
 // ============================================================
@@ -1285,6 +1879,483 @@ mod tests {
                 assert_eq!(item_name.as_deref(), Some("MetalSlab2"));
             }
             _ => panic!("Expected ItemStackChanged"),
+        }
+    }
+
+    // ============================================================
+    // New Event Type Tests
+    // ============================================================
+
+    #[test]
+    fn test_parse_end_interaction() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[13:27:00] LocalPlayer: ProcessEndInteraction(14804)"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::InteractionEnded { entity_id, .. } => {
+                assert_eq!(*entity_id, 14804);
+            }
+            _ => panic!("Expected InteractionEnded"),
+        }
+    }
+
+    #[test]
+    fn test_parse_end_interaction_negative_entity_id() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[16:06:27] LocalPlayer: ProcessEndInteraction(-153)"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::InteractionEnded { entity_id, .. } => {
+                assert_eq!(*entity_id, -153);
+            }
+            _ => panic!("Expected InteractionEnded"),
+        }
+    }
+
+    #[test]
+    fn test_end_interaction_clears_context() {
+        let mut parser = PlayerEventParser::new();
+        // Start an interaction
+        parser.process_line(
+            r#"[13:26:55] LocalPlayer: ProcessStartInteraction(14804, 7, 1200, True, "NPC_Qatik")"#
+        );
+        assert!(parser.current_interaction.is_some());
+
+        // End the interaction
+        parser.process_line(
+            r#"[13:27:00] LocalPlayer: ProcessEndInteraction(14804)"#
+        );
+        assert!(parser.current_interaction.is_none());
+    }
+
+    #[test]
+    fn test_parse_set_active_skills() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:33:22] LocalPlayer: ProcessSetActiveSkills(Riding, Mentalism)"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::ActiveSkillsChanged { skill1, skill2, .. } => {
+                assert_eq!(skill1, "Riding");
+                assert_eq!(skill2, "Mentalism");
+            }
+            _ => panic!("Expected ActiveSkillsChanged"),
+        }
+    }
+
+    #[test]
+    fn test_parse_set_active_skills_combat() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:33:31] LocalPlayer: ProcessSetActiveSkills(Hammer, Mentalism)"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::ActiveSkillsChanged { skill1, skill2, .. } => {
+                assert_eq!(skill1, "Hammer");
+                assert_eq!(skill2, "Mentalism");
+            }
+            _ => panic!("Expected ActiveSkillsChanged"),
+        }
+    }
+
+    #[test]
+    fn test_parse_player_mount() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:33:25] LocalPlayer: ProcessPlayerMount(11921978, True)"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::MountStateChanged { entity_id, is_mounting, .. } => {
+                assert_eq!(*entity_id, 11921978);
+                assert!(*is_mounting);
+            }
+            _ => panic!("Expected MountStateChanged"),
+        }
+    }
+
+    #[test]
+    fn test_parse_player_dismount() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:33:31] LocalPlayer: ProcessPlayerMount(11921978, False)"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::MountStateChanged { entity_id, is_mounting, .. } => {
+                assert_eq!(*entity_id, 11921978);
+                assert!(!*is_mounting);
+            }
+            _ => panic!("Expected MountStateChanged"),
+        }
+    }
+
+    #[test]
+    fn test_parse_set_weather() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:32:47] LocalPlayer: ProcessSetWeather("Clear Sky", True)"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::WeatherChanged { weather_name, is_active, .. } => {
+                assert_eq!(weather_name, "Clear Sky");
+                assert!(*is_active);
+            }
+            _ => panic!("Expected WeatherChanged"),
+        }
+    }
+
+    #[test]
+    fn test_parse_set_weather_cloudy() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[16:06:32] LocalPlayer: ProcessSetWeather("Cloudy 3", True)"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::WeatherChanged { weather_name, .. } => {
+                assert_eq!(weather_name, "Cloudy 3");
+            }
+            _ => panic!("Expected WeatherChanged"),
+        }
+    }
+
+    #[test]
+    fn test_parse_update_recipe() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[16:10:13] LocalPlayer: ProcessUpdateRecipe(21052, 151)"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::RecipeUpdated { recipe_id, completion_count, .. } => {
+                assert_eq!(*recipe_id, 21052);
+                assert_eq!(*completion_count, 151);
+            }
+            _ => panic!("Expected RecipeUpdated"),
+        }
+    }
+
+    #[test]
+    fn test_parse_update_recipe_new() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[16:10:13] LocalPlayer: ProcessUpdateRecipe(5001, 0)"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::RecipeUpdated { recipe_id, completion_count, .. } => {
+                assert_eq!(*recipe_id, 5001);
+                assert_eq!(*completion_count, 0);
+            }
+            _ => panic!("Expected RecipeUpdated"),
+        }
+    }
+
+    #[test]
+    fn test_parse_combat_mode_not_in_combat() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:33:33] LocalPlayer: ProcessCombatModeStatus(NotInCombat, System.Int32[])"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::CombatStateChanged { in_combat, .. } => {
+                assert!(!*in_combat);
+            }
+            _ => panic!("Expected CombatStateChanged"),
+        }
+    }
+
+    #[test]
+    fn test_parse_combat_mode_in_combat() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:33:33] LocalPlayer: ProcessCombatModeStatus(InCombat, System.Int32[])"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::CombatStateChanged { in_combat, .. } => {
+                assert!(*in_combat);
+            }
+            _ => panic!("Expected CombatStateChanged"),
+        }
+    }
+
+    #[test]
+    fn test_parse_vendor_update_gold() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[16:32:25] LocalPlayer: ProcessVendorUpdateAvailableGold(14880, 123456789, 15000)"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::VendorGoldChanged { current_gold, server_id, max_gold, .. } => {
+                assert_eq!(*current_gold, 14880);
+                assert_eq!(*server_id, 123456789);
+                assert_eq!(*max_gold, 15000);
+            }
+            _ => panic!("Expected VendorGoldChanged"),
+        }
+    }
+
+    #[test]
+    fn test_parse_vendor_update_gold_after_sale() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[16:32:27] LocalPlayer: ProcessVendorUpdateAvailableGold(14776, 123456789, 15000)"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::VendorGoldChanged { current_gold, .. } => {
+                assert_eq!(*current_gold, 14776);
+            }
+            _ => panic!("Expected VendorGoldChanged"),
+        }
+    }
+
+    #[test]
+    fn test_parse_set_attributes_single() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:33:25] LocalPlayer: ProcessSetAttributes(11921978, "[IS_MOUNTED], [1]")"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::AttributesChanged { entity_id, attributes, .. } => {
+                assert_eq!(*entity_id, 11921978);
+                assert_eq!(attributes.len(), 1);
+                assert_eq!(attributes[0].name, "IS_MOUNTED");
+                assert!((attributes[0].value - 1.0).abs() < 0.001);
+            }
+            _ => panic!("Expected AttributesChanged"),
+        }
+    }
+
+    #[test]
+    fn test_parse_set_attributes_multiple() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:33:33] LocalPlayer: ProcessSetAttributes(11921978, "[CUR_HEALTH, MAX_HEALTH, CUR_POWER, MAX_POWER], [667, 667, 442, 442]")"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::AttributesChanged { entity_id, attributes, .. } => {
+                assert_eq!(*entity_id, 11921978);
+                assert_eq!(attributes.len(), 4);
+                assert_eq!(attributes[0].name, "CUR_HEALTH");
+                assert!((attributes[0].value - 667.0).abs() < 0.001);
+                assert_eq!(attributes[1].name, "MAX_HEALTH");
+                assert_eq!(attributes[2].name, "CUR_POWER");
+                assert!((attributes[2].value - 442.0).abs() < 0.001);
+                assert_eq!(attributes[3].name, "MAX_POWER");
+            }
+            _ => panic!("Expected AttributesChanged"),
+        }
+    }
+
+    #[test]
+    fn test_parse_set_attributes_float_value() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:32:47] LocalPlayer: ProcessSetAttributes(11921435, "[WORKORDER_COIN_REWARD_MOD], [1.36]")"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::AttributesChanged { attributes, .. } => {
+                assert_eq!(attributes.len(), 1);
+                assert_eq!(attributes[0].name, "WORKORDER_COIN_REWARD_MOD");
+                assert!((attributes[0].value - 1.36).abs() < 0.001);
+            }
+            _ => panic!("Expected AttributesChanged"),
+        }
+    }
+
+    // ============================================================
+    // Login Snapshot Event Tests
+    // ============================================================
+
+    #[test]
+    fn test_parse_load_abilities() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:32:47] LocalPlayer: ProcessLoadAbilities(System.Int32[], Hammer, Mentalism, AbilityBarContents[])"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::AbilitiesLoaded { skill1, skill2, .. } => {
+                assert_eq!(skill1, "Hammer");
+                assert_eq!(skill2, "Mentalism");
+            }
+            _ => panic!("Expected AbilitiesLoaded"),
+        }
+    }
+
+    #[test]
+    fn test_parse_load_abilities_riding() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:33:25] LocalPlayer: ProcessLoadAbilities(System.Int32[], Riding, Mentalism, AbilityBarContents[])"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::AbilitiesLoaded { skill1, skill2, .. } => {
+                assert_eq!(skill1, "Riding");
+                assert_eq!(skill2, "Mentalism");
+            }
+            _ => panic!("Expected AbilitiesLoaded"),
+        }
+    }
+
+    #[test]
+    fn test_parse_load_recipes() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:46:08] LocalPlayer: ProcessLoadRecipes(System.Int32[], System.Int32[])"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::RecipesLoaded { timestamp, .. } => {
+                assert_eq!(timestamp, "23:46:08");
+            }
+            _ => panic!("Expected RecipesLoaded"),
+        }
+    }
+
+    #[test]
+    fn test_parse_set_equipped_items() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:32:47] LocalPlayer: ProcessSetEquippedItems(System.Int32[], System.Int32[], System.Int32[], "@Base2-f(sex=f;race=h;@Chest=@eq-{sex}2-chest-steel-02(^Armor={sex}2-body-steel-02-thorian2;Color1=500050);@MainHand=eq-x-hammer1;MainHandEquip=Hammer;@Feet=@eq-{sex}2-feet-greaves-steel-02(^Armor={sex}2-feet-greaves-steel-02-thorian2;Color1=800080))", 11921435)"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::EquipmentChanged { entity_id, equipment, .. } => {
+                assert_eq!(*entity_id, 11921435);
+                // Should find Chest, MainHand, Feet, MainHandEquip
+                let slot_names: Vec<&str> = equipment.iter().map(|s| s.slot.as_str()).collect();
+                assert!(slot_names.contains(&"Chest"), "Missing Chest slot: {:?}", slot_names);
+                assert!(slot_names.contains(&"MainHand"), "Missing MainHand slot: {:?}", slot_names);
+                assert!(slot_names.contains(&"Feet"), "Missing Feet slot: {:?}", slot_names);
+                assert!(slot_names.contains(&"MainHandEquip"), "Missing MainHandEquip: {:?}", slot_names);
+
+                // Verify MainHand value
+                let main_hand = equipment.iter().find(|s| s.slot == "MainHand").unwrap();
+                assert_eq!(main_hand.appearance_key, "eq-x-hammer1");
+
+                // Verify MainHandEquip value
+                let equip_type = equipment.iter().find(|s| s.slot == "MainHandEquip").unwrap();
+                assert_eq!(equip_type.appearance_key, "Hammer");
+            }
+            _ => panic!("Expected EquipmentChanged"),
+        }
+    }
+
+    #[test]
+    fn test_parse_set_equipped_items_mount_entity() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:33:25] LocalPlayer: ProcessSetEquippedItems(System.Int32[], System.Int32[], System.Int32[], "@Base2-f(sex=f;race=h;@Head=FloatingGem2;@OffHandShield=eq-x-shield5;OffHandEquip=Shield)", 11921978)"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::EquipmentChanged { entity_id, equipment, .. } => {
+                assert_eq!(*entity_id, 11921978);
+                let slot_names: Vec<&str> = equipment.iter().map(|s| s.slot.as_str()).collect();
+                assert!(slot_names.contains(&"Head"), "Missing Head: {:?}", slot_names);
+                assert!(slot_names.contains(&"OffHandShield"), "Missing OffHandShield: {:?}", slot_names);
+                assert!(slot_names.contains(&"OffHandEquip"), "Missing OffHandEquip: {:?}", slot_names);
+            }
+            _ => panic!("Expected EquipmentChanged"),
+        }
+    }
+
+    #[test]
+    fn test_equipment_slot_parsing_nested_parens() {
+        // Verify that nested parens in appearance values are handled correctly
+        let slots = parse_equipment_slots(
+            "@Chest=@eq-f2-chest-steel-02(^Armor=f2-body-steel-02;Color1=500050;Color2=C0C0C0);@Legs=@eq-f2-legs-steel-02(^Armor=f2-body-steel-02;Color1=500050)"
+        );
+        assert_eq!(slots.len(), 2);
+        assert_eq!(slots[0].slot, "Chest");
+        assert_eq!(slots[0].appearance_key, "@eq-f2-chest-steel-02(^Armor=f2-body-steel-02;Color1=500050;Color2=C0C0C0)");
+        assert_eq!(slots[1].slot, "Legs");
+        assert_eq!(slots[1].appearance_key, "@eq-f2-legs-steel-02(^Armor=f2-body-steel-02;Color1=500050)");
+    }
+
+    // ── Effect Event Tests ───────────────────────────────────────────────
+
+    #[test]
+    fn test_parse_add_effects_login_batch() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:32:46] LocalPlayer: ProcessAddEffects(11921435, 0, "[302, 303, 13330, 26297]", False)"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::EffectsAdded { entity_id, source_entity_id, effect_ids, is_login_batch, .. } => {
+                assert_eq!(*entity_id, 11921435);
+                assert_eq!(*source_entity_id, 0);
+                assert_eq!(*effect_ids, vec![302, 303, 13330, 26297]);
+                assert!(*is_login_batch);
+            }
+            _ => panic!("Expected EffectsAdded"),
+        }
+    }
+
+    #[test]
+    fn test_parse_add_effects_gameplay() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:32:47] LocalPlayer: ProcessAddEffects(11921435, 11921435, "[13304, ]", True)"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::EffectsAdded { source_entity_id, effect_ids, is_login_batch, .. } => {
+                assert_eq!(*source_entity_id, 11921435);
+                assert_eq!(*effect_ids, vec![13304]);
+                assert!(!*is_login_batch);
+            }
+            _ => panic!("Expected EffectsAdded"),
+        }
+    }
+
+    #[test]
+    fn test_parse_remove_effects() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:35:12] LocalPlayer: ProcessRemoveEffects(11921435, System.Int32[])"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::EffectsRemoved { entity_id, .. } => {
+                assert_eq!(*entity_id, 11921435);
+            }
+            _ => panic!("Expected EffectsRemoved"),
+        }
+    }
+
+    #[test]
+    fn test_parse_update_effect_name() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[23:32:48] LocalPlayer: ProcessUpdateEffectName(11921435, 123456, "Performance Appreciation, Level 0")"#
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::EffectNameUpdated { entity_id, effect_instance_id, display_name, .. } => {
+                assert_eq!(*entity_id, 11921435);
+                assert_eq!(*effect_instance_id, 123456);
+                assert_eq!(display_name, "Performance Appreciation, Level 0");
+            }
+            _ => panic!("Expected EffectNameUpdated"),
         }
     }
 }

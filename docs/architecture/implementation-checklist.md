@@ -2,24 +2,34 @@
 
 Quick checklist for implementing common features in the glogger data architecture.
 
-## Adding a New Log Event Parser
+## Adding a New Player.log Event
 
-- [ ] Add `LogEvent` variant in [`log_watchers.rs`](../../src-tauri/src/log_watchers.rs)
-- [ ] Implement parsing logic in appropriate watcher (`PlayerLogWatcher` or `ChatLogWatcher`)
-- [ ] Add test case for the parser
-- [ ] Add event handler in [`coordinator.rs`](../../src-tauri/src/coordinator.rs)
-- [ ] Add database insert logic (if needed)
-- [ ] Emit Tauri event to frontend (if needed)
-- [ ] Add frontend listener in store (if needed)
-- [ ] Test with real log files
-- [ ] Update documentation
+See [`player-event-parser.md`](player-event-parser.md) for full details.
+
+- [ ] Add `PlayerEvent` variant in [`player_event_parser.rs`](../../src-tauri/src/player_event_parser.rs)
+- [ ] Add `parse_xxx` method on `PlayerEventParser`
+- [ ] Add dispatch branch in `process_line`
+- [ ] Add test cases
+- [ ] Handle in coordinator if persistence needed (follow `GameStateManager` pattern)
+- [ ] Update `player-event-parser.md` and `live-event-streams.md`
+
+## Adding a New Chat Status Event
+
+See [`live-event-streams.md`](live-event-streams.md) for full details.
+
+- [ ] Add `ChatStatusEvent` variant in [`chat_status_parser.rs`](../../src-tauri/src/chat_status_parser.rs)
+- [ ] Add `try_xxx` function with string matching logic
+- [ ] Chain into `parse_status_message()` via `.or_else()`
+- [ ] Add test cases using `status_msg()` helper
+- [ ] Handle in coordinator if persistence needed
+- [ ] Update `live-event-streams.md`
 
 ## Adding a New Database Table
 
 - [ ] Add table schema to [`migrations.rs`](../../src-tauri/src/db/migrations.rs) in `migration_v1_unified_schema`
 - [ ] Add indexes for common queries
 - [ ] Add unique constraints if needed for deduplication
-- [ ] Create query module in [`db/queries.rs`](../../src-tauri/src/db/queries.rs) or new file
+- [ ] Create query module in `src-tauri/src/db/` (e.g., `my_feature_commands.rs`)
 - [ ] Implement insert/update/select functions
 - [ ] Add error handling with proper Result types
 - [ ] Add Tauri commands for frontend access (if needed)
@@ -126,7 +136,6 @@ Quick checklist for implementing common features in the glogger data architectur
 
 ## Documentation
 
-- [ ] Update README if user-facing
 - [ ] Update architecture docs if structural change
 - [ ] Add/update code comments
 - [ ] Update TypeScript types

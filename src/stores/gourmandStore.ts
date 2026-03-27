@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open, save } from '@tauri-apps/plugin-dialog'
-import { useSkillStore } from './skillStore'
+import { useGameStateStore } from './gameStateStore'
 import { useCharacterStore } from './characterStore'
 import type { FoodItem, GourmandFoodEntry, GourmandImportResult } from '../types/gourmand'
 
@@ -30,12 +30,15 @@ export const useGourmandStore = defineStore('gourmand', () => {
   // ── Computed: Gourmand level resolution ────────────────────────────────────
 
   const gourmandLevel = computed<number | null>(() => {
-    // Priority: manual override > live session > character snapshot
+    // Priority: manual override > session > game state (persisted) > snapshot
     if (manualGourmandLevel.value !== null) return manualGourmandLevel.value
 
-    const skillStore = useSkillStore()
-    const sessionSkill = skillStore.skills['Gourmand']
+    const gameState = useGameStateStore()
+    const sessionSkill = gameState.sessionSkills['Gourmand']
     if (sessionSkill) return sessionSkill.currentLevel
+
+    const persisted = gameState.skillsByName['Gourmand']
+    if (persisted) return persisted.level
 
     const characterStore = useCharacterStore()
     const snapshotSkill = characterStore.skills.find(s => s.skill_name === 'Gourmand')
@@ -44,11 +47,13 @@ export const useGourmandStore = defineStore('gourmand', () => {
     return null
   })
 
-  const gourmandLevelSource = computed<'manual' | 'session' | 'snapshot' | null>(() => {
+  const gourmandLevelSource = computed<'manual' | 'session' | 'game_state' | 'snapshot' | null>(() => {
     if (manualGourmandLevel.value !== null) return 'manual'
 
-    const skillStore = useSkillStore()
-    if (skillStore.skills['Gourmand']) return 'session'
+    const gameState = useGameStateStore()
+    if (gameState.sessionSkills['Gourmand']) return 'session'
+
+    if (gameState.skillsByName['Gourmand']) return 'game_state'
 
     const characterStore = useCharacterStore()
     if (characterStore.skills.find(s => s.skill_name === 'Gourmand')) return 'snapshot'

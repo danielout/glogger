@@ -1,8 +1,6 @@
 <template>
-  <div class="flex-1 min-w-0 overflow-y-auto border border-surface-elevated rounded p-4">
-    <div v-if="!activeProject" class="flex items-center justify-center h-full text-border-default italic">
-      Select or create a project
-    </div>
+  <div class="shrink-0 overflow-y-auto border border-surface-elevated rounded p-4">
+    <EmptyState v-if="!activeProject" variant="panel" primary="No project selected" secondary="Select or create a project to see recipes." />
 
     <div v-else class="flex flex-col gap-4">
       <!-- Project header -->
@@ -103,6 +101,7 @@ import { useGameDataStore } from "../../stores/gameDataStore";
 import { useCraftingStore } from "../../stores/craftingStore";
 import type { CraftingProject } from "../../types/crafting";
 import type { RecipeInfo } from "../../types/gameData/recipes";
+import EmptyState from "../Shared/EmptyState.vue";
 import ProjectEntryCard from "./ProjectEntryCard.vue";
 
 const props = defineProps<{

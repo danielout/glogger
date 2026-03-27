@@ -11,81 +11,79 @@
 
     <CharacterSelect v-else-if="startup.phase === 'select-character'" />
 
-    <StartupProgress v-else-if="startup.phase === 'loading'" :tasks="startup.startupTasks" />
+    <StartupProgress v-else-if="startup.phase === 'loading'" :tasks="startup.startupTasks" :error-message="startup.error" />
 
     <!-- Main app -->
     <template v-else-if="startup.phase === 'ready'">
       <div class="flex-1 flex flex-col">
-        <MenuBar :currentView="currentView" @navigate="navigateToView" />
+        <MenuBar
+          ref="menuBarRef"
+          :currentView="currentView"
+          @navigate="navigateToView"
+          @update:sub-tab="onSubTabChange"
+        />
 
-        <div class="flex-1 flex flex-col p-4 pt-20">
-          <div class="flex-1">
-            <template v-if="currentView === 'dashboard'">
+        <div class="flex-1 flex flex-col p-4 min-h-0 transition-[padding] duration-250 ease-out" :class="hasSubTabs ? 'pt-28' : 'pt-20'">
+          <div class="flex-1 min-h-0">
+            <div v-if="visited.has('dashboard')" v-show="currentView === 'dashboard'" class="h-full overflow-y-auto">
               <DashboardView />
-            </template>
-            <template v-else-if="currentView === 'skills'">
-              <SkillGrid />
-            </template>
-            <template v-else-if="currentView === 'surveying'">
-              <SurveyView />
-            </template>
-            <template v-else-if="currentView === 'character'">
-              <CharacterView />
-            </template>
-            <template v-else-if="currentView === 'inventory'">
-              <InventoryWrapper />
-            </template>
-            <template v-else-if="currentView === 'data-browser'">
-              <DataBrowser :nav-target="entityNavTarget" />
-            </template>
-            <template v-else-if="currentView === 'chat'">
-              <ChatView />
-            </template>
-            <template v-else-if="currentView === 'gourmand'">
-              <GourmandView />
-            </template>
-            <template v-else-if="currentView === 'farming'">
-              <FarmingView />
-            </template>
-            <template v-else-if="currentView === 'crafting'">
-              <CraftingView />
-            </template>
-            <template v-else-if="currentView === 'settings'">
+            </div>
+            <div v-if="visited.has('character')" v-show="currentView === 'character'" class="h-full overflow-y-auto">
+              <CharacterView :active-tab="activeSubTab" />
+            </div>
+            <div v-if="visited.has('inventory')" v-show="currentView === 'inventory'" class="h-full">
+              <InventoryWrapper :active-tab="activeSubTab" />
+            </div>
+            <div v-if="visited.has('crafting')" v-show="currentView === 'crafting'" class="h-full">
+              <CraftingView :active-tab="activeSubTab" />
+            </div>
+            <div v-if="visited.has('economics')" v-show="currentView === 'economics'" class="h-full">
+              <EconomicsView :active-tab="activeSubTab" />
+            </div>
+            <div v-if="visited.has('chat')" v-show="currentView === 'chat'" class="h-full overflow-y-auto">
+              <ChatView :active-tab="activeSubTab" />
+            </div>
+            <div v-if="visited.has('data-browser')" v-show="currentView === 'data-browser'" class="h-full">
+              <DataBrowser :nav-target="entityNavTarget" :active-tab="activeSubTab" />
+            </div>
+            <div v-if="visited.has('search')" v-show="currentView === 'search'" class="h-full overflow-y-auto">
+              <EmptyState primary="Search" secondary="Coming soon." />
+            </div>
+            <div v-if="visited.has('settings')" v-show="currentView === 'settings'" class="h-full overflow-y-auto">
               <Settings
                 :parsing="parsing"
                 :error="error"
                 :onParseLog="parseLog" />
-            </template>
+            </div>
+            <div v-if="visited.has('help')" v-show="currentView === 'help'" class="h-full overflow-y-auto">
+              <EmptyState primary="Help" secondary="Coming soon." />
+            </div>
           </div>
         </div>
       </div>
+
+      <ToastContainer />
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { ref, reactive, computed, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { useSkillStore } from "./stores/skillStore";
-import { useSurveyStore } from "./stores/surveyStore";
 import { useSettingsStore } from "./stores/settingsStore";
-import { useCoordinatorStore } from "./stores/coordinatorStore";
-import { useCharacterStore } from "./stores/characterStore";
 import { useStartupStore } from "./stores/startupStore";
+import { useGameStateStore } from "./stores/gameStateStore";
+import { useSurveyStore } from "./stores/surveyStore";
 import { provideEntityNavigation, type EntityNavigationTarget } from "./composables/useEntityNavigation";
 import MenuBar, { type AppView } from "./components/MenuBar.vue";
-import SkillGrid from "./components/Shared/SkillGrid.vue";
-import SurveyView from "./components/Surveying/SurveyView.vue";
-import DataBrowser from "./components/DataBrowser/DataBrowser.vue";
-import ChatView from "./components/Chat/ChatView.vue";
+import DashboardView from "./components/Dashboard/DashboardView.vue";
 import CharacterView from "./components/Character/CharacterView.vue";
 import InventoryWrapper from "./components/Inventory/InventoryWrapper.vue";
-import { useInventoryStore } from "./stores/inventoryStore";
-import GourmandView from "./components/Gourmand/GourmandView.vue";
-import FarmingView from "./components/Farming/FarmingView.vue";
 import CraftingView from "./components/Crafting/CraftingView.vue";
-import DashboardView from "./components/Dashboard/DashboardView.vue";
+import EconomicsView from "./components/Economics/EconomicsView.vue";
+import ChatView from "./components/Chat/ChatView.vue";
+import DataBrowser from "./components/DataBrowser/DataBrowser.vue";
+import EmptyState from "./components/Shared/EmptyState.vue";
 import Settings from "./components/Settings.vue";
 import StartupSplash from "./components/Startup/StartupSplash.vue";
 import StartupLayout from "./components/Startup/StartupLayout.vue";
@@ -94,97 +92,53 @@ import SetupPathStep from "./components/Startup/SetupPathStep.vue";
 import SetupWatchersStep from "./components/Startup/SetupWatchersStep.vue";
 import SetupCharacterStep from "./components/Startup/SetupCharacterStep.vue";
 import CharacterSelect from "./components/Startup/CharacterSelect.vue";
+import ToastContainer from "./components/Shared/ToastContainer.vue";
 
-import { useFarmingStore } from "./stores/farmingStore";
-import type { PlayerEvent } from "./types/playerEvents";
-
-const skillStore = useSkillStore();
-const surveyStore = useSurveyStore();
-const farmingStore = useFarmingStore();
 const settingsStore = useSettingsStore();
-const coordinator = useCoordinatorStore();
-const characterStore = useCharacterStore();
-// Instantiate to activate event listeners (side-effect only)
-useInventoryStore();
 const startup = useStartupStore();
 
-const logPath = ref("");
 const error = ref("");
 const parsing = ref(false);
 const currentView = ref<AppView>("dashboard");
 const entityNavTarget = ref<EntityNavigationTarget | null>(null);
+const visited = reactive(new Set<AppView>(["dashboard"]));
+const menuBarRef = ref<InstanceType<typeof MenuBar> | null>(null);
+const activeSubTab = ref("");
+
+const hasSubTabs = computed(() => menuBarRef.value?.hasTabs ?? false);
+
+function onSubTabChange(tab: string) {
+  activeSubTab.value = tab;
+}
 
 provideEntityNavigation((target) => {
+  visited.add("data-browser");
   currentView.value = "data-browser";
   entityNavTarget.value = { ...target };
-});
-
-// When the startup flow reaches 'ready', initialize the main app
-watch(
-  () => startup.phase,
-  async (newPhase) => {
-    if (newPhase === "ready") {
-      await initializeMainApp();
-    }
+  const entityTypeToTab: Record<string, string> = {
+    item: "items", skill: "skills", ability: "abilities", recipe: "recipes",
+    quest: "quests", npc: "npcs", effect: "effects", title: "titles",
+  };
+  const tab = entityTypeToTab[target.type];
+  if (tab && menuBarRef.value) {
+    menuBarRef.value.activeSubTabs["data-browser"] = tab;
+    activeSubTab.value = tab;
   }
-);
+});
 
 onMounted(async () => {
   await startup.initialize();
 });
 
-async function initializeMainApp() {
-  logPath.value = settingsStore.settings.logFilePath || settingsStore.getPlayerLogPath();
-
-  await listen("skill-update", (event: any) => {
-    skillStore.handleUpdate(event.payload);
-    surveyStore.handleSkillUpdate(event.payload);
-    farmingStore.handleSkillUpdate(event.payload);
-  });
-  await listen("survey-event", (event: any) => {
-    console.log("[survey-event] Received:", event.payload);
-    surveyStore.handleSurveyEvent(event.payload);
-  });
-  await listen<number>("survey-session-ended", (event) => {
-    console.log("[survey-session-ended] Session finalized:", event.payload);
-    surveyStore.handleSessionEnded(event.payload);
-  });
-  await listen<PlayerEvent>("player-event", (event) => {
-    farmingStore.handlePlayerEvent(event.payload);
-  });
-
-  // Start coordinator polling for log watchers
-  coordinator.startPolling(1500);
-
-  // Auto-start coordinator watchers if enabled
-  if (settingsStore.settings.autoTailPlayerLog && settingsStore.settings.gameDataPath) {
-    try {
-      await coordinator.startPlayerTailing();
-    } catch (e) {
-      console.error("Failed to auto-start player log tailing:", e);
-    }
-  }
-
-  if (settingsStore.settings.autoTailChat && settingsStore.settings.gameDataPath) {
-    try {
-      await coordinator.startChatTailing();
-    } catch (e) {
-      console.error("Failed to auto-start chat log tailing:", e);
-    }
-  }
-
-  // Start report folder watching
-  characterStore.startReportWatching();
-}
-
 async function parseLog() {
   error.value = "";
-  skillStore.reset();
+  const gameStateStore = useGameStateStore();
+  const surveyStore = useSurveyStore();
+  gameStateStore.resetSessionSkills();
   surveyStore.reset();
   parsing.value = true;
   try {
-    // Use the latest path from settings (may have been updated by file picker)
-    const path = settingsStore.settings.logFilePath || logPath.value;
+    const path = settingsStore.settings.logFilePath || settingsStore.getPlayerLogPath();
     await invoke("parse_log", { path });
   } catch (e) {
     error.value = String(e);
@@ -194,6 +148,7 @@ async function parseLog() {
 }
 
 function navigateToView(view: AppView) {
+  visited.add(view);
   currentView.value = view;
 }
 </script>

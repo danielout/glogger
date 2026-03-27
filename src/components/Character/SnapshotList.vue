@@ -36,6 +36,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { CharacterSnapshotSummary } from '../../types/database'
+import { formatDateTimeFull } from '../../composables/useTimestamp'
 
 defineProps<{
   snapshots: CharacterSnapshotSummary[]
@@ -69,6 +70,6 @@ function emitCompare() {
 }
 
 function formatTimestamp(ts: string): string {
-  return ts.replace('T', ' ').replace('Z', '').substring(0, 19)
+  return formatDateTimeFull(ts)
 }
 </script>

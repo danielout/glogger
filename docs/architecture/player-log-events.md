@@ -225,18 +225,53 @@ Fires before each talk/prompt screen. Appears repeatedly during a single NPC con
 ### ProcessSetAttributes — Player attribute update
 
 ```
-[HH:MM:SS] LocalPlayer: ProcessSetAttributes(entityId, "[ATTRIBUTE], [value]")
+[HH:MM:SS] LocalPlayer: ProcessSetAttributes(entityId, "[KEY1, KEY2, ...], [val1, val2, ...]")
 ```
 
 | Field | Type | Meaning |
 |---|---|---|
 | `entityId` | u32 | Player entity ID |
-| `ATTRIBUTE` | string | Attribute key (e.g., `CUR_COMMUNITY`) |
-| `value` | i32 | New attribute value |
+| `keys` | string[] | Parallel array of attribute names |
+| `values` | f32[] | Parallel array of attribute values (matching order to keys) |
 
-**When it fires:** Periodically during NPC interactions. Known attributes:
-- `CUR_COMMUNITY` — ticks upward as the player sells items or gives gifts (social/community currency)
-- `CUR_PEACEABLENESS` — changes during storage interactions and other activities
+**Format:** Two parallel arrays inside a single string argument — attribute names and their values. A single event can set 1 to hundreds of attributes at once.
+
+**When it fires:**
+- **Login** — two massive dumps (hundreds of attributes each) covering all character state
+- **Mount/dismount** — re-dumps ~44 attributes (stats change when mounted)
+- **Skill bar swap** — re-dumps stats affected by active skills
+- **During play** — incremental single or small-batch updates (e.g., `[IS_MOUNTED], [1]`, `[CUR_HEALTH, MAX_HEALTH, ...], [667, 667, ...]`)
+
+**Known attribute categories:**
+- **Vitals:** `CUR_HEALTH`, `MAX_HEALTH`, `CUR_POWER`, `MAX_POWER`, `CUR_ARMOR`, `MAX_ARMOR`, `CUR_METABOLISM`, `MAX_METABOLISM`
+- **Regen:** `COMBAT_REGEN_HEALTH_DELTA`, `NONCOMBAT_REGEN_HEALTH_DELTA`, `COMBAT_REGEN_POWER_DELTA`, `NONCOMBAT_REGEN_POWER_DELTA`, `COMBAT_REGEN_ARMOR_DELTA`, `NONCOMBAT_REGEN_ARMOR_DELTA`
+- **Movement:** `MOVEMENT_SPEED`, `SPRINT_BOOST`, `NONCOMBAT_SPRINT_BOOST`, `GRAVITY`, `JUMP_BURST`, `CLIMB_SPEED`
+- **Combat modifiers:** `VULN_*` (per damage type × direct/indirect/elite), `MOD_*` (per damage type), `MITIGATION_*`
+- **Ability modifiers:** `MOD_ABILITY_*`, `ABILITY_COST_MOD_*`, `ABILITY_RAGE_MOD_*`, `ABILITY_TAUNT_MOD_*`
+- **Skill modifiers:** `MOD_SKILL_*`, `BOOST_SKILL_*`
+- **NPC interaction:** `NPC_MOD_TRAININGCOST`, `NPC_MOD_MAXSALESVALUE`, `NPC_MOD_FAVORFROMGIFTS`, `NPC_MOD_FAVORFROMHANGOUTS`
+- **Social:** `CUR_COMMUNITY`, `MAX_COMMUNITY`, `CUR_PEACEABLENESS`, `MAX_PEACEABLENESS`, `CUR_CLEANLINESS`, `MAX_CLEANLINESS`
+- **Crafting:** `MAX_ACTIVE_WORKORDERS`, `WORKORDER_COIN_REWARD_MOD`, `CRAFTING_XP_EARNED_MOD`
+- **Mount:** `IS_MOUNTED`, `MAX_MOUNT_ANXIETY`, `MOUNTED_TOP_SPEED_LAND`, `MOUNTED_TURN_SPEED_LAND`, `MOUNTED_ACCELERATION_LAND`, `MAX_SADDLEBAG_VAULT_SIZE`, `MOUNT_RESILIENCE`, etc.
+- **Equipment:** `EQUIPMENT_LEVEL_CAP`, `EQUIPMENT_CAP_MASK`
+- **Inventory:** `MAX_INVENTORY_SIZE`, `BONUS_STABLE_SLOTS`, `MAX_SADDLEBAG_VAULT_SIZE`
+- **XP modifiers:** `COMBAT_XP_EARNED_MOD`, `CRAFTING_XP_EARNED_MOD`, `ANATOMY_XP_EARNED_MOD`, `SKINNING_XP_EARNED_MOD`, `ANGLING_XP_EARNED_MOD`, etc.
+- **Misc:** `FOOD_LEVEL`, `ACTIVE_TITLE`, `RACIAL_LEVEL`, `AUTOLOOT_RADIUS`, `PVP`, `IS_CORPSE_INTACT`, `CUR_COMBAT_WISDOM`, `CUR_HYDRATION`, `MAX_HYDRATION`
+
+**Examples:**
+```
+# Login dump (abbreviated — real line has hundreds of attributes)
+[23:32:47] LocalPlayer: ProcessSetAttributes(11921435, "[MAX_HEALTH, CUR_HEALTH, MAX_POWER, CUR_POWER, ...], [667, 667, 442, 442, ...]")
+
+# Mount
+[23:33:25] LocalPlayer: ProcessSetAttributes(11921978, "[IS_MOUNTED], [1]")
+
+# Health/combat update
+[23:33:33] LocalPlayer: ProcessSetAttributes(11921978, "[CUR_HEALTH, MAX_HEALTH, CUR_POWER, MAX_POWER, CUR_ARMOR, MAX_ARMOR, CUR_METABOLISM, MAX_METABOLISM], [667, 667, 442, 442, 766, 766, 140, 140]")
+
+# Single modifier change
+[23:32:47] LocalPlayer: ProcessSetAttributes(11921435, "[WORKORDER_COIN_REWARD_MOD], [1.36]")
+```
 
 ### ProcessUpdateQuest — Quest state change
 
@@ -245,6 +280,551 @@ Fires before each talk/prompt screen. Appears repeatedly during a single NPC con
 ```
 
 **When it fires:** A quest objective was completed or quest state changed. In the gift-giving context, this fires after a favor threshold is crossed (e.g., giving enough gifts unlocks a quest step).
+
+**NOT YET PARSED.**
+
+### ProcessSetWeather — Weather change
+
+```
+[HH:MM:SS] LocalPlayer: ProcessSetWeather("WeatherName", boolFlag)
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `WeatherName` | string | Weather condition name (e.g., `"Clear Sky"`, `"Cloudy 3"`) |
+| `boolFlag` | bool | Possibly indicates outdoor area (always True in samples) |
+
+**When it fires:** On login and when the weather changes (zone transitions, weather cycle updates).
+
+Relevant for features that depend on weather conditions (e.g., some Fletching recipes require clear weather).
+
+**Examples:**
+```
+[23:32:47] LocalPlayer: ProcessSetWeather("Clear Sky", True)
+[16:06:32] LocalPlayer: ProcessSetWeather("Cloudy 3", True)
+```
+
+### ProcessAddEffects — Effects/buffs applied
+
+```
+[HH:MM:SS] LocalPlayer: ProcessAddEffects(entityId, sourceEntityId, "[effectId1, effectId2, ...]", boolFlag)
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `entityId` | u32 | Target entity (player) |
+| `sourceEntityId` | u32 | Source of effects (0 = system/login, self = self-applied buff) |
+| `effectIds` | u32[] | List of numeric effect IDs |
+| `boolFlag` | bool | False on login batch, True during gameplay |
+
+**When it fires:**
+- **Login** — large batch of all active effects with `sourceEntityId=0`, `boolFlag=False`
+- **During play** — smaller batches when buffs are applied, with `sourceEntityId=self`, `boolFlag=True`
+
+**Parsed** → `PlayerEvent::EffectsAdded`. Effect IDs are numeric — `ProcessUpdateEffectName` provides display names.
+
+**Examples:**
+```
+# Login batch (many effect IDs, source=0)
+[23:32:46] LocalPlayer: ProcessAddEffects(11921435, 0, "[302, 303, 13330, 26297, 26142, 26304, 44086019, ...]", False)
+
+# In-play buff application (source=self)
+[23:32:47] LocalPlayer: ProcessAddEffects(11921435, 11921435, "[13304, ]", True)
+[23:32:47] LocalPlayer: ProcessAddEffects(11921435, 11921435, "[9024, ]", True)
+```
+
+### ProcessRemoveEffects — Effects/buffs removed
+
+```
+[HH:MM:SS] LocalPlayer: ProcessRemoveEffects(entityId, System.Int32[])
+```
+
+**When it fires:** When buffs expire or are dispelled. Fires on dismount and other state changes.
+
+**Parsed** → `PlayerEvent::EffectsRemoved` (signal-only — the `System.Int32[]` is C#'s opaque ToString(), so individual effect IDs cannot be extracted).
+
+### ProcessUpdateEffectName — Effect display name
+
+```
+[HH:MM:SS] LocalPlayer: ProcessUpdateEffectName(entityId, effectInstanceId, "Effect Name, Level N")
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `entityId` | u32 | Player entity ID |
+| `effectInstanceId` | u32 | Instance ID of the effect |
+| `displayName` | string | Human-readable name with level (e.g., `"Performance Appreciation, Level 0"`) |
+
+**When it fires:** After an effect is applied, providing its display name.
+
+**Parsed** → `PlayerEvent::EffectNameUpdated`.
+
+### ProcessPlayerMount — Mount/dismount
+
+```
+[HH:MM:SS] LocalPlayer: ProcessPlayerMount(entityId, isMounting)
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `entityId` | u32 | Player entity ID |
+| `isMounting` | bool | True = mounting, False = dismounting |
+
+**When it fires:** Player mounts or dismounts. Followed by `ProcessSetAttributes([IS_MOUNTED], [1/0])`, `ProcessSetActiveSkills`, and `ProcessSetEquippedItems` with updated appearance.
+
+**Examples:**
+```
+[23:33:25] LocalPlayer: ProcessPlayerMount(11921978, True)
+[23:33:31] LocalPlayer: ProcessPlayerMount(11921978, False)
+```
+
+### ProcessSetActiveSkills — Active skill bar
+
+```
+[HH:MM:SS] LocalPlayer: ProcessSetActiveSkills(Skill1, Skill2)
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `Skill1` | string | Primary active skill (e.g., `Hammer`, `Riding`) |
+| `Skill2` | string | Secondary active skill (e.g., `Mentalism`) |
+
+**When it fires:** On login, mount/dismount (swaps to Riding), and manual skill bar changes.
+
+**Examples:**
+```
+[23:33:22] LocalPlayer: ProcessSetActiveSkills(Riding, Mentalism)
+[23:33:31] LocalPlayer: ProcessSetActiveSkills(Hammer, Mentalism)
+```
+
+### ProcessSetEquippedItems — Equipment state
+
+```
+[HH:MM:SS] LocalPlayer: ProcessSetEquippedItems(System.Int32[], System.Int32[], System.Int32[], "appearanceString", entityId)
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `int[] (x3)` | arrays | Item ID arrays (serialized as C# type names in log) |
+| `appearanceString` | string | Full appearance/equipment string with slot assignments |
+| `entityId` | u32 | Player entity ID |
+
+**When it fires:** On login, mount/dismount, and equipment changes. The appearance string contains slot-keyed equipment data.
+
+**Parsed** → `EquipmentChanged`. Extracts `entity_id`, full `appearance` string, and structured `equipment` slots. The three `System.Int32[]` arrays are opaque C# types (Unity prints type name only, not contents).
+
+**Slot keys found in appearance string:**
+- `@Chest`, `@Head`, `@Legs`, `@Feet`, `@Hands` — armor slots
+- `@MainHand`, `MainHandEquip=Hammer` — main weapon + type
+- `@OffHandShield`, `OffHandEquip=Shield` — off-hand + type
+- `@Racial` — racial equipment slot
+- `Mount=@Horse1(...)` — mount appearance with sub-slots (`@Saddle`, `@Saddlebag`, `@Reins`, `@MountCosmetic`)
+
+### ProcessMountXpStatus — Mount XP eligibility
+
+```
+[HH:MM:SS] LocalPlayer: ProcessMountXpStatus(status)
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `status` | enum | XP eligibility (e.g., `NotEarnedInThisArea`, `AlreadyMaxLevel`) |
+
+**When it fires:** After mounting, indicates whether mount XP can be earned in the current area.
+
+**NOT YET PARSED.**
+
+### ProcessLoadAbilities — Ability loadout on login
+
+```
+[HH:MM:SS] LocalPlayer: ProcessLoadAbilities(System.Int32[], Skill1, Skill2, AbilityBarContents[])
+```
+
+**When it fires:** On login. Contains ability IDs, active skill pair, and ability bar layout.
+
+**Parsed** → `AbilitiesLoaded`. Extracts `skill1` and `skill2` (the active skill pair). The `System.Int32[]` and `AbilityBarContents[]` arguments are opaque C# types — Unity prints only the type name, not array contents.
+
+### ProcessLoadRecipes — Recipe knowledge on login
+
+```
+[HH:MM:SS] LocalPlayer: ProcessLoadRecipes(System.Int32[], System.Int32[])
+```
+
+**When it fires:** On login. Contains known recipe IDs and completion counts.
+
+**Parsed** → `RecipesLoaded`. Signal event (timestamp only). Both `System.Int32[]` arguments are opaque C# types — Unity prints only the type name, not array contents. Individual recipe updates are tracked via `ProcessUpdateRecipe`.
+
+### ProcessUpdateRecipe — Recipe learned/completed
+
+```
+[HH:MM:SS] LocalPlayer: ProcessUpdateRecipe(recipeId, completionCount)
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `recipeId` | u32 | Recipe ID (maps to CDN recipe data) |
+| `completionCount` | u32 | Total times this recipe has been completed |
+
+**When it fires:** After completing a recipe during crafting.
+
+**Example:**
+```
+[16:10:13] LocalPlayer: ProcessUpdateRecipe(21052, 151)
+```
+
+### ProcessSetStarredRecipes — Favorited recipes
+
+```
+[HH:MM:SS] LocalPlayer: ProcessSetStarredRecipes(System.Collections.Generic.HashSet`1[System.Int32])
+```
+
+**When it fires:** On login. Contains the set of recipe IDs the player has starred/favorited.
+
+**NOT YET PARSED.**
+
+### ProcessSetRecipeReuseTimers — Recipe cooldowns
+
+```
+[HH:MM:SS] LocalPlayer: ProcessSetRecipeReuseTimers(entityId, System.Int32[], System.Single[])
+```
+
+**When it fires:** During play when recipe cooldowns are active. Contains recipe IDs and remaining cooldown times.
+
+**NOT YET PARSED.**
+
+### ProcessLoadQuests — Quest state on login
+
+```
+[HH:MM:SS] LocalPlayer: ProcessLoadQuests(entityId, TransitionalQuestState[], System.Int32[], System.Int32[])
+```
+
+**When it fires:** On login. Full quest state including active quests, completed objectives, etc.
+
+**NOT YET PARSED.**
+
+### ProcessAddQuest — New quest acquired
+
+```
+[HH:MM:SS] LocalPlayer: ProcessAddQuest(entityId, TransitionalQuestState)
+```
+
+**When it fires:** Player accepts or triggers a new quest.
+
+**NOT YET PARSED.**
+
+### ProcessCompleteQuest — Quest completed
+
+```
+[HH:MM:SS] LocalPlayer: ProcessCompleteQuest(entityId, questId)
+```
+
+**When it fires:** Player completes a quest objective or turns in a quest.
+
+**NOT YET PARSED.**
+
+**Example:**
+```
+[16:25:49] LocalPlayer: ProcessCompleteQuest(1145895, 25216)
+```
+
+### ProcessSelectQuest — Quest tracking selection
+
+```
+[HH:MM:SS] LocalPlayer: ProcessSelectQuest(questId)
+```
+
+**When it fires:** Player selects a quest to track in the quest tracker UI.
+
+**NOT YET PARSED.**
+
+### ProcessCombatModeStatus — Combat state
+
+```
+[HH:MM:SS] LocalPlayer: ProcessCombatModeStatus(status, System.Int32[])
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `status` | enum | `NotInCombat` or `InCombat` |
+
+**When it fires:** When entering or leaving combat.
+
+### ProcessMapFx — Map marker/point of interest
+
+```
+[HH:MM:SS] LocalPlayer: ProcessMapFx((x, y, z), radius, type, "label", category, "description")
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `position` | (f32, f32, f32) | World coordinates |
+| `radius` | u32 | Effect radius |
+| `type` | u32 | Marker type |
+| `label` | string | Short label (e.g., `"Tsavorite is here"`) |
+| `category` | enum | Marker category (e.g., `ImportantInfo`) |
+| `description` | string | Detailed text (e.g., `"The Tsavorite is 441m east and 1316m north."`) |
+
+**When it fires:** Survey results, resource discoveries, and other map-pinned events.
+
+**NOT YET PARSED** (but consumed by `SurveyParser` from raw lines).
+
+### ProcessSetAreaSettings — Area configuration
+
+```
+[HH:MM:SS] LocalPlayer: ProcessSetAreaSettings(AreaSettingsFromServer)
+```
+
+**When it fires:** On login and zone transitions. Contains area-specific settings.
+
+**NOT YET PARSED.** Serialized C# type — actual data content unknown.
+
+### ProcessAddPlayer — Player appearance on login
+
+```
+[HH:MM:SS] LocalPlayer: ProcessAddPlayer(serverId, entityId, "appearanceString", "CharacterName", "description", ...)
+```
+
+**When it fires:** On login. Contains the player's full appearance string, name, and description.
+
+**NOT YET PARSED.**
+
+### ProcessGuildGeneralInfo — Guild membership
+
+```
+[HH:MM:SS] LocalPlayer: ProcessGuildGeneralInfo(guildId, "GuildName", "motd")
+```
+
+**When it fires:** On login. Contains guild ID, name, and message of the day.
+
+**NOT YET PARSED.**
+
+### ProcessErrorMessage — Game error
+
+```
+[HH:MM:SS] LocalPlayer: ProcessErrorMessage(errorCode, "message")
+```
+
+**When it fires:** Various game errors (e.g., entity no longer exists, can't perform action).
+
+**NOT YET PARSED.**
+
+### ProcessEndInteraction — Interaction ended
+
+```
+[HH:MM:SS] LocalPlayer: ProcessEndInteraction(entityId)
+```
+
+**When it fires:** Player ends an NPC interaction (closes dialogue, walks away).
+
+### ProcessExtendedItemUseInfo — Extended item use data
+
+```
+[HH:MM:SS] LocalPlayer: ProcessExtendedItemUseInfo(SystemName, ActionType, System.Collections.Generic.List`1[System.Int32])
+```
+
+**When it fires:** On login. Known systems: `Gourmand` with `Initialize` action — contains list of food item IDs the player has eaten.
+
+**NOT YET PARSED.** Currently consumed by `gourmandStore` via separate mechanism.
+
+### ProcessShowRecipes — Recipe UI opened
+
+```
+[HH:MM:SS] LocalPlayer: ProcessShowRecipes(SkillName)
+```
+
+**When it fires:** Player opens the crafting recipe list for a specific skill (e.g., `Teleportation`).
+
+**NOT YET PARSED.**
+
+### ProcessSetString — String attribute
+
+```
+[HH:MM:SS] LocalPlayer: ProcessSetString(key, "value")
+```
+
+**When it fires:** Sets named string values. Known keys: `HUNTING_GROUP_TITLE`.
+
+**NOT YET PARSED.**
+
+### ProcessTitlesList — Unlocked titles
+
+```
+[HH:MM:SS] LocalPlayer: ProcessTitlesList(Initialize, System.Collections.Generic.List`1[System.Int32])
+```
+
+**When it fires:** On login. Contains list of title IDs the player has unlocked.
+
+**NOT YET PARSED.**
+
+### ProcessBookList — Known books
+
+```
+[HH:MM:SS] LocalPlayer: ProcessBookList(Initialize, System.Collections.Generic.List`1[System.Int32])
+```
+
+**When it fires:** On login. Contains list of book IDs the player has read.
+
+**NOT YET PARSED.**
+
+### ProcessPlayerVendorScreen — Player shop inventory
+
+```
+[HH:MM:SS] LocalPlayer: ProcessPlayerVendorScreen(npcId, "", System.Collections.Generic.List`1[PlayerVendorItemForSale], slotCount, bool, bool, ...)
+```
+
+**When it fires:** Player opens their own vendor stall management UI.
+
+**NOT YET PARSED.**
+
+### ProcessPlayerVendorScreenUpdate — Player shop item update
+
+```
+[HH:MM:SS] LocalPlayer: ProcessPlayerVendorScreenUpdate(npcId, PlayerVendorItemForSale, bool)
+```
+
+**When it fires:** Item added or price changed in player's vendor stall.
+
+**NOT YET PARSED.**
+
+### ProcessPlayerVendorScreenRemove — Player shop item removed
+
+```
+[HH:MM:SS] LocalPlayer: ProcessPlayerVendorScreenRemove(npcId, instanceId)
+```
+
+**When it fires:** Item removed from player's vendor stall.
+
+**NOT YET PARSED.**
+
+### ProcessSetDisabledEquipment — Disabled equipment slots
+
+```
+[HH:MM:SS] LocalPlayer: ProcessSetDisabledEquipment(System.Int32[])
+```
+
+**When it fires:** After equipment changes. Indicates which equipment slots are currently disabled.
+
+**NOT YET PARSED.**
+
+### ProcessSetLockedItems — Locked items
+
+```
+[HH:MM:SS] LocalPlayer: ProcessSetLockedItems(System.Int32[])
+```
+
+**When it fires:** On login. Items the player has locked/protected from accidental use.
+
+**NOT YET PARSED.**
+
+### ProcessInventoryFolderSettings — Inventory UI state
+
+```
+[HH:MM:SS] LocalPlayer: ProcessInventoryFolderSettings(System.Collections.Generic.List`1[InventoryFolderSettings])
+```
+
+**When it fires:** On login. Player's inventory folder/tab configuration.
+
+**NOT YET PARSED.**
+
+### ProcessSetExtendedGuiFeatures — GUI feature flags
+
+```
+[HH:MM:SS] LocalPlayer: ProcessSetExtendedGuiFeatures(ExtendedGuiFeatures)
+```
+
+**When it fires:** On login. GUI feature configuration from server.
+
+**NOT YET PARSED.**
+
+### ProcessCompleteDirectedGoals — Tutorial/directed goal completion
+
+```
+[HH:MM:SS] LocalPlayer: ProcessCompleteDirectedGoals(System.Int32[])
+```
+
+**When it fires:** On login. List of completed tutorial/directed goals.
+
+**NOT YET PARSED.**
+
+### ProcessMapFog — Explored map areas
+
+```
+[HH:MM:SS] LocalPlayer: ProcessMapFog(System.Collections.Generic.List`1[MapFogHistory])
+```
+
+**When it fires:** On login. Map exploration/fog-of-war state.
+
+**NOT YET PARSED.**
+
+### ProcessRedemptionCount — Redemption/loyalty points
+
+```
+[HH:MM:SS] LocalPlayer: ProcessRedemptionCount(count)
+```
+
+**When it fires:** On login. Current redemption point count.
+
+**NOT YET PARSED.**
+
+### ProcessToolCommandResponse — Tool command result
+
+```
+[HH:MM:SS] LocalPlayer: ProcessToolCommandResponse(commandId, success, "message", System.Collections.Generic.Dictionary`2[System.String,System.String])
+```
+
+**When it fires:** Response to a tool command (e.g., `/outputcharacter`).
+
+**NOT YET PARSED.**
+
+### ProcessRemoveLoot — Loot removed
+
+```
+[HH:MM:SS] LocalPlayer: ProcessRemoveLoot(lootId)
+```
+
+**When it fires:** Loot container removed from the world (after looting or timeout).
+
+**NOT YET PARSED.**
+
+### ProcessAttack — Attack action
+
+```
+[HH:MM:SS] LocalPlayer: ProcessAttack(attackType)
+```
+
+**When it fires:** Player initiates an attack.
+
+**NOT YET PARSED.**
+
+### ProcessShowStable — Stable UI
+
+```
+[HH:MM:SS] LocalPlayer: ProcessShowStable(npcId, StableSlot[], System.Int32[], System.String[], modifier)
+```
+
+**When it fires:** Player opens the animal stable UI. Contains stable slot data, animal IDs, and names.
+
+**NOT YET PARSED.**
+
+### ProcessFirstEverInteraction — First interaction with entity
+
+```
+[HH:MM:SS] LocalPlayer: ProcessFirstEverInteraction("interactionData")
+```
+
+**When it fires:** First time interacting with a specific entity type (portals, etc.). Contains interaction metadata string.
+
+**NOT YET PARSED.**
+
+### ProcessEnableInteractor — Interactable entities
+
+```
+[HH:MM:SS] LocalPlayer: ProcessEnableInteractor(System.Int32[], System.Int32[])
+```
+
+**When it fires:** On login/zone change. Lists entities that can be interacted with.
+
+**NOT YET PARSED.**
 
 ### ProcessBook — Display book or log content
 

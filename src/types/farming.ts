@@ -12,7 +12,6 @@ export interface FarmingSkillEntry {
 }
 
 export interface FarmingFavorEntry {
-  npcId: number
   delta: number
 }
 
@@ -70,9 +69,9 @@ export interface SaveFarmingSessionInput {
   elapsed_seconds: number
   total_paused_seconds: number
   vendor_gold: number
-  skills: Array<{ skill_name: string; xp_gained: number; levels_gained: number }>
+  skills: Array<{ skill_id: number; skill_name: string; xp_gained: number; levels_gained: number }>
   items: Array<{ item_name: string; net_quantity: number }>
-  favors: Array<{ npc_name: string; npc_id: number; delta: number }>
+  favors: Array<{ npc_key: string; npc_name: string; delta: number }>
 }
 
 // === Historical (loaded from DB) ===
@@ -87,7 +86,7 @@ export interface HistoricalFarmingSession {
   total_paused_seconds: number
   vendor_gold: number
   created_at: string
-  skills: Array<{ skill_name: string; xp_gained: number; levels_gained: number }>
+  skills: Array<{ skill_id: number; skill_name: string; xp_gained: number; levels_gained: number }>
   items: Array<{ item_name: string; net_quantity: number }>
-  favors: Array<{ npc_name: string; npc_id: number; delta: number }>
+  favors: Array<{ npc_key: string; npc_name: string; delta: number }>
 }

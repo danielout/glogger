@@ -1,7 +1,8 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useGameDataStore } from "./gameDataStore";
+import { useMarketStore } from "./marketStore";
 
 export interface SurveyLogEntry {
   kind: "map-crafted" | "survey-used" | "completed";
@@ -60,6 +61,13 @@ export interface SessionStats {
   manualMode: boolean;
   name: string;
   notes: string;
+  // TNL tracking for surveys-to-level estimates
+  surveyingTnl: number;
+  miningTnl: number;
+  geologyTnl: number;
+  // Track XP events count per skill for averaging
+  _miningXpEvents: number;
+  _geologyXpEvents: number;
 }
 
 const SURVEY_SKILLS = ["Surveying", "Mining", "Geology"];
@@ -71,17 +79,20 @@ export const useSurveyStore = defineStore("survey", () => {
   const backendSessionId = ref<number | null>(null);
 
   const gameDataStore = useGameDataStore();
+  const marketStore = useMarketStore();
 
-  // Cache of survey type name → crafting_cost from the survey_types table
+  // Cache of survey type name → crafting_cost and survey_xp from the survey_types table
   const surveyTypeCosts = ref<Record<string, number>>({});
+  const surveyTypeXp = ref<Record<string, number>>({});
   let surveyTypeCostsLoaded = false;
 
   async function loadSurveyTypeCosts() {
     if (surveyTypeCostsLoaded) return;
     try {
-      const types = await invoke<Array<{ name: string; crafting_cost: number | null }>>("get_all_survey_types");
+      const types = await invoke<Array<{ name: string; crafting_cost: number | null; survey_xp: number | null }>>("get_all_survey_types");
       for (const t of types) {
         surveyTypeCosts.value[t.name] = t.crafting_cost ?? 0;
+        if (t.survey_xp) surveyTypeXp.value[t.name] = t.survey_xp;
       }
       surveyTypeCostsLoaded = true;
     } catch (e) {
@@ -93,7 +104,7 @@ export const useSurveyStore = defineStore("survey", () => {
     return surveyTypeCosts.value[mapName] ?? 0;
   }
 
-  // Fetch item value from game data and cache it
+  // Fetch vendor value from game data and cache it (used as fallback when no market price set)
   async function fetchItemValue(itemName: string): Promise<number> {
     if (!session.value) return 0;
 
@@ -102,7 +113,7 @@ export const useSurveyStore = defineStore("survey", () => {
     }
 
     try {
-      const item = await gameDataStore.getItemByName(itemName);
+      const item = await gameDataStore.resolveItem(itemName);
       const value = item?.value ?? 0;
       session.value.itemValues[itemName] = value;
       return value;
@@ -111,6 +122,16 @@ export const useSurveyStore = defineStore("survey", () => {
       session.value.itemValues[itemName] = 0;
       return 0;
     }
+  }
+
+  /**
+   * Get effective price for an item: market price if set, otherwise cached vendor value.
+   * This is reactive — when marketStore.valuesByName changes, computeds that call this recompute.
+   */
+  function getEffectivePrice(itemName: string): number {
+    const market = marketStore.valuesByName[itemName];
+    if (market) return market.market_value;
+    return session.value?.itemValues[itemName] ?? 0;
   }
 
 
@@ -139,6 +160,11 @@ export const useSurveyStore = defineStore("survey", () => {
       manualMode: manual,
       name: "Survey Session",
       notes: "",
+      surveyingTnl: 0,
+      miningTnl: 0,
+      geologyTnl: 0,
+      _miningXpEvents: 0,
+      _geologyXpEvents: 0,
     };
   }
 
@@ -147,6 +173,7 @@ export const useSurveyStore = defineStore("survey", () => {
   async function handleSurveyEvent(payload: {
     kind: string;
     timestamp: string;
+    session_id?: number;
     // MapCrafted fields
     map_name?: string;
     internal_name?: string;
@@ -162,6 +189,10 @@ export const useSurveyStore = defineStore("survey", () => {
     }>;
     speed_bonus_earned?: boolean;
   }) {
+    // Track the backend session ID for patching on end
+    if (payload.session_id != null) {
+      backendSessionId.value = payload.session_id;
+    }
     if (payload.kind === "MapCrafted") {
       // Ensure survey type costs are loaded before we need them
       await loadSurveyTypeCosts();
@@ -285,6 +316,80 @@ export const useSurveyStore = defineStore("survey", () => {
         lootText: lootText,
       });
     }
+
+    if (payload.kind === "MotherlodeCompleted" && session.value) {
+      const surveyType = extractSurveyType(payload.map_name);
+      if (!session.value.surveyTypeStats[surveyType]) {
+        session.value.surveyTypeStats[surveyType] = {
+          count: 0,
+          completed: 0,
+          totalValue: 0,
+          totalCost: 0,
+          primaryLootTotals: {},
+          speedBonusLootTotals: {},
+        };
+      }
+      session.value.surveyTypeStats[surveyType].completed++;
+
+      const typeStats = session.value.surveyTypeStats[surveyType];
+      let motherLootValue = 0;
+      if (payload.loot_items) {
+        for (const lootItem of payload.loot_items) {
+          session.value.primaryLootTotals[lootItem.item_name] =
+            (session.value.primaryLootTotals[lootItem.item_name] ?? 0) +
+            lootItem.quantity;
+          typeStats.primaryLootTotals[lootItem.item_name] =
+            (typeStats.primaryLootTotals[lootItem.item_name] ?? 0) +
+            lootItem.quantity;
+          const value = await fetchItemValue(lootItem.item_name);
+          motherLootValue += value * lootItem.quantity;
+        }
+      }
+
+      session.value.surveyTypeStats[surveyType].totalValue += motherLootValue;
+
+      const lootText =
+        payload.loot_items
+          ?.map((item) =>
+            item.quantity > 1
+              ? `${item.item_name} x${item.quantity}`
+              : `${item.item_name}`
+          )
+          .join(", ") ?? "";
+
+      log.value.unshift({
+        kind: "completed",
+        timestamp: payload.timestamp,
+        label: `Motherlode: ${payload.map_name ?? "Unknown"}`,
+        lootText: lootText,
+      });
+    }
+  }
+
+  function handleLootCorrection(payload: {
+    item_name: string;
+    old_quantity: number;
+    new_quantity: number;
+    delta: number;
+  }) {
+    if (!session.value) return;
+
+    // Correct the running totals by adding the delta
+    const { item_name, delta } = payload;
+
+    if (session.value.primaryLootTotals[item_name] !== undefined) {
+      session.value.primaryLootTotals[item_name] += delta;
+    }
+
+    // Also correct per-survey-type stats
+    for (const stats of Object.values(session.value.surveyTypeStats)) {
+      if (stats.primaryLootTotals[item_name] !== undefined) {
+        stats.primaryLootTotals[item_name] += delta;
+        // Correct the revenue by the delta * item value
+        const value = session.value!.itemValues[item_name] ?? 0;
+        stats.totalValue += delta * value;
+      }
+    }
   }
 
   function handleSkillUpdate(payload: {
@@ -301,19 +406,28 @@ export const useSurveyStore = defineStore("survey", () => {
     if (payload.skill_type === "Surveying") {
       s.surveyingXpGained += xpDelta(payload.xp, s._surveyingXpBaseline);
       s._surveyingXpBaseline = payload.xp;
+      s.surveyingTnl = payload.tnl;
     } else if (payload.skill_type === "Mining") {
-      s.miningXpGained += xpDelta(payload.xp, s._miningXpBaseline);
+      const delta = xpDelta(payload.xp, s._miningXpBaseline);
+      s.miningXpGained += delta;
       s._miningXpBaseline = payload.xp;
+      s.miningTnl = payload.tnl;
+      if (delta > 0) s._miningXpEvents++;
     } else if (payload.skill_type === "Geology") {
-      s.geologyXpGained += xpDelta(payload.xp, s._geologyXpBaseline);
+      const delta = xpDelta(payload.xp, s._geologyXpBaseline);
+      s.geologyXpGained += delta;
       s._geologyXpBaseline = payload.xp;
+      s.geologyTnl = payload.tnl;
+      if (delta > 0) s._geologyXpEvents++;
     }
   }
 
   function reset() {
+    stopTick();
     sessionActive.value = false;
     session.value = null;
     log.value = [];
+    backendSessionId.value = null;
   }
 
   function togglePause() {
@@ -402,7 +516,39 @@ export const useSurveyStore = defineStore("survey", () => {
 
   // --- Computed: time ---
 
+  // Tick ref that updates every second while a session is active and not ended/paused.
+  // Forces reactivity in activeSeconds so the elapsed display updates in real time.
+  const _tick = ref(0);
+  let _tickInterval: ReturnType<typeof setInterval> | null = null;
+
+  function startTick() {
+    if (_tickInterval) return;
+    _tickInterval = setInterval(() => { _tick.value++; }, 1000);
+  }
+
+  function stopTick() {
+    if (_tickInterval) {
+      clearInterval(_tickInterval);
+      _tickInterval = null;
+    }
+  }
+
+  watch(
+    () => ({ active: sessionActive.value, ended: session.value?.endTime, paused: session.value?.isPaused }),
+    ({ active, ended, paused }) => {
+      if (active && !ended && !paused) {
+        startTick();
+      } else {
+        stopTick();
+      }
+    },
+    { immediate: true }
+  );
+
   const activeSeconds = computed(() => {
+    // Reference _tick so this recomputes every second
+    void _tick.value;
+
     if (!session.value) return 0;
     const start = tsToSeconds(session.value.startTime);
 
@@ -412,10 +558,7 @@ export const useSurveyStore = defineStore("survey", () => {
     } else if (session.value.isPaused && session.value.pauseStartTime) {
       endSeconds = tsToSeconds(session.value.pauseStartTime);
     } else {
-      const lastTs = log.value[0]?.timestamp;
-      endSeconds = lastTs
-        ? tsToSeconds(lastTs)
-        : tsToSeconds(getCurrentTimestamp());
+      endSeconds = tsToSeconds(getCurrentTimestamp());
     }
 
     const totalSeconds = Math.max(0, endSeconds - start);
@@ -483,20 +626,31 @@ export const useSurveyStore = defineStore("survey", () => {
         if (type === "Unknown" && stats.completed === 0) return false;
         return true;
       })
-      .map(([type, stats]) => ({
-        type,
-        count: stats.count,
-        completed: stats.completed,
-        revenue: stats.totalValue,
-        cost: stats.totalCost,
-        profit: stats.totalValue - stats.totalCost,
-        profitPerSurvey:
-          stats.completed > 0
-            ? Math.round((stats.totalValue - stats.totalCost) / stats.completed)
-            : 0,
-        primaryLoot: buildLootSummary(stats.primaryLootTotals),
-        speedBonusLoot: buildLootSummary(stats.speedBonusLootTotals),
-      }))
+      .map(([type, stats]) => {
+        // Compute revenue reactively from current market/vendor prices
+        const allLoot = { ...stats.primaryLootTotals };
+        for (const [item, count] of Object.entries(stats.speedBonusLootTotals)) {
+          allLoot[item] = (allLoot[item] ?? 0) + count;
+        }
+        const revenue = Object.entries(allLoot).reduce(
+          (sum, [item, count]) => sum + getEffectivePrice(item) * count,
+          0
+        );
+        return {
+          type,
+          count: stats.count,
+          completed: stats.completed,
+          revenue,
+          cost: stats.totalCost,
+          profit: revenue - stats.totalCost,
+          profitPerSurvey:
+            stats.completed > 0
+              ? Math.round((revenue - stats.totalCost) / stats.completed)
+              : 0,
+          primaryLoot: buildLootSummary(stats.primaryLootTotals),
+          speedBonusLoot: buildLootSummary(stats.speedBonusLootTotals),
+        };
+      })
       .sort((a, b) => b.completed - a.completed);
   });
 
@@ -511,10 +665,8 @@ export const useSurveyStore = defineStore("survey", () => {
     )) {
       allTotals[item] = (allTotals[item] ?? 0) + count;
     }
-    const values = session.value.itemValues;
     return Object.entries(allTotals).reduce((sum, [item, count]) => {
-      const unitValue = values[item] ?? 0;
-      return sum + unitValue * count;
+      return sum + getEffectivePrice(item) * count;
     }, 0);
   });
 
@@ -541,6 +693,55 @@ export const useSurveyStore = defineStore("survey", () => {
     return hours > 0 ? Math.round(totalProfit.value / hours) : 0;
   });
 
+  // --- Computed: XP-to-level estimates ---
+
+  /** Estimated surveys to craft until Surveying levels up */
+  const surveysToLevelSurveying = computed((): number | null => {
+    if (!session.value || session.value.surveyingTnl <= 0) return null;
+    // Find the avg XP per craft from the survey types used this session
+    const craftedTypes = Object.keys(session.value.surveyTypeStats);
+    if (craftedTypes.length === 0) return null;
+    let totalXp = 0;
+    let count = 0;
+    for (const type of craftedTypes) {
+      // Survey type names in stats don't have "Survey"/"Map" suffix — find matching XP
+      for (const [name, xp] of Object.entries(surveyTypeXp.value)) {
+        if (name.startsWith(type)) {
+          totalXp += xp;
+          count++;
+          break;
+        }
+      }
+    }
+    if (count === 0 || totalXp === 0) return null;
+    const avgXp = totalXp / count;
+    return Math.ceil(session.value.surveyingTnl / avgXp);
+  });
+
+  /** Estimated survey completions until Mining levels up */
+  const surveysToLevelMining = computed((): number | null => {
+    if (!session.value || session.value.miningTnl <= 0) return null;
+    if (session.value._miningXpEvents <= 0 || session.value.miningXpGained <= 0) return null;
+    const avgXpPerCompletion = session.value.miningXpGained / session.value._miningXpEvents;
+    return Math.ceil(session.value.miningTnl / avgXpPerCompletion);
+  });
+
+  /** Estimated survey completions until Geology levels up */
+  const surveysToLevelGeology = computed((): number | null => {
+    if (!session.value || session.value.geologyTnl <= 0) return null;
+    if (session.value._geologyXpEvents <= 0 || session.value.geologyXpGained <= 0) return null;
+    const avgXpPerCompletion = session.value.geologyXpGained / session.value._geologyXpEvents;
+    return Math.ceil(session.value.geologyTnl / avgXpPerCompletion);
+  });
+
+  const sessionEnded = computed(() => {
+    return sessionActive.value && session.value?.endTime != null;
+  });
+
+  function newSession() {
+    reset();
+  }
+
   return {
     sessionActive,
     session,
@@ -555,10 +756,16 @@ export const useSurveyStore = defineStore("survey", () => {
     totalProfit,
     profitPerSurvey,
     profitPerHour,
+    sessionEnded,
+    newSession,
+    surveysToLevelSurveying,
+    surveysToLevelMining,
+    surveysToLevelGeology,
     fetchItemValue,
     handleSurveyEvent,
     handleSessionEnded,
     handleSkillUpdate,
+    handleLootCorrection,
     reset,
     togglePause,
     manualStart,

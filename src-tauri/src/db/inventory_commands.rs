@@ -221,6 +221,50 @@ pub fn import_inventory_report_internal(
             ]).map_err(|e| format!("Failed to insert item {}: {e}", item.name))?;
         }
 
+        // 8. Seed game_state_storage from this snapshot
+        conn.execute(
+            "DELETE FROM game_state_storage WHERE character_name = ?1 AND server_name = ?2",
+            rusqlite::params![report.character, report.server_name],
+        ).ok();
+
+        let mut storage_query = conn.prepare(
+            "SELECT storage_vault, type_id, item_name, stack_size
+             FROM character_snapshot_items
+             WHERE item_snapshot_id = ?1 AND storage_vault != '' AND is_in_inventory = 0"
+        ).map_err(|e| format!("Failed to prepare storage query: {e}"))?;
+
+        let mut storage_insert = conn.prepare(
+            "INSERT INTO game_state_storage (character_name, server_name, vault_key, instance_id, item_name, item_type_id, stack_size, last_confirmed_at, source)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'snapshot')"
+        ).map_err(|e| format!("Failed to prepare storage insert: {e}"))?;
+
+        let storage_rows: Vec<(String, i64, String, i64)> = storage_query.query_map(
+            rusqlite::params![snapshot_id],
+            |row| Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, i64>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, i64>(3)?,
+            ))
+        ).map_err(|e| format!("Failed to query storage items: {e}"))?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        for (i, (vault_key, type_id, item_name, stack_size)) in storage_rows.iter().enumerate() {
+            let synthetic_id = -(i as i64 + 1);
+            storage_insert.execute(rusqlite::params![
+                report.character,
+                report.server_name,
+                vault_key,
+                synthetic_id,
+                item_name,
+                type_id,
+                stack_size,
+                now,
+            ]).ok();
+        }
+
         Ok(InventoryImportResult {
             character_name: report.character.clone(),
             server_name: report.server_name.clone(),

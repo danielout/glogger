@@ -98,12 +98,8 @@
       </div>
 
       <!-- Empty state -->
-      <div v-if="!selectedRecipe && searchResults.length === 0 && searchQuery" class="text-text-dim text-xs italic">
-        No recipes found for "{{ searchQuery }}"
-      </div>
-      <div v-if="!selectedRecipe && !searchQuery" class="text-text-dim text-xs italic">
-        Search for a recipe to calculate ingredient requirements
-      </div>
+      <EmptyState v-if="!selectedRecipe && searchResults.length === 0 && searchQuery" variant="compact" :primary="`No recipes found for &quot;${searchQuery}&quot;`" />
+      <EmptyState v-if="!selectedRecipe && !searchQuery" variant="compact" primary="Search for a recipe" secondary="Calculate ingredient requirements for any recipe." />
     </div>
 
     <!-- Right panel: results -->
@@ -189,6 +185,7 @@ import { useGameDataStore } from "../../stores/gameDataStore";
 import { useCraftingStore } from "../../stores/craftingStore";
 import type { RecipeInfo } from "../../types/gameData/recipes";
 import type { ResolvedRecipe, MaterialNeed } from "../../types/crafting";
+import EmptyState from "../Shared/EmptyState.vue";
 import IngredientTreeNode from "./IngredientTreeNode.vue";
 import MaterialSummary from "./MaterialSummary.vue";
 import PickupList from "./PickupList.vue";

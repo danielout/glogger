@@ -3,13 +3,16 @@
     border-class="border-entity-skill/50"
     @hover="loadData"
   >
-    <button
-      class="inline-flex items-center gap-1 cursor-pointer hover:underline"
+    <component
+      :is="plain ? 'span' : 'button'"
+      :class="plain
+        ? 'hover:underline cursor-pointer text-inherit'
+        : 'inline-flex items-center gap-1 cursor-pointer hover:underline'"
       @click="handleClick"
     >
-      <GameIcon v-if="showIcon && skillData?.icon_id" :icon-id="skillData.icon_id" :alt="name" size="xs" />
-      <span class="text-entity-skill text-xs font-medium">{{ skillData?.name ?? name }}</span>
-    </button>
+      <GameIcon v-if="!plain && showIcon && skillData?.icon_id" :icon-id="skillData.icon_id" :alt="reference" size="xs" />
+      <span :class="plain ? '' : 'text-entity-skill text-xs font-medium'">{{ skillData?.name ?? reference }}</span>
+    </component>
     <template #tooltip>
       <SkillTooltip v-if="skillData" :skill="skillData" :icon-src="iconSrc" />
     </template>
@@ -27,10 +30,12 @@ import GameIcon from "../GameIcon.vue";
 import SkillTooltip from "./SkillTooltip.vue";
 
 const props = withDefaults(defineProps<{
-  name: string;
+  reference: string;
   showIcon?: boolean;
+  plain?: boolean;
 }>(), {
   showIcon: true,
+  plain: false,
 });
 
 const store = useGameDataStore();
@@ -42,7 +47,7 @@ const iconSrc = ref<string | null>(null);
 async function loadData() {
   if (skillData.value) return;
   try {
-    const skill = await store.getSkillByName(props.name);
+    const skill = await store.resolveSkill(props.reference);
     if (!skill) return;
     skillData.value = skill;
     if (skill.icon_id) {
@@ -50,11 +55,11 @@ async function loadData() {
       iconSrc.value = convertFileSrc(path);
     }
   } catch (e) {
-    console.warn(`Failed to load skill: ${props.name}`, e);
+    console.warn(`Failed to resolve skill: ${props.reference}`, e);
   }
 }
 
 function handleClick() {
-  navigateToEntity({ type: "skill", id: props.name });
+  navigateToEntity({ type: "skill", id: skillData.value?.name ?? props.reference });
 }
 </script>

@@ -1,0 +1,251 @@
+# Game State System
+
+Centralized, persisted representation of the player's current game state. Merges data from two sources — **character/inventory JSON exports** (complete snapshots, manually triggered) and **Player.log events** (real-time but partial) — into a single source of truth that any feature can query.
+
+## Design Principles
+
+### Persist Derived State, Not Raw Events
+
+We maintain a **live state model** — a set of `game_state_*` tables representing "last known value" per domain. Events update this model in place; we don't store raw events or replay logs.
+
+### Freshness Tracking
+
+Every value has a `last_confirmed_at` timestamp. Features can use this to display freshness indicators or prompt for a fresh export.
+
+### Deconfliction: Most Recent Timestamp Wins
+
+When a snapshot import and a log event conflict, the **most recent timestamp wins**. Snapshot imports use `ON CONFLICT DO UPDATE ... WHERE excluded.last_confirmed_at > existing.last_confirmed_at` to avoid overwriting fresher log data.
+
+### Session Awareness
+
+On `CharacterLogin`, the game dumps full state across many events (items, skills, attributes, equipment, recipes, abilities, active skills, effects). This naturally refreshes nearly all domains. The `GameStateManager` clears transient state (inventory, equipment, combat, mount, effects) on login and resets favor deltas.
+
+## Architecture
+
+### Data Flow
+
+```
+Player.log → LogWatcher → PlayerEventParser → LogEvent::PlayerEventParsed
+                                                        ↓
+                                              DataIngestCoordinator
+                                                   ↓              ↓
+                                        GameStateManager     emit("player-event")
+                                         (writes to DB)       (for live tracking)
+                                                ↓
+                                    emit("game-state-updated", [domain names])
+                                                ↓
+                                          gameStateStore
+                                       (refreshDomain per domain)
+
+Snapshot Import → seed_game_state_from_snapshot() → same DB tables
+```
+
+### Key Files
+
+| File | Role |
+|---|---|
+| `src-tauri/src/game_state.rs` | `GameStateManager` — processes `PlayerEvent`s into DB writes |
+| `src-tauri/src/db/game_state_commands.rs` | Tauri query commands (one per domain) |
+| `src-tauri/src/db/migrations.rs` | All `game_state_*` table definitions (V1 schema) |
+| `src-tauri/src/db/character_commands.rs` | Snapshot seeding for skills, attributes, recipes, equipment, favor, currencies, storage |
+| `src-tauri/src/db/inventory_commands.rs` | Snapshot seeding for inventory |
+| `src-tauri/src/coordinator.rs` | Wires `GameStateManager` into event loop, emits `game-state-updated` |
+| `src/stores/gameStateStore.ts` | Frontend Pinia store — single source of truth for all game state |
+| `src/types/gameState.ts` | TypeScript interfaces matching Rust response structs |
+
+## Database Schema
+
+All tables live in the V1 unified migration. Every table uses `last_confirmed_at TEXT` for freshness.
+
+| Table | PK | Key Columns |
+|---|---|---|
+| `game_state_session` | `id CHECK (id = 1)` | character_name, server_name, last_login_at |
+| `game_state_skills` | (character_name, skill_name) | level, bonus_levels, xp, tnl, max_level, source |
+| `game_state_active_skills` | character_name | skill1, skill2 |
+| `game_state_attributes` | (character_name, attribute_name) | value |
+| `game_state_weather` | `id CHECK (id = 1)` | weather_name, is_active |
+| `game_state_combat` | character_name | in_combat |
+| `game_state_mount` | character_name | is_mounted |
+| `game_state_inventory` | (character_name, instance_id) | item_name, item_type_id, stack_size, slot_index, source |
+| `game_state_recipes` | (character_name, recipe_id) | completion_count, source |
+| `game_state_equipment` | (character_name, slot) | appearance_key |
+| `game_state_favor` | (character_name, npc_name) | npc_id, cumulative_delta, favor_tier, source |
+| `game_state_currencies` | (character_name, currency_name) | amount, source |
+| `game_state_effects` | (character_name, effect_instance_id) | effect_name, source_entity_id |
+| `game_state_storage` | (character_name, server_name, vault_key, instance_id) | item_name, item_type_id, stack_size, slot_index, source |
+
+## GameStateManager (Rust)
+
+Lightweight struct with `active_character: Option<String>` and `active_server: Option<String>`. Receives `&DbPool` per call.
+
+### Event → Domain Mapping
+
+| PlayerEvent | Table | Operation | Domain |
+|---|---|---|---|
+| SkillsLoaded | game_state_skills | DELETE all + bulk INSERT | `skills` |
+| ActiveSkillsChanged | game_state_active_skills | UPSERT | `active_skills` |
+| AttributesChanged | game_state_attributes | Batch UPSERT (transaction) | `attributes` |
+| WeatherChanged | game_state_weather | UPSERT singleton | `weather` |
+| CombatStateChanged | game_state_combat | UPSERT | `combat` |
+| MountStateChanged | game_state_mount | UPSERT | `mount` |
+| ItemAdded | game_state_inventory | INSERT | `inventory` |
+| ItemStackChanged | game_state_inventory | UPDATE | `inventory` |
+| ItemDeleted | game_state_inventory | DELETE | `inventory` |
+| RecipeUpdated | game_state_recipes | UPSERT | `recipes` |
+| EquipmentChanged | game_state_equipment | DELETE all + bulk INSERT | `equipment` |
+| FavorChanged | game_state_favor | UPSERT (increments cumulative_delta) | `favor` |
+| EffectsAdded | game_state_effects | Clear on login batch + bulk INSERT | `effects` |
+| EffectsRemoved | *(signal only)* | Emits domain update | `effects` |
+| EffectNameUpdated | game_state_effects | UPDATE effect_name | `effects` |
+| StorageDeposit | game_state_storage | UPSERT | `storage` |
+| StorageWithdrawal | game_state_storage | DELETE | `storage` |
+
+### Timestamp Handling
+
+Log events have `"HH:MM:SS"` timestamps. `GameStateManager` normalizes these to `"YYYY-MM-DD HH:MM:SS"` using `chrono::Local::now()`.
+
+### Login Behavior
+
+On `CharacterLogin`, `set_active_character()`:
+- Updates `game_state_session`
+- Clears transient state: inventory, equipment, combat, mount
+- Resets favor `cumulative_delta` to 0 (fresh session baseline)
+- Does NOT clear storage (storage persists across sessions)
+
+## Frontend Store (`gameStateStore`)
+
+Pinia composition API store. All game state flows through here.
+
+### Persisted State (from DB)
+
+Loaded via parallel `invoke()` calls in `loadAll()`, refreshed per-domain via `refreshDomain(domain)`.
+
+| Ref | Type | Tauri Command |
+|---|---|---|
+| `skills` | `GameStateSkill[]` | `get_game_state_skills` |
+| `attributes` | `GameStateAttribute[]` | `get_game_state_attributes` |
+| `activeSkills` | `GameStateActiveSkills \| null` | `get_game_state_active_skills` |
+| `world` | `GameStateWorld` | `get_game_state_world` |
+| `inventory` | `GameStateInventoryItem[]` | `get_game_state_inventory` |
+| `recipes` | `GameStateRecipe[]` | `get_game_state_recipes` |
+| `equipment` | `GameStateEquipmentSlot[]` | `get_game_state_equipment` |
+| `favor` | `GameStateFavor[]` | `get_game_state_favor` |
+| `currencies` | `GameStateCurrency[]` | `get_game_state_currencies` |
+| `effects` | `GameStateEffect[]` | `get_game_state_effects` |
+| `storage` | `GameStateStorageItem[]` | `get_game_state_storage` |
+| `storageVaults` | `StorageVaultDetail[]` | `get_storage_vault_metadata` |
+
+### Computed Lookups
+
+| Computed | Type | Description |
+|---|---|---|
+| `skillsByName` | `Record<string, GameStateSkill>` | O(1) skill lookup |
+| `attributesByName` | `Record<string, number>` | O(1) attribute lookup |
+| `ownedItemCounts` | `Record<string, number>` | Merges DB inventory + live inventory |
+| `recipesById` | `Record<number, GameStateRecipe>` | O(1) recipe lookup |
+| `recipeCompletions` | `Record<string, number>` | Keyed by `"Recipe_{id}"` for CDN compat |
+| `knownRecipeKeys` | `Set<string>` | Recipe keys with count > 0 |
+| `favorByNpc` | `Record<string, GameStateFavor>` | O(1) NPC favor lookup |
+| `currenciesByName` | `Record<string, GameStateCurrency>` | O(1) currency lookup |
+| `effectsById` | `Record<number, GameStateEffect>` | O(1) effect lookup |
+| `namedEffects` | `GameStateEffect[]` | Effects with resolved display names |
+| `storageByVault` | `Record<string, GameStateStorageItem[]>` | Items grouped by vault_key |
+| `storageVaultsByKey` | `Record<string, StorageVaultDetail>` | O(1) vault metadata lookup |
+
+### Session Tracking (In-Memory)
+
+These are not persisted to DB — they reset on login/session restart.
+
+| Feature | State | Description |
+|---|---|---|
+| Session skills | `sessionSkills` | XP deltas, levels gained, XP/hour per skill since session start |
+| Live inventory | `liveItemMap`, `liveEventLog` | Real-time inventory tracking from `player-event` |
+
+### Event Listeners
+
+- `game-state-updated` → `refreshDomain()` per domain in payload
+- `player-event` → `handleInventoryEvent()` for live inventory tracking
+- `character-login` → `resetSessionSkills()`, `clearLiveInventory()`, `loadAll()`
+
+## Data Domains
+
+### Implemented
+
+| Domain | DB Table | Log Events | Snapshot Seeding |
+|---|---|---|---|
+| Skills | `game_state_skills` | `SkillsLoaded` | character snapshot |
+| Active Skills | `game_state_active_skills` | `ActiveSkillsChanged` | — |
+| Attributes | `game_state_attributes` | `AttributesChanged` | — |
+| Weather | `game_state_weather` | `WeatherChanged` | — |
+| Combat | `game_state_combat` | `CombatStateChanged` | — |
+| Mount | `game_state_mount` | `MountStateChanged` | — |
+| Inventory | `game_state_inventory` | `ItemAdded`/`Changed`/`Deleted` | inventory snapshot |
+| Recipes | `game_state_recipes` | `RecipeUpdated` | character snapshot |
+| Equipment | `game_state_equipment` | `EquipmentChanged` | — |
+| NPC Favor | `game_state_favor` | `FavorChanged` | character snapshot (tier) |
+| Currencies | `game_state_currencies` | *(none — snapshot only)* | character snapshot |
+| Effects | `game_state_effects` | `EffectsAdded`/`Removed`/`NameUpdated` | — |
+| Storage | `game_state_storage` | `StorageDeposit`/`Withdrawal` | inventory snapshot (vault items) |
+
+### Not Yet Implemented
+
+| Domain | Status | Notes |
+|---|---|---|
+| Stats | Covered by attributes | `MAX_HEALTH` etc. are attributes — no separate table needed |
+| Location | Deferred | Transient; coordinator already tracks area transitions |
+| Quests | Needs parser work | `ProcessLoadQuests`, `ProcessAddQuest`, `ProcessUpdateQuest`, `ProcessCompleteQuest` |
+| Map Data | Needs parser work | `ProcessMapFog`, `ProcessMapFx` |
+| Character Identity | Partial | Name/login tracked via `game_state_session`; race/guild not yet |
+
+## Domain-Specific Notes
+
+### NPC Favor
+
+Log events only provide **deltas** (`ProcessDeltaFavor`), not absolute values. `cumulative_delta` tracks the running sum since last snapshot. `favor_tier` comes from snapshots (e.g., `"BestFriends"`). Delta resets to 0 on login.
+
+### Currencies
+
+Attribute-based currencies (e.g., `CUR_COMBAT_WISDOM`) flow through `game_state_attributes`. Snapshot-only currencies (Gold, Councils) live in `game_state_currencies`. `VendorGoldChanged` events track vendor gold, not player gold.
+
+### Effects
+
+`ProcessRemoveEffects` prints opaque `System.Int32[]` (C# ToString), so we can't determine which effects were removed. We emit a signal-only `EffectsRemoved` event. Stale entries are cleaned up on next login batch (which clears all effects and re-adds active ones).
+
+### Storage
+
+Storage persists across sessions — it is NOT cleared on `CharacterLogin` (unlike inventory). Items are only removed by explicit `StorageWithdrawal` events or full snapshot replacement. Vault keys come from the parser's `current_interaction.npc_name` (e.g., `"NPC_Joe"`), not the game entity ID in the log line. Slot capacity is computed on the frontend by cross-referencing `storagevaults.json` metadata with favor tiers and attributes. See [Storage Tracker](../features/storage-tracker.md) for full details.
+
+### Stats → Attributes Mapping
+
+Snapshot stat names map to attribute keys: `"MaxHealth"` → `"MAX_HEALTH"`, `"MaxPower"` → `"MAX_POWER"`, `"MaxArmor"` → `"MAX_ARMOR"`.
+
+## Feature Integrations
+
+### Crafting Material Availability
+
+`check_material_availability()` in `crafting_commands.rs` queries two sources:
+1. **`game_state_inventory`** — persisted log-driven inventory, aggregated by `item_type_id`
+2. **`character_snapshot_items`** (storage vaults only) — from the latest `/outputitems` export
+
+The frontend's `craftingStore.checkMaterialAvailability()` calls this backend function and builds `MaterialNeed[]` with `inventory_have` + `storage_have` + `vault_breakdown`.
+
+### Skill Synergy Bonuses
+
+`game_state_skills.bonus_levels` is populated from `SkillsLoaded` events (the `bonus` field in each `SkillSnapshot`). `SkillCard.vue` displays the effective level as `level + bonus_levels` with a breakdown showing both values.
+
+### Cook's Helper
+
+Uses `gameStateStore.knownRecipeKeys` to filter recipes the player has learned, and `gameStateStore.ownedItemCounts` to show how many of each dish the player already has in inventory/storage.
+
+## Decisions
+
+- **Attribute storage:** Persist ALL attributes, not a curated subset. Storage is cheap, avoids revisiting schema.
+- **Favor thresholds:** Build the favor-level-to-tier mapping from wiki data. `ProcessVendorScreen` provides tier enum for validation.
+- **Opaque C# types:** `TransitionalQuestState`, `AbilityBarContents[]`, `StableSlot[]` are unparseable (Unity `.ToString()` outputs type name only). Extract what we can around them.
+- **Effect ID mapping:** CDN effects JSON exists but mapping to in-game IDs is unclear. Rely on `ProcessUpdateEffectName` for display names.
+- **Weather values:** No CDN/wiki reference for weather strings. Collect organically from `ProcessSetWeather` events.
+
+## Open Questions
+
+- **UI freshness patterns:** How to display data staleness varies per feature. Defer until specific features consume game state.
+- **Weather bool flag:** The `ProcessSetWeather` bool parameter's meaning is unknown (indoor/outdoor? active/clearing?). Needs more samples.

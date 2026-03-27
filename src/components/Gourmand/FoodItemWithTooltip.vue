@@ -30,7 +30,7 @@ const iconSrc = ref<string | null>(null)
 async function loadData() {
   if (itemData.value) return
   try {
-    const item = await store.getItemByName(props.foodName)
+    const item = await store.resolveItem(props.foodName)
     if (!item) return
     itemData.value = item
     if (item.icon_id) {

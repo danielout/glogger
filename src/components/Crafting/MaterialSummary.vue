@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col gap-3">
-    <div class="flex items-center justify-between">
+    <div v-if="!bare" class="flex items-center justify-between">
       <h4 class="text-text-secondary text-xs font-semibold uppercase tracking-wide m-0">
         Material Availability
       </h4>
@@ -34,7 +34,7 @@
           class="border-b border-surface-dark"
           :class="rowClass(mat)">
           <td class="py-1">
-            <ItemInline :name="mat.item_name" />
+            <ItemInline :reference="mat.item_name" />
           </td>
           <td class="text-right py-1 font-mono text-text-primary">{{ mat.quantity_needed }}</td>
           <td class="text-right py-1 font-mono" :class="mat.inventory_have > 0 ? 'text-green-400' : 'text-text-muted'">
@@ -57,9 +57,12 @@ import { computed } from "vue";
 import type { MaterialNeed } from "../../types/crafting";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   needs: MaterialNeed[]
-}>();
+  bare?: boolean
+}>(), {
+  bare: false,
+});
 
 const coveredCount = computed(() => props.needs.filter((m) => m.shortfall === 0).length);
 const partialCount = computed(() =>

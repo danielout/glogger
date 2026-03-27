@@ -7,7 +7,7 @@
       <span class="text-text-muted w-3 text-center text-[0.65rem]">
         {{ expanded ? '▾' : '▸' }}
       </span>
-      <RecipeInline :name="entry.recipe_name" />
+      <RecipeInline :reference="entry.recipe_name" />
       <span class="text-text-primary font-mono">×{{ entry.quantity }}</span>
       <div class="ml-auto flex items-center gap-2" @click.stop>
         <input
@@ -81,7 +81,7 @@ watch(expanded, async (isExpanded) => {
   if (isExpanded && !recipe.value) {
     loading.value = true;
     try {
-      recipe.value = await gameData.getRecipeByName(props.entry.recipe_name);
+      recipe.value = await gameData.resolveRecipe(props.entry.recipe_name);
       if (recipe.value) {
         const resolved = await craftingStore.resolveRecipeIngredients(
           recipe.value,

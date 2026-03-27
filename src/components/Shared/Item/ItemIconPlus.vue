@@ -45,7 +45,7 @@ const typeline = computed(() => itemData.value?.keywords?.[0] ?? null);
 async function loadData() {
   if (itemData.value) return;
   try {
-    const item = await store.getItemByName(props.name);
+    const item = await store.resolveItem(props.name);
     if (!item) return;
     itemData.value = item;
     if (item.icon_id) {

@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use std::io::{BufRead, BufReader, Seek, SeekFrom};
 use std::fs::File;
 use chrono::NaiveDateTime;
-use crate::chat_parser::{ChatMessage, parse_chat_lines};
+use crate::chat_parser::{ChatMessage, parse_chat_lines, parse_chat_login_line};
 use crate::parsers::{SkillUpdate, parse_skill_update};
 use crate::survey_parser::{SurveyParser, SurveyEvent, KnownSurveyType};
 use crate::player_event_parser::{PlayerEventParser, PlayerEvent};
@@ -80,6 +80,14 @@ pub enum LogEvent {
 
     /// Player log event (items, skills, NPC interactions, vendor, storage, etc.)
     PlayerEventParsed(PlayerEvent),
+
+    /// Server detected from chat log login line
+    ServerDetected {
+        server_name: String,
+        character_name: String,
+        /// Timezone offset in seconds from UTC (e.g., -25200 for -07:00:00)
+        timezone_offset_seconds: Option<i32>,
+    },
 
     /// Generic log line that wasn't parsed
     Unparsed {
@@ -206,7 +214,7 @@ fn match_character_login(line: &str, watcher: &mut PlayerLogWatcher) -> Option<L
 
             return Some(LogEvent::CharacterLogin {
                 character_name,
-                timestamp: chrono::Local::now().naive_local(),
+                timestamp: chrono::Utc::now().naive_utc(),
                 area: None,
             });
         }
@@ -224,7 +232,7 @@ fn match_chat_log_path(line: &str, watcher: &mut PlayerLogWatcher) -> Option<Log
 
         return Some(LogEvent::ChatLogPath {
             path,
-            timestamp: chrono::Local::now().naive_local(),
+            timestamp: chrono::Utc::now().naive_utc(),
         });
     }
     None
@@ -238,7 +246,7 @@ fn match_area_transition(line: &str, _watcher: &mut PlayerLogWatcher) -> Option<
 
         return Some(LogEvent::AreaTransition {
             area,
-            timestamp: chrono::Local::now().naive_local(),
+            timestamp: chrono::Utc::now().naive_utc(),
         });
     }
     None
@@ -332,40 +340,36 @@ impl LogFileWatcher for PlayerLogWatcher {
 ///
 /// This watcher handles:
 /// - Session tracking within daily files
-/// - Message parsing and deduplication
+/// - Message parsing (all channels — filtering is handled downstream)
 /// - Position tracking for incremental reads
-/// - Settings-driven channel exclusion
 pub struct ChatLogWatcher {
     file_path: PathBuf,
     current_position: u64,
     active: bool,
     player_name: Option<String>,
     current_session_start: Option<NaiveDateTime>,
-    excluded_channels: Vec<String>,
 }
 
 impl ChatLogWatcher {
-    /// Create a new ChatLogWatcher with excluded channels from settings
-    pub fn new(file_path: PathBuf, excluded_channels: Vec<String>) -> Self {
+    /// Create a new ChatLogWatcher
+    pub fn new(file_path: PathBuf) -> Self {
         Self {
             file_path,
             current_position: 0,
             active: false,
             player_name: None,
             current_session_start: None,
-            excluded_channels,
         }
     }
 
     /// Create from existing position (resume from database)
-    pub fn from_position(file_path: PathBuf, position: u64, excluded_channels: Vec<String>) -> Self {
+    pub fn from_position(file_path: PathBuf, position: u64) -> Self {
         Self {
             file_path,
             current_position: position,
             active: false,
             player_name: None,
             current_session_start: None,
-            excluded_channels,
         }
     }
 
@@ -393,38 +397,43 @@ impl ChatLogWatcher {
     }
 
     /// Check a line for session markers (login/logout).
-    /// Returns Some(LogEvent) if the line is a session marker.
-    fn check_session_marker(&mut self, line: &str) -> Option<LogEvent> {
-        // Check for login marker: ******** Logged In As [Name]
-        if line.contains("******** Logged In As") {
-            if let Some(start) = line.find('[') {
-                if let Some(end) = line.find(']') {
-                    let name = line[start + 1..end].to_string();
-                    self.player_name = Some(name.clone());
-                    self.current_session_start = Some(chrono::Local::now().naive_local());
+    /// Returns a vec of LogEvents if the line is a session marker.
+    fn check_session_marker(&mut self, line: &str) -> Vec<LogEvent> {
+        let mut events = Vec::new();
 
-                    return Some(LogEvent::CharacterLogin {
-                        character_name: name,
-                        timestamp: chrono::Local::now().naive_local(),
-                        area: None,
-                    });
-                }
-            }
+        // Check for login marker using the chat login line parser
+        // Format: "******** Logged In As Zenith. Server Dreva. Timezone Offset -07:00:00."
+        if let Some(info) = parse_chat_login_line(line) {
+            self.player_name = Some(info.character_name.clone());
+            self.current_session_start = Some(chrono::Utc::now().naive_utc());
+
+            events.push(LogEvent::ServerDetected {
+                server_name: info.server_name,
+                character_name: info.character_name.clone(),
+                timezone_offset_seconds: info.timezone_offset_seconds,
+            });
+
+            events.push(LogEvent::CharacterLogin {
+                character_name: info.character_name,
+                timestamp: chrono::Utc::now().naive_utc(),
+                area: None,
+            });
+
+            return events;
         }
 
         // Check for logout marker: ******** Logged Out
         if line.contains("******** Logged Out") {
             if let Some(player) = &self.player_name {
-                let event = LogEvent::CharacterLogout {
+                events.push(LogEvent::CharacterLogout {
                     character_name: player.clone(),
-                    timestamp: chrono::Local::now().naive_local(),
-                };
+                    timestamp: chrono::Utc::now().naive_utc(),
+                });
                 self.current_session_start = None;
-                return Some(event);
             }
         }
 
-        None
+        events
     }
 }
 
@@ -477,15 +486,34 @@ impl LogFileWatcher for ChatLogWatcher {
         let content_str = String::from_utf8_lossy(&content);
         let mut events = Vec::new();
 
-        // Check each line for session markers first
+        // Check each line for session markers, but only keep the LAST login
+        // marker found in the batch. When reading from position 0 the chat log
+        // contains every historical login — we only care about the most recent.
+        let mut last_login_events: Option<Vec<LogEvent>> = None;
+        let mut non_login_marker_events: Vec<LogEvent> = Vec::new();
+
         for line in content_str.lines() {
-            if let Some(event) = self.check_session_marker(line) {
-                events.push(event);
+            let marker_events = self.check_session_marker(line);
+            if !marker_events.is_empty() {
+                // Check if this batch contains a login (ServerDetected + CharacterLogin)
+                let has_login = marker_events.iter().any(|e| matches!(e, LogEvent::CharacterLogin { .. }));
+                if has_login {
+                    // Replace any previous login — we only want the last one
+                    last_login_events = Some(marker_events);
+                } else {
+                    non_login_marker_events.extend(marker_events);
+                }
             }
         }
 
+        // Emit the last login events first, then any non-login markers (logouts)
+        if let Some(login_events) = last_login_events {
+            events.extend(login_events);
+        }
+        events.extend(non_login_marker_events);
+
         // Parse all chat messages using the multiline-aware parser
-        let messages = parse_chat_lines(&content_str, &self.excluded_channels);
+        let messages = parse_chat_lines(&content_str);
         for msg in messages {
             events.push(LogEvent::ChatMessage(msg));
         }
@@ -554,15 +582,26 @@ mod tests {
 
     #[test]
     fn test_chat_login_marker() {
-        let mut watcher = ChatLogWatcher::new(PathBuf::from("test.log"), vec![]);
+        let mut watcher = ChatLogWatcher::new(PathBuf::from("test.log"));
 
-        let event = watcher.check_session_marker("******** Logged In As [TestCharacter]");
-        assert!(event.is_some());
+        // Use the actual chat log format
+        let events = watcher.check_session_marker("26-03-22 18:12:49\t**************************************** Logged In As TestCharacter. Server Dreva. Timezone Offset -07:00:00.");
+        assert_eq!(events.len(), 2);
 
-        if let Some(LogEvent::CharacterLogin { character_name, .. }) = event {
+        // First event: ServerDetected
+        if let LogEvent::ServerDetected { server_name, character_name, timezone_offset_seconds } = &events[0] {
+            assert_eq!(server_name, "Dreva");
+            assert_eq!(character_name, "TestCharacter");
+            assert_eq!(*timezone_offset_seconds, Some(-25200)); // -07:00:00
+        } else {
+            panic!("Expected ServerDetected event, got {:?}", events[0]);
+        }
+
+        // Second event: CharacterLogin
+        if let LogEvent::CharacterLogin { character_name, .. } = &events[1] {
             assert_eq!(character_name, "TestCharacter");
         } else {
-            panic!("Expected CharacterLogin event");
+            panic!("Expected CharacterLogin event, got {:?}", events[1]);
         }
 
         assert_eq!(watcher.player_name, Some("TestCharacter".to_string()));
@@ -571,13 +610,13 @@ mod tests {
 
     #[test]
     fn test_chat_logout_marker() {
-        let mut watcher = ChatLogWatcher::new(PathBuf::from("test.log"), vec![]);
+        let mut watcher = ChatLogWatcher::new(PathBuf::from("test.log"));
         watcher.player_name = Some("TestCharacter".to_string());
 
-        let event = watcher.check_session_marker("******** Logged Out");
-        assert!(event.is_some());
+        let events = watcher.check_session_marker("******** Logged Out");
+        assert_eq!(events.len(), 1);
 
-        if let Some(LogEvent::CharacterLogout { character_name, .. }) = event {
+        if let LogEvent::CharacterLogout { character_name, .. } = &events[0] {
             assert_eq!(character_name, "TestCharacter");
         } else {
             panic!("Expected CharacterLogout event");
@@ -589,7 +628,7 @@ mod tests {
     #[test]
     fn test_chat_message_parsing() {
         let line = "26-03-09 14:23:45\t[Global] TestPlayer: Hello world!";
-        let messages = parse_chat_lines(line, &[]);
+        let messages = parse_chat_lines(line);
 
         assert_eq!(messages.len(), 1);
         assert_eq!(messages[0].channel, Some("Global".to_string()));
@@ -598,21 +637,18 @@ mod tests {
     }
 
     #[test]
-    fn test_chat_message_excluded_channel() {
-        let excluded = vec!["Global".to_string()];
-
-        let line = "26-03-09 14:23:45\t[Global] TestPlayer: Hello world!";
-        let messages = parse_chat_lines(line, &excluded);
-
-        // Should be empty because Global is excluded
-        assert!(messages.is_empty());
+    fn test_all_channels_parsed() {
+        // All channels are now parsed — no exclusion at the watcher/parser level
+        let line = "26-03-09 14:23:45\t[Status] You earned 50 XP in Mining.";
+        let messages = parse_chat_lines(line);
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0].channel, Some("Status".to_string()));
     }
 
     #[test]
     fn test_chat_watcher_get_file_name() {
         let watcher = ChatLogWatcher::new(
             PathBuf::from("/some/path/Chat-26-03-09.log"),
-            vec![],
         );
         assert_eq!(watcher.get_file_name(), "Chat-26-03-09.log");
     }
@@ -626,7 +662,7 @@ mod tests {
                 Some(LogEvent::XpGained {
                     skill: "TestSkill".to_string(),
                     amount: 100,
-                    timestamp: chrono::Local::now().naive_local(),
+                    timestamp: chrono::Utc::now().naive_utc(),
                 })
             } else {
                 None

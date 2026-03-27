@@ -2,7 +2,7 @@
   <!-- Skill: "Learned via {SkillInline} skill" -->
   <template v-if="entry.source_type === 'Skill' && entry.skill">
     <span class="text-text-secondary">Learned via</span>
-    <SkillInline :name="entry.skill" :show-icon="false" />
+    <SkillInline :reference="entry.skill" :show-icon="false" />
     <span class="text-text-secondary">skill</span>
   </template>
   <template v-else-if="entry.source_type === 'Skill'">
@@ -12,7 +12,7 @@
   <!-- Training: "Trained by {NpcInline}" -->
   <template v-else-if="entry.source_type === 'Training' && entry.npc">
     <span class="text-text-secondary">Trained by</span>
-    <NpcInline :name="entry.npc" />
+    <NpcInline :reference="entry.npc" />
   </template>
   <template v-else-if="entry.source_type === 'Training'">
     <span class="text-text-secondary">Trained by NPC</span>
@@ -21,7 +21,7 @@
   <!-- Vendor: "Sold by {NpcInline}" -->
   <template v-else-if="entry.source_type === 'Vendor' && entry.npc">
     <span class="text-text-secondary">Sold by</span>
-    <NpcInline :name="entry.npc" />
+    <NpcInline :reference="entry.npc" />
   </template>
   <template v-else-if="entry.source_type === 'Vendor'">
     <span class="text-text-secondary">Sold by vendor</span>
@@ -30,7 +30,7 @@
   <!-- Barter: "Bartered from {NpcInline}" -->
   <template v-else-if="entry.source_type === 'Barter' && entry.npc">
     <span class="text-text-secondary">Bartered from</span>
-    <NpcInline :name="entry.npc" />
+    <NpcInline :reference="entry.npc" />
   </template>
   <template v-else-if="entry.source_type === 'Barter'">
     <span class="text-text-secondary">Available via barter</span>
@@ -39,7 +39,7 @@
   <!-- NpcGift: "Gift from {NpcInline}" -->
   <template v-else-if="entry.source_type === 'NpcGift' && entry.npc">
     <span class="text-text-secondary">Gift from</span>
-    <NpcInline :name="entry.npc" />
+    <NpcInline :reference="entry.npc" />
   </template>
   <template v-else-if="entry.source_type === 'NpcGift'">
     <span class="text-text-secondary">NPC gift</span>
@@ -48,7 +48,7 @@
   <!-- HangOut: "Hang out with {NpcInline}" -->
   <template v-else-if="entry.source_type === 'HangOut' && entry.npc">
     <span class="text-text-secondary">Hang out with</span>
-    <NpcInline :name="entry.npc" />
+    <NpcInline :reference="entry.npc" />
   </template>
   <template v-else-if="entry.source_type === 'HangOut'">
     <span class="text-text-secondary">Hang out reward</span>

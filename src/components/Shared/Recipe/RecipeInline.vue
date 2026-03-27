@@ -3,13 +3,16 @@
     border-class="border-entity-recipe/50"
     @hover="loadData"
   >
-    <button
-      class="inline-flex items-center gap-1 cursor-pointer hover:underline"
+    <component
+      :is="plain ? 'span' : 'button'"
+      :class="plain
+        ? 'hover:underline cursor-pointer text-inherit'
+        : 'inline-flex items-center gap-1 cursor-pointer hover:underline'"
       @click="handleClick"
     >
-      <GameIcon v-if="showIcon && recipeData?.icon_id" :icon-id="recipeData.icon_id" :alt="name" size="xs" />
-      <span class="text-entity-recipe text-xs font-medium">{{ recipeData?.name ?? name }}</span>
-    </button>
+      <GameIcon v-if="!plain && showIcon && recipeData?.icon_id" :icon-id="recipeData.icon_id" :alt="reference" size="xs" />
+      <span :class="plain ? '' : 'text-entity-recipe text-xs font-medium'">{{ recipeData?.name ?? reference }}</span>
+    </component>
     <template #tooltip>
       <RecipeTooltip v-if="recipeData" :recipe="recipeData" :icon-src="iconSrc" />
     </template>
@@ -27,10 +30,12 @@ import GameIcon from "../GameIcon.vue";
 import RecipeTooltip from "./RecipeTooltip.vue";
 
 const props = withDefaults(defineProps<{
-  name: string;
+  reference: string;
   showIcon?: boolean;
+  plain?: boolean;
 }>(), {
   showIcon: true,
+  plain: false,
 });
 
 const store = useGameDataStore();
@@ -42,7 +47,7 @@ const iconSrc = ref<string | null>(null);
 async function loadData() {
   if (recipeData.value) return;
   try {
-    const recipe = await store.getRecipeByName(props.name);
+    const recipe = await store.resolveRecipe(props.reference);
     if (!recipe) return;
     recipeData.value = recipe;
     if (recipe.icon_id) {
@@ -50,11 +55,11 @@ async function loadData() {
       iconSrc.value = convertFileSrc(path);
     }
   } catch (e) {
-    console.warn(`Failed to load recipe: ${props.name}`, e);
+    console.warn(`Failed to resolve recipe: ${props.reference}`, e);
   }
 }
 
 function handleClick() {
-  navigateToEntity({ type: "recipe", id: props.name });
+  navigateToEntity({ type: "recipe", id: recipeData.value?.name ?? props.reference });
 }
 </script>

@@ -7,8 +7,21 @@
       class="w-8 h-8 object-contain bg-black/30 border border-border-light rounded shrink-0" />
     <div class="flex-1">
       <div class="font-bold text-entity-item text-sm mb-0.5">{{ item.name }}</div>
-      <div v-if="item.value" class="text-accent-gold text-xs">
-        Value: {{ item.value }}g
+      <div class="flex flex-wrap gap-x-3 gap-y-0.5">
+        <div v-if="item.value" class="text-accent-gold text-xs">
+          Vendor: {{ item.value }}g
+        </div>
+        <div v-if="item.value" class="text-text-muted text-xs">
+          Buy Used: {{ Math.round(item.value * 2) }}g
+        </div>
+        <div v-if="marketValue !== null" class="text-accent-green text-xs">
+          Market: {{ marketValue.toLocaleString() }}g
+          <span class="text-text-muted ml-0.5">({{ marketStaleness }})</span>
+        </div>
+      </div>
+      <div v-if="effectiveValue !== null && showEffectiveValue" class="text-text-secondary text-xs mt-0.5">
+        Effective: {{ effectiveValue.toLocaleString() }}g
+        <span class="text-text-dim">({{ valuationModeLabel }})</span>
       </div>
     </div>
   </div>
@@ -41,12 +54,53 @@
     <span v-if="item.max_stack_size">Max Stack: {{ item.max_stack_size }}</span>
     <span v-if="ownedCount > 0" class="text-accent-gold">Owned: {{ ownedCount.toLocaleString() }}</span>
   </div>
+
+  <!-- Set Market Value -->
+  <div class="text-[0.7rem] mt-1.5 pt-1.5 border-t border-[#2a2a3e]">
+    <div v-if="!editingMarket" class="flex items-center gap-2">
+      <button
+        class="text-text-muted hover:text-text-primary bg-transparent border-none cursor-pointer text-[0.65rem] p-0 underline"
+        @click.stop="startEditMarket">
+        {{ marketValue !== null ? 'Edit market value' : 'Set market value' }}
+      </button>
+      <button
+        v-if="marketValue !== null"
+        class="text-text-muted hover:text-red-400 bg-transparent border-none cursor-pointer text-[0.65rem] p-0 underline"
+        @click.stop="removeMarketValue">
+        Remove
+      </button>
+    </div>
+    <div v-else class="flex items-center gap-1" @click.stop>
+      <input
+        ref="marketInput"
+        v-model="marketEditValue"
+        type="number"
+        min="0"
+        class="w-20 bg-surface-dark border border-border-default rounded px-1 py-0.5 text-[0.65rem] text-text-primary"
+        placeholder="Price"
+        @keydown.enter="saveMarketValue"
+        @keydown.escape="editingMarket = false" />
+      <span class="text-text-muted">g</span>
+      <button
+        class="text-accent-green hover:text-green-400 bg-transparent border-none cursor-pointer text-[0.65rem] px-1"
+        @click.stop="saveMarketValue">
+        Save
+      </button>
+      <button
+        class="text-text-muted hover:text-text-primary bg-transparent border-none cursor-pointer text-[0.65rem] px-1"
+        @click.stop="editingMarket = false">
+        Cancel
+      </button>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { useCharacterStore } from "../../../stores/characterStore";
+import { useGameStateStore } from "../../../stores/gameStateStore";
+import { useMarketStore } from "../../../stores/marketStore";
+import { useSettingsStore } from "../../../stores/settingsStore";
 import type { ItemInfo } from "../../../types/gameData";
 
 interface ResolvedEffect {
@@ -62,9 +116,87 @@ const props = defineProps<{
   iconSrc: string | null;
 }>();
 
-const characterStore = useCharacterStore();
-const ownedCount = computed(() => characterStore.ownedItemCounts[props.item.name] ?? 0);
+const gameStateStore = useGameStateStore();
+const marketStore = useMarketStore();
+const settingsStore = useSettingsStore();
+const ownedCount = computed(() => gameStateStore.ownedItemCounts[props.item.name] ?? 0);
 
+// Market value
+const marketEntry = computed(() => marketStore.valuesByItemId[props.item.id] ?? null);
+const marketValue = computed(() => marketEntry.value?.market_value ?? null);
+const marketStaleness = computed(() => {
+  if (!marketEntry.value) return ''
+  const updated = new Date(marketEntry.value.updated_at)
+  const now = new Date()
+  const diffMs = now.getTime() - updated.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  if (diffDays === 0) return 'today'
+  if (diffDays === 1) return '1 day ago'
+  if (diffDays < 30) return `${diffDays} days ago`
+  const diffMonths = Math.floor(diffDays / 30)
+  return diffMonths === 1 ? '1 month ago' : `${diffMonths} months ago`
+})
+
+// Effective value based on valuation mode
+const effectiveValue = computed(() => {
+  const vendor = props.item.value ?? 0
+  const market = marketValue.value ?? 0
+  const mode = settingsStore.settings.itemValuationMode
+  switch (mode) {
+    case 'highest_market_vendor': return Math.max(market, vendor)
+    case 'highest_market_buy_used': return Math.max(market, vendor * 2)
+    case 'vendor_only': return vendor
+    case 'buy_used_only': return vendor * 2
+    case 'market_only': return market
+    default: return Math.max(market, vendor)
+  }
+})
+
+const showEffectiveValue = computed(() => {
+  // Only show if there's at least one source value and the effective differs from the obvious single value
+  const vendor = props.item.value ?? 0
+  const market = marketValue.value ?? 0
+  if (vendor === 0 && market === 0) return false
+  // Always show when both values exist, or when mode transforms vendor (buy_used)
+  const mode = settingsStore.settings.itemValuationMode
+  if (market > 0 && vendor > 0) return true
+  if (mode === 'buy_used_only' || mode === 'highest_market_buy_used') return vendor > 0
+  return false
+})
+
+const valuationModeLabel = computed(() => {
+  const labels: Record<string, string> = {
+    'highest_market_vendor': 'highest of market/vendor',
+    'highest_market_buy_used': 'highest of market/buy-used',
+    'vendor_only': 'vendor only',
+    'buy_used_only': 'buy-used only',
+    'market_only': 'market only',
+  }
+  return labels[settingsStore.settings.itemValuationMode] ?? 'default'
+})
+
+const editingMarket = ref(false)
+const marketEditValue = ref('')
+const marketInput = ref<HTMLInputElement | null>(null)
+
+function startEditMarket() {
+  marketEditValue.value = marketValue.value?.toString() ?? ''
+  editingMarket.value = true
+  nextTick(() => marketInput.value?.focus())
+}
+
+async function saveMarketValue() {
+  const val = parseInt(marketEditValue.value)
+  if (isNaN(val) || val < 0) return
+  await marketStore.setValue(props.item.id, props.item.name, val)
+  editingMarket.value = false
+}
+
+async function removeMarketValue() {
+  await marketStore.deleteValue(props.item.id)
+}
+
+// Effects
 const resolvedEffects = ref<ResolvedEffect[]>([]);
 
 async function resolveEffects() {

@@ -68,7 +68,7 @@
             class="border-b border-border-default/50 hover:bg-surface-elevated/50">
             <td class="py-1 px-2">
               <div class="flex flex-col">
-                <ItemInline :name="item.item_name" :item-id="item.type_id" />
+                <ItemInline :reference="String(item.type_id)" />
                 <span v-if="item.crafter" class="text-xs text-text-muted">
                   Crafted by {{ item.crafter }}
                 </span>

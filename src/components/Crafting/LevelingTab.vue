@@ -1,378 +1,849 @@
 <template>
-  <div class="flex gap-4 h-[calc(100vh-200px)]">
-    <!-- Left panel: inputs -->
-    <div class="w-80 shrink-0 flex flex-col gap-3">
-      <h3 class="text-text-primary text-sm font-semibold m-0">XP Leveling Optimizer</h3>
-
+  <div class="flex flex-col gap-3 h-[calc(100vh-200px)]">
+    <!-- Top bar: skill selector + level info + XP buff -->
+    <div class="flex items-end gap-4 shrink-0">
       <!-- Skill selector -->
       <div class="flex flex-col gap-1">
         <label class="text-text-dim text-xs">Skill</label>
-        <select v-model="selectedSkill" class="input text-xs" @change="onSkillChange">
+        <select v-model="state.selectedSkill" class="input text-xs w-48" @change="onSkillChange">
           <option value="">Select a skill...</option>
-          <option v-for="skill in craftingSkills" :key="skill.name" :value="skill.name">
-            {{ skill.name }}
+          <option v-for="skill in craftingSkills" :key="skill" :value="skill">
+            {{ skill }}
           </option>
         </select>
       </div>
 
-      <!-- Level inputs -->
-      <div v-if="selectedSkill" class="flex flex-col gap-2">
-        <div class="flex items-center gap-2">
-          <label class="text-text-dim text-xs w-24">Current level:</label>
-          <input
-            v-model.number="currentLevel"
-            type="number"
-            min="0"
-            class="input w-20 text-center text-xs" />
-          <button
-            v-if="snapshotLevel !== null"
-            class="text-text-muted text-[0.65rem] cursor-pointer bg-transparent border-none hover:text-accent-gold underline"
-            @click="currentLevel = snapshotLevel">
-            (use {{ snapshotLevel }})
-          </button>
-        </div>
-        <div class="flex items-center gap-2">
-          <label class="text-text-dim text-xs w-24">Target level:</label>
-          <input
-            v-model.number="targetLevel"
-            type="number"
-            min="1"
-            class="input w-20 text-center text-xs" />
-        </div>
-      </div>
-
-      <!-- Strategy -->
-      <div v-if="selectedSkill" class="flex flex-col gap-1">
-        <label class="text-text-dim text-xs">Strategy</label>
-        <select v-model="strategy" class="input text-xs">
-          <option value="combined">Combined (recommended)</option>
-          <option value="first-time-rush">First-Time Bonus Rush</option>
-          <option value="cost-efficient">Cost-Efficient Grinding</option>
-        </select>
-        <p class="text-text-muted text-[0.65rem] m-0">
-          <template v-if="strategy === 'combined'">
-            Collect first-time bonuses, then grind the most cost-efficient recipe.
-          </template>
-          <template v-else-if="strategy === 'first-time-rush'">
-            Craft every uncrafted recipe once for bonus XP, then grind highest-XP recipe.
-          </template>
-          <template v-else>
-            Find the recipe with the best XP-per-gold ratio and grind it.
-          </template>
-        </p>
-      </div>
-
-      <!-- Options -->
-      <div v-if="selectedSkill" class="flex flex-col gap-1.5">
-        <label class="flex items-center gap-2 text-text-dim text-xs cursor-pointer">
-          <input
-            v-model="includeUnlearnedRecipes"
-            type="checkbox"
-            class="accent-accent-gold" />
-          Include unlearned recipes
-        </label>
-        <p class="text-text-muted text-[0.65rem] m-0 ml-5">
-          Include recipes from the CDN that don't appear in your character export.
-          These are recipes you haven't learned yet in-game.
-        </p>
-      </div>
-
-      <!-- Calculate button -->
-      <button
-        v-if="selectedSkill"
-        class="btn-primary text-xs py-1.5"
-        :disabled="calculating || !selectedSkill || targetLevel <= currentLevel"
-        @click="calculate">
-        {{ calculating ? 'Calculating...' : 'Generate Plan' }}
-      </button>
-
-      <!-- Excluded recipes -->
-      <div v-if="excludedRecipeIds.size > 0" class="flex flex-col gap-1">
-        <div class="flex items-center justify-between">
-          <span class="text-text-dim text-[0.65rem] uppercase tracking-wide">
-            Excluded ({{ excludedRecipeIds.size }})
-          </span>
-          <button
-            class="text-text-muted text-[0.6rem] cursor-pointer bg-transparent border-none hover:text-accent-gold underline"
-            @click="clearExclusions">
-            clear all
-          </button>
-        </div>
-        <div
-          v-for="[id, name] in excludedRecipeNames"
-          :key="id"
-          class="flex items-center gap-1.5 text-[0.65rem] text-text-muted">
-          <button
-            class="text-accent-gold cursor-pointer bg-transparent border-none hover:text-accent-gold/70 text-[0.65rem]"
-            @click="restoreRecipe(id)">
-            +
-          </button>
-          <span class="line-through opacity-60">{{ name }}</span>
-        </div>
-      </div>
-
-      <div v-if="error" class="text-accent-red text-xs">{{ error }}</div>
-    </div>
-
-    <!-- Right panel: results -->
-    <div class="flex-1 overflow-y-auto border border-surface-elevated rounded p-4">
-      <div v-if="!plan" class="flex items-center justify-center h-full text-border-default italic">
-        Select a skill and target level to generate a leveling plan
-      </div>
-
-      <div v-else class="flex flex-col gap-4">
-        <!-- Summary -->
-        <div class="bg-surface-elevated rounded p-3 border border-border-light">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <SkillInline :name="plan.skill_name" :show-icon="true" />
-              <span class="text-text-primary text-sm font-semibold">
-                Lv {{ plan.current_level }} → Lv {{ plan.target_level }}
-              </span>
-            </div>
+      <template v-if="state.selectedSkill">
+        <!-- Current level (editable) -->
+        <div class="flex flex-col gap-1">
+          <label class="text-text-dim text-xs">Current Level</label>
+          <div class="flex items-center gap-1.5">
+            <input
+              v-model.number="state.currentLevel"
+              type="number"
+              min="0"
+              class="input w-16 text-center text-xs" />
             <button
-              v-if="plan.steps.length > 0"
-              class="text-accent-gold text-[0.65rem] cursor-pointer bg-transparent border border-accent-gold/30 rounded px-2.5 py-1 hover:bg-accent-gold/10 transition-colors"
-              :disabled="creatingProject"
-              @click="createProjectFromPlan">
-              {{ creatingProject ? 'Creating...' : 'Create Crafting Project' }}
+              v-if="state.snapshotLevel !== null && state.snapshotLevel !== state.currentLevel"
+              class="text-text-muted text-[0.6rem] cursor-pointer bg-transparent border-none hover:text-accent-gold underline"
+              @click="state.currentLevel = state.snapshotLevel!">
+              reset ({{ state.snapshotLevel }})
             </button>
           </div>
-          <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
-            <div>
-              <span class="text-text-dim">Total XP needed:</span>
-              <span class="text-text-primary font-semibold ml-1">{{ plan.xp_needed.toLocaleString() }}</span>
-            </div>
-            <div>
-              <span class="text-text-dim">Total crafts:</span>
-              <span class="text-text-primary font-semibold ml-1">{{ plan.total_crafts.toLocaleString() }}</span>
-            </div>
-            <div v-if="plan.xp_from_first_time > 0">
-              <span class="text-text-dim">XP from bonuses:</span>
-              <span class="text-accent-gold font-semibold ml-1">{{ plan.xp_from_first_time.toLocaleString() }}</span>
-            </div>
-            <div v-if="plan.total_cost > 0">
-              <span class="text-text-dim">Est. total cost:</span>
-              <span class="text-accent-red font-semibold ml-1">{{ plan.total_cost.toLocaleString() }}g</span>
-            </div>
-            <div v-if="unlearnedInPlan > 0">
-              <span class="text-text-dim">Unlearned recipes:</span>
-              <span class="text-purple-400 font-semibold ml-1">{{ unlearnedInPlan }}</span>
-            </div>
+        </div>
+
+        <!-- XP buff -->
+        <div class="flex flex-col gap-1">
+          <label class="text-text-dim text-xs">XP Buff</label>
+          <div class="flex items-center gap-1">
+            <input
+              v-model.number="state.xpBuffPercent"
+              type="number"
+              min="0"
+              max="500"
+              step="1"
+              class="input w-16 text-center text-xs"
+              placeholder="0" />
+            <span class="text-text-muted text-[0.65rem]">%</span>
+            <span class="text-accent-gold text-[0.65rem] font-semibold ml-1">({{ effectiveMultiplier }}×)</span>
           </div>
         </div>
 
-        <!-- No steps -->
-        <div v-if="plan.levels.length === 0" class="text-text-dim text-xs italic">
-          No recipes found for this skill and level range.
+        <!-- Current plan level info -->
+        <div v-if="state.xpTable.length > 0" class="flex flex-col gap-0.5 ml-2">
+          <span class="text-text-dim text-xs">Planning: Lv {{ planningLevel }} → {{ planningLevel + 1 }}</span>
+          <span class="text-text-primary text-xs font-semibold">
+            {{ currentLevelXpAccumulated.toLocaleString() }} / {{ currentLevelXpNeeded.toLocaleString() }} XP
+          </span>
+        </div>
+      </template>
+    </div>
+
+    <!-- Main content -->
+    <div v-if="!state.selectedSkill" class="flex-1 flex items-center justify-center">
+      <EmptyState primary="Select a crafting skill to get started" />
+    </div>
+
+    <div v-else class="flex flex-1 min-h-0">
+      <!-- Left panel: Recipe list -->
+      <div class="shrink-0 flex flex-col gap-2 min-h-0 pr-1" :style="{ width: `${recipePanelWidth}px` }">
+        <!-- Filters -->
+        <div class="flex items-center gap-3 text-xs">
+          <label class="flex items-center gap-1.5 text-text-dim cursor-pointer">
+            <input v-model="hideUnknown" type="checkbox" class="accent-accent-gold" />
+            Hide unknown
+          </label>
+          <label class="flex items-center gap-1.5 text-text-dim cursor-pointer">
+            <input v-model="hideReducedXp" type="checkbox" class="accent-accent-gold" />
+            Hide reduced XP
+          </label>
+          <label class="flex items-center gap-1.5 text-text-dim cursor-pointer">
+            <input v-model="showCosts" type="checkbox" class="accent-accent-gold" />
+            Costs
+          </label>
+          <label class="flex items-center gap-1.5 text-text-dim cursor-pointer">
+            <input v-model="showXp" type="checkbox" class="accent-accent-gold" />
+            XP
+          </label>
+          <div class="flex items-center gap-1 ml-auto">
+            <label class="text-text-dim text-[0.65rem]">Min lvl:</label>
+            <input
+              v-model.number="minLevel"
+              type="number"
+              min="0"
+              class="input w-14 text-center text-[0.65rem]" />
+          </div>
+        </div>
+
+        <!-- Recipe list -->
+        <div class="flex-1 overflow-y-auto border border-surface-elevated rounded">
+          <div v-if="loading" class="p-4 text-text-muted text-xs text-center">Loading recipes...</div>
+          <div v-else-if="filteredRecipes.length === 0" class="p-4 text-text-muted text-xs text-center">
+            No matching recipes found.
+          </div>
+          <div
+            v-for="r in filteredRecipes"
+            :key="r.recipe.id"
+            class="flex items-center gap-1.5 px-2 py-1 text-xs border-b border-surface-elevated hover:bg-surface-elevated/50 group"
+            :class="recipeRowClass(r)">
+            <!-- Level req -->
+            <span class="text-text-muted font-mono w-7 text-right shrink-0 text-[0.65rem]">
+              {{ r.recipe.skill_level_req ?? 0 }}
+            </span>
+            <!-- Cost -->
+            <span v-if="showCosts" class="text-text-muted font-mono w-14 text-right shrink-0 text-[0.65rem]">
+              {{ r.cost !== null ? `${r.cost.toLocaleString()}g` : '—' }}
+            </span>
+            <!-- Separator -->
+            <span class="text-text-muted/40 shrink-0">-</span>
+            <!-- Recipe name -->
+            <span class="truncate flex-1">
+              <RecipeInline :reference="r.recipe.name" :plain="true" />
+            </span>
+            <!-- XP info -->
+            <span v-if="showXp" class="text-text-muted text-[0.6rem] shrink-0">
+              {{ r.effectiveXp.toLocaleString() }}xp
+            </span>
+            <!-- First-time badge -->
+            <span
+              v-if="showXp && r.firstTimeXp > 0"
+              class="text-accent-gold text-[0.55rem] shrink-0"
+              :title="`+${r.effectiveFirstTimeXp.toLocaleString()} first-time bonus XP`">
+              +{{ r.effectiveFirstTimeXp.toLocaleString() }}
+            </span>
+            <!-- Action buttons -->
+            <div class="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                class="text-[0.6rem] px-1.5 py-0.5 rounded bg-accent-gold/10 text-accent-gold hover:bg-accent-gold/20 border-none cursor-pointer"
+                title="Add one craft to the plan"
+                @click="addOnce(r)">
+                +1
+              </button>
+              <button
+                class="text-[0.6rem] px-1.5 py-0.5 rounded bg-green-900/30 text-green-400 hover:bg-green-900/50 border-none cursor-pointer"
+                title="Add enough crafts to reach next level"
+                @click="addToLevel(r)">
+                +Lvl
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resize handle -->
+      <div
+        class="w-1.5 shrink-0 cursor-col-resize flex items-center justify-center hover:bg-accent-gold/20 rounded transition-colors mx-1"
+        @mousedown="onResizeStart">
+        <div class="w-px h-8 bg-border-light" />
+      </div>
+
+      <!-- Center panel: Leveling plan -->
+      <div class="flex-1 overflow-y-auto border border-surface-elevated rounded p-3 min-h-0">
+        <div v-if="state.planLevels.length === 0" class="text-text-muted text-xs text-center py-8">
+          Add recipes from the list to build your leveling plan.
         </div>
 
         <div v-else class="flex flex-col gap-3">
-          <!-- Unlearned recipes callout -->
-          <div
-            v-if="unlearnedInPlan > 0"
-            class="bg-purple-900/20 border border-purple-600/30 rounded px-3 py-2 text-xs text-purple-300/80">
-            This plan includes {{ unlearnedInPlan }} unlearned recipe{{ unlearnedInPlan !== 1 ? 's' : '' }}
-            (marked with <span class="text-purple-400 font-semibold">UNLEARNED</span>).
-            You'll need to find and learn {{ unlearnedInPlan !== 1 ? 'them' : 'it' }} before crafting.
-          </div>
-
-          <!-- Level-by-level plan -->
-          <div v-for="(lvl, lvlIdx) in plan.levels" :key="lvlIdx" class="flex flex-col gap-1">
+          <div v-for="(lvl, idx) in state.planLevels" :key="`${lvl.from_level}-${lvl.to_level}`">
             <!-- Level header -->
-            <div class="flex items-center gap-2 mt-1">
+            <div class="flex items-center gap-2 mb-1.5">
               <span class="text-text-secondary text-xs font-semibold">
                 Lv {{ lvl.from_level }} → {{ lvl.to_level }}
               </span>
               <span class="text-text-muted text-[0.65rem]">
-                {{ lvl.xp_needed.toLocaleString() }} XP
+                {{ lvl.xp_accumulated.toLocaleString() }} / {{ lvl.xp_needed.toLocaleString() }} XP
               </span>
-              <span class="text-text-muted text-[0.65rem]">
-                · {{ lvl.total_crafts }} craft{{ lvl.total_crafts !== 1 ? 's' : '' }}
-              </span>
-              <span v-if="lvl.total_cost > 0" class="text-text-muted text-[0.65rem]">
-                · {{ lvl.total_cost.toLocaleString() }}g
+              <!-- Progress indicator -->
+              <span
+                v-if="lvl.xp_accumulated >= lvl.xp_needed"
+                class="text-green-400 text-[0.6rem] font-semibold">
+                DONE
               </span>
               <div class="flex-1 border-b border-border-default ml-2" />
+              <!-- Clear level button (only for topmost incomplete level) -->
+              <button
+                v-if="idx === 0 && lvl.xp_accumulated < lvl.xp_needed"
+                class="text-text-muted text-[0.6rem] cursor-pointer bg-transparent border-none hover:text-accent-red"
+                title="Clear this level's entries"
+                @click="clearCurrentLevel">
+                clear
+              </button>
             </div>
 
-            <!-- Steps in this level -->
+            <!-- XP progress bar -->
+            <div class="w-full h-1 bg-surface-base rounded-full mb-2 overflow-hidden">
+              <div
+                class="h-full rounded-full transition-all duration-300"
+                :class="lvl.xp_accumulated >= lvl.xp_needed ? 'bg-green-500' : 'bg-accent-gold'"
+                :style="{ width: `${Math.min(100, (lvl.xp_accumulated / lvl.xp_needed) * 100)}%` }" />
+            </div>
+
+            <!-- Entries -->
+            <div v-if="lvl.entries.length === 0" class="text-text-muted text-[0.65rem] pl-2">
+              No recipes added yet.
+            </div>
             <div
-              v-for="(step, idx) in lvl.steps"
-              :key="`${lvlIdx}-${idx}`"
-              class="flex items-center gap-2 px-3 py-1.5 bg-surface-base border border-surface-elevated rounded text-xs group"
-              :class="{ 'border-l-2 border-l-purple-500/50': !step.is_known }">
-              <RecipeInline :name="step.recipe_name" />
-              <span
-                v-if="!step.is_known"
-                class="text-purple-400 text-[0.6rem] font-semibold shrink-0"
-                title="You haven't learned this recipe yet">
-                UNLEARNED
+              v-for="(entry, eIdx) in lvl.entries"
+              :key="`${lvl.from_level}-${eIdx}`"
+              class="flex items-center gap-2 px-2 py-1 text-xs bg-surface-base border border-surface-elevated rounded mb-1">
+              <span class="text-text-primary truncate flex-1">{{ entry.recipe_name }}</span>
+              <span class="text-text-primary font-mono shrink-0">×{{ entry.craft_count.toLocaleString() }}</span>
+              <span class="text-accent-gold text-[0.65rem] shrink-0">
+                {{ entry.total_xp.toLocaleString() }} XP
               </span>
-              <span class="text-text-primary font-mono shrink-0">×{{ step.craft_count.toLocaleString() }}</span>
-              <div class="ml-auto flex items-center gap-2 shrink-0">
-                <span v-if="step.xp_first_time > 0" class="text-accent-gold text-[0.65rem]">
-                  +{{ (step.xp_per_craft + step.xp_first_time).toLocaleString() }} XP
-                  <span class="text-yellow-500/70">({{ step.xp_first_time.toLocaleString() }} bonus)</span>
+              <span v-if="entry.estimated_cost > 0" class="text-text-muted text-[0.65rem] shrink-0">
+                {{ entry.estimated_cost.toLocaleString() }}g
+              </span>
+              <!-- Remove entry (only for current incomplete level) -->
+              <button
+                v-if="idx === 0 && lvl.xp_accumulated < lvl.xp_needed"
+                class="text-text-muted text-[0.6rem] cursor-pointer bg-transparent border-none hover:text-accent-red"
+                @click="removeEntry(idx, eIdx)">
+                ×
+              </button>
+            </div>
+          </div>
+
+          <!-- Plan totals + actions -->
+          <div class="bg-surface-elevated rounded p-2 border border-border-light mt-2">
+            <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[0.65rem]">
+              <div>
+                <span class="text-text-dim">Levels planned:</span>
+                <span class="text-text-primary font-semibold ml-1">
+                  {{ state.currentLevel }} → {{ planningLevel + (currentLevelComplete ? 1 : 0) }}
                 </span>
-                <span v-else class="text-accent-gold text-[0.65rem]">
-                  {{ step.total_xp.toLocaleString() }} XP
-                  <span v-if="step.craft_count > 1" class="text-text-muted">({{ step.xp_per_craft.toLocaleString() }}/ea)</span>
-                </span>
-                <span v-if="step.estimated_cost > 0" class="text-text-muted text-[0.65rem]">
-                  {{ step.estimated_cost.toLocaleString() }}g
-                </span>
-                <button
-                  class="text-text-muted/0 group-hover:text-text-muted text-[0.65rem] cursor-pointer bg-transparent border-none hover:text-accent-red ml-1"
-                  title="Exclude this recipe"
-                  @click="excludeRecipe(step.recipe_id, step.recipe_name)">
-                  ✕
-                </button>
               </div>
+              <div>
+                <span class="text-text-dim">Total crafts:</span>
+                <span class="text-text-primary font-semibold ml-1">
+                  {{ totalCrafts.toLocaleString() }}
+                </span>
+              </div>
+              <div v-if="totalCost > 0">
+                <span class="text-text-dim">Est. total cost:</span>
+                <span class="text-accent-red font-semibold ml-1">{{ totalCost.toLocaleString() }}g</span>
+              </div>
+            </div>
+            <div class="flex gap-2 mt-2">
+              <button
+                class="btn-primary text-[0.65rem] py-1 px-3"
+                :disabled="creatingProject"
+                @click="onCreateProject">
+                {{ creatingProject ? 'Creating...' : 'Create Project' }}
+              </button>
+              <button
+                class="text-[0.65rem] px-3 py-1 rounded bg-surface-base text-text-muted hover:text-accent-red border border-border-light cursor-pointer"
+                @click="clearPlan">
+                Clear Plan
+              </button>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Right panel: Materials summary -->
+      <div class="w-72 shrink-0 overflow-y-auto border border-surface-elevated rounded p-3 min-h-0 flex flex-col gap-2">
+        <h4 class="text-text-secondary text-xs font-semibold uppercase tracking-wide m-0">Materials</h4>
+
+        <div v-if="state.planLevels.length === 0" class="text-text-muted text-[0.65rem] text-center py-4">
+          Materials will appear here as you add recipes to your plan.
+        </div>
+
+        <div v-else-if="materialsLoading" class="text-text-muted text-[0.65rem] text-center py-4">
+          Calculating materials...
+        </div>
+
+        <template v-else-if="aggregatedMaterials.length > 0">
+          <div class="text-text-muted text-[0.65rem] mb-1">
+            {{ aggregatedMaterials.length }} items needed
+          </div>
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="text-text-dim border-b border-border-light">
+                <th class="text-left py-1 font-medium">Item</th>
+                <th class="text-right py-1 font-medium w-14">Qty</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="mat in aggregatedMaterials"
+                :key="mat.key"
+                class="border-b border-surface-dark">
+                <td class="py-0.5">
+                  <template v-if="mat.is_dynamic">
+                    <span class="text-accent-gold/60 text-[0.65rem] mr-1">&#9670;</span>
+                    <span class="text-text-secondary text-[0.65rem]">{{ mat.item_name }}</span>
+                  </template>
+                  <ItemInline v-else-if="mat.item_id !== null" :reference="mat.item_name" />
+                  <span v-else class="text-text-muted text-[0.65rem]">{{ mat.item_name }}</span>
+                </td>
+                <td class="text-right py-0.5 font-mono text-text-primary text-[0.65rem]">
+                  {{ Math.ceil(mat.expected_quantity).toLocaleString() }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </template>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
+import { storeToRefs } from "pinia";
+import { invoke } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useCraftingStore } from "../../stores/craftingStore";
-import type { LevelingPlan, LevelingStrategy } from "../../types/crafting";
-import type { SkillInfo } from "../../types/gameData/skills";
-import SkillInline from "../Shared/Skill/SkillInline.vue";
+import { useGameStateStore } from "../../stores/gameStateStore";
+import type { RecipeInfo } from "../../types/gameData/recipes";
+import type { FlattenedMaterial } from "../../types/crafting";
+import EmptyState from "../Shared/EmptyState.vue";
+import ItemInline from "../Shared/Item/ItemInline.vue";
 import RecipeInline from "../Shared/Recipe/RecipeInline.vue";
 
 const gameData = useGameDataStore();
 const craftingStore = useCraftingStore();
+const gameStateStore = useGameStateStore();
 
-const craftingSkills = ref<SkillInfo[]>([]);
-const selectedSkill = ref("");
-const currentLevel = ref(0);
-const targetLevel = ref(50);
-const strategy = ref<LevelingStrategy>("combined");
-const includeUnlearnedRecipes = ref(true);
-const excludedRecipeIds = ref<Set<number>>(new Set());
-const excludedRecipeNames = ref<Map<number, string>>(new Map());
-const calculating = ref(false);
+// ── Persistent state (lives in the store) ─────────────────────────────────
+
+const { levelingState: state } = storeToRefs(craftingStore);
+
+// ── Local-only UI state ───────────────────────────────────────────────────
+
+const craftingSkills = ref<string[]>([]);
+const loading = ref(false);
 const creatingProject = ref(false);
-const plan = ref<LevelingPlan | null>(null);
-const error = ref("");
-const snapshotLevel = ref<number | null>(null);
+const materialsLoading = ref(false);
 
-const unlearnedInPlan = computed(() =>
-  plan.value?.steps.filter((s) => !s.is_known).length ?? 0,
+// Recipe panel resize
+const recipePanelWidth = ref(384); // 24rem default (w-96)
+
+function onResizeStart(e: MouseEvent) {
+  const startX = e.clientX;
+  const startWidth = recipePanelWidth.value;
+
+  function onMouseMove(ev: MouseEvent) {
+    const delta = ev.clientX - startX;
+    recipePanelWidth.value = Math.max(280, Math.min(800, startWidth + delta));
+  }
+  function onMouseUp() {
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+  }
+  document.addEventListener("mousemove", onMouseMove);
+  document.addEventListener("mouseup", onMouseUp);
+}
+
+// Filters (local — not worth persisting)
+const hideUnknown = ref(false);
+const hideReducedXp = ref(false);
+const showCosts = ref(false);
+const showXp = ref(true);
+const minLevel = ref(0);
+
+// Recipe list data (rebuilt from store state on mount/skill change)
+interface EnrichedRecipe {
+  recipe: RecipeInfo
+  isKnown: boolean
+  isCrafted: boolean
+  isDropOff: boolean
+  isTooHigh: boolean
+  xpPerCraft: number
+  firstTimeXp: number
+  effectiveXp: number
+  effectiveFirstTimeXp: number
+  cost: number | null
+}
+
+const allRecipes = ref<EnrichedRecipe[]>([]);
+
+// Aggregated materials for the plan
+const aggregatedMaterials = ref<FlattenedMaterial[]>([]);
+
+// ── Computed ─────────────────────────────────────────────────────────────────
+
+const effectiveMultiplier = computed(() =>
+  (1 + (state.value.xpBuffPercent || 0) / 100).toFixed(2),
 );
+
+const multiplier = computed(() => 1 + (state.value.xpBuffPercent || 0) / 100);
+
+/** The level we're currently planning for (topmost incomplete level) */
+const planningLevel = computed(() => {
+  if (state.value.planLevels.length === 0) return state.value.currentLevel;
+  const top = state.value.planLevels[0];
+  return top.from_level;
+});
+
+const currentLevelComplete = computed(() => {
+  if (state.value.planLevels.length === 0) return false;
+  const top = state.value.planLevels[0];
+  return top.xp_accumulated >= top.xp_needed;
+});
+
+const currentLevelXpNeeded = computed(() => {
+  if (state.value.planLevels.length === 0) {
+    return state.value.xpTable[state.value.currentLevel] ?? 0;
+  }
+  return state.value.planLevels[0].xp_needed;
+});
+
+const currentLevelXpAccumulated = computed(() => {
+  if (state.value.planLevels.length === 0) return 0;
+  return state.value.planLevels[0].xp_accumulated;
+});
+
+const totalCrafts = computed(() =>
+  state.value.planLevels.reduce((sum, lvl) =>
+    sum + lvl.entries.reduce((s, e) => s + e.craft_count, 0), 0),
+);
+
+const totalCost = computed(() =>
+  state.value.planLevels.reduce((sum, lvl) =>
+    sum + lvl.entries.reduce((s, e) => s + e.estimated_cost, 0), 0),
+);
+
+const filteredRecipes = computed(() => {
+  return allRecipes.value.filter((r) => {
+    if (hideUnknown.value && !r.isKnown) return false;
+    if (hideReducedXp.value && r.isDropOff) return false;
+    if ((r.recipe.skill_level_req ?? 0) < minLevel.value) return false;
+    return true;
+  });
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────────
 
 onMounted(async () => {
   const allSkills = await gameData.getAllSkills();
-  craftingSkills.value = allSkills
-    .filter((s) => s.xp_table !== null)
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const skillsWithRecipes: string[] = [];
+  for (const skill of allSkills) {
+    if (!skill.xp_table) continue;
+    const recipes = await gameData.getRecipesForSkill(skill.name);
+    if (recipes.length > 0) {
+      skillsWithRecipes.push(skill.name);
+    }
+  }
+  craftingSkills.value = skillsWithRecipes.sort((a, b) => a.localeCompare(b));
+
+  // If we have persisted state, rebuild recipe list
+  if (state.value.selectedSkill) {
+    loading.value = true;
+    await loadRecipes();
+    await recomputeMaterials();
+    loading.value = false;
+  }
 });
 
+// ── Skill change ─────────────────────────────────────────────────────────────
+
 async function onSkillChange() {
-  plan.value = null;
-  error.value = "";
-  snapshotLevel.value = null;
-  excludedRecipeIds.value = new Set();
-  excludedRecipeNames.value = new Map();
+  state.value.planLevels = [];
+  allRecipes.value = [];
+  state.value.xpTable = [];
+  state.value.snapshotLevel = null;
+  state.value.currentLevel = 0;
+  aggregatedMaterials.value = [];
 
-  if (!selectedSkill.value) return;
+  if (!state.value.selectedSkill) return;
 
-  const skillData = await craftingStore.getSkillLevel(selectedSkill.value);
+  loading.value = true;
+
+  // Get current level from game state
+  const skillData = await craftingStore.getSkillLevel(state.value.selectedSkill);
   if (skillData) {
-    snapshotLevel.value = skillData.level;
-    currentLevel.value = skillData.level;
-  } else {
-    currentLevel.value = 0;
+    state.value.snapshotLevel = skillData.level;
+    state.value.currentLevel = skillData.level;
+  }
+
+  // Load XP table
+  try {
+    state.value.xpTable = await invoke<number[]>("get_xp_table_for_skill", { skillName: state.value.selectedSkill });
+  } catch {
+    state.value.xpTable = [];
+  }
+
+  // Load recipes
+  await loadRecipes();
+  loading.value = false;
+}
+
+async function loadRecipes() {
+  const skillInfo = await gameData.resolveSkill(state.value.selectedSkill);
+  const skillInternalName = skillInfo?.internal_name ?? state.value.selectedSkill;
+
+  const raw = await gameData.getRecipesForSkill(state.value.selectedSkill);
+  // Filter to recipes that actually reward XP in this skill
+  const relevant = raw.filter(
+    (r) => r.reward_skill === skillInternalName
+      && ((r.reward_skill_xp ?? 0) > 0 || (r.reward_skill_xp_first_time ?? 0) > 0),
+  );
+
+  const completionMap = gameStateStore.recipeCompletions;
+  const knownKeys = gameStateStore.knownRecipeKeys;
+  const hasCompletionData = Object.keys(completionMap).length > 0;
+
+  // Batch load costs
+  const costMap = new Map<number, number>();
+  if (showCosts.value) {
+    await loadCosts(relevant, costMap);
+  }
+
+  const pLevel = planningLevel.value;
+
+  allRecipes.value = relevant
+    .map((recipe) => {
+      const key = `Recipe_${recipe.id}`;
+      const isKnown = !hasCompletionData || key in completionMap;
+      const isCrafted = knownKeys.has(key);
+      const levelReq = recipe.skill_level_req ?? 0;
+      const dropOff = recipe.reward_skill_xp_drop_off_level;
+      const isDropOff = dropOff !== null && dropOff !== undefined && pLevel >= dropOff;
+      const isTooHigh = levelReq > pLevel;
+
+      const xpPerCraft = recipe.reward_skill_xp ?? 0;
+      const firstTimeXp = isCrafted ? 0 : (recipe.reward_skill_xp_first_time ?? 0);
+
+      return {
+        recipe,
+        isKnown,
+        isCrafted,
+        isDropOff,
+        isTooHigh,
+        xpPerCraft,
+        firstTimeXp,
+        effectiveXp: Math.round(xpPerCraft * multiplier.value),
+        effectiveFirstTimeXp: Math.round(firstTimeXp * multiplier.value),
+        cost: costMap.get(recipe.id) ?? null,
+      };
+    })
+    .sort((a, b) => (a.recipe.skill_level_req ?? 0) - (b.recipe.skill_level_req ?? 0));
+}
+
+async function loadCosts(recipes: RecipeInfo[], costMap: Map<number, number>) {
+  for (const recipe of recipes) {
+    const cost = await craftingStore.estimateRecipeCost(recipe);
+    costMap.set(recipe.id, cost);
   }
 }
 
-async function calculate() {
-  if (!selectedSkill.value || targetLevel.value <= currentLevel.value) return;
+// Re-enrich recipes when planning level or multiplier changes
+watch([planningLevel, multiplier], () => {
+  if (allRecipes.value.length === 0) return;
+  refreshRecipeState();
+});
 
-  calculating.value = true;
-  error.value = "";
-  plan.value = null;
+// Reload costs when showCosts toggled on
+watch(showCosts, async (show) => {
+  if (!show || allRecipes.value.length === 0) return;
+  const costMap = new Map<number, number>();
+  const recipes = allRecipes.value.map((r) => r.recipe);
+  await loadCosts(recipes, costMap);
+  allRecipes.value = allRecipes.value.map((r) => ({
+    ...r,
+    cost: costMap.get(r.recipe.id) ?? r.cost,
+  }));
+});
 
-  try {
-    plan.value = await craftingStore.generateLevelingPlan(
-      selectedSkill.value,
-      currentLevel.value,
-      targetLevel.value,
-      strategy.value,
-      includeUnlearnedRecipes.value,
-      excludedRecipeIds.value,
-    );
-  } catch (e) {
-    error.value = String(e);
-    console.error("[crafting] Leveling plan failed:", e);
-  } finally {
-    calculating.value = false;
-  }
+function refreshRecipeState() {
+  const pLevel = planningLevel.value;
+  const mult = multiplier.value;
+
+  allRecipes.value = allRecipes.value.map((r) => {
+    const dropOff = r.recipe.reward_skill_xp_drop_off_level;
+    const isDropOff = dropOff !== null && dropOff !== undefined && pLevel >= dropOff;
+    const isTooHigh = (r.recipe.skill_level_req ?? 0) > pLevel;
+
+    return {
+      ...r,
+      isDropOff,
+      isTooHigh,
+      effectiveXp: Math.round(r.xpPerCraft * mult),
+      effectiveFirstTimeXp: Math.round(r.firstTimeXp * mult),
+    };
+  });
 }
 
-async function createProjectFromPlan() {
-  if (!plan.value || plan.value.steps.length === 0) return;
-  creatingProject.value = true;
+// ── Color coding ─────────────────────────────────────────────────────────────
 
-  try {
-    const projectName = `${plan.value.skill_name} Lv${plan.value.current_level}→${plan.value.target_level}`;
-    const projectId = await craftingStore.createProject(projectName, `Generated by Leveling Optimizer (${plan.value.strategy} strategy)`);
+function recipeRowClass(r: EnrichedRecipe): string {
+  if (r.isTooHigh) return "text-blue-400/70";
+  if (r.isDropOff) {
+    if (!r.isKnown) return "text-red-900";
+    if (!r.isCrafted) return "text-green-800";
+    return "text-text-muted/50"; // grey
+  }
+  // Good XP range
+  if (!r.isKnown) return "text-red-400";
+  if (!r.isCrafted) return "text-green-400";
+  return "text-text-primary"; // white
+}
 
-    // Add each unique recipe with its total craft count
-    const recipeTotals = new Map<number, { name: string; count: number }>();
-    for (const step of plan.value.steps) {
-      const existing = recipeTotals.get(step.recipe_id);
+// ── Materials computation ─────────────────────────────────────────────────
+
+/** Map of loaded recipes by ID for material resolution */
+const recipeMap = computed(() => {
+  const map = new Map<number, RecipeInfo>();
+  for (const r of allRecipes.value) {
+    map.set(r.recipe.id, r.recipe);
+  }
+  return map;
+});
+
+async function recomputeMaterials() {
+  if (state.value.planLevels.length === 0) {
+    aggregatedMaterials.value = [];
+    return;
+  }
+
+  materialsLoading.value = true;
+
+  // Aggregate recipe craft counts across all levels
+  const recipeQuantities = new Map<number, number>();
+  for (const lvl of state.value.planLevels) {
+    for (const entry of lvl.entries) {
+      recipeQuantities.set(
+        entry.recipe_id,
+        (recipeQuantities.get(entry.recipe_id) ?? 0) + entry.craft_count,
+      );
+    }
+  }
+
+  // Resolve ingredients for each recipe and flatten
+  const combined = new Map<string, FlattenedMaterial>();
+
+  for (const [recipeId, craftCount] of recipeQuantities) {
+    const recipe = recipeMap.value.get(recipeId);
+    if (!recipe) continue;
+
+    const resolved = await craftingStore.resolveRecipeIngredients(recipe, craftCount);
+    const flat = craftingStore.flattenIngredients(resolved.ingredients);
+
+    for (const [key, mat] of flat) {
+      const existing = combined.get(key);
       if (existing) {
-        existing.count += step.craft_count;
+        existing.quantity += mat.quantity;
+        existing.expected_quantity += mat.expected_quantity;
       } else {
-        recipeTotals.set(step.recipe_id, { name: step.recipe_name, count: step.craft_count });
+        combined.set(key, { ...mat });
       }
     }
+  }
 
-    for (const [recipeId, { name, count }] of recipeTotals) {
-      await craftingStore.addEntry(projectId, recipeId, name, count);
+  aggregatedMaterials.value = [...combined.values()].sort((a, b) =>
+    a.item_name.localeCompare(b.item_name),
+  );
+  materialsLoading.value = false;
+}
+
+// Debounced material recomputation — triggers when the plan changes
+let materialTimer: ReturnType<typeof setTimeout> | null = null;
+
+watch(
+  () => state.value.planLevels.map(l => l.entries.length + l.xp_accumulated),
+  () => {
+    if (materialTimer) clearTimeout(materialTimer);
+    materialTimer = setTimeout(() => recomputeMaterials(), 300);
+  },
+  { deep: true },
+);
+
+// ── Plan actions ─────────────────────────────────────────────────────────────
+
+function ensureCurrentLevel() {
+  if (state.value.planLevels.length === 0 || state.value.planLevels[0].xp_accumulated >= state.value.planLevels[0].xp_needed) {
+    // Need a new level at the top
+    const lvl = planningLevel.value + (state.value.planLevels.length > 0 && state.value.planLevels[0].xp_accumulated >= state.value.planLevels[0].xp_needed ? 1 : 0);
+    const xpNeeded = state.value.xpTable[lvl] ?? 0;
+    if (xpNeeded <= 0) return; // Can't level further
+
+    state.value.planLevels.unshift({
+      from_level: lvl,
+      to_level: lvl + 1,
+      xp_needed: xpNeeded,
+      xp_accumulated: 0,
+      entries: [],
+    });
+  }
+}
+
+function addOnce(r: EnrichedRecipe) {
+  ensureCurrentLevel();
+  if (state.value.planLevels.length === 0) return;
+
+  const top = state.value.planLevels[0];
+  const totalXpForOne = r.effectiveXp + r.effectiveFirstTimeXp;
+  const costForOne = r.cost ?? 0;
+
+  top.entries.push({
+    recipe_id: r.recipe.id,
+    recipe_name: r.recipe.name,
+    craft_count: 1,
+    xp_per_craft: r.xpPerCraft,
+    xp_first_time: r.firstTimeXp,
+    total_xp: totalXpForOne,
+    estimated_cost: costForOne,
+  });
+  top.xp_accumulated += totalXpForOne;
+
+  // Mark first-time bonus as used for this recipe
+  if (r.firstTimeXp > 0) {
+    markFirstTimeUsed(r);
+  }
+
+  // If we've hit the XP target, auto-advance
+  checkAutoAdvance();
+}
+
+function addToLevel(r: EnrichedRecipe) {
+  ensureCurrentLevel();
+  if (state.value.planLevels.length === 0) return;
+
+  const top = state.value.planLevels[0];
+  const remaining = top.xp_needed - top.xp_accumulated;
+  if (remaining <= 0) return;
+
+  // First craft might include first-time bonus
+  let xpFromFirst = 0;
+  let craftsUsed = 0;
+
+  if (r.firstTimeXp > 0) {
+    // First craft gets bonus
+    xpFromFirst = r.effectiveXp + r.effectiveFirstTimeXp;
+    craftsUsed = 1;
+    if (xpFromFirst >= remaining) {
+      // One craft with bonus is enough
+      const costForOne = r.cost ?? 0;
+      top.entries.push({
+        recipe_id: r.recipe.id,
+        recipe_name: r.recipe.name,
+        craft_count: 1,
+        xp_per_craft: r.xpPerCraft,
+        xp_first_time: r.firstTimeXp,
+        total_xp: xpFromFirst,
+        estimated_cost: costForOne,
+      });
+      top.xp_accumulated += xpFromFirst;
+      markFirstTimeUsed(r);
+      checkAutoAdvance();
+      return;
     }
-  } catch (e) {
-    error.value = String(e);
-    console.error("[crafting] Failed to create project:", e);
+  }
+
+  // Remaining after potential first-time craft
+  const afterBonus = remaining - xpFromFirst;
+  const additionalCrafts = r.effectiveXp > 0 ? Math.ceil(afterBonus / r.effectiveXp) : 0;
+  const planTotalCrafts = craftsUsed + additionalCrafts;
+
+  if (planTotalCrafts <= 0) return;
+
+  const totalXp = xpFromFirst + additionalCrafts * r.effectiveXp;
+  const entryCost = (r.cost ?? 0) * planTotalCrafts;
+
+  top.entries.push({
+    recipe_id: r.recipe.id,
+    recipe_name: r.recipe.name,
+    craft_count: planTotalCrafts,
+    xp_per_craft: r.xpPerCraft,
+    xp_first_time: craftsUsed > 0 ? r.firstTimeXp : 0,
+    total_xp: totalXp,
+    estimated_cost: entryCost,
+  });
+  top.xp_accumulated += totalXp;
+
+  if (r.firstTimeXp > 0 && craftsUsed > 0) {
+    markFirstTimeUsed(r);
+  }
+
+  checkAutoAdvance();
+}
+
+function markFirstTimeUsed(r: EnrichedRecipe) {
+  // Update the recipe in the list so subsequent adds don't include first-time bonus
+  allRecipes.value = allRecipes.value.map((ar) => {
+    if (ar.recipe.id !== r.recipe.id) return ar;
+    return {
+      ...ar,
+      isCrafted: true,
+      firstTimeXp: 0,
+      effectiveFirstTimeXp: 0,
+    };
+  });
+}
+
+function checkAutoAdvance() {
+  // If the current level is complete, recipe state needs refreshing
+  // (drop-off and too-high will change for the next level)
+  if (state.value.planLevels.length > 0 && state.value.planLevels[0].xp_accumulated >= state.value.planLevels[0].xp_needed) {
+    refreshRecipeState();
+  }
+}
+
+function removeEntry(levelIdx: number, entryIdx: number) {
+  const lvl = state.value.planLevels[levelIdx];
+  const entry = lvl.entries[entryIdx];
+  lvl.xp_accumulated -= entry.total_xp;
+  lvl.entries.splice(entryIdx, 1);
+
+  // If level is now empty, remove it (unless it's the only level)
+  if (lvl.entries.length === 0 && state.value.planLevels.length > 1) {
+    state.value.planLevels.splice(levelIdx, 1);
+  }
+
+  refreshRecipeState();
+}
+
+function clearCurrentLevel() {
+  if (state.value.planLevels.length === 0) return;
+  const top = state.value.planLevels[0];
+  top.entries = [];
+  top.xp_accumulated = 0;
+
+  // If there are completed levels below and this one is now empty, remove it
+  if (state.value.planLevels.length > 1) {
+    state.value.planLevels.shift();
+  }
+
+  refreshRecipeState();
+}
+
+function clearPlan() {
+  state.value.planLevels = [];
+  aggregatedMaterials.value = [];
+}
+
+async function onCreateProject() {
+  if (state.value.planLevels.length === 0) return;
+  creatingProject.value = true;
+  try {
+    const fromLvl = state.value.currentLevel;
+    const toLvl = planningLevel.value + (currentLevelComplete.value ? 1 : 0);
+    const name = `${state.value.selectedSkill} Lv${fromLvl}→${toLvl}`;
+    await craftingStore.createProjectFromLevelingPlan(name);
   } finally {
     creatingProject.value = false;
   }
-}
-
-function excludeRecipe(recipeId: number, recipeName: string) {
-  const newSet = new Set(excludedRecipeIds.value);
-  newSet.add(recipeId);
-  excludedRecipeIds.value = newSet;
-
-  const newNames = new Map(excludedRecipeNames.value);
-  newNames.set(recipeId, recipeName);
-  excludedRecipeNames.value = newNames;
-
-  calculate();
-}
-
-function restoreRecipe(recipeId: number) {
-  const newSet = new Set(excludedRecipeIds.value);
-  newSet.delete(recipeId);
-  excludedRecipeIds.value = newSet;
-
-  const newNames = new Map(excludedRecipeNames.value);
-  newNames.delete(recipeId);
-  excludedRecipeNames.value = newNames;
-
-  calculate();
-}
-
-function clearExclusions() {
-  excludedRecipeIds.value = new Set();
-  excludedRecipeNames.value = new Map();
-  calculate();
 }
 </script>

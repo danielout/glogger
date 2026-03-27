@@ -1,13 +1,15 @@
 {
   "name": "glogger",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "version:bump": "bash scripts/bump-version.sh",
+    "changelog": "bash scripts/generate-changelog.sh"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",

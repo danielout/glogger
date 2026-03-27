@@ -23,6 +23,24 @@ export const useGameDataStore = defineStore("gameData", () => {
   const errorMessage = ref<string | null>(null);
   const cacheStatus = ref<CacheStatus | null>(null);
 
+  // ── Preloaded NPC map (loaded once on game-data-ready) ────────────────────
+  const npcsByKey = ref<Record<string, NpcInfo>>({})
+  const npcsByDisplayName = ref<Record<string, NpcInfo>>({})
+
+  async function loadAllNpcsMap(): Promise<void> {
+    if (Object.keys(npcsByKey.value).length > 0) return
+    const all = await invoke<NpcInfo[]>('get_all_npcs')
+    const byKey: Record<string, NpcInfo> = {}
+    const byName: Record<string, NpcInfo> = {}
+    for (const npc of all) {
+      byKey[npc.key] = npc
+      byName[npc.name] = npc
+    }
+    npcsByKey.value = byKey
+    npcsByDisplayName.value = byName
+  }
+
+
   // Icon path cache: icon_id → local filesystem path
   const iconPaths = ref<Record<number, string>>({});
 
@@ -32,7 +50,7 @@ export const useGameDataStore = defineStore("gameData", () => {
   listen<number>("game-data-ready", async (_event) => {
     status.value = "ready";
     errorMessage.value = null;
-    await refreshCacheStatus();
+    await Promise.all([refreshCacheStatus(), loadAllNpcsMap()]);
   });
 
   listen<string>("game-data-error", (event) => {
@@ -42,7 +60,9 @@ export const useGameDataStore = defineStore("gameData", () => {
 
   // Kick off an initial status check immediately (covers the case where
   // game-data-ready fires before we're listening)
-  refreshCacheStatus();
+  refreshCacheStatus().then(() => {
+    if (status.value === 'ready') loadAllNpcsMap()
+  });
 
   // ── Cache management ───────────────────────────────────────────────────────
 
@@ -72,19 +92,41 @@ export const useGameDataStore = defineStore("gameData", () => {
     }
   }
 
-  // ── Item queries ───────────────────────────────────────────────────────────
+  // ── Unified entity resolvers ─────────────────────────────────────────────
+  // Each accepts any known reference form (numeric ID, display name, internal
+  // name, CDN key) and resolves to the canonical entity.
 
-  async function getItem(id: number): Promise<ItemInfo | null> {
-    return invoke<ItemInfo | null>("get_item", { id });
+  async function resolveItem(reference: string | number): Promise<ItemInfo | null> {
+    return invoke<ItemInfo | null>("resolve_item", { reference: String(reference) });
   }
 
-  async function getItemByName(name: string): Promise<ItemInfo | null> {
-    return invoke<ItemInfo | null>("get_item_by_name", { name });
+  async function resolveItemsBatch(references: string[]): Promise<Record<string, ItemInfo>> {
+    return invoke<Record<string, ItemInfo>>("resolve_items_batch", { references });
   }
 
-  async function getItemByInternalName(name: string): Promise<ItemInfo | null> {
-    return invoke<ItemInfo | null>("get_item_by_internal_name", { name });
+  async function resolveSkill(reference: string | number): Promise<SkillInfo | null> {
+    return invoke<SkillInfo | null>("resolve_skill", { reference: String(reference) });
   }
+
+  async function resolveRecipe(reference: string | number): Promise<RecipeInfo | null> {
+    return invoke<RecipeInfo | null>("resolve_recipe", { reference: String(reference) });
+  }
+
+  async function resolveQuest(reference: string): Promise<QuestInfo | null> {
+    return invoke<QuestInfo | null>("resolve_quest", { reference });
+  }
+
+  /** Synchronous NPC resolver using preloaded maps. Tries CDN key, then display name. */
+  function resolveNpcSync(reference: string): NpcInfo | null {
+    return npcsByKey.value[reference] ?? npcsByDisplayName.value[reference] ?? null
+  }
+
+  /** Async NPC resolver via backend (for cases where NPC map isn't loaded yet). */
+  async function resolveNpc(reference: string): Promise<NpcInfo | null> {
+    return invoke<NpcInfo | null>("resolve_npc", { reference });
+  }
+
+  // ── Query/filter commands (not replaced by resolvers) ───────────────────
 
   async function searchItems(
     query: string,
@@ -104,6 +146,10 @@ export const useGameDataStore = defineStore("gameData", () => {
     return invoke<ItemInfo[]>("get_items_by_keyword", { keyword });
   }
 
+  async function getAllItemKeywords(): Promise<string[]> {
+    return invoke<string[]>("get_all_item_keywords");
+  }
+
   async function getEquipSlots(): Promise<string[]> {
     return invoke<string[]>("get_equip_slots");
   }
@@ -114,10 +160,6 @@ export const useGameDataStore = defineStore("gameData", () => {
     return invoke<SkillInfo[]>("get_all_skills");
   }
 
-  async function getSkillByName(name: string): Promise<SkillInfo | null> {
-    return invoke<SkillInfo | null>("get_skill_by_name", { name });
-  }
-
   // ── Ability queries ────────────────────────────────────────────────────────
 
   async function getAbilitiesForSkill(skill: string): Promise<AbilityInfo[]> {
@@ -125,10 +167,6 @@ export const useGameDataStore = defineStore("gameData", () => {
   }
 
   // ── Recipe queries ─────────────────────────────────────────────────────────
-
-  async function getRecipeByName(name: string): Promise<RecipeInfo | null> {
-    return invoke<RecipeInfo | null>("get_recipe_by_name", { name });
-  }
 
   async function getRecipesForItem(itemId: number): Promise<RecipeInfo[]> {
     return invoke<RecipeInfo[]>("get_recipes_for_item", { itemId });
@@ -146,10 +184,6 @@ export const useGameDataStore = defineStore("gameData", () => {
     return invoke<RecipeInfo[]>("get_recipes_for_skill", { skill });
   }
 
-  async function getItemsBatch(ids: number[]): Promise<Record<number, ItemInfo>> {
-    return invoke<Record<number, ItemInfo>>("get_items_batch", { ids });
-  }
-
   // ── Quest queries ──────────────────────────────────────────────────────────
 
   async function getAllQuests(): Promise<QuestInfo[]> {
@@ -158,14 +192,6 @@ export const useGameDataStore = defineStore("gameData", () => {
 
   async function searchQuests(query: string): Promise<QuestInfo[]> {
     return invoke<QuestInfo[]>("search_quests", { query });
-  }
-
-  async function getQuestByKey(key: string): Promise<QuestInfo | null> {
-    return invoke<QuestInfo | null>("get_quest_by_key", { key });
-  }
-
-  async function getQuestByInternalName(name: string): Promise<QuestInfo | null> {
-    return invoke<QuestInfo | null>("get_quest_by_internal_name", { name });
   }
 
   // ── NPC queries ────────────────────────────────────────────────────────────
@@ -264,31 +290,35 @@ export const useGameDataStore = defineStore("gameData", () => {
     errorMessage,
     cacheStatus,
     iconPaths,
-    // Actions
+    // Unified entity resolvers
+    resolveItem,
+    resolveItemsBatch,
+    resolveSkill,
+    resolveRecipe,
+    resolveQuest,
+    resolveNpcSync,
+    resolveNpc,
+    // Query/filter actions
     refreshCacheStatus,
     forceRefreshCdn,
-    getItem,
-    getItemByName,
-    getItemByInternalName,
     searchItems,
     getItemsByKeyword,
+    getAllItemKeywords,
     getEquipSlots,
     getAllSkills,
-    getSkillByName,
     getAbilitiesForSkill,
-    getRecipeByName,
     getRecipesForItem,
     getRecipesUsingItem,
     searchRecipes,
     getRecipesForSkill,
-    getItemsBatch,
     getAllQuests,
     searchQuests,
-    getQuestByKey,
-    getQuestByInternalName,
     getAllNpcs,
     searchNpcs,
     getNpcsInArea,
+    npcsByKey,
+    npcsByDisplayName,
+    loadAllNpcsMap,
     searchEffects,
     getEffect,
     getAllPlayerTitles,

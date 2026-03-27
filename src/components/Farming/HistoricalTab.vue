@@ -2,9 +2,7 @@
   <div class="flex flex-col gap-4">
     <div v-if="loading" class="text-text-dim italic text-sm">Loading sessions...</div>
     <div v-else-if="error" class="text-[#c87e7e] text-sm">{{ error }}</div>
-    <div v-else-if="sessions.length === 0" class="text-text-dim italic text-sm py-4 text-center">
-      No saved farming sessions yet.
-    </div>
+    <EmptyState v-else-if="sessions.length === 0" variant="panel" primary="No saved farming sessions" secondary="Complete a farming session to see history here." />
 
     <template v-else>
       <!-- Aggregate stats -->
@@ -87,7 +85,7 @@
                   v-for="skill in session.skills"
                   :key="skill.skill_name"
                   class="flex items-center gap-2 px-3 py-1.5 rounded text-xs bg-[#1a2e1a] border border-[#3a5a3a]">
-                  <SkillInline :name="skill.skill_name" />
+                  <SkillInline :reference="skill.skill_name" />
                   <span class="text-[#7ec87e] font-bold">+{{ skill.xp_gained.toLocaleString() }}</span>
                   <span class="text-text-dim text-[0.6rem]">{{ skillXpPerHour(skill.xp_gained, session.elapsed_seconds).toLocaleString() }}/hr</span>
                   <span v-if="skill.levels_gained > 0" class="text-[#c8b47e] font-bold">(+{{ skill.levels_gained }} lvl)</span>
@@ -103,7 +101,7 @@
                   v-for="item in session.items"
                   :key="item.item_name"
                   class="flex items-center justify-between px-2 py-1 rounded text-xs bg-black/20 border border-border-default">
-                  <ItemInline :name="item.item_name" />
+                  <ItemInline :reference="item.item_name" />
                   <div class="flex items-center gap-2">
                     <span
                       :class="[
@@ -126,7 +124,7 @@
                   v-for="fav in session.favors"
                   :key="fav.npc_name"
                   class="px-3 py-1.5 rounded text-xs bg-black/20 border border-border-default">
-                  <NpcInline :name="fav.npc_name" />
+                  <NpcInline :reference="fav.npc_name" />
                   <span
                     :class="[
                       'font-mono font-bold ml-1',
@@ -157,7 +155,9 @@
 import { ref, onMounted, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import type { HistoricalFarmingSession } from "../../types/farming";
+import EmptyState from "../Shared/EmptyState.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
+import { formatDateTimeShort } from "../../composables/useTimestamp";
 import SkillInline from "../Shared/Skill/SkillInline.vue";
 import NpcInline from "../Shared/NPC/NpcInline.vue";
 
@@ -258,12 +258,7 @@ function formatDuration(seconds: number): string {
 }
 
 function formatDate(isoStr: string): string {
-  try {
-    const d = new Date(isoStr);
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-  } catch {
-    return isoStr;
-  }
+  return formatDateTimeShort(isoStr)
 }
 
 onMounted(loadSessions);

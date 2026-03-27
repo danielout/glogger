@@ -4,10 +4,10 @@ import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { useGameDataStore } from './gameDataStore'
 import { useCraftingStore } from './craftingStore'
-import { useSettingsStore } from './settingsStore'
+import { useGameStateStore } from './gameStateStore'
 import type { RecipeInfo } from '../types/gameData/recipes'
 import type { FoodItem } from '../types/gourmand'
-import type { MaterialNeed, RecipeCompletionEntry } from '../types/crafting'
+import type { MaterialNeed } from '../types/crafting'
 
 export interface HelpfulRecipe {
   recipe: RecipeInfo
@@ -24,7 +24,7 @@ export const useCooksHelperStore = defineStore('cooksHelper', () => {
   const allFoods = ref<FoodItem[]>([])
   const cookingRecipes = ref<RecipeInfo[]>([])
   const sushiRecipes = ref<RecipeInfo[]>([])
-  const knownRecipeKeys = ref<Set<string>>(new Set())
+  const gameStateStore = useGameStateStore()
 
   const selectedRecipeIds = ref<Set<number>>(new Set())
   const materialNeedsMap = ref<Map<number, MaterialNeed[]>>(new Map())
@@ -40,7 +40,8 @@ export const useCooksHelperStore = defineStore('cooksHelper', () => {
 
   // ── Computed ───────────────────────────────────────────────────────────────
 
-  const isImported = computed(() => importedEatenNames.value.size > 0)
+  const blankMode = ref(false)
+  const isImported = computed(() => blankMode.value || importedEatenNames.value.size > 0)
 
   const uneatenFoods = computed(() =>
     allFoods.value.filter(f => !importedEatenNames.value.has(f.name))
@@ -61,7 +62,7 @@ export const useCooksHelperStore = defineStore('cooksHelper', () => {
       foodById.set(food.item_id, food)
     }
 
-    const known = knownRecipeKeys.value
+    const known = gameStateStore.knownRecipeKeys
     const results: HelpfulRecipe[] = []
     for (const recipe of allCookableRecipes.value) {
       // Only include recipes the cook has learned
@@ -126,6 +127,11 @@ export const useCooksHelperStore = defineStore('cooksHelper', () => {
 
   const selectionCount = computed(() => selectedRecipeIds.value.size)
 
+  /** Check how many of a food the player currently owns (inventory + storage) */
+  function ownedCount(foodName: string): number {
+    return gameStateStore.ownedItemCounts[foodName] ?? 0
+  }
+
   const stats = computed(() => ({
     totalFoods: allFoods.value.length,
     eaten: importedEatenNames.value.size,
@@ -165,10 +171,6 @@ export const useCooksHelperStore = defineStore('cooksHelper', () => {
   }
 
   async function loadFoodsAndRecipes() {
-    const settingsStore = useSettingsStore()
-    const characterName = settingsStore.settings.activeCharacterName
-    const serverName = settingsStore.settings.activeServerName
-
     const [foods, cooking, sushi] = await Promise.all([
       invoke<FoodItem[]>('get_all_foods'),
       gameData.getRecipesForSkill('Cooking'),
@@ -178,22 +180,6 @@ export const useCooksHelperStore = defineStore('cooksHelper', () => {
     allFoods.value = foods
     cookingRecipes.value = cooking
     sushiRecipes.value = sushi
-
-    // Load the cook's known recipes from character snapshot
-    if (characterName && serverName) {
-      try {
-        const completions = await invoke<RecipeCompletionEntry[]>('get_latest_recipe_completions', {
-          characterName,
-          serverName,
-        })
-        knownRecipeKeys.value = new Set(completions.map(c => c.recipe_key))
-      } catch {
-        // No snapshot — show all recipes (can't filter)
-        knownRecipeKeys.value = new Set()
-      }
-    } else {
-      knownRecipeKeys.value = new Set()
-    }
   }
 
   async function checkAllMaterials() {
@@ -252,12 +238,29 @@ export const useCooksHelperStore = defineStore('cooksHelper', () => {
     return projectId
   }
 
+  /** Start with a blank slate — treat all foods as uneaten, no import needed */
+  async function startFresh() {
+    error.value = null
+    loading.value = true
+    try {
+      importedEatenNames.value = new Set()
+      blankMode.value = true
+      await loadFoodsAndRecipes()
+      selectedRecipeIds.value = new Set()
+      materialNeedsMap.value = new Map()
+    } catch (e) {
+      error.value = String(e)
+    } finally {
+      loading.value = false
+    }
+  }
+
   function clear() {
     importedEatenNames.value = new Set()
+    blankMode.value = false
     allFoods.value = []
     cookingRecipes.value = []
     sushiRecipes.value = []
-    knownRecipeKeys.value = new Set()
     selectedRecipeIds.value = new Set()
     materialNeedsMap.value = new Map()
     error.value = null
@@ -284,6 +287,8 @@ export const useCooksHelperStore = defineStore('cooksHelper', () => {
     stats,
     // Actions
     importFile,
+    startFresh,
+    ownedCount,
     checkAllMaterials,
     toggleSelection,
     selectAll,

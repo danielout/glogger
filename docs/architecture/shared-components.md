@@ -54,7 +54,7 @@ src/components/Shared/
 
 Shared logic lives in [`src/composables/`](../../src/composables/):
 
-- **`useTooltip(options?)`** — Tooltip show/hide with configurable delay. Returns `showTooltip`, `onMouseEnter`, `onMouseLeave`, `cleanup`. Calls optional `onHover` callback on first mouseenter for lazy data loading.
+- **`useTooltip(options?)`** — Tooltip show/hide with configurable delay. Options: `delay`, `interactive`, `onHover`. Returns `showTooltip`, `onMouseEnter`, `onMouseLeave`, `onTooltipMouseEnter`, `onTooltipMouseLeave`, `cleanup`. When `interactive: true`, mouseleave has a 150ms grace period so the user can move their cursor into the tooltip body.
 - **`useGameIcon()`** — Loads icon via `gameDataStore.getIconPath()` + `convertFileSrc()`. Returns `iconSrc`, `iconLoading`, `loadIcon(iconId)`. Memoizes per icon ID.
 - **`useEntityNavigation()`** — Provides/injects a `navigateToEntity(target)` function for click-to-browse. The provider in [`App.vue`](../../src/App.vue) switches to the Data Browser view and passes a nav target to [`DataBrowser.vue`](../../src/components/DataBrowser/DataBrowser.vue).
 
@@ -244,7 +244,9 @@ Wraps any content with tooltip-on-hover behavior. Handles delay, positioning, an
 </EntityTooltipWrapper>
 ```
 
-**Props:** `delay?: number` (default 500), `disabled?: boolean`, `borderClass?: string`
+**Props:** `delay?: number` (default 500), `disabled?: boolean`, `borderClass?: string`, `interactive?: boolean`
+
+- `interactive` — when `true`, the tooltip stays open while the user's mouse is inside it (allows clicking links/buttons in the tooltip). When `false` (default), the tooltip has `pointer-events-none` and closes immediately on mouseleave. `ItemInline` uses `interactive: true` so the market value editor in `ItemTooltip` is clickable.
 
 **Events:** `hover` — emitted once on first mouseenter, use for lazy data loading.
 

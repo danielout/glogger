@@ -47,9 +47,7 @@
     </div>
 
     <!-- Empty state -->
-    <div v-if="store.projects.length === 0 && !showNewProject" class="text-text-dim text-xs italic py-4">
-      No projects yet. Create one to start planning crafts.
-    </div>
+    <EmptyState v-if="store.projects.length === 0 && !showNewProject" variant="compact" primary="No projects yet" secondary="Create one to start planning crafts." />
 
     <!-- Project list -->
     <ul class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated rounded">
@@ -71,6 +69,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { useCraftingStore } from "../../stores/craftingStore";
+import EmptyState from "../Shared/EmptyState.vue";
 
 const store = useCraftingStore();
 

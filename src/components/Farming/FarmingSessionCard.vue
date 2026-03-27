@@ -1,9 +1,7 @@
 <template>
   <!-- No active session -->
   <div v-if="!store.sessionActive" class="py-4 flex flex-col items-center gap-4">
-    <div class="text-text-dim italic">
-      No active farming session. Start one to track XP, items, favor, and more.
-    </div>
+    <EmptyState variant="compact" primary="No active farming session" secondary="Start one to track XP, items, favor, and more." />
     <div class="flex items-center gap-3">
       <input
         v-model="sessionName"
@@ -115,7 +113,7 @@
       <!-- LEFT: Skills Panel -->
       <div class="bg-surface-dark border border-border-default rounded-lg p-3 overflow-y-auto">
         <div class="text-[0.65rem] uppercase tracking-widest text-entity-item mb-2 font-bold">Skills</div>
-        <div v-if="store.skillSummary.length === 0" class="text-text-dim italic text-xs">No skill gains yet.</div>
+        <EmptyState v-if="store.skillSummary.length === 0" variant="compact" primary="No skill gains yet" />
         <div class="flex flex-col gap-1">
           <div
             v-for="skill in store.skillSummary"
@@ -128,7 +126,7 @@
             <!-- Content -->
             <div class="relative flex items-center justify-between px-2 py-1.5 z-10">
               <div class="flex items-center gap-1.5 min-w-0">
-                <SkillInline :name="skill.name" :show-icon="true" class="text-xs" />
+                <SkillInline :reference="skill.name" :show-icon="true" class="text-xs" />
                 <span v-if="skill.levelsGained > 0" class="text-[0.6rem] text-[#c8b47e] font-bold">
                   +{{ skill.levelsGained }}lvl
                 </span>
@@ -149,7 +147,7 @@
               v-for="fav in store.favorSummary"
               :key="fav.name"
               class="flex items-center justify-between px-2 py-1.5 rounded text-xs bg-black/20 border border-border-default">
-              <NpcInline :name="fav.name" />
+              <NpcInline :reference="fav.name" />
               <span
                 :class="[
                   'font-mono font-bold',
@@ -173,7 +171,7 @@
             {{ showIgnored ? 'Hide' : 'Show' }} ignored ({{ ignoredCount }})
           </button>
         </div>
-        <div v-if="store.itemSummary.length === 0" class="text-text-dim italic text-xs">No item changes yet.</div>
+        <EmptyState v-if="store.itemSummary.length === 0" variant="compact" primary="No item changes yet" />
         <div class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-1.5">
           <div
             v-for="item in visibleItems"
@@ -184,7 +182,7 @@
                 ? 'bg-black/10 border-border-default opacity-40'
                 : 'bg-black/20 border-border-default'
             ]">
-            <ItemInline :name="item.name" />
+            <ItemInline :reference="item.name" />
             <div class="flex items-center gap-2">
               <span
                 :class="[
@@ -219,6 +217,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { useFarmingStore } from "../../stores/farmingStore";
+import EmptyState from "../Shared/EmptyState.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 import SkillInline from "../Shared/Skill/SkillInline.vue";
 import NpcInline from "../Shared/NPC/NpcInline.vue";

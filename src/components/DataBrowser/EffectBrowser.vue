@@ -1,5 +1,5 @@
 <template>
-  <div class="h-[calc(100vh-130px)] flex flex-col">
+  <div class="h-full flex flex-col">
     <!-- Status banner if data not ready -->
     <div v-if="store.status !== 'ready'" class="p-4 text-sm">
       <span v-if="store.status === 'loading'" class="text-accent-gold"
@@ -33,12 +33,12 @@
           No effects found for "{{ query }}"
         </div>
 
-        <ul v-else class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated">
+        <ul v-else ref="listRef" class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated">
           <li
-            v-for="effect in results"
+            v-for="(effect, idx) in results"
             :key="effect.id"
             class="flex items-baseline gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
-            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === effect.id }"
+            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === effect.id, 'bg-surface-elevated': selectedIndex === idx && selected?.id !== effect.id }"
             @click="selectEffect(effect)">
             <span class="text-text-dim text-[0.72rem] min-w-12 shrink-0">#{{ effect.id }}</span>
             <span class="text-text-primary/75 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ effect.name || 'Unnamed' }}</span>
@@ -158,6 +158,7 @@
 import { ref, watch } from "vue";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
+import { useKeyboard } from "../../composables/useKeyboard";
 import type { EffectInfo } from "../../types/gameData";
 
 const store = useGameDataStore();
@@ -165,6 +166,8 @@ const store = useGameDataStore();
 const query = ref("");
 const results = ref<EffectInfo[]>([]);
 const selected = ref<EffectInfo | null>(null);
+const selectedIndex = ref(0);
+const listRef = ref<HTMLElement | null>(null);
 const iconSrc = ref<string | null>(null);
 const iconLoading = ref(false);
 const searching = ref(false);
@@ -188,6 +191,21 @@ async function doSearch(q: string) {
     searching.value = false;
   }
 }
+
+watch(results, () => {
+  selectedIndex.value = 0;
+});
+
+useKeyboard({
+  listNavigation: {
+    items: results,
+    selectedIndex,
+    onConfirm: (index: number) => {
+      if (results.value[index]) selectEffect(results.value[index]);
+    },
+    scrollContainerRef: listRef,
+  },
+});
 
 async function selectEffect(effect: EffectInfo) {
   selected.value = effect;

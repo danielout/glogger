@@ -117,13 +117,13 @@ async function finish() {
   // Save character to database
   await startupStore.saveCharacter(charName, serverName, source);
 
-  // Set as active
-  await startupStore.selectCharacter(charName, serverName);
+  // Set as active character in backend + settings (but don't run startup tasks yet)
+  await startupStore.setActiveCharacter(charName, serverName);
 
   // Save auto-load preference
   await settingsStore.updateSettings({ autoLoadLastCharacter: autoLoadLast.value });
 
-  // Complete setup (this transitions to loading phase)
+  // Complete setup — this triggers the full startup task sequence
   await startupStore.completeSetup();
 }
 </script>

@@ -9,41 +9,49 @@ mod cdn_commands;
 mod db;
 mod settings;
 mod chat_parser;
+mod chat_status_parser;
 mod chat_commands;
 mod log_watchers;
 mod coordinator;
+mod game_state;
 mod setup_commands;
 mod watch_rules;
+mod replay;
 
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 use tokio::sync::RwLock;
 use tauri::{Emitter, Manager};
+use chrono::Local;
 
 use commands::parse_log;
+use replay::replay_dual_logs;
 use cdn_commands::{
     GameDataState,
     init_game_data,
     get_cache_status,
     force_refresh_cdn,
-    get_item,
-    get_item_by_name,
-    get_item_by_internal_name,
+    // Unified entity resolvers
+    resolve_item,
+    resolve_items_batch,
+    resolve_skill,
+    resolve_recipe,
+    resolve_quest,
+    resolve_npc,
+    resolve_area,
+    // Query/filter commands (not replaced by resolvers)
     search_items,
     get_items_by_keyword,
+    get_all_item_keywords,
     get_equip_slots,
     get_all_skills,
-    get_skill_by_name,
     get_abilities_for_skill,
-    get_recipe_by_name,
     get_recipes_for_item,
     get_recipes_using_item,
     search_recipes,
     get_recipes_for_skill,
-    get_items_batch,
     get_all_quests,
     search_quests,
-    get_quest_by_key,
-    get_quest_by_internal_name,
     get_all_npcs,
     search_npcs,
     get_npcs_in_area,
@@ -59,6 +67,7 @@ use cdn_commands::{
     resolve_effect_descs,
     get_tsys_power_info,
     get_storage_vault_zones,
+    get_storage_vault_metadata,
     get_xp_table_for_skill,
 };
 use db::player_commands::{
@@ -81,6 +90,7 @@ use db::player_commands_survey_events::{
     get_speed_bonus_stats,
     get_loot_breakdown,
     get_survey_type_metrics,
+    get_zone_analytics,
 };
 use db::admin_commands::{
     get_database_stats,
@@ -133,9 +143,33 @@ use db::crafting_commands::{
     reorder_project_entries,
     duplicate_crafting_project,
     check_material_availability,
-    get_latest_recipe_completions,
-    get_latest_skill_level,
     get_work_orders_from_snapshot,
+};
+use db::game_state_commands::{
+    get_game_state_skills,
+    get_game_state_attributes,
+    get_game_state_active_skills,
+    get_game_state_world,
+    get_game_state_inventory,
+    get_game_state_recipes,
+    get_game_state_equipment,
+    get_game_state_favor,
+    get_game_state_currencies,
+    get_game_state_effects,
+    get_game_state_storage,
+};
+use db::market_commands::{
+    get_market_values,
+    get_market_value,
+    set_market_value,
+    delete_market_value,
+    export_market_values,
+    import_market_values,
+};
+use db::aggregate_commands::{
+    get_aggregate_inventory,
+    get_aggregate_wealth,
+    get_aggregate_skills,
 };
 use settings::{
     SettingsManager,
@@ -150,9 +184,11 @@ use setup_commands::{
     save_user_character,
     get_user_characters,
     set_active_character,
+    delete_character,
     complete_setup,
     import_latest_report_for_character,
     import_latest_inventory_for_character,
+    import_reports_for_server,
 };
 use chat_commands::{
     scan_chat_logs,
@@ -177,6 +213,19 @@ use coordinator::{
     DataIngestCoordinator,
 };
 
+/// Timestamped log line for startup diagnostics.
+macro_rules! startup_log {
+    ($($arg:tt)*) => {
+        eprintln!("[{}] {}", Local::now().format("%H:%M:%S%.3f"), format!($($arg)*));
+    };
+}
+
+/// Frontend can push a message into the stderr startup log stream.
+#[tauri::command]
+fn log_startup(message: String) {
+    startup_log!("{}", message);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let game_data_state: GameDataState = Arc::new(RwLock::new(game_data::GameData::empty()));
@@ -189,6 +238,9 @@ pub fn run() {
             let app_handle = app.handle().clone();
             let state = game_data_state.clone();
 
+            let current_version = app.config().version.clone();
+            startup_log!("glogger v{} starting up", current_version.as_deref().unwrap_or("unknown"));
+
             // Step 1: Get app data directory
             let app_data_dir = app
                 .path()
@@ -200,34 +252,66 @@ pub fn run() {
                 SettingsManager::new(app_data_dir.clone())
                     .expect("Failed to initialize settings")
             );
+            startup_log!("Settings loaded");
 
-            // Step 3: Initialize database using settings
+            // Step 3: Nuke database on prototype version upgrade
             let db_path = settings_manager.get_db_path(&app_data_dir);
-            let db_pool = db::init_pool(db_path).expect("Failed to initialize database");
+            {
+                let stored_version = settings_manager.get().last_app_version;
+                let version_changed = match &stored_version {
+                    Some(v) => current_version.as_ref().map_or(true, |cv| cv != v),
+                    None => false, // First run, no nuke needed
+                };
+                if version_changed {
+                    startup_log!(
+                        "Prototype version changed ({} -> {}), deleting old database",
+                        stored_version.as_deref().unwrap_or("unknown"),
+                        current_version.as_deref().unwrap_or("unknown"),
+                    );
+                    // Delete main db file and WAL/SHM sidecars
+                    let _ = std::fs::remove_file(&db_path);
+                    let _ = std::fs::remove_file(db_path.with_extension("db-wal"));
+                    let _ = std::fs::remove_file(db_path.with_extension("db-shm"));
+                }
+                // Persist the current version so next launch knows
+                let mut updated = settings_manager.get();
+                updated.last_app_version = current_version.clone();
+                settings_manager.update(updated).expect("Failed to save version to settings");
+            }
 
-            // Step 4: Initialize DataIngestCoordinator
+            // Step 4: Initialize database (fresh if just nuked)
+            let db_pool = db::init_pool(db_path).expect("Failed to initialize database");
+            startup_log!("Database initialized");
+
+            // Step 5: Initialize DataIngestCoordinator
             let coordinator = Arc::new(Mutex::new(
                 DataIngestCoordinator::new(
                     db_pool.clone(),
                     settings_manager.clone(),
                     app_handle.clone(),
+                    state.clone(),
                 ).expect("Failed to initialize DataIngestCoordinator")
             ));
+            startup_log!("Coordinator initialized");
 
-            // Step 5: Register managed state
+            // Step 6: Register managed state
             app.manage(settings_manager.clone());
             app.manage(db_pool.clone());
             app.manage(coordinator.clone());
 
+            startup_log!("Splash screen displayed (frontend rendering)");
+
             // Kick off CDN init in the background — non-blocking.
             // The frontend should listen for a "game-data-ready" event
             // or poll get_cache_status() to know when data is available.
+            startup_log!("Starting game data load (background)");
             tauri::async_runtime::spawn(async move {
+                let t0 = Instant::now();
                 match init_game_data(&app_handle, &state).await {
                     Ok(()) => {
                         let data = state.read().await;
-                        eprintln!(
-                            "Game data ready: v{} — {} items, {} skills, {} recipes, {} npcs, {} effects, {} areas",
+                        startup_log!(
+                            "Game data ready: v{} — {} items, {} skills, {} recipes, {} npcs, {} effects, {} areas (took {:.1}s)",
                             data.version,
                             data.items.len(),
                             data.skills.len(),
@@ -235,15 +319,16 @@ pub fn run() {
                             data.npcs.len(),
                             data.effects.len(),
                             data.areas.len(),
+                            t0.elapsed().as_secs_f64(),
                         );
 
                         // Persist CDN data to database (in background, non-blocking)
                         if let Some(pool) = app_handle.try_state::<db::DbPool>() {
                             if let Ok(mut conn) = pool.get() {
                                 if let Err(e) = db::cdn_persistence::persist_cdn_data(&mut conn, &data) {
-                                    eprintln!("Failed to persist CDN data to database: {e}");
+                                    startup_log!("Failed to persist CDN data to database: {e}");
                                 } else {
-                                    eprintln!("CDN data persisted to database successfully");
+                                    startup_log!("CDN data persisted to database");
                                 }
                             }
                         }
@@ -252,7 +337,7 @@ pub fn run() {
                         app_handle.emit("game-data-ready", data.version).ok();
                     }
                     Err(e) => {
-                        eprintln!("Game data init failed: {e}");
+                        startup_log!("Game data init FAILED: {e}");
                         app_handle.emit("game-data-error", e).ok();
                     }
                 }
@@ -261,35 +346,39 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            // Startup diagnostics
+            log_startup,
             // Log parsing (manual upload)
             parse_log,
+            replay_dual_logs,
             // CDN management
             get_cache_status,
             force_refresh_cdn,
+            // Unified entity resolvers
+            resolve_item,
+            resolve_items_batch,
+            resolve_skill,
+            resolve_recipe,
+            resolve_quest,
+            resolve_npc,
+            resolve_area,
             // Item queries
-            get_item,
-            get_item_by_name,
-            get_item_by_internal_name,
             search_items,
             get_items_by_keyword,
+            get_all_item_keywords,
             get_equip_slots,
             // Skill queries
             get_all_skills,
-            get_skill_by_name,
             // Ability queries
             get_abilities_for_skill,
             // Recipe queries
-            get_recipe_by_name,
             get_recipes_for_item,
             get_recipes_using_item,
             search_recipes,
             get_recipes_for_skill,
-            get_items_batch,
             // Quest queries
             get_all_quests,
             search_quests,
-            get_quest_by_key,
-            get_quest_by_internal_name,
             // NPC queries
             get_all_npcs,
             search_npcs,
@@ -304,6 +393,7 @@ pub fn run() {
             search_player_titles,
             // Storage vault queries
             get_storage_vault_zones,
+            get_storage_vault_metadata,
             // Icons
             get_icon_path,
             // Source queries
@@ -331,6 +421,7 @@ pub fn run() {
             get_speed_bonus_stats,
             get_loot_breakdown,
             get_survey_type_metrics,
+            get_zone_analytics,
             // Player data - Event log
             log_event,
             get_recent_events,
@@ -349,9 +440,11 @@ pub fn run() {
             save_user_character,
             get_user_characters,
             set_active_character,
+            delete_character,
             complete_setup,
             import_latest_report_for_character,
             import_latest_inventory_for_character,
+            import_reports_for_server,
             // Chat
             scan_chat_logs,
             scan_chat_log_file,
@@ -411,12 +504,46 @@ pub fn run() {
             reorder_project_entries,
             duplicate_crafting_project,
             check_material_availability,
-            get_latest_recipe_completions,
-            get_latest_skill_level,
             get_work_orders_from_snapshot,
             // CDN - XP tables
             get_xp_table_for_skill,
+            // Game state queries
+            get_game_state_skills,
+            get_game_state_attributes,
+            get_game_state_active_skills,
+            get_game_state_world,
+            get_game_state_inventory,
+            get_game_state_recipes,
+            get_game_state_equipment,
+            get_game_state_favor,
+            get_game_state_currencies,
+            get_game_state_effects,
+            get_game_state_storage,
+            get_market_values,
+            get_market_value,
+            set_market_value,
+            delete_market_value,
+            export_market_values,
+            import_market_values,
+            get_aggregate_inventory,
+            get_aggregate_wealth,
+            get_aggregate_skills,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            if let tauri::RunEvent::Exit = event {
+                // Save watcher positions before the process dies
+                if let Some(coordinator) = app_handle.try_state::<Arc<Mutex<DataIngestCoordinator>>>() {
+                    let mut coord = coordinator.lock().unwrap();
+                    if let Err(e) = coord.stop_player_log_tailing() {
+                        startup_log!("[shutdown] Failed to save player log position: {e}");
+                    }
+                    if let Err(e) = coord.stop_chat_log_tailing() {
+                        startup_log!("[shutdown] Failed to save chat log position: {e}");
+                    }
+                    startup_log!("[shutdown] Watcher positions saved.");
+                }
+            }
+        });
 }

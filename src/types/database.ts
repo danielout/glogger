@@ -101,6 +101,7 @@ export interface HistoricalSession {
   end_time: string | null;
   maps_started: number;
   surveys_completed: number;
+  total_completions: number;
   total_revenue: number;
   total_cost: number;
   total_profit: number;

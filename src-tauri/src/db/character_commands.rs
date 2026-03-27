@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use tauri::State;
 use serde::{Deserialize, Serialize};
 use super::DbPool;
+use crate::cdn_commands::GameDataState;
+use crate::game_data::GameData;
 
 // ── JSON Deserialization Structs (match game's /outputcharacter format) ───────
 
@@ -122,15 +124,18 @@ pub struct SkillDiff {
 #[tauri::command]
 pub fn import_character_report(
     db: State<'_, DbPool>,
+    cdn: State<'_, GameDataState>,
     file_path: String,
 ) -> Result<ImportResult, String> {
-    import_character_report_internal(&db, &file_path)
+    let data = cdn.blocking_read();
+    import_character_report_internal(&db, &file_path, &data)
 }
 
 /// Internal import logic, callable without Tauri State wrapper
 pub fn import_character_report_internal(
     db: &DbPool,
     file_path: &str,
+    game_data: &GameData,
 ) -> Result<ImportResult, String> {
     // 1. Read file
     let raw_json = std::fs::read_to_string(file_path)
@@ -259,6 +264,9 @@ pub fn import_character_report_internal(
                 amount,
             ]).map_err(|e| format!("Failed to insert currency {currency_key}: {e}"))?;
         }
+
+        // 12. Seed game state from snapshot (timestamp deconfliction: only overwrite if newer)
+        seed_game_state_from_snapshot(&conn, &report, game_data)?;
 
         Ok(ImportResult {
             character_name: report.character.clone(),
@@ -534,4 +542,190 @@ pub fn compare_snapshots(
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Failed to read results: {e}"))
+}
+
+// ── Game State Seeding ──────────────────────────────────────────────────────
+
+/// Seed game state tables from a character snapshot.
+/// Uses timestamp deconfliction: only overwrites if snapshot is newer than existing data.
+fn seed_game_state_from_snapshot(
+    conn: &rusqlite::Connection,
+    report: &CharacterReport,
+    game_data: &GameData,
+) -> Result<(), String> {
+    let character = &report.character;
+    let server = &report.server_name;
+    let ts = &report.timestamp;
+
+    // Auto-create server record if not exists
+    conn.execute(
+        "INSERT INTO servers (server_name) VALUES (?1) ON CONFLICT DO NOTHING",
+        rusqlite::params![server],
+    ).ok();
+
+    // Seed skills — resolve internal names to canonical IDs + display names
+    let mut skill_stmt = conn.prepare(
+        "INSERT INTO game_state_skills (character_name, server_name, skill_id, skill_name, level, bonus_levels, xp, tnl, max_level, last_confirmed_at, source)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 0, ?9, 'snapshot')
+         ON CONFLICT(character_name, server_name, skill_id) DO UPDATE SET
+            skill_name = excluded.skill_name,
+            level = excluded.level,
+            bonus_levels = excluded.bonus_levels,
+            xp = excluded.xp,
+            tnl = excluded.tnl,
+            last_confirmed_at = excluded.last_confirmed_at,
+            source = excluded.source
+         WHERE excluded.last_confirmed_at > game_state_skills.last_confirmed_at"
+    ).map_err(|e| format!("Failed to prepare game state skill upsert: {e}"))?;
+
+    for (skill_name, skill_data) in &report.skills {
+        let (skill_id, display_name) = match game_data.resolve_skill(skill_name) {
+            Some(info) => (info.id as i64, info.name.clone()),
+            None => (0i64, skill_name.clone()),
+        };
+        skill_stmt.execute(rusqlite::params![
+            character,
+            server,
+            skill_id,
+            display_name,
+            skill_data.level,
+            skill_data.bonus_levels,
+            skill_data.xp_toward_next_level,
+            skill_data.xp_needed_for_next_level,
+            ts,
+        ]).ok();
+    }
+
+    // Seed recipes — snapshot uses string keys like "Recipe_12345", extract numeric ID
+    let mut recipe_stmt = conn.prepare(
+        "INSERT INTO game_state_recipes (character_name, server_name, recipe_id, completion_count, last_confirmed_at, source)
+         VALUES (?1, ?2, ?3, ?4, ?5, 'snapshot')
+         ON CONFLICT(character_name, server_name, recipe_id) DO UPDATE SET
+            completion_count = excluded.completion_count,
+            last_confirmed_at = excluded.last_confirmed_at,
+            source = excluded.source
+         WHERE excluded.last_confirmed_at > game_state_recipes.last_confirmed_at"
+    ).map_err(|e| format!("Failed to prepare game state recipe upsert: {e}"))?;
+
+    for (recipe_key, completions) in &report.recipe_completions {
+        // Snapshot keys are InternalName strings (e.g., "Butter", "OrcishFlour").
+        // Look up the numeric recipe ID from the CDN internal name index.
+        if let Some(&recipe_id) = game_data.recipe_internal_name_index.get(recipe_key) {
+            recipe_stmt.execute(rusqlite::params![
+                character,
+                server,
+                recipe_id as i64,
+                completions,
+                ts,
+            ]).ok();
+        }
+    }
+
+    // Seed NPC favor — snapshot provides tier names, reset cumulative_delta to 0
+    let mut favor_stmt = conn.prepare(
+        "INSERT INTO game_state_favor (character_name, server_name, npc_key, npc_name, favor_tier, cumulative_delta, last_confirmed_at, source)
+         VALUES (?1, ?2, ?3, ?4, ?5, 0, ?6, 'snapshot')
+         ON CONFLICT(character_name, server_name, npc_key) DO UPDATE SET
+            npc_name = excluded.npc_name,
+            favor_tier = excluded.favor_tier,
+            cumulative_delta = 0,
+            last_confirmed_at = excluded.last_confirmed_at,
+            source = 'snapshot'
+         WHERE excluded.last_confirmed_at > game_state_favor.last_confirmed_at"
+    ).map_err(|e| format!("Failed to prepare game state favor upsert: {e}"))?;
+
+    for (npc_key, favor_data) in &report.npcs {
+        let display_name = game_data.npcs.get(npc_key)
+            .map(|info| info.name.clone())
+            .unwrap_or_else(|| npc_key.clone());
+        favor_stmt.execute(rusqlite::params![
+            character,
+            server,
+            npc_key,
+            display_name,
+            favor_data.favor_level,
+            ts,
+        ]).ok();
+    }
+
+    // Seed currencies
+    let mut currency_stmt = conn.prepare(
+        "INSERT INTO game_state_currencies (character_name, server_name, currency_name, amount, last_confirmed_at, source)
+         VALUES (?1, ?2, ?3, ?4, ?5, 'snapshot')
+         ON CONFLICT(character_name, server_name, currency_name) DO UPDATE SET
+            amount = excluded.amount,
+            last_confirmed_at = excluded.last_confirmed_at,
+            source = excluded.source
+         WHERE excluded.last_confirmed_at > game_state_currencies.last_confirmed_at"
+    ).map_err(|e| format!("Failed to prepare game state currency upsert: {e}"))?;
+
+    for (currency_name, amount) in &report.currencies {
+        currency_stmt.execute(rusqlite::params![
+            character,
+            server,
+            currency_name,
+            *amount as f64,
+            ts,
+        ]).ok();
+    }
+
+    // Seed storage vault contents from the latest item snapshot
+    // Full replacement — snapshot is authoritative for storage state
+    conn.execute(
+        "DELETE FROM game_state_storage WHERE character_name = ?1 AND server_name = ?2",
+        rusqlite::params![character, server],
+    ).ok();
+
+    // Find the latest item snapshot for this character+server
+    let latest_snapshot_id: Option<i64> = conn.query_row(
+        "SELECT cis.id FROM character_item_snapshots cis
+         WHERE cis.character_name = ?1 AND cis.server_name = ?2
+         ORDER BY cis.snapshot_timestamp DESC LIMIT 1",
+        rusqlite::params![character, server],
+        |row| row.get(0),
+    ).ok();
+
+    if let Some(snapshot_id) = latest_snapshot_id {
+        let mut storage_query = conn.prepare(
+            "SELECT storage_vault, type_id, item_name, stack_size
+             FROM character_snapshot_items
+             WHERE item_snapshot_id = ?1 AND storage_vault != '' AND is_in_inventory = 0"
+        ).map_err(|e| format!("Failed to prepare storage query: {e}"))?;
+
+        let mut storage_insert = conn.prepare(
+            "INSERT INTO game_state_storage (character_name, server_name, vault_key, instance_id, item_name, item_type_id, stack_size, last_confirmed_at, source)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'snapshot')"
+        ).map_err(|e| format!("Failed to prepare storage insert: {e}"))?;
+
+        // Snapshot items don't have real instance IDs, so generate synthetic ones per vault
+        let rows: Vec<(String, i64, String, i64)> = storage_query.query_map(
+            rusqlite::params![snapshot_id],
+            |row| Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, i64>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, i64>(3)?,
+            ))
+        ).map_err(|e| format!("Failed to query storage items: {e}"))?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        for (i, (vault_key, type_id, item_name, stack_size)) in rows.iter().enumerate() {
+            // Use negative synthetic instance IDs to avoid collision with real ones
+            let synthetic_id = -(i as i64 + 1);
+            storage_insert.execute(rusqlite::params![
+                character,
+                server,
+                vault_key,
+                synthetic_id,
+                item_name,
+                type_id,
+                stack_size,
+                ts,
+            ]).ok();
+        }
+    }
+
+    eprintln!("[game_state] Seeded game state from snapshot for {character} on {server} at {ts}");
+    Ok(())
 }

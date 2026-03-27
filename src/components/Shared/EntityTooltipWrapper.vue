@@ -9,9 +9,11 @@
     <Teleport to="body">
       <div
         v-if="showTooltip && !disabled"
-        class="fixed z-[9999] min-w-62 max-w-87 bg-[#1a1a2e] border rounded-md p-3 shadow-lg pointer-events-none"
-        :class="borderClass"
+        class="fixed z-[9999] min-w-62 max-w-87 bg-[#1a1a2e] border rounded-md p-3 shadow-lg"
+        :class="[borderClass, interactive ? '' : 'pointer-events-none']"
         :style="tooltipStyle"
+        @mouseenter="onTooltipMouseEnter"
+        @mouseleave="onTooltipMouseLeave"
       >
         <slot name="tooltip" />
       </div>
@@ -27,6 +29,7 @@ const props = defineProps<{
   delay?: number;
   disabled?: boolean;
   borderClass?: string;
+  interactive?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -36,8 +39,15 @@ const emit = defineEmits<{
 const anchorEl = ref<HTMLElement | null>(null);
 const anchorRect = ref<DOMRect | null>(null);
 
-const { showTooltip, onMouseEnter: baseMouseEnter, onMouseLeave } = useTooltip({
+const {
+  showTooltip,
+  onMouseEnter: baseMouseEnter,
+  onMouseLeave,
+  onTooltipMouseEnter,
+  onTooltipMouseLeave,
+} = useTooltip({
   delay: props.delay,
+  interactive: props.interactive,
   onHover: () => emit("hover"),
 });
 

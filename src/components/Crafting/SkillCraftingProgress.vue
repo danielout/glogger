@@ -13,7 +13,7 @@
         v-for="skill in stats"
         :key="skill.skill_name"
         class="bg-surface-base border border-surface-elevated rounded px-3 py-2 flex items-center gap-3 text-xs">
-        <SkillInline :name="skill.skill_name" :show-icon="true" class="w-32 shrink-0" />
+        <SkillInline :reference="skill.skill_name" :show-icon="true" class="w-32 shrink-0" />
 
         <!-- Progress bar -->
         <div class="flex-1 flex items-center gap-2">

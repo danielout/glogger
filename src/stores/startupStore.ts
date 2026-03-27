@@ -1,7 +1,16 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useSettingsStore } from "./settingsStore";
+import { useGameDataStore } from "./gameDataStore";
+import { useGameStateStore } from "./gameStateStore";
+import { useCharacterStore } from "./characterStore";
+import { useCoordinatorStore } from "./coordinatorStore";
+import { useMarketStore } from "./marketStore";
+import { useSurveyStore } from "./surveyStore";
+import { useFarmingStore } from "./farmingStore";
+import type { PlayerEvent } from "../types/playerEvents";
 
 export type StartupPhase =
   | "splash"
@@ -53,6 +62,11 @@ export const useStartupStore = defineStore("startup", () => {
 
   const isSetupWizard = computed(() => phase.value.startsWith("setup-"));
 
+  /** Fire-and-forget startup log to the backend */
+  function log(message: string) {
+    invoke("log_startup", { message });
+  }
+
   const setupStepIndex = computed(() => {
     switch (phase.value) {
       case "setup-path": return 0;
@@ -79,14 +93,14 @@ export const useStartupStore = defineStore("startup", () => {
     const settings = settingsStore.settings;
 
     if (!settings.setupCompleted || !settings.gameDataPath) {
-      // First-time setup
+      log("First-time setup — entering setup wizard");
       phase.value = "setup-path";
     } else if (settings.autoLoadLastCharacter && settings.activeCharacterName) {
-      // Auto-load last character
+      log(`Auto-loading character: ${settings.activeCharacterName} on ${settings.activeServerName}`);
       phase.value = "loading";
       await runStartupTasks();
     } else {
-      // Show character selection
+      log("Showing character selection");
       await loadUserCharacters();
       phase.value = "select-character";
     }
@@ -127,18 +141,27 @@ export const useStartupStore = defineStore("startup", () => {
     });
   }
 
-  async function selectCharacter(characterName: string, serverName: string) {
+  /** Set active character in backend + settings without running startup tasks.
+   *  Used by the setup wizard where completeSetup() triggers startup separately. */
+  async function setActiveCharacter(characterName: string, serverName: string) {
+    log(`Character selected: ${characterName} on ${serverName}`);
     await invoke("set_active_character", { characterName, serverName });
 
     const settingsStore = useSettingsStore();
     settingsStore.settings.activeCharacterName = characterName;
     settingsStore.settings.activeServerName = serverName;
+  }
 
+  /** Set active character and immediately run the full startup sequence.
+   *  Used by CharacterSelect (non-wizard flow). */
+  async function selectCharacter(characterName: string, serverName: string) {
+    await setActiveCharacter(characterName, serverName);
     phase.value = "loading";
     await runStartupTasks();
   }
 
   async function completeSetup() {
+    log("Setup wizard completed");
     await invoke("complete_setup");
 
     const settingsStore = useSettingsStore();
@@ -148,25 +171,156 @@ export const useStartupStore = defineStore("startup", () => {
     await runStartupTasks();
   }
 
+  // ── Helpers for task progress ─────────────────────────────────────────
+
+  function updateTask(index: number, status: StartupTask["status"], detail?: string) {
+    if (startupTasks.value[index]) {
+      startupTasks.value[index].status = status;
+      if (detail !== undefined) startupTasks.value[index].detail = detail;
+    }
+  }
+
+  // ── Main startup sequence ─────────────────────────────────────────────
+
   async function runStartupTasks() {
+    const TASK_GAME_DATA = 0;
+    const TASK_CHARACTER = 1;
+    const TASK_GAME_STATE = 2;
+    const TASK_LOG_WATCHERS = 3;
+
     startupTasks.value = [
-      { label: "Initializing application", status: "running" },
-      { label: "Checking game data", status: "pending" },
+      { label: "Loading game data", status: "running" },
+      { label: "Loading character data", status: "pending" },
+      { label: "Preparing game state", status: "pending" },
+      { label: "Starting log watchers", status: "pending" },
     ];
 
-    // Brief pause so the user sees the loading screen
-    await new Promise((r) => setTimeout(r, 300));
+    const settingsStore = useSettingsStore();
+    const gameData = useGameDataStore();
+    const gameState = useGameStateStore();
+    const characterStore = useCharacterStore();
+    const coordinator = useCoordinatorStore();
+    const marketStore = useMarketStore();
+    const surveyStore = useSurveyStore();
+    const farmingStore = useFarmingStore();
 
-    startupTasks.value[0].status = "done";
-    startupTasks.value[1].status = "running";
+    // ── Task 1: Wait for game data (CDN) ────────────────────────────────
+    // The Rust backend is already loading this in a background task spawned
+    // during setup(). We just need to wait for the event.
+    try {
+      if (gameData.status !== "ready") {
+        await new Promise<void>((resolve, reject) => {
+          const unwatch = watch(
+            () => gameData.status,
+            (s) => {
+              if (s === "ready") { unwatch(); resolve(); }
+              if (s === "error") { unwatch(); reject(new Error(gameData.errorMessage || "Failed to load game data")); }
+            },
+            { immediate: true }
+          );
+        });
+      }
+      log("Game data ready");
+      updateTask(TASK_GAME_DATA, "done");
+    } catch (e) {
+      log(`Game data FAILED: ${e}`);
+      updateTask(TASK_GAME_DATA, "error", String(e));
+      error.value = `Game data failed to load: ${e}`;
+      // Game data is critical — can't proceed without it
+      return;
+    }
 
-    // CDN loads in the background (non-blocking), just mark as done
-    startupTasks.value[1].status = "done";
+    // ── Task 2: Load character data from reports ────────────────────────
+    log("Loading character data from reports");
+    updateTask(TASK_CHARACTER, "running");
+    try {
+      // Auto-import latest character + inventory reports and seed game state
+      await characterStore.initForActiveCharacter();
+      log("Character data loaded");
+      updateTask(TASK_CHARACTER, "done");
+    } catch (e) {
+      // Non-fatal — character data from reports is supplementary
+      log(`Character data partial: ${e}`);
+      console.warn("Character init had errors:", e);
+      updateTask(TASK_CHARACTER, "done", "Partial — no reports found");
+    }
 
+    // ── Task 3: Load full game state from DB ────────────────────────────
+    log("Loading game state from database");
+    updateTask(TASK_GAME_STATE, "running");
+    try {
+      // Load all game state domains (skills, inventory, favor, recipes, etc.)
+      await gameState.loadAll();
+      // Also load storage vault CDN metadata
+      await gameState.loadStorageVaults();
+      // Load market values
+      await marketStore.loadAll();
+      log("Game state ready");
+      updateTask(TASK_GAME_STATE, "done");
+    } catch (e) {
+      log(`Game state load error: ${e}`);
+      console.error("Game state load error:", e);
+      updateTask(TASK_GAME_STATE, "error", String(e));
+      // Continue anyway — some state is better than no state
+    }
+
+    // ── Task 4: Start log watchers and event listeners ──────────────────
+    log("Starting log watchers");
+    updateTask(TASK_LOG_WATCHERS, "running");
+    try {
+      // Register event listeners BEFORE starting watchers so no events are missed
+      await listen("skill-update", (event: any) => {
+        gameState.handleSkillUpdate(event.payload);
+        surveyStore.handleSkillUpdate(event.payload);
+        farmingStore.handleSkillUpdate(event.payload);
+      });
+      await listen("survey-event", (event: any) => {
+        surveyStore.handleSurveyEvent(event.payload);
+      });
+      await listen<number>("survey-session-ended", (event) => {
+        surveyStore.handleSessionEnded(event.payload);
+      });
+      await listen("survey-loot-correction", (event: any) => {
+        surveyStore.handleLootCorrection(event.payload);
+      });
+      await listen<PlayerEvent>("player-event", (event) => {
+        farmingStore.handlePlayerEvent(event.payload);
+      });
+
+      // Start coordinator polling
+      coordinator.startPolling(1500);
+
+      // Start log watchers if enabled
+      if (settingsStore.settings.autoTailPlayerLog && settingsStore.settings.gameDataPath) {
+        await coordinator.startPlayerTailing();
+      }
+      if (settingsStore.settings.autoTailChat && settingsStore.settings.gameDataPath) {
+        await coordinator.startChatTailing();
+      }
+
+      // Start report folder watching
+      characterStore.startReportWatching();
+
+      updateTask(TASK_LOG_WATCHERS, "done");
+    } catch (e) {
+      console.warn("Log watcher startup error:", e);
+      updateTask(TASK_LOG_WATCHERS, "done", "Some watchers failed to start");
+    }
+
+    // ── All critical tasks complete — app is ready ──────────────────────
+    log("App is interactive");
     phase.value = "ready";
   }
 
   function goToPhase(newPhase: StartupPhase) {
+    if (newPhase.startsWith("setup-")) {
+      const stepNames: Record<string, string> = {
+        "setup-path": "Game folder",
+        "setup-watchers": "Log watchers",
+        "setup-character": "Character selection",
+      };
+      log(`Setup wizard step: ${stepNames[newPhase] || newPhase}`);
+    }
     phase.value = newPhase;
   }
 
@@ -185,6 +339,7 @@ export const useStartupStore = defineStore("startup", () => {
     scanForCharacters,
     loadUserCharacters,
     saveCharacter,
+    setActiveCharacter,
     selectCharacter,
     completeSetup,
     runStartupTasks,

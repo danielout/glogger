@@ -39,8 +39,6 @@ pub fn parse(json: &str) -> Result<HashMap<u32, SkillInfo>, String> {
         format!("skills.json: parse error at line {}, col {}: {e}", e.line(), e.column())
     })?;
 
-    eprintln!("skills.json: Parsed {} raw skills", raw.len());
-
     let mut skills = HashMap::with_capacity(raw.len());
     let mut skipped = 0;
 
@@ -79,7 +77,6 @@ pub fn parse(json: &str) -> Result<HashMap<u32, SkillInfo>, String> {
     if skipped > 0 {
         eprintln!("skills.json: Warning: skipped {skipped} entries without valid Id");
     }
-    eprintln!("skills.json: Created {} SkillInfo entries", skills.len());
     Ok(skills)
 }
 

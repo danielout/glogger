@@ -13,7 +13,7 @@
 
     <!-- Food name -->
     <div class="flex items-center gap-1.5 min-w-0 flex-1">
-      <ItemInline :name="entry.food.name" />
+      <ItemInline :reference="entry.food.name" />
     </div>
 
     <!-- Food category badge -->
@@ -46,13 +46,22 @@
     <div class="flex items-center gap-1 shrink-0">
       <SkillInline
         v-if="entry.recipe.skill"
-        :name="entry.recipe.skill"
+        :reference="entry.recipe.skill"
         :show-icon="true"
         class="text-[0.65rem]" />
       <span class="text-text-muted text-[0.65rem]">
         {{ entry.recipe.skill_level_req ?? '?' }}
       </span>
     </div>
+
+    <!-- Owned count -->
+    <span
+      v-if="ownedCount > 0"
+      class="text-green-400/70 shrink-0 text-[0.65rem] w-14 text-right"
+      title="Already in inventory/storage">
+      have {{ ownedCount }}
+    </span>
+    <span v-else class="shrink-0 w-14" />
 
     <!-- Material status -->
     <div class="shrink-0 w-5 text-center">
@@ -82,7 +91,7 @@
 import { computed } from 'vue'
 import ItemInline from '../Shared/Item/ItemInline.vue'
 import SkillInline from '../Shared/Skill/SkillInline.vue'
-import type { HelpfulRecipe } from '../../stores/cooksHelperStore'
+import { useCooksHelperStore, type HelpfulRecipe } from '../../stores/cooksHelperStore'
 import type { MaterialNeed } from '../../types/crafting'
 
 const props = defineProps<{
@@ -94,6 +103,9 @@ const props = defineProps<{
 defineEmits<{
   toggle: [recipeId: number]
 }>()
+
+const cooksHelper = useCooksHelperStore()
+const ownedCount = computed(() => cooksHelper.ownedCount(props.entry.food.name))
 
 const materialStatus = computed<'ready' | 'partial' | 'unknown'>(() => {
   if (!props.materialNeeds) return 'unknown'

@@ -1,9 +1,7 @@
 <template>
-  <div class="shrink-0 overflow-y-auto border border-surface-elevated rounded p-4 flex flex-col gap-4">
+  <div class="flex-1 min-w-0 overflow-y-auto border border-surface-elevated rounded p-4 flex flex-col gap-3">
     <template v-if="!activeProject">
-      <div class="text-text-dim text-xs italic text-center py-8">
-        Select a project to see materials
-      </div>
+      <EmptyState variant="compact" primary="No project selected" secondary="Select a project to see materials." />
     </template>
 
     <template v-else>
@@ -18,13 +16,20 @@
       </div>
 
       <!-- Intermediate crafts -->
-      <IntermediateCraftsList :intermediates="intermediates" />
+      <AccordionSection v-if="intermediates.length > 0">
+        <template #title>Intermediate Crafts</template>
+        <template #badge>
+          <span class="text-text-muted text-[0.65rem]">{{ intermediates.length }}</span>
+        </template>
+        <IntermediateCraftsList :intermediates="intermediates" :bare="true" />
+      </AccordionSection>
 
       <!-- Materials table -->
-      <div v-if="materials.size > 0">
-        <h4 class="text-text-secondary text-xs font-semibold uppercase tracking-wide mb-2">
-          Total Materials Needed
-        </h4>
+      <AccordionSection v-if="materials.size > 0">
+        <template #title>Total Materials Needed</template>
+        <template #badge>
+          <span class="text-text-muted text-[0.65rem]">{{ materials.size }} items</span>
+        </template>
         <table class="w-full text-xs">
           <thead>
             <tr class="text-text-dim border-b border-border-light">
@@ -42,7 +47,7 @@
                   <span class="text-accent-gold/60 text-[0.65rem] mr-1">&#9670;</span>
                   <span class="text-text-secondary">{{ mat.item_name }}</span>
                 </template>
-                <ItemInline v-else-if="mat.item_id !== null" :name="mat.item_name" />
+                <ItemInline v-else-if="mat.item_id !== null" :reference="mat.item_name" />
                 <span v-else class="text-text-muted italic">{{ mat.item_name }}</span>
               </td>
               <td class="text-right py-1 text-text-primary font-mono whitespace-nowrap">
@@ -65,16 +70,48 @@
           @click="$emit('check-availability')">
           {{ checkingAvailability ? 'Checking...' : 'Check Inventory' }}
         </button>
-      </div>
+      </AccordionSection>
 
       <!-- Material availability breakdown -->
-      <MaterialSummary v-if="materialNeeds.length > 0" :needs="materialNeeds" />
+      <AccordionSection v-if="materialNeeds.length > 0">
+        <template #title>Material Availability</template>
+        <template #badge>
+          <div class="flex gap-3 text-[0.65rem] text-text-muted">
+            <span><span class="text-green-400">{{ coveredCount }}</span> covered</span>
+            <span><span class="text-yellow-400">{{ partialCount }}</span> partial</span>
+            <span><span class="text-accent-red">{{ missingCount }}</span> missing</span>
+          </div>
+        </template>
+        <MaterialSummary :needs="materialNeeds" :bare="true" />
+      </AccordionSection>
 
       <!-- Pickup list -->
-      <PickupList v-if="materialNeeds.length > 0" :needs="materialNeeds" />
+      <AccordionSection v-if="materialNeeds.length > 0 && hasPickupItems">
+        <template #title>Pickup List</template>
+        <template #badge>
+          <span class="text-text-muted text-[0.65rem]">{{ pickupAreaCount }} area{{ pickupAreaCount !== 1 ? 's' : '' }}</span>
+        </template>
+        <PickupList :needs="materialNeeds" :bare="true" />
+      </AccordionSection>
 
-      <!-- Shopping list -->
-      <ShoppingList v-if="materialNeeds.length > 0" :needs="materialNeeds" />
+      <!-- Shopping / gathering list -->
+      <AccordionSection v-if="materialNeeds.length > 0 && hasShortfalls">
+        <template #title>Shopping / Gathering List</template>
+        <template #badge>
+          <span v-if="vendorCost > 0" class="text-text-muted text-[0.65rem]">
+            Est. cost: <span class="text-accent-red font-semibold">{{ vendorCost.toLocaleString() }}g</span>
+          </span>
+        </template>
+        <ShoppingList :needs="materialNeeds" :bare="true" />
+      </AccordionSection>
+
+      <!-- Export button -->
+      <button
+        v-if="materialNeeds.length > 0 && activeProject"
+        class="btn-secondary text-xs py-1.5 w-full"
+        @click="craftingStore.exportMaterialList(activeProject.name, materialNeeds)">
+        Export Material List
+      </button>
 
       <!-- Start tracking button -->
       <div v-if="activeProject.entries.length > 0 && materials.size > 0">
@@ -96,6 +133,8 @@
 import { computed } from "vue";
 import { useCraftingStore } from "../../stores/craftingStore";
 import type { CraftingProject, FlattenedMaterial, IntermediateCraft, MaterialNeed } from "../../types/crafting";
+import EmptyState from "../Shared/EmptyState.vue";
+import AccordionSection from "../Shared/AccordionSection.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 import MaterialSummary from "./MaterialSummary.vue";
 import PickupList from "./PickupList.vue";
@@ -123,9 +162,41 @@ const tracker = computed(() => craftingStore.tracker);
 const sortedMaterials = computed(() => {
   return Array.from(props.materials.values())
     .sort((a, b) => {
-      // Dynamic ingredients last
       if (a.is_dynamic !== b.is_dynamic) return a.is_dynamic ? 1 : -1;
       return a.item_name.localeCompare(b.item_name);
     });
 });
+
+const coveredCount = computed(() => props.materialNeeds.filter((m) => m.shortfall === 0).length);
+const partialCount = computed(() =>
+  props.materialNeeds.filter((m) => m.shortfall > 0 && (m.inventory_have > 0 || m.storage_have > 0)).length
+);
+const missingCount = computed(() =>
+  props.materialNeeds.filter((m) => m.shortfall > 0 && m.inventory_have === 0 && m.storage_have === 0).length
+);
+
+const hasPickupItems = computed(() =>
+  props.materialNeeds.some((m) => m.storage_have > 0)
+);
+
+const pickupAreaCount = computed(() => {
+  const areas = new Set<string>();
+  for (const mat of props.materialNeeds) {
+    if (mat.storage_have === 0) continue;
+    for (const vs of mat.vault_breakdown) {
+      if (vs.quantity > 0) areas.add(vs.vault_name);
+    }
+  }
+  return areas.size;
+});
+
+const hasShortfalls = computed(() =>
+  props.materialNeeds.some((m) => m.shortfall > 0)
+);
+
+const vendorCost = computed(() =>
+  props.materialNeeds
+    .filter((m) => m.shortfall > 0 && m.vendor_price)
+    .reduce((sum, m) => sum + (m.vendor_price! * m.shortfall), 0)
+);
 </script>

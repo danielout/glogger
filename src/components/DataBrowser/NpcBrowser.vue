@@ -1,5 +1,5 @@
 <template>
-  <div class="h-[calc(100vh-130px)] flex flex-col">
+  <div class="h-full flex flex-col">
     <!-- Status banner if data not ready -->
     <div v-if="store.status !== 'ready'" class="p-4 text-sm">
       <span v-if="store.status === 'loading'" class="text-accent-gold"
@@ -44,12 +44,15 @@
           No NPCs found
         </div>
 
-        <ul v-else class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated">
+        <ul v-else ref="listRef" class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated">
           <li
-            v-for="npc in filteredNpcs"
+            v-for="(npc, idx) in filteredNpcs"
             :key="npc.key"
             class="flex flex-col gap-0.5 px-2 py-1.5 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
-            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.key === npc.key }"
+            :class="{
+              'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.key === npc.key,
+              'bg-surface-elevated': selectedIndex === idx && selected?.key !== npc.key,
+            }"
             @click="selectNpc(npc)">
             <span class="text-text-primary/75 flex-1">{{ npc.name }}</span>
             <span v-if="npc.area_friendly_name" class="text-text-dim text-[0.72rem]">{{
@@ -154,41 +157,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from "vue";
+import { ref, watch, computed } from "vue";
 import { useGameDataStore } from "../../stores/gameDataStore";
+import { useKeyboard } from "../../composables/useKeyboard";
+import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { NpcInfo } from "../../types/gameData";
+
+const props = defineProps<{
+  navTarget?: EntityNavigationTarget | null;
+}>();
 
 const store = useGameDataStore();
 
 const query = ref("");
 const selectedArea = ref<string>("All Areas");
-const allNpcs = ref<NpcInfo[]>([]);
-const filteredNpcs = ref<NpcInfo[]>([]);
 const selected = ref<NpcInfo | null>(null);
-const loading = ref(false);
+const selectedIndex = ref(0);
+const listRef = ref<HTMLElement | null>(null);
 
-onMounted(async () => {
-  if (store.status === "ready") {
-    await loadAllNpcs();
-  }
-});
-
-watch(() => store.status, async (newStatus) => {
-  if (newStatus === "ready") {
-    await loadAllNpcs();
-  }
-});
-
-async function loadAllNpcs() {
-  loading.value = true;
-  try {
-    const npcs = await store.getAllNpcs();
-    allNpcs.value = npcs.sort((a, b) => a.name.localeCompare(b.name));
-    filteredNpcs.value = allNpcs.value;
-  } finally {
-    loading.value = false;
-  }
-}
+const allNpcs = computed(() =>
+  Object.values(store.npcsByKey).sort((a, b) => a.name.localeCompare(b.name))
+);
+const loading = computed(() => allNpcs.value.length === 0 && store.status === 'loading');
+const filteredNpcs = ref<NpcInfo[]>([]);
 
 // Get unique areas for the filter dropdown
 const availableAreas = computed(() => {
@@ -201,8 +192,8 @@ const availableAreas = computed(() => {
   return Array.from(areas).sort();
 });
 
-// Filter NPCs based on search query and area
-watch([query, selectedArea], () => {
+// Filter NPCs based on search query, area, and when data loads
+watch([query, selectedArea, allNpcs], () => {
   let results = allNpcs.value;
 
   // Filter by area
@@ -220,7 +211,8 @@ watch([query, selectedArea], () => {
   }
 
   filteredNpcs.value = results;
-});
+  selectedIndex.value = 0;
+}, { immediate: true });
 
 async function selectNpc(npc: NpcInfo) {
   selected.value = npc;
@@ -229,4 +221,26 @@ async function selectNpc(npc: NpcInfo) {
 function clearSelection() {
   selected.value = null;
 }
+
+useKeyboard({
+  listNavigation: {
+    items: filteredNpcs,
+    selectedIndex,
+    onConfirm: (index: number) => selectNpc(filteredNpcs.value[index]),
+    scrollContainerRef: listRef,
+  },
+});
+
+// Navigate to a specific NPC when navTarget changes
+watch(() => props.navTarget, (target) => {
+  if (!target || target.type !== 'npc') return;
+  const key = String(target.id);
+  if (selected.value?.key === key) return;
+
+  const match = store.resolveNpcSync(key);
+  if (match) {
+    query.value = match.name;
+    selectNpc(match);
+  }
+}, { immediate: true });
 </script>

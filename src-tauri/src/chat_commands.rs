@@ -54,7 +54,6 @@ pub async fn scan_chat_logs(
         let (messages, new_position) = chat_parser::read_chat_log(
             &log_file.file_path,
             start_position,
-            &excluded_channels,
         ).map_err(|e| format!("Failed to read chat log: {e}"))?;
 
         if !messages.is_empty() {
@@ -127,7 +126,6 @@ pub async fn scan_chat_log_file(
     let (messages, new_position) = chat_parser::read_chat_log(
         &log_path,
         start_position,
-        &excluded_channels,
     ).map_err(|e| format!("Failed to read chat log: {e}"))?;
 
     let mut messages_imported = 0;
@@ -245,7 +243,6 @@ pub async fn tail_chat_log(
     let (messages, new_position) = chat_parser::read_chat_log(
         &log_path,
         start_position,
-        &excluded_channels,
     ).map_err(|e| format!("Failed to read chat log: {e}"))?;
 
     if messages.is_empty() {

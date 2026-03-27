@@ -277,7 +277,7 @@ pub fn get_speed_bonus_stats(
                 COUNT(*) as total,
                 SUM(CASE WHEN speed_bonus_earned = 1 THEN 1 ELSE 0 END) as bonus_count
              FROM survey_events
-             WHERE event_type = 'completed' AND session_id = ?1",
+             WHERE event_type IN ('completed', 'motherlode_completed') AND session_id = ?1",
             [sid],
             |row| Ok((row.get(0)?, row.get(1)?))
         )
@@ -287,7 +287,7 @@ pub fn get_speed_bonus_stats(
                 COUNT(*) as total,
                 SUM(CASE WHEN speed_bonus_earned = 1 THEN 1 ELSE 0 END) as bonus_count
              FROM survey_events
-             WHERE event_type = 'completed'",
+             WHERE event_type IN ('completed', 'motherlode_completed')",
             [],
             |row| Ok((row.get(0)?, row.get(1)?))
         )
@@ -458,7 +458,7 @@ pub fn get_survey_type_metrics(
                 COUNT(*) as total_completed,
                 SUM(CASE WHEN se.speed_bonus_earned = 1 THEN 1 ELSE 0 END) as speed_bonus_count
          FROM survey_events se
-         WHERE se.event_type = 'completed' AND se.survey_type IS NOT NULL {session_filter}
+         WHERE se.event_type IN ('completed', 'motherlode_completed') AND se.survey_type IS NOT NULL {session_filter}
          GROUP BY se.survey_type
          ORDER BY total_completed DESC"
     );
@@ -487,7 +487,7 @@ pub fn get_survey_type_metrics(
                 COALESCE(SUM(CASE WHEN sli.is_speed_bonus = 1 THEN sli.quantity ELSE 0 END), 0) as total_bonus_items
          FROM survey_events se
          JOIN survey_loot_items sli ON sli.event_id = se.id
-         WHERE se.event_type = 'completed' AND se.survey_type IS NOT NULL {session_filter}
+         WHERE se.event_type IN ('completed', 'motherlode_completed') AND se.survey_type IS NOT NULL {session_filter}
          GROUP BY se.survey_type"
     );
     let mut loot_stmt = conn.prepare(&loot_query)
@@ -531,6 +531,340 @@ pub fn get_survey_type_metrics(
             total_items,
             total_bonus_items,
             avg_items_per_survey,
+        });
+    }
+
+    Ok(results)
+}
+
+// ── Zone-Based Analytics ─────────────────────────────────────────────────────
+
+#[derive(Serialize)]
+pub struct SpeedBonusItemStats {
+    pub item_name: String,
+    pub total_quantity: i64,
+    pub times_seen: i64,
+    pub total_procs: i64,
+    pub min_per_proc: i64,
+    pub max_per_proc: i64,
+    pub avg_per_proc: f64,
+}
+
+#[derive(Serialize)]
+pub struct CategorySpeedBonusStats {
+    pub category: String,
+    pub total_surveys: i64,
+    pub speed_bonus_count: i64,
+    pub speed_bonus_rate: f64,
+    pub avg_bonus_value: f64,
+    pub item_stats: Vec<SpeedBonusItemStats>,
+}
+
+#[derive(Serialize)]
+pub struct SurveyItemStats {
+    pub item_name: String,
+    pub total_quantity: i64,
+    pub times_seen: i64,
+    pub min_per_completion: i64,
+    pub max_per_completion: i64,
+    pub avg_per_completion: f64,
+}
+
+#[derive(Serialize)]
+pub struct SurveyTypeAnalytics {
+    pub survey_type: String,
+    pub category: String,
+    pub crafting_cost: f64,
+    pub total_completed: i64,
+    pub item_stats: Vec<SurveyItemStats>,
+}
+
+#[derive(Serialize)]
+pub struct ZoneAnalytics {
+    pub zone: String,
+    pub speed_bonus_stats: Vec<CategorySpeedBonusStats>,
+    pub survey_type_stats: Vec<SurveyTypeAnalytics>,
+}
+
+#[tauri::command]
+pub fn get_zone_analytics(
+    db: State<'_, DbPool>,
+) -> Result<Vec<ZoneAnalytics>, String> {
+    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+
+    // ── 1. Per-zone+category event-level stats ───────────────────────────────
+    let mut zone_cat_stats: std::collections::HashMap<(String, String), (i64, i64)> =
+        std::collections::HashMap::new();
+    {
+        let mut stmt = conn.prepare(
+            "SELECT st.zone, st.survey_category,
+                    COUNT(*) as total_completed,
+                    SUM(CASE WHEN se.speed_bonus_earned = 1 THEN 1 ELSE 0 END) as bonus_count
+             FROM survey_events se
+             JOIN survey_types st ON se.survey_type = st.name COLLATE NOCASE
+             WHERE se.event_type IN ('completed', 'motherlode_completed') AND st.zone IS NOT NULL
+             GROUP BY st.zone, st.survey_category"
+        ).map_err(|e| format!("Failed to prepare zone stats query: {e}"))?;
+
+        let rows = stmt.query_map([], |row| {
+            let zone: String = row.get(0)?;
+            let cat: String = row.get(1)?;
+            let total: i64 = row.get(2)?;
+            let bonus: i64 = row.get(3)?;
+            Ok((zone, cat, total, bonus))
+        }).map_err(|e| format!("Zone stats query failed: {e}"))?;
+
+        for r in rows {
+            if let Ok((zone, cat, total, bonus)) = r {
+                zone_cat_stats.insert((zone, cat), (total, bonus));
+            }
+        }
+    }
+
+    // ── 2. Speed bonus item stats per zone+category ──────────────────────────
+    let mut bonus_item_stats: std::collections::HashMap<(String, String), Vec<SpeedBonusItemStats>> =
+        std::collections::HashMap::new();
+    {
+        let mut stmt = conn.prepare(
+            "WITH per_proc AS (
+                SELECT se.id as event_id, st.zone, st.survey_category, sli.item_name,
+                       SUM(sli.quantity) as qty
+                FROM survey_loot_items sli
+                JOIN survey_events se ON sli.event_id = se.id
+                JOIN survey_types st ON se.survey_type = st.name COLLATE NOCASE
+                WHERE sli.is_speed_bonus = 1
+                  AND se.event_type IN ('completed', 'motherlode_completed')
+                  AND st.zone IS NOT NULL
+                GROUP BY se.id, st.zone, st.survey_category, sli.item_name
+            )
+            SELECT zone, survey_category, item_name,
+                   SUM(qty) as total_qty,
+                   COUNT(*) as times_seen,
+                   MIN(qty) as min_qty,
+                   MAX(qty) as max_qty,
+                   AVG(qty) as avg_qty
+            FROM per_proc
+            GROUP BY zone, survey_category, item_name
+            ORDER BY zone, survey_category, total_qty DESC"
+        ).map_err(|e| format!("Failed to prepare bonus item stats query: {e}"))?;
+
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, i64>(3)?,
+                row.get::<_, i64>(4)?,
+                row.get::<_, i64>(5)?,
+                row.get::<_, i64>(6)?,
+                row.get::<_, f64>(7)?,
+            ))
+        }).map_err(|e| format!("Bonus item stats query failed: {e}"))?;
+
+        for r in rows {
+            if let Ok((zone, cat, item_name, total_quantity, times_seen, min_per_proc, max_per_proc, avg_per_proc)) = r {
+                bonus_item_stats
+                    .entry((zone, cat))
+                    .or_default()
+                    .push(SpeedBonusItemStats {
+                        item_name,
+                        total_quantity,
+                        times_seen,
+                        total_procs: 0, // filled in during assembly
+                        min_per_proc,
+                        max_per_proc,
+                        avg_per_proc,
+                    });
+            }
+        }
+    }
+
+    // ── 3. Average bonus value per proc per zone+category ────────────────────
+    let mut avg_bonus_values: std::collections::HashMap<(String, String), f64> =
+        std::collections::HashMap::new();
+    {
+        let mut stmt = conn.prepare(
+            "WITH bonus_event_values AS (
+                SELECT se.id as event_id, st.zone, st.survey_category,
+                       SUM(sli.quantity * COALESCE(i.value, 0)) as bonus_value
+                FROM survey_events se
+                JOIN survey_types st ON se.survey_type = st.name COLLATE NOCASE
+                JOIN survey_loot_items sli ON sli.event_id = se.id
+                LEFT JOIN items i ON sli.item_name = i.name COLLATE NOCASE
+                WHERE se.event_type IN ('completed', 'motherlode_completed')
+                  AND se.speed_bonus_earned = 1
+                  AND sli.is_speed_bonus = 1
+                  AND st.zone IS NOT NULL
+                GROUP BY se.id, st.zone, st.survey_category
+            )
+            SELECT zone, survey_category, AVG(bonus_value) as avg_value
+            FROM bonus_event_values
+            GROUP BY zone, survey_category"
+        ).map_err(|e| format!("Failed to prepare avg bonus value query: {e}"))?;
+
+        let rows = stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, f64>(2)?))
+        }).map_err(|e| format!("Avg bonus value query failed: {e}"))?;
+
+        for r in rows {
+            if let Ok((zone, cat, avg_value)) = r {
+                avg_bonus_values.insert((zone, cat), avg_value);
+            }
+        }
+    }
+
+    // ── 4. Per-survey-type completion stats ───────────────────────────────────
+    let mut type_stats: std::collections::HashMap<String, Vec<SurveyTypeAnalytics>> =
+        std::collections::HashMap::new();
+    {
+        let mut stmt = conn.prepare(
+            "SELECT st.zone, st.survey_category, se.survey_type,
+                    COALESCE(st.crafting_cost, 0) as crafting_cost,
+                    COUNT(*) as total_completed
+             FROM survey_events se
+             JOIN survey_types st ON se.survey_type = st.name COLLATE NOCASE
+             WHERE se.event_type IN ('completed', 'motherlode_completed') AND st.zone IS NOT NULL
+             GROUP BY st.zone, st.survey_category, se.survey_type
+             ORDER BY st.zone, st.survey_category, total_completed DESC"
+        ).map_err(|e| format!("Failed to prepare type stats query: {e}"))?;
+
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, f64>(3)?,
+                row.get::<_, i64>(4)?,
+            ))
+        }).map_err(|e| format!("Type stats query failed: {e}"))?;
+
+        for r in rows {
+            if let Ok((zone, cat, survey_type, crafting_cost, total_completed)) = r {
+                type_stats
+                    .entry(zone)
+                    .or_default()
+                    .push(SurveyTypeAnalytics {
+                        survey_type,
+                        category: cat,
+                        crafting_cost,
+                        total_completed,
+                        item_stats: Vec::new(),
+                    });
+            }
+        }
+    }
+
+    // ── 5. Per-survey-type item stats (min/max/avg per completion) ────────────
+    {
+        let mut stmt = conn.prepare(
+            "WITH per_completion AS (
+                SELECT se.id as event_id, se.survey_type, sli.item_name,
+                       SUM(sli.quantity) as qty
+                FROM survey_loot_items sli
+                JOIN survey_events se ON sli.event_id = se.id
+                JOIN survey_types st ON se.survey_type = st.name COLLATE NOCASE
+                WHERE se.event_type IN ('completed', 'motherlode_completed')
+                  AND sli.is_primary = 1
+                  AND st.zone IS NOT NULL
+                GROUP BY se.id, se.survey_type, sli.item_name
+            )
+            SELECT survey_type, item_name,
+                   SUM(qty) as total_qty,
+                   COUNT(*) as times_seen,
+                   MIN(qty) as min_qty,
+                   MAX(qty) as max_qty,
+                   AVG(qty) as avg_qty
+            FROM per_completion
+            GROUP BY survey_type, item_name
+            ORDER BY survey_type, total_qty DESC"
+        ).map_err(|e| format!("Failed to prepare type item stats query: {e}"))?;
+
+        let mut type_item_map: std::collections::HashMap<String, Vec<SurveyItemStats>> =
+            std::collections::HashMap::new();
+
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, i64>(2)?,
+                row.get::<_, i64>(3)?,
+                row.get::<_, i64>(4)?,
+                row.get::<_, i64>(5)?,
+                row.get::<_, f64>(6)?,
+            ))
+        }).map_err(|e| format!("Type item stats query failed: {e}"))?;
+
+        for r in rows {
+            if let Ok((survey_type, item_name, total_quantity, times_seen, min_per_completion, max_per_completion, avg_per_completion)) = r {
+                type_item_map
+                    .entry(survey_type)
+                    .or_default()
+                    .push(SurveyItemStats {
+                        item_name,
+                        total_quantity,
+                        times_seen,
+                        min_per_completion,
+                        max_per_completion,
+                        avg_per_completion,
+                    });
+            }
+        }
+
+        // Attach item stats to their survey types
+        for types in type_stats.values_mut() {
+            for st in types.iter_mut() {
+                if let Some(items) = type_item_map.remove(&st.survey_type) {
+                    st.item_stats = items;
+                }
+            }
+        }
+    }
+
+    // ── 6. Assemble zone-level results ───────────────────────────────────────
+    let mut all_zones: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    for (zone, _cat) in zone_cat_stats.keys() {
+        all_zones.insert(zone.clone());
+    }
+    for zone in type_stats.keys() {
+        all_zones.insert(zone.clone());
+    }
+
+    let mut results: Vec<ZoneAnalytics> = Vec::new();
+
+    for zone in all_zones {
+        let mut speed_bonus_stats: Vec<CategorySpeedBonusStats> = Vec::new();
+        for cat in &["mineral", "mining"] {
+            let key = (zone.clone(), cat.to_string());
+            if let Some(&(total_surveys, speed_bonus_count)) = zone_cat_stats.get(&key) {
+                let speed_bonus_rate = if total_surveys > 0 {
+                    (speed_bonus_count as f64 / total_surveys as f64) * 100.0
+                } else {
+                    0.0
+                };
+                let avg_bonus_value = avg_bonus_values.get(&key).copied().unwrap_or(0.0);
+
+                let mut items = bonus_item_stats.remove(&key).unwrap_or_default();
+                for item in &mut items {
+                    item.total_procs = speed_bonus_count;
+                }
+
+                speed_bonus_stats.push(CategorySpeedBonusStats {
+                    category: cat.to_string(),
+                    total_surveys,
+                    speed_bonus_count,
+                    speed_bonus_rate,
+                    avg_bonus_value,
+                    item_stats: items,
+                });
+            }
+        }
+
+        let survey_type_stats = type_stats.remove(&zone).unwrap_or_default();
+
+        results.push(ZoneAnalytics {
+            zone,
+            speed_bonus_stats,
+            survey_type_stats,
         });
     }
 

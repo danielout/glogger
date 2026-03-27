@@ -40,6 +40,12 @@
           :parsing="props.parsing"
           :error="props.error"
           :onParseLog="props.onParseLog" />
+
+        <AboutTab
+          v-else-if="activeTab === 'about'" />
+
+        <GameStateDebug
+          v-else-if="activeTab === 'game-state'" />
       </div>
     </div>
 
@@ -59,6 +65,8 @@ import NotificationsSettings from "./Settings/NotificationsSettings.vue";
 import UserDataSettings from "./Settings/UserDataSettings.vue";
 import GameDataSettings from "./Settings/GameDataSettings.vue";
 import AdvancedSettings from "./Settings/AdvancedSettings.vue";
+import AboutTab from "./Settings/AboutTab.vue";
+import GameStateDebug from "./Settings/GameStateDebug.vue";
 
 const settingsStore = useSettingsStore();
 
@@ -68,7 +76,7 @@ const props = defineProps<{
   onParseLog: () => void;
 }>();
 
-type TabId = 'general' | 'app' | 'chat-logs' | 'notifications' | 'user-data' | 'game-data' | 'advanced';
+type TabId = 'general' | 'app' | 'chat-logs' | 'notifications' | 'user-data' | 'game-data' | 'advanced' | 'game-state' | 'about';
 
 const tabs: { id: TabId; label: string }[] = [
   { id: 'general', label: 'General' },
@@ -78,6 +86,8 @@ const tabs: { id: TabId; label: string }[] = [
   { id: 'user-data', label: 'User Data' },
   { id: 'game-data', label: 'Game Data' },
   { id: 'advanced', label: 'Advanced' },
+  { id: 'game-state', label: 'Game State' },
+  { id: 'about', label: 'About' },
 ];
 
 const activeTab = ref<TabId>('general');

@@ -71,12 +71,67 @@
         <div v-if="parseError" class="error-box">{{ parseError }}</div>
       </div>
     </div>
+
+    <div class="settings-section">
+      <h3>Dual-Log Replay</h3>
+
+      <p class="mb-3 text-text-muted text-xs leading-relaxed">
+        Replay a Player.log and Chat.log together, interleaved by timestamp. This simulates
+        live tailing with full cross-referencing — survey loot quantities get corrected from
+        Chat.log Status messages, game state is persisted to the DB, etc.
+      </p>
+
+      <div class="flex gap-2 mb-3">
+        <div class="flex-1">
+          <label class="text-xs text-text-secondary mb-1 block">Player.log</label>
+          <button
+            @click="pickPlayerLogForReplay"
+            :disabled="replaying"
+            class="btn btn-secondary text-xs w-full truncate">
+            {{ replayPlayerPath ? replayPlayerPath.split(/[\\/]/).pop() : "Select Player.log..." }}
+          </button>
+        </div>
+        <div class="flex-1">
+          <label class="text-xs text-text-secondary mb-1 block">Chat.log</label>
+          <button
+            @click="pickChatLogForReplay"
+            :disabled="replaying"
+            class="btn btn-secondary text-xs w-full truncate">
+            {{ replayChatPath ? replayChatPath.split(/[\\/]/).pop() : "Select Chat.log..." }}
+          </button>
+        </div>
+      </div>
+
+      <button
+        @click="startReplay"
+        :disabled="replaying || !replayPlayerPath || !replayChatPath"
+        class="btn btn-primary mb-3">
+        {{ replaying ? "Replaying..." : "Start Dual Replay" }}
+      </button>
+
+      <div v-if="replayProgress" class="mb-2 text-xs text-text-secondary">
+        <div v-if="replayProgress.phase === 'processing'" class="mb-1">
+          <div class="bg-surface-elevated rounded-full h-2 overflow-hidden">
+            <div
+              class="bg-accent-primary h-full transition-all duration-200"
+              :style="{ width: `${Math.round((replayProgress.current / replayProgress.total) * 100)}%` }">
+            </div>
+          </div>
+        </div>
+        {{ replayProgress.detail }}
+      </div>
+
+      <div v-if="replayResultText" class="success-box">{{ replayResultText }}</div>
+      <div v-if="replayError" class="error-box">{{ replayError }}</div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onUnmounted } from "vue";
 import { open } from "@tauri-apps/plugin-dialog";
+import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useCharacterStore } from "../../stores/characterStore";
 
@@ -137,4 +192,91 @@ async function browseAndParsePlayerLog() {
     }
   }
 }
+
+// ── Dual-Log Replay ──────────────────────────────────────────────────────────
+
+interface ReplayProgressEvent {
+  phase: string;
+  current: number;
+  total: number;
+  detail: string;
+}
+
+const replayPlayerPath = ref<string | null>(null);
+const replayChatPath = ref<string | null>(null);
+const replaying = ref(false);
+const replayProgress = ref<ReplayProgressEvent | null>(null);
+const replayResultText = ref<string | null>(null);
+const replayError = ref<string | null>(null);
+
+let unlistenProgress: UnlistenFn | null = null;
+
+async function pickPlayerLogForReplay() {
+  const selected = await open({
+    multiple: false,
+    filters: [{ name: "Log Files", extensions: ["log", "txt"] }],
+  });
+  if (selected) {
+    replayPlayerPath.value = selected;
+  }
+}
+
+async function pickChatLogForReplay() {
+  const selected = await open({
+    multiple: false,
+    filters: [{ name: "Log Files", extensions: ["log", "txt"] }],
+  });
+  if (selected) {
+    replayChatPath.value = selected;
+  }
+}
+
+async function startReplay() {
+  if (!replayPlayerPath.value || !replayChatPath.value) return;
+
+  replaying.value = true;
+  replayProgress.value = null;
+  replayResultText.value = null;
+  replayError.value = null;
+
+  // Listen for progress events
+  unlistenProgress = await listen<ReplayProgressEvent>("replay-progress", (event) => {
+    replayProgress.value = event.payload;
+  });
+
+  try {
+    const result = await invoke<{
+      player_lines_processed: number;
+      chat_messages_processed: number;
+      player_events_emitted: number;
+      survey_events_emitted: number;
+      chat_status_events_emitted: number;
+      loot_corrections_applied: number;
+    }>("replay_dual_logs", {
+      playerLogPath: replayPlayerPath.value,
+      chatLogPath: replayChatPath.value,
+    });
+
+    replayResultText.value = [
+      `Player: ${result.player_events_emitted} events from ${result.player_lines_processed} lines`,
+      `Chat: ${result.chat_messages_processed} messages, ${result.chat_status_events_emitted} status events`,
+      `Survey: ${result.survey_events_emitted} events`,
+      `Loot corrections: ${result.loot_corrections_applied}`,
+    ].join(" · ");
+  } catch (e: any) {
+    replayError.value = e.toString();
+  } finally {
+    replaying.value = false;
+    if (unlistenProgress) {
+      unlistenProgress();
+      unlistenProgress = null;
+    }
+  }
+}
+
+onUnmounted(() => {
+  if (unlistenProgress) {
+    unlistenProgress();
+  }
+});
 </script>

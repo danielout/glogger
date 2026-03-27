@@ -28,6 +28,9 @@ export interface AppSettings {
   autoWatchReports: boolean;
   reportWatchIntervalSeconds: number;
   excludeMaxEnchantedRecipes: boolean;
+  marketPriceMode: string;
+  itemValuationMode: string;
+  viewPreferences: Record<string, Record<string, unknown>>;
 }
 
 // Backend settings format (snake_case)
@@ -56,6 +59,9 @@ interface BackendSettings {
   auto_watch_reports: boolean;
   report_watch_interval_seconds: number;
   exclude_max_enchanted_recipes: boolean;
+  market_price_mode: string;
+  item_valuation_mode: string;
+  view_preferences: Record<string, Record<string, unknown>>;
 }
 
 // Convert frontend format to backend format
@@ -85,6 +91,9 @@ function toBackendSettings(settings: AppSettings): BackendSettings {
     auto_watch_reports: settings.autoWatchReports,
     report_watch_interval_seconds: settings.reportWatchIntervalSeconds,
     exclude_max_enchanted_recipes: settings.excludeMaxEnchantedRecipes,
+    market_price_mode: settings.marketPriceMode,
+    item_valuation_mode: settings.itemValuationMode,
+    view_preferences: settings.viewPreferences,
   };
 }
 
@@ -119,6 +128,9 @@ function fromBackendSettings(settings: BackendSettings): AppSettings {
     autoWatchReports: settings.auto_watch_reports ?? true,
     reportWatchIntervalSeconds: settings.report_watch_interval_seconds ?? 10,
     excludeMaxEnchantedRecipes: settings.exclude_max_enchanted_recipes ?? true,
+    marketPriceMode: settings.market_price_mode ?? 'universal',
+    itemValuationMode: settings.item_valuation_mode ?? 'highest_market_vendor',
+    viewPreferences: settings.view_preferences ?? {},
   };
 }
 
@@ -149,6 +161,9 @@ function getDefaultSettings(): AppSettings {
     autoWatchReports: true,
     reportWatchIntervalSeconds: 10,
     excludeMaxEnchantedRecipes: true,
+    marketPriceMode: 'universal',
+    itemValuationMode: 'highest_market_vendor',
+    viewPreferences: {},
   };
 }
 

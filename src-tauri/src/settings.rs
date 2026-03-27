@@ -4,6 +4,7 @@
 /// Settings determine paths for database, game data, and auto-start behavior.
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
@@ -100,6 +101,58 @@ pub struct AppSettings {
     /// (leveling optimizer, work order matching, intermediate resolution)
     #[serde(default = "default_true")]
     pub exclude_max_enchanted_recipes: bool,
+
+    /// Market price mode: "universal" (one price per item) or "per_server" (price per item per server)
+    #[serde(default = "default_market_price_mode")]
+    pub market_price_mode: String,
+
+    /// Item valuation mode for wealth/cost calculations:
+    /// - "highest_market_vendor" (default): max(market, vendor)
+    /// - "highest_market_buy_used": max(market, vendor * 2)
+    /// - "vendor_only": vendor value only
+    /// - "buy_used_only": vendor * 2
+    /// - "market_only": market value only
+    #[serde(default = "default_item_valuation_mode")]
+    pub item_valuation_mode: String,
+
+    /// Opaque per-screen UI preferences (persisted as JSON, frontend-managed)
+    #[serde(default)]
+    pub view_preferences: Option<JsonValue>,
+
+    /// Last app version that was run (used to detect prototype version upgrades and nuke stale data)
+    #[serde(default)]
+    pub last_app_version: Option<String>,
+
+    /// Auto-detected timezone offset in seconds from UTC (e.g., -25200 for UTC-7).
+    /// Populated from chat login line's "Timezone Offset" field.
+    #[serde(default)]
+    pub timezone_offset_seconds: Option<i32>,
+
+    /// Manual timezone override in seconds from UTC. When set, takes precedence
+    /// over the auto-detected offset. Advanced setting for edge cases.
+    #[serde(default)]
+    pub manual_timezone_override: Option<i32>,
+}
+
+fn default_market_price_mode() -> String {
+    "universal".to_string()
+}
+
+fn default_item_valuation_mode() -> String {
+    "highest_market_vendor".to_string()
+}
+
+/// Resolve the effective value of an item given vendor value and market value,
+/// based on the item valuation mode setting.
+pub fn resolve_item_value(mode: &str, vendor_value: f64, market_value: f64) -> f64 {
+    match mode {
+        "highest_market_vendor" => vendor_value.max(market_value),
+        "highest_market_buy_used" => (vendor_value * 2.0).max(market_value),
+        "vendor_only" => vendor_value,
+        "buy_used_only" => vendor_value * 2.0,
+        "market_only" => market_value,
+        _ => vendor_value.max(market_value), // fallback to default
+    }
 }
 
 /// How conditions within a rule are combined
@@ -206,6 +259,12 @@ impl Default for AppSettings {
             auto_watch_reports: true,
             report_watch_interval_seconds: 10,
             exclude_max_enchanted_recipes: true,
+            market_price_mode: default_market_price_mode(),
+            item_valuation_mode: default_item_valuation_mode(),
+            view_preferences: None,
+            last_app_version: None,
+            timezone_offset_seconds: None,
+            manual_timezone_override: None,
         }
     }
 }

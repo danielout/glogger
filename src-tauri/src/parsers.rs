@@ -33,6 +33,30 @@ pub fn parse_timestamp(line: &str) -> Option<String> {
     Some(line[1..end].to_string())
 }
 
+/// Convert a Player.log time-only timestamp ("HH:MM:SS") to a full UTC datetime string.
+///
+/// Player.log timestamps are local time with no date. We combine with today's UTC date
+/// and apply the timezone offset to produce a UTC datetime.
+///
+/// `tz_offset_seconds`: offset from UTC in seconds (e.g., -25200 for UTC-7).
+/// The log time is local, so UTC = local_time - offset.
+pub fn to_utc_datetime(time_str: &str, tz_offset_seconds: i32) -> String {
+    use chrono::{Utc, NaiveTime, Duration};
+
+    let today = Utc::now().date_naive();
+
+    // Parse the HH:MM:SS time string
+    if let Ok(local_time) = NaiveTime::parse_from_str(time_str, "%H:%M:%S") {
+        let local_dt = today.and_time(local_time);
+        // UTC = local - offset (offset is seconds east of UTC)
+        let utc_dt = local_dt - Duration::seconds(tz_offset_seconds as i64);
+        utc_dt.format("%Y-%m-%d %H:%M:%S").to_string()
+    } else {
+        // Fallback: use current UTC time if parsing fails
+        Utc::now().format("%Y-%m-%d %H:%M:%S").to_string()
+    }
+}
+
 // Extracts the value after `key` up to the next comma or `}`
 pub fn extract_field(line: &str, key: &str) -> Option<String> {
     let start = line.find(key)? + key.len();

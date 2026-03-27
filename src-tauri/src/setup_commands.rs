@@ -8,9 +8,18 @@ use std::path::Path;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use tauri::State;
+use chrono::Local;
 
 use crate::db::DbPool;
+use crate::cdn_commands::GameDataState;
 use crate::settings::SettingsManager;
+
+/// Timestamped log line for startup diagnostics.
+macro_rules! startup_log {
+    ($($arg:tt)*) => {
+        eprintln!("[{}] {}", Local::now().format("%H:%M:%S%.3f"), format!($($arg)*));
+    };
+}
 
 // ── Response Types ──────────────────────────────────────────────────────────
 
@@ -227,13 +236,119 @@ pub fn complete_setup(
     settings_manager.update(settings)
 }
 
-/// Find the latest Character_*.json report file for a given character in the Reports folder
-/// and import it if not already in the database.
+/// Delete a character and all their character-scoped data.
+/// Cascades across all game_state_*, character_snapshots, inventory_snapshots, and related tables.
 #[tauri::command]
-pub fn import_latest_report_for_character(
+pub fn delete_character(
     db: State<'_, DbPool>,
     settings_manager: State<'_, Arc<SettingsManager>>,
     character_name: String,
+    server_name: String,
+) -> Result<(), String> {
+    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+
+    // All character-scoped tables to cascade delete
+    let tables = [
+        "game_state_skills",
+        "game_state_active_skills",
+        "game_state_attributes",
+        "game_state_combat",
+        "game_state_mount",
+        "game_state_inventory",
+        "game_state_recipes",
+        "game_state_equipment",
+        "game_state_favor",
+        "game_state_currencies",
+        "game_state_effects",
+        "game_state_session",
+    ];
+
+    conn.execute("BEGIN", []).ok();
+
+    for table in &tables {
+        conn.execute(
+            &format!("DELETE FROM {table} WHERE character_name = ?1 AND server_name = ?2"),
+            rusqlite::params![character_name, server_name],
+        ).ok();
+    }
+
+    // Delete character snapshots and their child data
+    let snapshot_ids: Vec<i64> = {
+        let mut stmt = conn.prepare(
+            "SELECT id FROM character_snapshots WHERE character_name = ?1 AND server_name = ?2"
+        ).map_err(|e| format!("Query error: {e}"))?;
+        let ids: Vec<i64> = stmt.query_map(rusqlite::params![character_name, server_name], |row| row.get(0))
+            .map_err(|e| format!("Query error: {e}"))?
+            .flatten()
+            .collect();
+        ids
+    };
+
+    for sid in &snapshot_ids {
+        conn.execute("DELETE FROM character_skill_levels WHERE snapshot_id = ?1", rusqlite::params![sid]).ok();
+        conn.execute("DELETE FROM character_npc_favor WHERE snapshot_id = ?1", rusqlite::params![sid]).ok();
+        conn.execute("DELETE FROM character_recipe_completions WHERE snapshot_id = ?1", rusqlite::params![sid]).ok();
+        conn.execute("DELETE FROM character_stats WHERE snapshot_id = ?1", rusqlite::params![sid]).ok();
+        conn.execute("DELETE FROM character_currencies WHERE snapshot_id = ?1", rusqlite::params![sid]).ok();
+    }
+    conn.execute(
+        "DELETE FROM character_snapshots WHERE character_name = ?1 AND server_name = ?2",
+        rusqlite::params![character_name, server_name],
+    ).ok();
+
+    // Delete inventory snapshots and their child data
+    let inv_snapshot_ids: Vec<i64> = {
+        let mut stmt = conn.prepare(
+            "SELECT id FROM inventory_snapshots WHERE character_name = ?1 AND server_name = ?2"
+        ).map_err(|e| format!("Query error: {e}"))?;
+        let ids: Vec<i64> = stmt.query_map(rusqlite::params![character_name, server_name], |row| row.get(0))
+            .map_err(|e| format!("Query error: {e}"))?
+            .flatten()
+            .collect();
+        ids
+    };
+
+    for sid in &inv_snapshot_ids {
+        conn.execute("DELETE FROM inventory_snapshot_items WHERE snapshot_id = ?1", rusqlite::params![sid]).ok();
+    }
+    conn.execute(
+        "DELETE FROM inventory_snapshots WHERE character_name = ?1 AND server_name = ?2",
+        rusqlite::params![character_name, server_name],
+    ).ok();
+
+    // Delete the user_characters record
+    conn.execute(
+        "DELETE FROM user_characters WHERE character_name = ?1 AND server_name = ?2",
+        rusqlite::params![character_name, server_name],
+    ).ok();
+
+    conn.execute("COMMIT", []).ok();
+
+    // If the deleted character was the active one, clear it from settings
+    let settings = settings_manager.get();
+    if settings.active_character_name.as_deref() == Some(&character_name)
+        && settings.active_server_name.as_deref() == Some(&server_name)
+    {
+        let mut updated = settings;
+        updated.active_character_name = None;
+        updated.active_server_name = None;
+        settings_manager.update(updated).ok();
+    }
+
+    eprintln!("[setup] Deleted character {character_name} on {server_name}");
+    Ok(())
+}
+
+/// Find the latest Character_*.json report file for a given character in the Reports folder
+/// and import it if not already in the database.
+/// When `server_name` is provided, only reports for that server are considered.
+#[tauri::command]
+pub fn import_latest_report_for_character(
+    db: State<'_, DbPool>,
+    cdn: State<'_, GameDataState>,
+    settings_manager: State<'_, Arc<SettingsManager>>,
+    character_name: String,
+    server_name: Option<String>,
 ) -> Result<Option<crate::db::character_commands::ImportResult>, String> {
     let settings = settings_manager.get();
     let game_data_path = &settings.game_data_path;
@@ -277,6 +392,13 @@ pub fn import_latest_report_for_character(
             continue;
         }
 
+        // Filter by server when specified
+        if let Some(ref wanted_server) = server_name {
+            if &header.server_name != wanted_server {
+                continue;
+            }
+        }
+
         if let Some(ref ts) = header.timestamp {
             if best_file.as_ref().map_or(true, |(existing_ts, _)| ts > existing_ts) {
                 best_file = Some((ts.clone(), file_path));
@@ -289,8 +411,9 @@ pub fn import_latest_report_for_character(
     };
 
     let file_path_str = file_path.to_string_lossy().to_string();
+    let data = cdn.blocking_read();
     let result = crate::db::character_commands::import_character_report_internal(
-        &db, &file_path_str,
+        &db, &file_path_str, &data,
     )?;
 
     // If it was a duplicate, return None (already imported)
@@ -298,16 +421,105 @@ pub fn import_latest_report_for_character(
         return Ok(None);
     }
 
+    startup_log!("Imported character report for {}", character_name);
     Ok(Some(result))
+}
+
+/// Import the latest Character_*.json report for every character on a given server.
+/// Scans the Reports directory once, groups by character, and imports each.
+/// Skips duplicates (already-imported snapshots). Returns the count of new imports.
+#[tauri::command]
+pub fn import_reports_for_server(
+    db: State<'_, DbPool>,
+    cdn: State<'_, GameDataState>,
+    settings_manager: State<'_, Arc<SettingsManager>>,
+    server_name: String,
+) -> Result<u32, String> {
+    let settings = settings_manager.get();
+    let game_data_path = &settings.game_data_path;
+    if game_data_path.is_empty() {
+        return Err("Game data path not configured".into());
+    }
+
+    let reports_dir = Path::new(game_data_path).join("Reports");
+    if !reports_dir.is_dir() {
+        return Ok(0);
+    }
+
+    let entries = std::fs::read_dir(&reports_dir)
+        .map_err(|e| format!("Failed to read Reports directory: {e}"))?;
+
+    // Scan all Character_*.json files for this server, keep the latest per character
+    let mut best_per_character: std::collections::HashMap<String, (String, std::path::PathBuf)> =
+        std::collections::HashMap::new();
+
+    for entry in entries.flatten() {
+        let file_name = entry.file_name().to_string_lossy().to_string();
+        if !file_name.starts_with("Character_") || !file_name.ends_with(".json") {
+            continue;
+        }
+
+        let file_path = entry.path();
+        let contents = match std::fs::read_to_string(&file_path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+
+        let header: ReportHeader = match serde_json::from_str(&contents) {
+            Ok(h) => h,
+            Err(_) => continue,
+        };
+
+        if header.report.as_deref() != Some("CharacterSheet") {
+            continue;
+        }
+
+        if header.server_name != server_name {
+            continue;
+        }
+
+        if let Some(ref ts) = header.timestamp {
+            let is_newer = best_per_character.get(&header.character)
+                .map_or(true, |(existing_ts, _)| ts > existing_ts);
+            if is_newer {
+                best_per_character.insert(header.character.clone(), (ts.clone(), file_path));
+            }
+        }
+    }
+
+    // Import each character's latest report
+    let data = cdn.blocking_read();
+    let mut imported = 0u32;
+    for (character, (_, file_path)) in &best_per_character {
+        let file_path_str = file_path.to_string_lossy().to_string();
+        match crate::db::character_commands::import_character_report_internal(&db, &file_path_str, &data) {
+            Ok(result) if !result.was_duplicate => {
+                startup_log!("Imported account character report: {} on {}", character, server_name);
+                imported += 1;
+            }
+            Ok(_) => {} // duplicate, skip
+            Err(e) => {
+                startup_log!("Failed to import report for {} on {}: {e}", character, server_name);
+            }
+        }
+    }
+
+    if imported > 0 {
+        startup_log!("Account-wide import: {} new report(s) for {}", imported, server_name);
+    }
+
+    Ok(imported)
 }
 
 /// Find the latest *_items_*.json inventory report file for a given character
 /// in the Reports folder and import it if not already in the database.
+/// When `server_name` is provided, only reports for that server are considered.
 #[tauri::command]
 pub fn import_latest_inventory_for_character(
     db: State<'_, DbPool>,
     settings_manager: State<'_, Arc<SettingsManager>>,
     character_name: String,
+    server_name: Option<String>,
 ) -> Result<Option<crate::db::inventory_commands::InventoryImportResult>, String> {
     let settings = settings_manager.get();
     let game_data_path = &settings.game_data_path;
@@ -351,6 +563,13 @@ pub fn import_latest_inventory_for_character(
             continue;
         }
 
+        // Filter by server when specified
+        if let Some(ref wanted_server) = server_name {
+            if &header.server_name != wanted_server {
+                continue;
+            }
+        }
+
         if let Some(ref ts) = header.timestamp {
             if best_file.as_ref().map_or(true, |(existing_ts, _)| ts > existing_ts) {
                 best_file = Some((ts.clone(), file_path));
@@ -371,5 +590,6 @@ pub fn import_latest_inventory_for_character(
         return Ok(None);
     }
 
+    startup_log!("Imported inventory report for {} ({} items)", character_name, result.items_imported);
     Ok(Some(result))
 }

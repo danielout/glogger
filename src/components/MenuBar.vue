@@ -1,82 +1,249 @@
 <template>
-  <div class="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-4 py-3 bg-surface-base border-b border-border-default">
-    <div class="flex items-center gap-6">
-      <span class="text-accent-gold font-bold text-xl">Glogger</span>
-      <div class="flex gap-1">
+  <div class="fixed top-0 left-0 right-0 z-50">
+    <!-- Primary nav row -->
+    <div class="grid grid-cols-[auto_1fr_auto] items-center px-4 py-2 bg-surface-base border-b border-border-default">
+      <!-- Left: Identity block + Data Browser -->
+      <div class="flex items-center gap-4">
+        <div class="flex flex-col leading-tight">
+          <div class="flex items-center gap-2">
+            <span class="text-accent-gold font-bold text-lg">glogger</span>
+            <div class="flex items-center gap-1.5">
+              <span
+                class="w-2 h-2 rounded-full"
+                :class="isPlayerLogTailing ? 'bg-green-500' : 'bg-red-500'"
+                :title="isPlayerLogTailing ? 'Player.log: tailing' : 'Player.log: not tailing'"
+              />
+              <span
+                class="w-2 h-2 rounded-full"
+                :class="isChatLogTailing ? 'bg-green-500' : 'bg-red-500'"
+                :title="isChatLogTailing ? 'Chat log: tailing' : 'Chat log: not tailing'"
+              />
+            </div>
+          </div>
+          <CharacterPicker :isActive="currentView === 'character'" />
+        </div>
+        <div class="border-l border-border-default h-8" />
+        <button
+          class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer font-mono text-sm rounded transition-all hover:bg-surface-elevated hover:text-text-primary"
+          :class="{ 'bg-surface-elevated! text-accent-gold!': currentView === 'data-browser' }"
+          @click="emit('navigate', 'data-browser')"
+          title="Data Browser">
+          Data Browser
+        </button>
+      </div>
+
+      <!-- Center: Navigation links -->
+      <div class="flex justify-center gap-1">
         <button
           v-for="item in navItems"
           :key="item.view"
-          class="px-4 py-2 bg-transparent border-none text-text-secondary cursor-pointer font-mono text-[0.95rem] rounded transition-all hover:bg-surface-elevated hover:text-text-primary"
+          class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer font-mono text-sm rounded transition-all hover:bg-surface-elevated hover:text-text-primary"
           :class="{ 'bg-surface-elevated! text-accent-gold!': currentView === item.view }"
           @click="emit('navigate', item.view)">
           {{ item.label }}
         </button>
       </div>
-    </div>
-    <div class="flex items-center gap-4">
-      <button
-        v-if="activeCharacter"
-        class="px-3 py-1.5 bg-transparent border-none text-text-secondary text-sm font-mono cursor-pointer rounded transition-all hover:bg-surface-elevated"
-        :class="{ 'bg-surface-elevated! text-accent-gold!': currentView === 'character' }"
-        @click="emit('navigate', 'character')"
-        title="View character summary">
-        <span class="text-text-primary">{{ activeCharacter }}</span>
-        <span class="text-text-muted ml-1">{{ activeServer }}</span>
-      </button>
-      <div class="flex items-center gap-1.5">
-        <span
-          class="w-2 h-2 rounded-full"
-          :class="isPlayerLogTailing ? 'bg-green-500' : 'bg-red-500'"
-          :title="isPlayerLogTailing ? 'Player.log: tailing' : 'Player.log: not tailing'"
-        />
-        <span
-          class="w-2 h-2 rounded-full"
-          :class="isChatLogTailing ? 'bg-green-500' : 'bg-red-500'"
-          :title="isChatLogTailing ? 'Chat log: tailing' : 'Chat log: not tailing'"
-        />
+
+      <!-- Right: Search, Settings, Help -->
+      <div class="flex items-center justify-end gap-1">
+        <button
+          class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer text-sm rounded transition-all leading-none hover:bg-surface-elevated hover:text-text-primary font-mono"
+          :class="{ 'bg-surface-elevated! text-accent-gold!': currentView === 'search' }"
+          @click="emit('navigate', 'search')"
+          title="Search">
+          Search
+        </button>
+        <button
+          class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer text-xl rounded transition-all leading-none hover:bg-surface-elevated hover:text-text-primary"
+          :class="{ 'bg-surface-elevated! text-accent-gold!': currentView === 'settings' }"
+          @click="emit('navigate', 'settings')"
+          title="Settings">
+          ⚙
+        </button>
+        <button
+          class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer text-xl rounded transition-all leading-none hover:bg-surface-elevated hover:text-text-primary"
+          :class="{ 'bg-surface-elevated! text-accent-gold!': currentView === 'help' }"
+          @click="emit('navigate', 'help')"
+          title="Help">
+          ?
+        </button>
       </div>
-      <button
-        class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer text-xl rounded transition-all leading-none hover:bg-surface-elevated hover:text-text-primary"
-        :class="{ 'bg-surface-elevated! text-accent-gold!': currentView === 'settings' }"
-        @click="emit('navigate', 'settings')"
-        title="Settings">
-        ⚙
-      </button>
+    </div>
+
+    <!-- Sub-tab flyout row -->
+    <div
+      class="overflow-hidden bg-surface-base border-b border-border-default transition-all duration-250 ease-out"
+      :class="currentTabs.length ? 'subtab-open' : 'subtab-closed'"
+    >
+      <div class="flex justify-center gap-1 px-4 py-1.5">
+        <button
+          v-for="tab in currentTabs"
+          :key="tab.id"
+          class="px-3 py-1 bg-transparent border-none text-text-secondary cursor-pointer font-mono text-xs rounded transition-all hover:bg-surface-elevated hover:text-text-primary"
+          :class="{ 'text-accent-gold! bg-surface-elevated!': activeSubTabs[currentView] === tab.id }"
+          @click="selectSubTab(tab.id)">
+          {{ tab.label }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, computed } from "vue";
-import { useSettingsStore } from "../stores/settingsStore";
+import { computed, reactive, watch } from "vue";
 import { useCoordinatorStore } from "../stores/coordinatorStore";
+import { useKeyboard } from "../composables/useKeyboard";
+import CharacterPicker from "./CharacterPicker.vue";
 
-export type AppView = "dashboard" | "skills" | "surveying" | "farming" | "crafting" | "character" | "inventory" | "data-browser" | "chat" | "gourmand" | "settings";
+export type AppView = "dashboard" | "character" | "inventory" | "crafting" | "economics" | "chat" | "data-browser" | "search" | "settings" | "help";
 
-const settingsStore = useSettingsStore();
+interface SubTab {
+  id: string;
+  label: string;
+}
+
+// All sub-tab definitions, keyed by view
+const viewTabs: Partial<Record<AppView, SubTab[]>> = {
+  character: [
+    { id: "skills", label: "Skills" },
+    { id: "stats", label: "Stats" },
+    { id: "npcs", label: "NPCs" },
+    { id: "quests", label: "Quests" },
+    { id: "gourmand", label: "Gourmand" },
+    { id: "build-planner", label: "Build Planner" },
+  ],
+  inventory: [
+    { id: "live", label: "Inventory" },
+    { id: "storage", label: "Storage" },
+    { id: "vaults", label: "Vaults" },
+  ],
+  crafting: [
+    { id: "quick-calc", label: "Quick Calc" },
+    { id: "projects", label: "Projects" },
+    { id: "leveling", label: "Leveling" },
+    { id: "history", label: "History" },
+    { id: "work-orders", label: "Work Orders" },
+    { id: "cooks-helper", label: "Cook's Helper" },
+  ],
+  economics: [
+    { id: "market", label: "Market Prices" },
+    { id: "farming", label: "Farming" },
+    { id: "surveying", label: "Surveying" },
+    { id: "stall-tracker", label: "Stall Tracker" },
+  ],
+  chat: [
+    { id: "channels", label: "Channels" },
+    { id: "tells", label: "Tells" },
+    { id: "party", label: "Party" },
+    { id: "nearby", label: "Nearby" },
+    { id: "guild", label: "Guild" },
+    { id: "system", label: "System" },
+    { id: "all", label: "All Messages" },
+    { id: "watchwords", label: "Watchwords" },
+  ],
+  "data-browser": [
+    { id: "items", label: "Items" },
+    { id: "skills", label: "Skills" },
+    { id: "abilities", label: "Abilities" },
+    { id: "recipes", label: "Recipes" },
+    { id: "quests", label: "Quests" },
+    { id: "npcs", label: "NPCs" },
+    { id: "effects", label: "Effects" },
+    { id: "titles", label: "Titles" },
+  ],
+};
+
+// Default sub-tab per view
+const defaultSubTabs: Partial<Record<AppView, string>> = {
+  character: "skills",
+  inventory: "live",
+  crafting: "quick-calc",
+  economics: "market",
+  chat: "channels",
+  "data-browser": "items",
+};
+
 const coordinatorStore = useCoordinatorStore();
-const activeCharacter = computed(() => settingsStore.settings.activeCharacterName);
-const activeServer = computed(() => settingsStore.settings.activeServerName);
 const isPlayerLogTailing = computed(() => coordinatorStore.isPlayerLogTailing);
 const isChatLogTailing = computed(() => coordinatorStore.isChatLogTailing);
 
 const navItems: { view: AppView; label: string }[] = [
   { view: "dashboard", label: "Dashboard" },
-  { view: "skills", label: "Skills" },
-  { view: "surveying", label: "Surveying" },
-  { view: "farming", label: "Farming" },
-  { view: "crafting", label: "Crafting" },
+  { view: "character", label: "Character" },
   { view: "inventory", label: "Inventory" },
-  { view: "data-browser", label: "Data Browser" },
+  { view: "crafting", label: "Crafting" },
+  { view: "economics", label: "Economics" },
   { view: "chat", label: "Chat Logs" },
-  { view: "gourmand", label: "Gourmand" },
 ];
 
-defineProps<{
+const props = defineProps<{
   currentView: AppView;
 }>();
 
 const emit = defineEmits<{
   navigate: [view: AppView];
+  "update:subTab": [tab: string];
 }>();
+
+// Track active sub-tab per view
+const activeSubTabs = reactive<Record<string, string>>({});
+
+// Initialize defaults
+for (const [view, defaultTab] of Object.entries(defaultSubTabs)) {
+  activeSubTabs[view] = defaultTab;
+}
+
+const currentTabs = computed(() => viewTabs[props.currentView] ?? []);
+
+const hasTabs = computed(() => currentTabs.value.length > 0);
+
+function selectSubTab(tabId: string) {
+  activeSubTabs[props.currentView] = tabId;
+  emit("update:subTab", tabId);
+}
+
+// Emit current sub-tab whenever the view changes (so the child view gets the right tab)
+watch(() => props.currentView, (view) => {
+  const tabs = viewTabs[view];
+  if (tabs) {
+    emit("update:subTab", activeSubTabs[view] ?? tabs[0].id);
+  }
+}, { immediate: true });
+
+// Keyboard tab cycling for the sub-tab row
+const tabIds = computed(() => currentTabs.value.map(t => t.id));
+const activeTabRef = computed({
+  get: () => activeSubTabs[props.currentView] ?? "",
+  set: (val: string) => {
+    activeSubTabs[props.currentView] = val;
+    emit("update:subTab", val);
+  },
+});
+
+useKeyboard({
+  tabCycling: {
+    tabs: tabIds,
+    activeTab: activeTabRef,
+  },
+});
+
+// Expose for parent to read current sub-tab
+defineExpose({
+  activeSubTabs,
+  viewTabs,
+  hasTabs,
+});
 </script>
+
+<style scoped>
+.subtab-open {
+  max-height: 3rem;
+  opacity: 1;
+}
+
+.subtab-closed {
+  max-height: 0;
+  opacity: 0;
+  border-bottom-color: transparent;
+}
+</style>

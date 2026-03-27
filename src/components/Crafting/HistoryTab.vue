@@ -12,9 +12,7 @@
 
     <div v-if="loading" class="text-text-dim text-xs italic">Loading crafting data...</div>
 
-    <div v-else-if="!hasData" class="text-text-dim text-xs italic py-8 text-center">
-      No crafting data available. Import a character report to see crafting history and stats.
-    </div>
+    <EmptyState v-else-if="!hasData" variant="panel" primary="No crafting data available" secondary="Import a character report to see crafting history and stats." />
 
     <template v-else>
       <!-- Skill progress overview -->
@@ -52,10 +50,10 @@
               class="border-b border-surface-dark">
               <td class="py-1 text-text-muted">{{ idx + 1 }}</td>
               <td class="py-1">
-                <RecipeInline :name="recipe.recipe_name" />
+                <RecipeInline :reference="recipe.recipe_name" />
               </td>
               <td class="py-1">
-                <SkillInline v-if="recipe.reward_skill" :name="recipe.reward_skill" />
+                <SkillInline v-if="recipe.reward_skill" :reference="recipe.reward_skill" />
                 <span v-else class="text-text-muted">—</span>
               </td>
               <td class="text-right py-1 text-text-muted">
@@ -104,6 +102,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useCraftingStore } from "../../stores/craftingStore";
 import type { CraftingHistoryRecipe, SkillCraftingStats } from "../../types/crafting";
+import EmptyState from "../Shared/EmptyState.vue";
 import SkillCraftingProgress from "./SkillCraftingProgress.vue";
 import RecipeInline from "../Shared/Recipe/RecipeInline.vue";
 import SkillInline from "../Shared/Skill/SkillInline.vue";

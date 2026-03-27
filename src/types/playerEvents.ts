@@ -95,6 +95,7 @@ export interface StorageDepositEvent {
   kind: 'StorageDeposit'
   timestamp: string
   npc_id: number
+  vault_key: string | null
   slot: number
   item_name: string
   instance_id: number
@@ -104,6 +105,7 @@ export interface StorageWithdrawalEvent {
   kind: 'StorageWithdrawal'
   timestamp: string
   npc_id: number
+  vault_key: string | null
   instance_id: number
   quantity: number
 }
@@ -137,6 +139,134 @@ export interface BookOpenedEvent {
   book_type: string
 }
 
+// === Interaction Events ===
+
+export interface InteractionEndedEvent {
+  kind: 'InteractionEnded'
+  timestamp: string
+  entity_id: number // i32 — can be negative
+}
+
+// === Skill Bar Events ===
+
+export interface ActiveSkillsChangedEvent {
+  kind: 'ActiveSkillsChanged'
+  timestamp: string
+  skill1: string
+  skill2: string
+}
+
+// === Mount Events ===
+
+export interface MountStateChangedEvent {
+  kind: 'MountStateChanged'
+  timestamp: string
+  entity_id: number
+  is_mounting: boolean
+}
+
+// === Weather Events ===
+
+export interface WeatherChangedEvent {
+  kind: 'WeatherChanged'
+  timestamp: string
+  weather_name: string
+  is_active: boolean
+}
+
+// === Recipe Events ===
+
+export interface RecipeUpdatedEvent {
+  kind: 'RecipeUpdated'
+  timestamp: string
+  recipe_id: number
+  completion_count: number
+}
+
+// === Combat Events ===
+
+export interface CombatStateChangedEvent {
+  kind: 'CombatStateChanged'
+  timestamp: string
+  in_combat: boolean
+}
+
+// === Vendor Gold Events ===
+
+export interface VendorGoldChangedEvent {
+  kind: 'VendorGoldChanged'
+  timestamp: string
+  current_gold: number
+  server_id: number
+  max_gold: number
+}
+
+// === Attribute Events ===
+
+export interface AttributeValue {
+  name: string
+  value: number
+}
+
+export interface AttributesChangedEvent {
+  kind: 'AttributesChanged'
+  timestamp: string
+  entity_id: number
+  attributes: AttributeValue[]
+}
+
+// === Login Snapshot Events ===
+
+export interface AbilitiesLoadedEvent {
+  kind: 'AbilitiesLoaded'
+  timestamp: string
+  skill1: string
+  skill2: string
+}
+
+export interface RecipesLoadedEvent {
+  kind: 'RecipesLoaded'
+  timestamp: string
+}
+
+export interface EquipmentSlot {
+  slot: string
+  appearance_key: string
+}
+
+export interface EquipmentChangedEvent {
+  kind: 'EquipmentChanged'
+  timestamp: string
+  entity_id: number
+  appearance: string
+  equipment: EquipmentSlot[]
+}
+
+// === Effect Events ===
+
+export interface EffectsAddedEvent {
+  kind: 'EffectsAdded'
+  timestamp: string
+  entity_id: number
+  source_entity_id: number
+  effect_ids: number[]
+  is_login_batch: boolean
+}
+
+export interface EffectsRemovedEvent {
+  kind: 'EffectsRemoved'
+  timestamp: string
+  entity_id: number
+}
+
+export interface EffectNameUpdatedEvent {
+  kind: 'EffectNameUpdated'
+  timestamp: string
+  entity_id: number
+  effect_instance_id: number
+  display_name: string
+}
+
 // === Union Type ===
 
 export type PlayerEvent =
@@ -153,3 +283,17 @@ export type PlayerEvent =
   | DelayLoopStartedEvent
   | ScreenTextEvent
   | BookOpenedEvent
+  | InteractionEndedEvent
+  | ActiveSkillsChangedEvent
+  | MountStateChangedEvent
+  | WeatherChangedEvent
+  | RecipeUpdatedEvent
+  | CombatStateChangedEvent
+  | VendorGoldChangedEvent
+  | AttributesChangedEvent
+  | AbilitiesLoadedEvent
+  | RecipesLoadedEvent
+  | EquipmentChangedEvent
+  | EffectsAddedEvent
+  | EffectsRemovedEvent
+  | EffectNameUpdatedEvent

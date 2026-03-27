@@ -34,14 +34,14 @@
 import { computed } from 'vue'
 import type { ChatMessage } from '../../types/database'
 import MessageWithItemLinks from './MessageWithItemLinks.vue'
+import { formatTimeFull } from '../../composables/useTimestamp'
 
 const props = defineProps<{
   message: ChatMessage
 }>()
 
 function formatTime(timestamp: string): string {
-  const date = new Date(timestamp)
-  return date.toLocaleTimeString('en-US', { hour12: false })
+  return formatTimeFull(timestamp)
 }
 
 const messageClass = computed(() => {

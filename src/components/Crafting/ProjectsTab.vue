@@ -3,16 +3,17 @@
     <!-- Left: project sidebar (collapsible) -->
     <ProjectSidebar />
 
-    <!-- Middle: recipe list -->
-    <ProjectRecipePanel
+    <!-- Middle: materials panel (flex, gets most space) -->
+    <ProjectMaterialsPanel
       class="mx-3"
       :active-project="store.activeProject"
-      :intermediate-expansions="intermediateExpansions"
-      @duplicate="duplicateProject"
-      @delete="deleteProject"
-      @update-qty="updateEntryQty"
-      @remove="(entryId) => store.removeEntry(entryId)"
-      @toggle-intermediate="toggleIntermediate" />
+      :materials="projectMaterials"
+      :intermediates="projectIntermediates"
+      :material-needs="materialNeeds"
+      :resolving="resolvingAll"
+      :checking-availability="checkingAvailability"
+      @resolve="resolveProject"
+      @check-availability="checkProjectAvailability" />
 
     <!-- Resize handle -->
     <div
@@ -22,17 +23,16 @@
       <div class="w-px h-8 bg-border-default rounded-full" />
     </div>
 
-    <!-- Right: materials panel (resizable width) -->
-    <ProjectMaterialsPanel
-      :style="{ width: `${materialsPanelWidth}px` }"
+    <!-- Right: recipe list (resizable width) -->
+    <ProjectRecipePanel
+      :style="{ width: `${recipePanelWidth}px` }"
       :active-project="store.activeProject"
-      :materials="projectMaterials"
-      :intermediates="projectIntermediates"
-      :material-needs="materialNeeds"
-      :resolving="resolvingAll"
-      :checking-availability="checkingAvailability"
-      @resolve="resolveProject"
-      @check-availability="checkProjectAvailability" />
+      :intermediate-expansions="intermediateExpansions"
+      @duplicate="duplicateProject"
+      @delete="deleteProject"
+      @update-qty="updateEntryQty"
+      @remove="(entryId) => store.removeEntry(entryId)"
+      @toggle-intermediate="toggleIntermediate" />
   </div>
 </template>
 
@@ -74,11 +74,11 @@ watch(() => store.activeProject, (project) => {
 
 // ── Resize logic ──────────────────────────────────────────────────────────────
 
-const MIN_PANEL_WIDTH = 240;
-const MAX_PANEL_WIDTH = 600;
-const DEFAULT_PANEL_WIDTH = 320;
+const MIN_PANEL_WIDTH = 320;
+const MAX_PANEL_WIDTH = 700;
+const DEFAULT_PANEL_WIDTH = 420;
 
-const materialsPanelWidth = ref(DEFAULT_PANEL_WIDTH);
+const recipePanelWidth = ref(DEFAULT_PANEL_WIDTH);
 const isResizing = ref(false);
 let startX = 0;
 let startWidth = 0;
@@ -86,7 +86,7 @@ let startWidth = 0;
 function startResize(e: MouseEvent) {
   isResizing.value = true;
   startX = e.clientX;
-  startWidth = materialsPanelWidth.value;
+  startWidth = recipePanelWidth.value;
   document.addEventListener("mousemove", onResize);
   document.addEventListener("mouseup", stopResize);
   document.body.style.cursor = "col-resize";
@@ -97,7 +97,7 @@ function onResize(e: MouseEvent) {
   // Dragging left increases width (panel is on the right)
   const delta = startX - e.clientX;
   const newWidth = Math.min(MAX_PANEL_WIDTH, Math.max(MIN_PANEL_WIDTH, startWidth + delta));
-  materialsPanelWidth.value = newWidth;
+  recipePanelWidth.value = newWidth;
 }
 
 function stopResize() {
@@ -185,7 +185,7 @@ async function resolveProject() {
     }
 
     for (const entry of store.activeProject.entries) {
-      const recipe = await gameData.getRecipeByName(entry.recipe_name);
+      const recipe = await gameData.resolveRecipe(entry.recipe_name);
       if (!recipe) continue;
 
       const resolved = await store.resolveRecipeIngredients(

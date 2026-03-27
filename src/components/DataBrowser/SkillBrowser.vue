@@ -1,5 +1,5 @@
 <template>
-  <div class="h-[calc(100vh-130px)] flex flex-col">
+  <div class="h-full flex flex-col">
     <!-- Status banner if data not ready -->
     <div v-if="store.status !== 'ready'" class="p-4 text-sm">
       <span v-if="store.status === 'loading'" class="text-accent-gold"
@@ -33,12 +33,15 @@
           No skills found for "{{ query }}"
         </div>
 
-        <ul v-else class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated">
+        <ul ref="listRef" v-else class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated">
           <li
-            v-for="skill in filteredSkills"
+            v-for="(skill, idx) in filteredSkills"
             :key="skill.id"
             class="flex items-baseline gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
-            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === skill.id }"
+            :class="{
+              'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === skill.id,
+              'bg-surface-elevated': selectedIndex === idx && selected?.id !== skill.id
+            }"
             @click="selectSkill(skill)">
             <span class="text-text-dim text-[0.72rem] min-w-12 shrink-0">#{{ skill.id }}</span>
             <span class="text-text-primary/75 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ skill.name }}</span>
@@ -180,8 +183,14 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from "vue";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { useKeyboard } from "../../composables/useKeyboard";
 import { useGameDataStore } from "../../stores/gameDataStore";
+import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { SkillInfo, AbilityInfo } from "../../types/gameData";
+
+const props = defineProps<{
+  navTarget?: EntityNavigationTarget | null;
+}>();
 
 const store = useGameDataStore();
 
@@ -189,6 +198,8 @@ const query = ref("");
 const allSkills = ref<SkillInfo[]>([]);
 const filteredSkills = ref<SkillInfo[]>([]);
 const selected = ref<SkillInfo | null>(null);
+const selectedIndex = ref(0);
+const listRef = ref<HTMLElement | null>(null);
 const relatedAbilities = ref<AbilityInfo[]>([]);
 const iconSrc = ref<string | null>(null);
 const iconLoading = ref(false);
@@ -220,13 +231,26 @@ async function loadAllSkills() {
 watch(query, (val) => {
   if (!val.trim()) {
     filteredSkills.value = allSkills.value;
-    return;
+  } else {
+    const q = val.toLowerCase();
+    filteredSkills.value = allSkills.value.filter(skill =>
+      skill.name.toLowerCase().includes(q) ||
+      skill.description?.toLowerCase().includes(q)
+    );
   }
-  const q = val.toLowerCase();
-  filteredSkills.value = allSkills.value.filter(skill =>
-    skill.name.toLowerCase().includes(q) ||
-    skill.description?.toLowerCase().includes(q)
-  );
+  selectedIndex.value = 0;
+});
+
+useKeyboard({
+  listNavigation: {
+    items: filteredSkills,
+    selectedIndex,
+    onConfirm: (idx) => {
+      const skill = filteredSkills.value[idx];
+      if (skill) selectSkill(skill);
+    },
+    scrollContainerRef: listRef,
+  },
 });
 
 async function selectSkill(skill: SkillInfo) {
@@ -261,4 +285,17 @@ function clearSelection() {
   iconSrc.value = null;
   relatedAbilities.value = [];
 }
+
+// Navigate to a specific skill when navTarget changes
+watch(() => props.navTarget, async (target) => {
+  if (!target || target.type !== 'skill') return;
+  const name = String(target.id);
+  if (selected.value?.name === name) return;
+
+  const skill = await store.resolveSkill(name);
+  if (skill) {
+    query.value = skill.name;
+    selectSkill(skill);
+  }
+}, { immediate: true });
 </script>

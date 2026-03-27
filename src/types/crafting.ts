@@ -100,6 +100,8 @@ export interface FlattenedMaterial {
   is_dynamic: boolean
   /** Keywords for dynamic ingredients */
   item_keys: string[]
+  /** Whether this ingredient can be crafted via a known recipe */
+  is_craftable: boolean
 }
 
 export interface IntermediateCraft {
@@ -131,7 +133,7 @@ export interface MaterialNeed {
   item_id: number
   item_name: string
   quantity_needed: number
-  /** From live inventory */
+  /** From persisted + live inventory */
   inventory_have: number
   /** From storage vaults (snapshot) */
   storage_have: number
@@ -141,71 +143,34 @@ export interface MaterialNeed {
   shortfall: number
   /** Estimated vendor buy price per unit (value * 1.5) */
   vendor_price: number | null
+  /** True if this item can be crafted via a known recipe (intermediate ingredient) */
+  is_craftable: boolean
 }
 
-// ── Leveling optimizer types ────────────────────────────────────────────────
+// ── Leveling helper types ───────────────────────────────────────────────────
 
-export type LevelingStrategy = "first-time-rush" | "cost-efficient" | "combined"
-
-export interface LevelingPlanStep {
+export interface LevelingPlanEntry {
   recipe_id: number
   recipe_name: string
-  /** Number of times to craft this recipe */
   craft_count: number
-  /** XP gained per craft */
+  /** Base XP per craft (before buff) */
   xp_per_craft: number
-  /** First-time bonus XP (only for first craft) */
+  /** First-time bonus XP (0 if already crafted) */
   xp_first_time: number
-  /** Total XP from this step */
+  /** Effective total XP for all crafts (with buff applied) */
   total_xp: number
-  /** Estimated ingredient cost for all crafts */
+  /** Total estimated ingredient cost */
   estimated_cost: number
-  /** Skill level required */
-  skill_level_req: number | null
-  /** Whether this recipe has been crafted before */
-  already_crafted: boolean
-  /** Whether the player has learned this recipe (appears in completion data) */
-  is_known: boolean
-  /** XP drop-off level — recipe becomes less efficient past this */
-  xp_drop_off_level: number | null
 }
 
 export interface LevelingPlanLevel {
-  /** Level at the start of this segment */
   from_level: number
-  /** Level at the end of this segment */
   to_level: number
-  /** XP needed for this level transition */
+  /** XP needed to complete this level */
   xp_needed: number
-  /** Steps to complete this level */
-  steps: LevelingPlanStep[]
-  /** Total XP from steps in this level */
-  total_xp: number
-  /** Total crafts in this level */
-  total_crafts: number
-  /** Total cost in this level */
-  total_cost: number
-}
-
-export interface LevelingPlan {
-  skill_name: string
-  current_level: number
-  target_level: number
-  strategy: LevelingStrategy
-  /** Total XP needed to reach target */
-  xp_needed: number
-  /** XP provided by first-time bonuses */
-  xp_from_first_time: number
-  /** XP provided by grinding */
-  xp_from_grinding: number
-  /** Plan grouped by level transitions */
-  levels: LevelingPlanLevel[]
-  /** Flat list of all steps (for backward compat) */
-  steps: LevelingPlanStep[]
-  /** Total estimated cost across all steps */
-  total_cost: number
-  /** Total crafts across all steps */
-  total_crafts: number
+  /** XP assigned so far from entries */
+  xp_accumulated: number
+  entries: LevelingPlanEntry[]
 }
 
 export interface RecipeCompletionEntry {

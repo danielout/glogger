@@ -49,7 +49,7 @@ Parse a single chat log line into a structured `ChatMessage`.
 
 **Input:** A raw string line from the log file.
 
-**Output:** `Option<ChatMessage>` — `None` for blank lines or excluded channels.
+**Output:** `Option<ChatMessage>` — `None` for blank lines.
 
 **ChatMessage fields:**
 | Field | Type | Description |
@@ -65,13 +65,14 @@ Parse a single chat log line into a structured `ChatMessage`.
 **Parsing rules:**
 - Split line on first `\t` to get timestamp + content
 - If content starts with `[`, extract channel name from brackets
-- Check channel against **excluded channels list** (from settings)
 - For Tell channel: parse `Sender->Recipient` arrow format, normalize so `sender` is always the conversation partner
 - For other channels: detect system vs player messages (system indicators: starts with `-`, starts with `You `, contains `#`)
 - For non-bracketed content: always system messages (banners, area transitions)
 - Chat messages can include linebreaks.
 
 ### 2. Channel Exclusion
+
+**Important:** Channel exclusion controls what gets **persisted to the database**, not what gets parsed. The parser itself parses ALL channels — exclusion is applied at the `insert_chat_messages()` call in the coordinator. This ensures that structured parsers (like `ChatStatusParser` for `[Status]` messages) always receive their data regardless of the user's exclusion settings.
 
 **Configurable** via `settings.excluded_chat_channels`. Default exclusions:
 - Error
@@ -82,7 +83,7 @@ Parse a single chat log line into a structured `ChatMessage`.
 - Status
 - Combat
 
-The parser must read the exclusion list from settings rather than using a hardcoded constant. This allows users to customize which channels are imported.
+See [live-event-streams.md](../architecture/live-event-streams.md) for how Status and other excluded channels are still routed to structured parsers.
 
 ### 3. Item Link Extraction (`extract_item_links`)
 
@@ -280,7 +281,7 @@ Based on observed log data:
 | Nearby | Player chat | Proximity-based |
 | Tell | Player chat | Private messages, has sender->recipient format |
 | Combat | System | Entity combat info, has `#ID` format |
-| Status | System | Friend online counts, favor gains — excluded by default |
+| Status | System | Item gains, XP, economy events — excluded from DB by default but always parsed for `ChatStatusParser` (see [live-event-streams.md](../architecture/live-event-streams.md)) |
 | Error | System | Game errors — excluded by default |
 | Emotes | System | Player emotes — excluded by default |
 | Action Emotes | System | Action-based emotes — excluded by default |
@@ -306,25 +307,30 @@ Based on observed log data:
 - Multiline messages — continuation lines lack the `YY-MM-DD HH:MM:SS\t` prefix
 - Tell messages where player name contains special characters
 
+### Resolved Questions
+- **Should we store Combat channel messages?** No — separate feature. A future `CombatParser` would follow the same pattern as `ChatStatusParser`.
+- **Should we detect and store "Skills" / "Loot" channel messages for tracking progression?** No — Player.log provides this via `PlayerEventParser`.
+- **Should Status channel be parsed despite being excluded from DB?** Yes — `ChatStatusParser` receives all Status messages regardless of `excluded_channels`. See [live-event-streams.md](../architecture/live-event-streams.md).
+- **Should we use timezone offset from login banner?** Yes — implemented. The offset is parsed, stored in settings, and used for UTC timestamp normalization across the app.
+- **Should we extract server name from login banner?** Yes — implemented. Server name is auto-detected and stored in settings.
+
 ### Open Questions
-- Should we store Combat channel messages? They're high-volume but some users may want combat logs. 
-  - NO. Seperate Feature.
-- Should we detect and store "Skills" / "Loot" channel messages for tracking progression?
-  - No, we can do this via Player.log
 - Should area transitions be stored as first-class events (not just system messages) for session timeline features?
 - Should we parse quest-related patterns (e.g., `[Quest] You completed...`) if that channel exists?
 
 ---
 
-## Implementation Priority
+## Implementation Status
 
-1. **Settings-driven exclusion** — Replace hardcoded `EXCLUDED_CHANNELS` with settings lookup
-2. **Multiline message handling** — Support messages with linebreaks and continuation lines (item links on next line)
-3. **Session detection** — Parse login/logout/area-change events into structured data
-4. **Robust edge cases** — Harden parsing against malformed lines
-5. **Chat search** — SQL-backed search with filters (query, channel, sender, date range, item links)
-6. **Unread notifications** — Per-channel unread counts with configurable badges
-7. **Watchwords & item watches** — Rule engine evaluated during tailing with event-driven alerts
-8. **Combat/Loot/Skills channels** — Decide inclusion and add parsing if needed
-9. **Server extraction** — Pull server name from login banner
-10. **Timezone handling** — Use timezone offset from login banner for correct UTC conversion
+Completed:
+1. Settings-driven exclusion (applied at DB persistence layer, not parse time)
+2. Multiline message handling (continuation lines appended to previous message)
+3. Session detection (login/logout/area-change parsed into `LogEvent` variants)
+4. Robust edge cases (blank lines, malformed timestamps, UTF-8 lossy)
+5. Watchwords & item watches (rule engine evaluated during tailing)
+6. Server + timezone extraction from login banner
+7. Channel exclusion refactor (parsing sees all channels; filtering only at `insert_chat_messages`)
+
+Remaining:
+- Chat search — SQL-backed search with filters
+- Unread notifications — per-channel unread counts with configurable badges

@@ -2,7 +2,7 @@
   <div class="flex items-center gap-2 py-1.5 px-2 text-xs border-b border-surface-dark/50">
     <!-- Item display -->
     <template v-if="ingredient.item_id !== null">
-      <ItemInline :name="ingredient.item_name" />
+      <ItemInline :reference="ingredient.item_name" />
     </template>
     <template v-else-if="ingredient.is_dynamic">
       <span

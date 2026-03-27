@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { useSettingsStore } from './settingsStore'
+import { useGameStateStore } from './gameStateStore'
 import type {
   CharacterInfo,
   CharacterSnapshotSummary,
@@ -42,16 +43,6 @@ export const useCharacterStore = defineStore('character', () => {
   const inventorySummary = ref<InventorySummary | null>(null)
   const lastInventoryImport = ref<InventoryImportResult | null>(null)
 
-  // Aggregated owned item counts by item name (summed across all stacks/vaults)
-  const ownedItemCounts = computed<Record<string, number>>(() => {
-    const counts: Record<string, number> = {}
-    for (const item of inventoryItems.value) {
-      const name = item.item_name
-      counts[name] = (counts[name] ?? 0) + item.stack_size
-    }
-    return counts
-  })
-
   async function importCharacterReport(): Promise<ImportResult | null> {
     const settingsStore = useSettingsStore()
     error.value = null
@@ -72,6 +63,11 @@ export const useCharacterStore = defineStore('character', () => {
 
       // Refresh character list after import
       await loadCharacters()
+
+      // Refresh game state domains seeded by character import
+      const gameState = useGameStateStore()
+      await gameState.refreshDomain('storage')
+      await gameState.refreshDomain('favor')
 
       return result
     } catch (e) {
@@ -102,7 +98,13 @@ export const useCharacterStore = defineStore('character', () => {
 
     try {
       // Try to auto-import the latest report from the Reports folder
-      await invoke('import_latest_report_for_character', { characterName })
+      await invoke('import_latest_report_for_character', { characterName, serverName: serverName || undefined })
+      // Report import seeds game state — refresh domains so the UI has the data
+      const gameState = useGameStateStore()
+      await Promise.all([
+        gameState.refreshDomain('favor'),
+        gameState.refreshDomain('storage'),
+      ])
     } catch (e) {
       // Non-fatal — the report may not exist on disk
       console.warn('Auto-import latest report:', e)
@@ -130,8 +132,24 @@ export const useCharacterStore = defineStore('character', () => {
       loading.value = false
     }
 
-    // Also init inventory data (non-blocking)
-    initInventoryForActiveCharacter()
+    // Load inventory data and import reports for all other characters on
+    // this server in parallel — both must complete before the app goes interactive
+    // so the aggregate view and inventory views have data.
+    const parallelTasks: Promise<void>[] = [initInventoryForActiveCharacter()]
+
+    if (serverName) {
+      parallelTasks.push(
+        invoke<number>('import_reports_for_server', { serverName }).then(async (count) => {
+          if (count > 0) {
+            await loadCharacters()
+          }
+        }).catch((e) => {
+          console.warn('Server-wide report import:', e)
+        })
+      )
+    }
+
+    await Promise.all(parallelTasks)
   }
 
   async function selectCharacter(character: CharacterInfo) {
@@ -203,17 +221,16 @@ export const useCharacterStore = defineStore('character', () => {
     if (!characterName) return
 
     try {
+      const serverName = settingsStore.settings.activeServerName
       const result = await invoke<ImportResult | null>(
         'import_latest_report_for_character',
-        { characterName },
+        { characterName, serverName: serverName || undefined },
       )
 
       if (result) {
         // New report was imported — refresh snapshot list and auto-select newest
         lastImport.value = result
         await loadCharacters()
-
-        const serverName = settingsStore.settings.activeServerName
         const activeChar = characters.value.find(
           c => c.character_name === characterName && (!serverName || c.server_name === serverName)
         )
@@ -232,14 +249,14 @@ export const useCharacterStore = defineStore('character', () => {
 
     // Also poll for inventory reports
     try {
+      const serverName = settingsStore.settings.activeServerName
       const invResult = await invoke<InventoryImportResult | null>(
         'import_latest_inventory_for_character',
-        { characterName },
+        { characterName, serverName: serverName || undefined },
       )
 
       if (invResult) {
         lastInventoryImport.value = invResult
-        const serverName = settingsStore.settings.activeServerName
         await loadInventorySnapshots(characterName, serverName || undefined)
         if (inventorySnapshots.value.length > 0) {
           await selectInventorySnapshot(inventorySnapshots.value[0])
@@ -294,6 +311,12 @@ export const useCharacterStore = defineStore('character', () => {
         )
       }
 
+      // Refresh game state storage domain (inventory import seeds game_state_storage)
+      if (!result.was_duplicate) {
+        const gameState = useGameStateStore()
+        await gameState.refreshDomain('storage')
+      }
+
       return result
     } catch (e) {
       error.value = String(e)
@@ -334,17 +357,17 @@ export const useCharacterStore = defineStore('character', () => {
   async function initInventoryForActiveCharacter() {
     const settingsStore = useSettingsStore()
     const characterName = settingsStore.settings.activeCharacterName
+    const serverName = settingsStore.settings.activeServerName
     if (!characterName) return
 
     // Try auto-import
     try {
-      await invoke('import_latest_inventory_for_character', { characterName })
+      await invoke('import_latest_inventory_for_character', { characterName, serverName: serverName || undefined })
     } catch (e) {
       console.warn('Auto-import inventory:', e)
     }
 
     // Load snapshots for the active character
-    const serverName = settingsStore.settings.activeServerName
     await loadInventorySnapshots(characterName, serverName || undefined)
 
     // Auto-select most recent snapshot
@@ -383,7 +406,6 @@ export const useCharacterStore = defineStore('character', () => {
     inventoryItems,
     inventorySummary,
     lastInventoryImport,
-    ownedItemCounts,
     importInventoryReport,
     loadInventorySnapshots,
     selectInventorySnapshot,

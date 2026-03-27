@@ -10,11 +10,11 @@
     <div class="flex gap-6 text-sm items-center">
       <div class="flex gap-1.5 items-baseline">
         <span class="text-text-muted">Items:</span>
-        <span class="text-text-primary font-medium">{{ store.itemCount.toLocaleString() }}</span>
+        <span class="text-text-primary font-medium">{{ store.liveItemCount.toLocaleString() }}</span>
       </div>
       <div class="flex gap-1.5 items-baseline">
         <span class="text-text-muted">Total Qty:</span>
-        <span class="text-text-primary font-medium">{{ store.totalStacks.toLocaleString() }}</span>
+        <span class="text-text-primary font-medium">{{ store.liveTotalStacks.toLocaleString() }}</span>
       </div>
       <div v-if="coordinator.isPlayerLogTailing" class="flex gap-1.5 items-center">
         <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
@@ -44,13 +44,13 @@
     </div>
 
     <!-- Empty state -->
-    <div v-if="!store.isPopulated && coordinator.isPlayerLogTailing"
-      class="text-text-muted text-sm py-8 text-center">
-      Waiting for inventory data. Log into a character in-game to populate.
-    </div>
+    <EmptyState
+      v-if="!store.isLivePopulated && coordinator.isPlayerLogTailing"
+      primary="Waiting for inventory data."
+      secondary="Log into a character in-game to populate." />
 
     <!-- Two-panel layout: inventory table + activity feed -->
-    <div v-if="store.isPopulated" class="flex gap-4 flex-1 min-h-0">
+    <div v-if="store.isLivePopulated" class="flex gap-4 flex-1 min-h-0">
       <!-- Item table -->
       <div class="flex-1 overflow-auto">
         <table class="w-full text-sm border-collapse">
@@ -72,7 +72,7 @@
                 {{ item.slot_index >= 0 ? item.slot_index : '-' }}
               </td>
               <td class="py-1 px-2">
-                <ItemInline :name="item.item_name" :item-id="item.item_type_id ?? undefined" />
+                <ItemInline :reference="item.item_name" />
               </td>
               <td class="py-1 px-2 text-right font-mono text-text-primary">
                 {{ item.stack_size > 0 ? item.stack_size.toLocaleString() : '-' }}
@@ -83,11 +83,11 @@
       </div>
 
       <!-- Activity feed -->
-      <div v-if="store.eventLog.length > 0" class="w-64 flex-shrink-0 flex flex-col border-l border-border-default pl-4">
+      <div v-if="store.liveEventLog.length > 0" class="w-64 flex-shrink-0 flex flex-col border-l border-border-default pl-4">
         <h3 class="text-xs text-text-muted font-medium mb-2">Activity</h3>
         <div class="overflow-auto flex-1 space-y-1">
           <div
-            v-for="(entry, i) in store.eventLog"
+            v-for="(entry, i) in store.liveEventLog"
             :key="i"
             class="text-xs py-0.5"
           >
@@ -112,18 +112,19 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useInventoryStore } from '../../stores/inventoryStore'
+import { useGameStateStore } from '../../stores/gameStateStore'
 import { useCoordinatorStore } from '../../stores/coordinatorStore'
+import EmptyState from '../Shared/EmptyState.vue'
 import ItemInline from '../Shared/Item/ItemInline.vue'
 
-const store = useInventoryStore()
+const store = useGameStateStore()
 const coordinator = useCoordinatorStore()
 
 const searchQuery = ref('')
 
 const filteredItems = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
-  if (!q) return store.items
-  return store.items.filter(item => item.item_name.toLowerCase().includes(q))
+  if (!q) return store.liveItems
+  return store.liveItems.filter(item => item.item_name.toLowerCase().includes(q))
 })
 </script>

@@ -23,7 +23,7 @@
         class="text-xs flex gap-1.5 px-2 py-0.5 items-center">
         <span class="text-[#6a8a6a] shrink-0">&#128214;</span>
         <span class="text-text-secondary">Taught by item:</span>
-        <ItemInline :name="item.name" />
+        <ItemInline :reference="item.name" />
       </div>
 
       <!-- Quests that reward this entity -->
@@ -33,7 +33,7 @@
         class="text-xs flex gap-1.5 px-2 py-0.5 items-center">
         <span class="text-[#6a8a6a] shrink-0">&#10070;</span>
         <span class="text-text-secondary">Quest reward:</span>
-        <QuestInline :quest-key="quest.key" />
+        <QuestInline :reference="quest.key" />
       </div>
     </div>
   </div>

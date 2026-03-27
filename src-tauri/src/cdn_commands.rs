@@ -5,9 +5,17 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::RwLock;
+use chrono::Local;
 
 use crate::cdn;
-use crate::game_data::{self, GameData, ItemInfo, SkillInfo, AbilityInfo, RecipeInfo, QuestInfo, NpcInfo, EffectInfo, PlayerTitleInfo, SourceEntry};
+use crate::game_data::{self, GameData, ItemInfo, SkillInfo, AbilityInfo, RecipeInfo, QuestInfo, NpcInfo, EffectInfo, PlayerTitleInfo, SourceEntry, AreaInfo};
+
+/// Timestamped log line for startup diagnostics.
+macro_rules! startup_log {
+    ($($arg:tt)*) => {
+        eprintln!("[{}] {}", Local::now().format("%H:%M:%S%.3f"), format!($($arg)*));
+    };
+}
 
 // ── Managed state ─────────────────────────────────────────────────────────────
 
@@ -47,12 +55,13 @@ pub async fn init_game_data(app: &AppHandle, state: &GameDataState) -> Result<()
     let cached_version = cdn::read_cached_version(&data_dir).await;
 
     // Try to fetch remote version; fall back to cache-only if offline
+    startup_log!("Checking CDN version...");
     let remote_version = match cdn::fetch_remote_version().await {
         Ok(v) => v,
         Err(e) => {
-            eprintln!("CDN version check failed (offline?): {e}");
+            startup_log!("CDN version check failed (offline?): {e}");
             if let Some(cached) = cached_version {
-                eprintln!("Loading from cache (v{cached})");
+                startup_log!("Loading game data from cache (v{cached})");
                 match game_data::load_from_cache(&data_dir, cached).await {
                     Ok(data) => {
                         *state.write().await = data;
@@ -69,12 +78,12 @@ pub async fn init_game_data(app: &AppHandle, state: &GameDataState) -> Result<()
     let needs_download = cached_version.map_or(true, |cv| cv != remote_version);
 
     if needs_download {
-        eprintln!("Downloading CDN data v{remote_version}...");
+        startup_log!("Downloading CDN data v{remote_version}...");
         cdn::download_all_data_files(remote_version, &data_dir).await?;
         cdn::write_cached_version(&data_dir, remote_version).await?;
-        eprintln!("CDN data downloaded.");
+        startup_log!("CDN download complete");
     } else {
-        eprintln!("CDN data up to date (v{remote_version}).");
+        startup_log!("CDN data up to date (v{remote_version}), loading from cache");
     }
 
     let data = game_data::load_from_cache(&data_dir, remote_version).await?;
@@ -145,33 +154,78 @@ pub async fn force_refresh_cdn(
     })
 }
 
-// ── Item query commands ───────────────────────────────────────────────────────
+// ── Unified entity resolve commands ──────────────────────────────────────────
+// Each accepts any known reference form (numeric ID, display name, internal
+// name, CDN key) and resolves it to the canonical entity.
 
-/// Look up a single item by its integer ID.
+/// Resolve any reference to an item (numeric ID, display name, or internal name).
 #[tauri::command]
-pub async fn get_item(
-    id: u32,
+pub async fn resolve_item(
+    reference: String,
     state: State<'_, GameDataState>,
 ) -> Result<Option<ItemInfo>, String> {
-    Ok(state.read().await.items.get(&id).cloned())
+    Ok(state.read().await.resolve_item(&reference).cloned())
 }
 
-/// Look up a single item by its display name (exact match).
+/// Resolve a batch of item references.
 #[tauri::command]
-pub async fn get_item_by_name(
-    name: String,
+pub async fn resolve_items_batch(
+    references: Vec<String>,
     state: State<'_, GameDataState>,
-) -> Result<Option<ItemInfo>, String> {
-    Ok(state.read().await.item_by_name(&name).cloned())
+) -> Result<std::collections::HashMap<String, ItemInfo>, String> {
+    let data = state.read().await;
+    let mut result = std::collections::HashMap::new();
+    for ref_str in references {
+        if let Some(item) = data.resolve_item(&ref_str) {
+            result.insert(ref_str, item.clone());
+        }
+    }
+    Ok(result)
 }
 
-/// Look up a single item by its internal name (exact match).
+/// Resolve any reference to a skill.
 #[tauri::command]
-pub async fn get_item_by_internal_name(
-    name: String,
+pub async fn resolve_skill(
+    reference: String,
     state: State<'_, GameDataState>,
-) -> Result<Option<ItemInfo>, String> {
-    Ok(state.read().await.item_by_internal_name(&name).cloned())
+) -> Result<Option<SkillInfo>, String> {
+    Ok(state.read().await.resolve_skill(&reference).cloned())
+}
+
+/// Resolve any reference to a recipe.
+#[tauri::command]
+pub async fn resolve_recipe(
+    reference: String,
+    state: State<'_, GameDataState>,
+) -> Result<Option<RecipeInfo>, String> {
+    Ok(state.read().await.resolve_recipe(&reference).cloned())
+}
+
+/// Resolve any reference to a quest.
+#[tauri::command]
+pub async fn resolve_quest(
+    reference: String,
+    state: State<'_, GameDataState>,
+) -> Result<Option<QuestInfo>, String> {
+    Ok(state.read().await.resolve_quest(&reference).cloned())
+}
+
+/// Resolve any reference to an NPC.
+#[tauri::command]
+pub async fn resolve_npc(
+    reference: String,
+    state: State<'_, GameDataState>,
+) -> Result<Option<NpcInfo>, String> {
+    Ok(state.read().await.resolve_npc(&reference).cloned())
+}
+
+/// Resolve any reference to an area.
+#[tauri::command]
+pub async fn resolve_area(
+    reference: String,
+    state: State<'_, GameDataState>,
+) -> Result<Option<AreaInfo>, String> {
+    Ok(state.read().await.resolve_area(&reference).cloned())
 }
 
 /// Search items whose name contains the query string (case-insensitive).
@@ -243,6 +297,23 @@ pub async fn get_items_by_keyword(
     Ok(results)
 }
 
+/// Return a sorted list of all distinct keyword values across all items.
+#[tauri::command]
+pub async fn get_all_item_keywords(
+    state: State<'_, GameDataState>,
+) -> Result<Vec<String>, String> {
+    let data = state.read().await;
+    let mut keywords: Vec<String> = data
+        .items
+        .values()
+        .flat_map(|item| item.keywords.iter().cloned())
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect();
+    keywords.sort();
+    Ok(keywords)
+}
+
 /// Return a sorted list of all distinct equip_slot values across all items.
 #[tauri::command]
 pub async fn get_equip_slots(
@@ -271,15 +342,6 @@ pub async fn get_all_skills(
     let mut skills: Vec<SkillInfo> = data.skills.values().cloned().collect();
     skills.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(skills)
-}
-
-/// Look up a single skill by name (exact match, case-sensitive as per CDN).
-#[tauri::command]
-pub async fn get_skill_by_name(
-    name: String,
-    state: State<'_, GameDataState>,
-) -> Result<Option<SkillInfo>, String> {
-    Ok(state.read().await.skill_by_name(&name).cloned())
 }
 
 /// Get the XP amounts array for a skill's XP table.
@@ -329,15 +391,6 @@ pub async fn get_abilities_for_skill(
 }
 
 // ── Recipe query commands ─────────────────────────────────────────────────────
-
-/// Look up a single recipe by name (exact match).
-#[tauri::command]
-pub async fn get_recipe_by_name(
-    name: String,
-    state: State<'_, GameDataState>,
-) -> Result<Option<RecipeInfo>, String> {
-    Ok(state.read().await.recipe_by_name(&name).cloned())
-}
 
 /// Get all recipes that produce a given item ID.
 #[tauri::command]
@@ -415,24 +468,6 @@ pub async fn get_recipes_for_skill(
     Ok(results)
 }
 
-/// Get multiple items by their IDs (for efficient batch lookup).
-#[tauri::command]
-pub async fn get_items_batch(
-    ids: Vec<u32>,
-    state: State<'_, GameDataState>,
-) -> Result<std::collections::HashMap<u32, ItemInfo>, String> {
-    let data = state.read().await;
-    let mut result = std::collections::HashMap::new();
-
-    for id in ids {
-        if let Some(item) = data.items.get(&id) {
-            result.insert(id, item.clone());
-        }
-    }
-
-    Ok(result)
-}
-
 // ── Quest query commands ──────────────────────────────────────────────────────
 
 /// Get all quests.
@@ -494,26 +529,6 @@ pub async fn search_quests(
     });
 
     Ok(results)
-}
-
-/// Get a quest by its internal key.
-#[tauri::command]
-pub async fn get_quest_by_key(
-    key: String,
-    state: State<'_, GameDataState>,
-) -> Result<Option<QuestInfo>, String> {
-    let data = state.read().await;
-    Ok(data.quests.get(&key).cloned())
-}
-
-/// Get a quest by its InternalName (e.g. "Carpentry_QualityMeleeStaves").
-#[tauri::command]
-pub async fn get_quest_by_internal_name(
-    name: String,
-    state: State<'_, GameDataState>,
-) -> Result<Option<QuestInfo>, String> {
-    let data = state.read().await;
-    Ok(data.quest_by_internal_name(&name).cloned())
 }
 
 // ── NPC query commands ────────────────────────────────────────────────────────
@@ -991,28 +1006,76 @@ pub async fn get_storage_vault_zones(
         .storage_vaults
         .iter()
         .map(|(key, vault)| {
-            let area_key = vault.raw.get("Area")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
+            let area_key = vault.area.clone();
             let area_name = area_key.as_ref()
                 .and_then(|ak| data.areas.get(ak))
                 .and_then(|a| a.short_friendly_name.clone().or(a.friendly_name.clone()));
-            let npc_friendly_name = vault.raw.get("NpcFriendlyName")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
-            let num_slots = vault.raw.get("NumSlots")
-                .and_then(|v| v.as_u64())
-                .map(|n| n as u32);
 
             StorageVaultZoneInfo {
                 vault_key: key.clone(),
                 area_key,
                 area_name,
-                npc_friendly_name,
-                num_slots,
+                npc_friendly_name: vault.npc_friendly_name.clone(),
+                num_slots: vault.num_slots,
             }
         })
         .collect();
     results.sort_by(|a, b| a.vault_key.cmp(&b.vault_key));
+    Ok(results)
+}
+
+#[derive(serde::Serialize)]
+pub struct StorageVaultDetail {
+    pub key: String,
+    pub id: u32,
+    pub npc_friendly_name: Option<String>,
+    pub area: Option<String>,
+    pub area_name: Option<String>,
+    pub grouping: Option<String>,
+    pub grouping_name: Option<String>,
+    pub num_slots: Option<u32>,
+    pub levels: Option<std::collections::HashMap<String, u32>>,
+    pub slot_attribute: Option<String>,
+    pub required_item_keywords: Option<Vec<String>>,
+    pub requirement_description: Option<String>,
+    pub num_slots_script_atomic_max: Option<u32>,
+}
+
+/// Get full metadata for all storage vaults (for the Storage Tracker feature).
+#[tauri::command]
+pub async fn get_storage_vault_metadata(
+    state: State<'_, GameDataState>,
+) -> Result<Vec<StorageVaultDetail>, String> {
+    let data = state.read().await;
+    let mut results: Vec<StorageVaultDetail> = data
+        .storage_vaults
+        .iter()
+        .map(|(key, vault)| {
+            let area_name = vault.area.as_ref()
+                .and_then(|ak| data.areas.get(ak))
+                .and_then(|a| a.short_friendly_name.clone().or(a.friendly_name.clone()));
+            let grouping_area = vault.grouping.as_ref().or(vault.area.as_ref());
+            let grouping_name = grouping_area
+                .and_then(|gk| data.areas.get(gk))
+                .and_then(|a| a.short_friendly_name.clone().or(a.friendly_name.clone()));
+
+            StorageVaultDetail {
+                key: key.clone(),
+                id: vault.id,
+                npc_friendly_name: vault.npc_friendly_name.clone(),
+                area: vault.area.clone(),
+                area_name,
+                grouping: vault.grouping.clone(),
+                grouping_name,
+                num_slots: vault.num_slots,
+                levels: vault.levels.clone(),
+                slot_attribute: vault.slot_attribute.clone(),
+                required_item_keywords: vault.required_item_keywords.clone(),
+                requirement_description: vault.requirement_description.clone(),
+                num_slots_script_atomic_max: vault.num_slots_script_atomic_max,
+            }
+        })
+        .collect();
+    results.sort_by(|a, b| a.key.cmp(&b.key));
     Ok(results)
 }

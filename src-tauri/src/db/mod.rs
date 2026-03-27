@@ -15,6 +15,9 @@ pub mod gourmand_commands;
 pub mod survey_commands;
 pub mod farming_commands;
 pub mod crafting_commands;
+pub mod game_state_commands;
+pub mod market_commands;
+pub mod aggregate_commands;
 
 pub type DbPool = r2d2::Pool<SqliteConnectionManager>;
 pub type DbConnection = r2d2::PooledConnection<SqliteConnectionManager>;

@@ -10,9 +10,9 @@
 
     <div v-if="error" class="text-[#c87e7e] bg-[#2a1a1a] border border-[#5a3a3a] rounded p-3 text-sm">{{ error }}</div>
 
-    <!-- Speed Bonus Stats -->
+    <!-- Global Summary (quick overview) -->
     <div v-if="speedStats" class="bg-surface-card border border-border-default rounded p-4">
-      <div class="text-[0.65rem] uppercase tracking-widest text-[#7ec8e3] mb-3 font-bold">Speed Bonus Stats (All Time)</div>
+      <div class="text-[0.65rem] uppercase tracking-widest text-[#7ec8e3] mb-3 font-bold">All-Time Overview</div>
       <div class="grid grid-cols-5 gap-4">
         <div class="text-center">
           <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Total Surveys</div>
@@ -31,75 +31,124 @@
           <div class="text-lg font-bold text-text-primary">{{ speedStats.total_bonus_items }}</div>
         </div>
         <div class="text-center">
-          <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Unique Bonus Items</div>
-          <div class="text-lg font-bold text-text-primary">{{ speedStats.unique_bonus_items }}</div>
+          <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Zones Active</div>
+          <div class="text-lg font-bold text-text-primary">{{ zones.length }}</div>
         </div>
       </div>
     </div>
 
-    <!-- Survey Type Metrics -->
-    <div v-if="typeMetrics.length > 0" class="bg-surface-card border border-border-default rounded p-4">
-      <div class="text-[0.65rem] uppercase tracking-widest text-[#7ec8e3] mb-3 font-bold">Survey Type Breakdown (All Time)</div>
-      <div class="flex flex-col gap-1">
-        <div class="grid grid-cols-[1fr_80px_100px_80px_80px_100px] gap-4 px-3 py-2 rounded text-[0.7rem] items-center bg-[#1a1a2e] border border-border-light font-bold text-text-secondary uppercase">
-          <div class="text-left">Type</div>
-          <div class="text-right">Completed</div>
-          <div class="text-right">Speed Bonuses</div>
-          <div class="text-right">Bonus Rate</div>
-          <div class="text-right">Total Items</div>
-          <div class="text-right">Avg Items/Survey</div>
-        </div>
-        <div
-          v-for="metric in typeMetrics"
-          :key="metric.survey_type"
-          class="grid grid-cols-[1fr_80px_100px_80px_80px_100px] gap-4 px-3 py-2 rounded text-xs items-center bg-black/20 border border-border-default hover:bg-black/30 hover:border-border-light">
-          <div class="text-left font-medium text-text-primary">{{ metric.survey_type }}</div>
-          <div class="text-right font-mono">{{ metric.total_completed }}</div>
-          <div class="text-right font-mono text-[#c8b47e]">{{ metric.speed_bonus_count }}/{{ metric.total_completed }}</div>
-          <div class="text-right font-mono text-[#c8b47e]">{{ metric.speed_bonus_rate.toFixed(1) }}%</div>
-          <div class="text-right font-mono">{{ metric.total_items }}</div>
-          <div class="text-right font-mono">{{ metric.avg_items_per_survey.toFixed(1) }}</div>
-        </div>
-      </div>
-    </div>
+    <!-- Zone Accordions -->
+    <AccordionSection
+      v-for="zone in zones"
+      :key="zone.zone"
+      :default-open="zones.length === 1"
+    >
+      <template #title>{{ formatZone(zone.zone) }}</template>
+      <template #badge>
+        <span class="text-[0.6rem] text-text-dim font-mono">
+          {{ zoneTotalSurveys(zone) }} surveys
+        </span>
+      </template>
 
-    <!-- All-Time Loot Breakdown -->
-    <div v-if="lootBreakdown.length > 0" class="bg-surface-card border border-border-default rounded p-4">
-      <div class="text-[0.65rem] uppercase tracking-widest text-[#7ec8e3] mb-3 font-bold">Loot Breakdown (All Time)</div>
-      <div class="flex flex-col gap-1">
-        <div class="grid grid-cols-[1fr_80px_80px_80px_80px] gap-4 px-3 py-2 rounded text-[0.7rem] items-center bg-[#1a1a2e] border border-border-light font-bold text-text-secondary uppercase">
-          <div class="text-left">Item</div>
-          <div class="text-right">Total</div>
-          <div class="text-right">Primary</div>
-          <div class="text-right">Bonus</div>
-          <div class="text-right">Times Found</div>
-        </div>
+      <div class="flex flex-col gap-4 mt-2">
+        <!-- Category sections (mineral / mining) -->
         <div
-          v-for="loot in lootBreakdown"
-          :key="loot.item_name"
-          class="grid grid-cols-[1fr_80px_80px_80px_80px] gap-4 px-3 py-2 rounded text-xs items-center bg-black/20 border border-border-default hover:bg-black/30 hover:border-border-light">
-          <div class="text-left min-w-0">
-            <ItemInline :name="loot.item_name" />
+          v-for="cat in zone.speed_bonus_stats"
+          :key="cat.category"
+          class="bg-[#1a1a2e] border border-border-light rounded-lg p-4"
+        >
+          <div class="text-[0.65rem] uppercase tracking-widest mb-3 font-bold"
+               :class="cat.category === 'mineral' ? 'text-[#7ec8e3]' : 'text-[#c87e7e]'">
+            {{ cat.category === 'mineral' ? 'Mineral Surveys' : 'Mining Surveys' }}
+            <span class="text-text-dim font-normal ml-2">
+              {{ cat.total_surveys }} completed &middot; {{ cat.speed_bonus_count }} bonuses ({{ cat.speed_bonus_rate.toFixed(1) }}%)
+            </span>
           </div>
-          <div class="text-right font-mono font-medium text-text-primary">{{ loot.total_quantity }}</div>
-          <div class="text-right font-mono text-[#8ec88e]">{{ loot.primary_quantity }}</div>
-          <div class="text-right font-mono text-[#c8b47e]">{{ loot.bonus_quantity }}</div>
-          <div class="text-right font-mono text-text-secondary">{{ loot.times_received }}</div>
+
+          <!-- Speed Bonus Item Stats -->
+          <div v-if="cat.item_stats.length > 0" class="mb-4">
+            <div class="text-[0.6rem] uppercase tracking-widest text-[#c8b47e] mb-2 font-bold">
+              Speed Bonus Items
+              <span v-if="cat.avg_bonus_value > 0" class="text-text-dim font-normal ml-2">
+                avg value per proc: {{ formatGold(cat.avg_bonus_value) }}
+              </span>
+            </div>
+            <div class="flex flex-col gap-1">
+              <div class="grid grid-cols-[1fr_60px_60px_60px_60px_60px_80px] gap-3 px-3 py-1.5 text-[0.6rem] uppercase tracking-wide text-text-muted font-bold">
+                <div>Item</div>
+                <div class="text-right">Total</div>
+                <div class="text-right">Seen</div>
+                <div class="text-right">Min</div>
+                <div class="text-right">Max</div>
+                <div class="text-right">Avg</div>
+                <div class="text-right">Out of</div>
+              </div>
+              <div
+                v-for="item in cat.item_stats"
+                :key="item.item_name"
+                class="grid grid-cols-[1fr_60px_60px_60px_60px_60px_80px] gap-3 px-3 py-1.5 text-xs bg-black/20 border border-border-default rounded hover:bg-black/30"
+              >
+                <div class="min-w-0"><ItemInline :reference="item.item_name" /></div>
+                <div class="text-right font-mono text-[#c8b47e]">{{ item.total_quantity }}</div>
+                <div class="text-right font-mono text-text-secondary">{{ item.times_seen }}</div>
+                <div class="text-right font-mono">{{ item.min_per_proc }}</div>
+                <div class="text-right font-mono">{{ item.max_per_proc }}</div>
+                <div class="text-right font-mono text-text-primary">{{ item.avg_per_proc.toFixed(1) }}</div>
+                <div class="text-right font-mono text-text-dim">{{ item.total_procs }} procs</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Per-Survey-Type Breakdown for this category -->
+          <div v-for="st in surveyTypesForCategory(zone, cat.category)" :key="st.survey_type">
+            <div class="flex items-center gap-3 mb-2 mt-3">
+              <span class="text-xs font-semibold text-text-primary">{{ st.survey_type }}</span>
+              <span class="text-[0.6rem] text-text-dim">
+                {{ st.total_completed }} completed &middot; cost: {{ formatGold(st.crafting_cost) }}
+              </span>
+            </div>
+            <div v-if="st.item_stats.length > 0" class="flex flex-col gap-1 ml-2">
+              <div class="grid grid-cols-[1fr_60px_60px_60px_60px_60px] gap-3 px-3 py-1 text-[0.6rem] uppercase tracking-wide text-text-muted font-bold">
+                <div>Item</div>
+                <div class="text-right">Total</div>
+                <div class="text-right">Seen</div>
+                <div class="text-right">Min</div>
+                <div class="text-right">Max</div>
+                <div class="text-right">Avg</div>
+              </div>
+              <div
+                v-for="item in st.item_stats"
+                :key="item.item_name"
+                class="grid grid-cols-[1fr_60px_60px_60px_60px_60px] gap-3 px-3 py-1.5 text-xs bg-black/10 border border-border-default rounded hover:bg-black/20"
+              >
+                <div class="min-w-0"><ItemInline :reference="item.item_name" /></div>
+                <div class="text-right font-mono text-text-primary">{{ item.total_quantity }}</div>
+                <div class="text-right font-mono text-text-secondary">{{ item.times_seen }}/{{ st.total_completed }}</div>
+                <div class="text-right font-mono">{{ item.min_per_completion }}</div>
+                <div class="text-right font-mono">{{ item.max_per_completion }}</div>
+                <div class="text-right font-mono text-text-primary">{{ item.avg_per_completion.toFixed(1) }}</div>
+              </div>
+            </div>
+            <div v-else class="text-text-dim italic text-xs ml-2">No loot data recorded.</div>
+          </div>
         </div>
       </div>
-    </div>
+    </AccordionSection>
 
     <!-- Empty state -->
-    <div v-if="!loading && !speedStats && typeMetrics.length === 0 && lootBreakdown.length === 0"
-      class="text-text-dim italic text-center p-8">
-      No survey data yet. Complete some surveys to see analytics here.
-    </div>
+    <EmptyState
+      v-if="!loading && zones.length === 0 && !speedStats"
+      variant="panel"
+      primary="No survey data yet"
+      secondary="Complete some surveys to see analytics here." />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import EmptyState from "../Shared/EmptyState.vue";
+import AccordionSection from "../Shared/AccordionSection.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 
 interface SpeedBonusStats {
@@ -110,30 +159,52 @@ interface SpeedBonusStats {
   unique_bonus_items: number;
 }
 
-interface SurveyTypeMetrics {
-  survey_type: string;
-  total_completed: number;
-  speed_bonus_count: number;
-  speed_bonus_rate: number;
-  total_items: number;
-  total_bonus_items: number;
-  avg_items_per_survey: number;
+interface SpeedBonusItemStats {
+  item_name: string;
+  total_quantity: number;
+  times_seen: number;
+  total_procs: number;
+  min_per_proc: number;
+  max_per_proc: number;
+  avg_per_proc: number;
 }
 
-interface LootBreakdownEntry {
+interface CategorySpeedBonusStats {
+  category: string;
+  total_surveys: number;
+  speed_bonus_count: number;
+  speed_bonus_rate: number;
+  avg_bonus_value: number;
+  item_stats: SpeedBonusItemStats[];
+}
+
+interface SurveyItemStats {
   item_name: string;
-  item_id: number | null;
   total_quantity: number;
-  primary_quantity: number;
-  bonus_quantity: number;
-  times_received: number;
+  times_seen: number;
+  min_per_completion: number;
+  max_per_completion: number;
+  avg_per_completion: number;
+}
+
+interface SurveyTypeAnalytics {
+  survey_type: string;
+  category: string;
+  crafting_cost: number;
+  total_completed: number;
+  item_stats: SurveyItemStats[];
+}
+
+interface ZoneAnalytics {
+  zone: string;
+  speed_bonus_stats: CategorySpeedBonusStats[];
+  survey_type_stats: SurveyTypeAnalytics[];
 }
 
 const loading = ref(false);
 const error = ref("");
 const speedStats = ref<SpeedBonusStats | null>(null);
-const typeMetrics = ref<SurveyTypeMetrics[]>([]);
-const lootBreakdown = ref<LootBreakdownEntry[]>([]);
+const zones = ref<ZoneAnalytics[]>([]);
 
 onMounted(() => {
   loadAll();
@@ -143,18 +214,35 @@ async function loadAll() {
   loading.value = true;
   error.value = "";
   try {
-    const [speed, metrics, loot] = await Promise.all([
+    const [speed, zoneData] = await Promise.all([
       invoke<SpeedBonusStats>("get_speed_bonus_stats", { sessionId: null }),
-      invoke<SurveyTypeMetrics[]>("get_survey_type_metrics", { sessionId: null }),
-      invoke<LootBreakdownEntry[]>("get_loot_breakdown", { sessionId: null, limit: 100 }),
+      invoke<ZoneAnalytics[]>("get_zone_analytics"),
     ]);
     speedStats.value = speed;
-    typeMetrics.value = metrics;
-    lootBreakdown.value = loot;
+    zones.value = zoneData;
   } catch (e) {
     error.value = `Failed to load analytics: ${e}`;
   } finally {
     loading.value = false;
   }
+}
+
+function zoneTotalSurveys(zone: ZoneAnalytics): number {
+  return zone.speed_bonus_stats.reduce((sum, c) => sum + c.total_surveys, 0);
+}
+
+function surveyTypesForCategory(zone: ZoneAnalytics, category: string): SurveyTypeAnalytics[] {
+  return zone.survey_type_stats.filter(st => st.category === category);
+}
+
+function formatZone(zone: string): string {
+  // Convert camelCase zone names to spaced: "KurMountains" → "Kur Mountains"
+  return zone.replace(/([a-z])([A-Z])/g, "$1 $2");
+}
+
+function formatGold(amount: number): string {
+  const rounded = Math.round(amount);
+  if (rounded >= 0) return rounded.toLocaleString() + "g";
+  return "-" + Math.abs(rounded).toLocaleString() + "g";
 }
 </script>

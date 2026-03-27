@@ -44,9 +44,8 @@ pub fn is_timestamped_line(line: &str) -> bool {
 
 /// Parse a single chat log line into a ChatMessage.
 ///
-/// `excluded_channels` is the list of channels to skip (from settings).
-/// Lines on excluded channels return `None`.
-pub fn parse_chat_line(line: &str, excluded_channels: &[String]) -> Option<ChatMessage> {
+/// All channels are parsed — filtering for display/persistence is handled downstream.
+pub fn parse_chat_line(line: &str) -> Option<ChatMessage> {
     if line.trim().is_empty() {
         return None;
     }
@@ -67,11 +66,6 @@ pub fn parse_chat_line(line: &str, excluded_channels: &[String]) -> Option<ChatM
     if content.starts_with('[') {
         let channel_end = content.find(']')?;
         let channel = content[1..channel_end].to_string();
-
-        // Skip excluded channels
-        if excluded_channels.iter().any(|c| c == &channel) {
-            return None;
-        }
 
         let remaining = content[channel_end + 1..].trim();
 
@@ -176,7 +170,7 @@ pub fn parse_chat_line(line: &str, excluded_channels: &[String]) -> Option<ChatM
 /// Lines that start with a timestamp (`YY-MM-DD HH:MM:SS\t`) begin a new message.
 /// Lines without that prefix are continuation lines — their content is appended
 /// to the previous message's text, and item links are re-extracted.
-pub fn parse_chat_lines(text: &str, excluded_channels: &[String]) -> Vec<ChatMessage> {
+pub fn parse_chat_lines(text: &str) -> Vec<ChatMessage> {
     let mut messages: Vec<ChatMessage> = Vec::new();
 
     for line in text.lines() {
@@ -186,7 +180,7 @@ pub fn parse_chat_lines(text: &str, excluded_channels: &[String]) -> Vec<ChatMes
 
         if is_timestamped_line(line) {
             // New timestamped line — parse as a new message
-            if let Some(msg) = parse_chat_line(line, excluded_channels) {
+            if let Some(msg) = parse_chat_line(line) {
                 messages.push(msg);
             }
         } else {
@@ -323,6 +317,72 @@ pub fn parse_chat_log_filename(filename: &str) -> Option<NaiveDate> {
     NaiveDate::from_ymd_opt(year, month, day)
 }
 
+/// Result of parsing a chat log login line
+#[derive(Debug, Clone)]
+pub struct ChatLoginInfo {
+    pub character_name: String,
+    pub server_name: String,
+    /// Timezone offset in seconds from UTC (e.g., -25200 for -07:00:00)
+    pub timezone_offset_seconds: Option<i32>,
+}
+
+/// Parse a chat log login line to extract character name and server name.
+/// Format: "**************************************** Logged In As PlayerName. Server Dreva. Timezone Offset -07:00:00."
+pub fn parse_chat_login_line(line: &str) -> Option<ChatLoginInfo> {
+    if !line.contains("Logged In As") {
+        return None;
+    }
+
+    let name_start = line.find("As ")? + 3;
+    let after_name = &line[name_start..];
+    let name_end = after_name.find(". Server")?;
+    let character_name = after_name[..name_end].trim().to_string();
+
+    let server_start = name_start + name_end + ". Server ".len();
+    let after_server = &line[server_start..];
+    let server_end = after_server.find('.')?;
+    let server_name = after_server[..server_end].trim().to_string();
+
+    if character_name.is_empty() || server_name.is_empty() {
+        return None;
+    }
+
+    // Parse timezone offset: "Timezone Offset -07:00:00" or "Timezone Offset 05:30:00"
+    let timezone_offset_seconds = parse_timezone_offset(line);
+
+    Some(ChatLoginInfo { character_name, server_name, timezone_offset_seconds })
+}
+
+/// Parse a timezone offset string like "-07:00:00" or "05:30:00" into total seconds from UTC.
+fn parse_timezone_offset(line: &str) -> Option<i32> {
+    let marker = "Timezone Offset ";
+    let offset_start = line.find(marker)? + marker.len();
+    let after_marker = &line[offset_start..];
+    // Offset ends at the next period
+    let offset_end = after_marker.find('.')?;
+    let offset_str = after_marker[..offset_end].trim();
+
+    // Determine sign
+    let (sign, time_part) = if offset_str.starts_with('-') {
+        (-1, &offset_str[1..])
+    } else if offset_str.starts_with('+') {
+        (1, &offset_str[1..])
+    } else {
+        (1, offset_str)
+    };
+
+    let parts: Vec<&str> = time_part.split(':').collect();
+    if parts.len() != 3 {
+        return None;
+    }
+
+    let hours: i32 = parts[0].parse().ok()?;
+    let minutes: i32 = parts[1].parse().ok()?;
+    let seconds: i32 = parts[2].parse().ok()?;
+
+    Some(sign * (hours * 3600 + minutes * 60 + seconds))
+}
+
 /// Extract player name from the first line of a chat log
 /// Format: "**************************************** Logged In As PlayerName. Server Dreva. ..."
 pub fn extract_player_name(file_path: &Path) -> std::io::Result<Option<String>> {
@@ -331,13 +391,8 @@ pub fn extract_player_name(file_path: &Path) -> std::io::Result<Option<String>> 
 
     for line in reader.lines() {
         let line = line?;
-        if line.contains("Logged In As") {
-            if let Some(start) = line.find("As ") {
-                if let Some(end) = line[start..].find(". Server") {
-                    let name = line[start + 3..start + end].trim().to_string();
-                    return Ok(Some(name));
-                }
-            }
+        if let Some(info) = parse_chat_login_line(&line) {
+            return Ok(Some(info.character_name));
         }
     }
 
@@ -351,7 +406,6 @@ pub fn extract_player_name(file_path: &Path) -> std::io::Result<Option<String>> 
 pub fn read_chat_log(
     file_path: &Path,
     start_position: u64,
-    excluded_channels: &[String],
 ) -> std::io::Result<(Vec<ChatMessage>, u64)> {
     use std::io::Read;
 
@@ -368,7 +422,7 @@ pub fn read_chat_log(
     file.read_to_end(&mut content)?;
 
     let content_str = String::from_utf8_lossy(&content);
-    let messages = parse_chat_lines(&content_str, excluded_channels);
+    let messages = parse_chat_lines(&content_str);
 
     Ok((messages, file_size))
 }
@@ -378,23 +432,10 @@ mod tests {
     use super::*;
     use chrono::Datelike;
 
-    /// Default excluded channels for testing
-    fn default_excluded() -> Vec<String> {
-        vec![
-            "Error".to_string(),
-            "Emotes".to_string(),
-            "Action Emotes".to_string(),
-            "NPC Chatter".to_string(),
-            "System".to_string(),
-            "Status".to_string(),
-            "Combat".to_string(),
-        ]
-    }
-
     #[test]
     fn test_parse_global_chat() {
         let line = "26-03-09 05:01:46\t[Global] Gunbsnark: one for party for shezak?";
-        let msg = parse_chat_line(line, &default_excluded()).unwrap();
+        let msg = parse_chat_line(line).unwrap();
 
         assert_eq!(msg.channel, Some("Global".to_string()));
         assert_eq!(msg.sender, Some("Gunbsnark".to_string()));
@@ -403,17 +444,9 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_status_message_excluded() {
+    fn test_parse_status_message() {
         let line = "26-03-09 05:00:17\t[Status] You have 4 friends online.";
-        // With default exclusions, Status is excluded
-        assert!(parse_chat_line(line, &default_excluded()).is_none());
-    }
-
-    #[test]
-    fn test_parse_status_message_not_excluded() {
-        let line = "26-03-09 05:00:17\t[Status] You have 4 friends online.";
-        // With no exclusions, Status is parsed
-        let msg = parse_chat_line(line, &[]).unwrap();
+        let msg = parse_chat_line(line).unwrap();
 
         assert_eq!(msg.channel, Some("Status".to_string()));
         assert_eq!(msg.sender, None);
@@ -424,7 +457,7 @@ mod tests {
     #[test]
     fn test_parse_system_message() {
         let line = "26-03-09 05:00:14\t**************************************** Logged In As Zenith. Server Dreva. Timezone Offset -07:00:00.";
-        let msg = parse_chat_line(line, &default_excluded()).unwrap();
+        let msg = parse_chat_line(line).unwrap();
 
         assert_eq!(msg.channel, None);
         assert_eq!(msg.sender, None);
@@ -432,9 +465,24 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_chat_login_line() {
+        let line = "26-03-22 18:12:49\t**************************************** Logged In As Zenith. Server Dreva. Timezone Offset -07:00:00.";
+        let info = parse_chat_login_line(line).unwrap();
+        assert_eq!(info.character_name, "Zenith");
+        assert_eq!(info.server_name, "Dreva");
+        assert_eq!(info.timezone_offset_seconds, Some(-25200)); // -7 * 3600
+    }
+
+    #[test]
+    fn test_parse_chat_login_line_no_match() {
+        assert!(parse_chat_login_line("just a regular line").is_none());
+        assert!(parse_chat_login_line("[Global] Player: hello").is_none());
+    }
+
+    #[test]
     fn test_parse_area_change() {
         let line = "26-03-09 05:00:14\t******************** Entering Area: Casino";
-        let msg = parse_chat_line(line, &default_excluded()).unwrap();
+        let msg = parse_chat_line(line).unwrap();
 
         assert_eq!(msg.channel, None);
         assert!(msg.is_system);
@@ -442,20 +490,21 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_combat_message_excluded_by_default() {
-        let line = "26-03-09 05:04:55\t[Combat] CaseyPG #4392505: Recovered: 56 power";
-        // Combat is excluded by default
-        assert!(parse_chat_line(line, &default_excluded()).is_none());
-    }
+    fn test_parse_all_channels() {
+        // All channels are now parsed — no exclusion at parse level
+        let error_line = "26-03-09 05:01:46\t[Error] Something went wrong";
+        assert!(parse_chat_line(error_line).is_some());
 
-    #[test]
-    fn test_parse_combat_message_when_not_excluded() {
-        let line = "26-03-09 05:04:55\t[Combat] CaseyPG #4392505: Recovered: 56 power";
-        let msg = parse_chat_line(line, &[]).unwrap();
-
+        let combat_line = "26-03-09 05:04:55\t[Combat] CaseyPG #4392505: Recovered: 56 power";
+        let msg = parse_chat_line(combat_line).unwrap();
         assert_eq!(msg.channel, Some("Combat".to_string()));
-        assert_eq!(msg.sender, None);
-        assert!(msg.is_system);
+
+        let status_line = "26-03-09 05:00:17\t[Status] You earned 50 XP in Mining.";
+        let msg = parse_chat_line(status_line).unwrap();
+        assert_eq!(msg.channel, Some("Status".to_string()));
+
+        let trade_line = "26-03-09 05:01:46\t[Trade] PlayerName: WTS items";
+        assert!(parse_chat_line(trade_line).is_some());
     }
 
     #[test]
@@ -507,59 +556,12 @@ mod tests {
     #[test]
     fn test_parse_chat_with_item_links() {
         let line = "26-03-09 05:01:46\t[Trade] PlayerName: Selling [Item: Leatherworking: Great Evasion Shirt] for 1000 councils";
-        let msg = parse_chat_line(line, &default_excluded()).unwrap();
+        let msg = parse_chat_line(line).unwrap();
 
         assert_eq!(msg.channel, Some("Trade".to_string()));
         assert_eq!(msg.sender, Some("PlayerName".to_string()));
         assert_eq!(msg.item_links.len(), 1);
         assert_eq!(msg.item_links[0].item_name, "Leatherworking: Great Evasion Shirt");
-    }
-
-    #[test]
-    fn test_excluded_channels() {
-        let excluded = default_excluded();
-
-        let error_line = "26-03-09 05:01:46\t[Error] Something went wrong";
-        assert!(parse_chat_line(error_line, &excluded).is_none());
-
-        let emotes_line = "26-03-09 05:01:46\t[Emotes] PlayerName waves";
-        assert!(parse_chat_line(emotes_line, &excluded).is_none());
-
-        let action_emotes_line = "26-03-09 05:01:46\t[Action Emotes] PlayerName dances";
-        assert!(parse_chat_line(action_emotes_line, &excluded).is_none());
-
-        let npc_chatter_line = "26-03-09 05:01:46\t[NPC Chatter] Guard: Halt!";
-        assert!(parse_chat_line(npc_chatter_line, &excluded).is_none());
-
-        let system_line = "26-03-09 05:01:46\t[System] You have been logged out";
-        assert!(parse_chat_line(system_line, &excluded).is_none());
-
-        // Non-excluded channels work
-        let trade_line = "26-03-09 05:01:46\t[Trade] PlayerName: WTS items";
-        assert!(parse_chat_line(trade_line, &excluded).is_some());
-    }
-
-    #[test]
-    fn test_custom_exclusion_list() {
-        // Exclude Trade but not Status
-        let custom = vec!["Trade".to_string()];
-
-        let trade_line = "26-03-09 05:01:46\t[Trade] PlayerName: WTS items";
-        assert!(parse_chat_line(trade_line, &custom).is_none());
-
-        let status_line = "26-03-09 05:00:17\t[Status] You have 4 friends online.";
-        assert!(parse_chat_line(status_line, &custom).is_some());
-    }
-
-    #[test]
-    fn test_no_exclusions() {
-        let empty: Vec<String> = vec![];
-
-        let error_line = "26-03-09 05:01:46\t[Error] Something went wrong";
-        assert!(parse_chat_line(error_line, &empty).is_some());
-
-        let system_line = "26-03-09 05:01:46\t[System] You have been logged out";
-        assert!(parse_chat_line(system_line, &empty).is_some());
     }
 
     // ── Multiline / parse_chat_lines tests ──────────────────────────────────
@@ -568,7 +570,7 @@ mod tests {
     fn test_parse_chat_lines_basic() {
         let text = "26-03-09 05:01:46\t[Global] Player1: hello\n\
                      26-03-09 05:01:47\t[Global] Player2: hi there";
-        let msgs = parse_chat_lines(text, &default_excluded());
+        let msgs = parse_chat_lines(text);
 
         assert_eq!(msgs.len(), 2);
         assert_eq!(msgs[0].message, "hello");
@@ -580,7 +582,7 @@ mod tests {
         let text = "26-03-09 05:01:46\t[Trade] Seller: WTS these items\n\
                      [Item: Sword]\n\
                      [Item: Blacksmithing: Iron Hammer]";
-        let msgs = parse_chat_lines(text, &default_excluded());
+        let msgs = parse_chat_lines(text);
 
         assert_eq!(msgs.len(), 1);
         assert!(msgs[0].message.contains("WTS these items"));
@@ -594,7 +596,7 @@ mod tests {
     fn test_parse_chat_lines_continuation_with_text() {
         let text = "26-03-09 12:46:01\t[Tell] You->AnotherPlayer: you need?\n\
                      [Item: Cow: Moo of Calm 7]";
-        let msgs = parse_chat_lines(text, &default_excluded());
+        let msgs = parse_chat_lines(text);
 
         assert_eq!(msgs.len(), 1);
         assert!(msgs[0].message.contains("you need?"));
@@ -608,7 +610,7 @@ mod tests {
         // Continuation line with no preceding message — should be skipped
         let text = "[Item: Sword]\n\
                      26-03-09 05:01:46\t[Global] Player1: hello";
-        let msgs = parse_chat_lines(text, &default_excluded());
+        let msgs = parse_chat_lines(text);
 
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].message, "hello");
@@ -619,7 +621,7 @@ mod tests {
         let text = "26-03-09 05:01:46\t[Global] Player1: hello\n\
                      \n\
                      26-03-09 05:01:47\t[Global] Player2: world";
-        let msgs = parse_chat_lines(text, &default_excluded());
+        let msgs = parse_chat_lines(text);
 
         assert_eq!(msgs.len(), 2);
     }
@@ -636,7 +638,7 @@ mod tests {
 Make new friends in Wintertide\n\
 Dying together\n\
 26-03-11 19:50:38\t[-apptesting] Zenith: That was multiline text";
-        let msgs = parse_chat_lines(text, &[]);
+        let msgs = parse_chat_lines(text);
 
         assert_eq!(msgs.len(), 5, "Should parse 5 messages, got: {:#?}", msgs);
 
@@ -681,7 +683,7 @@ Dying together\n\
     #[test]
     fn test_parse_tell_outgoing() {
         let line = "26-03-11 12:46:01\t[Tell] You->AnotherPlayer: you need?";
-        let msg = parse_chat_line(line, &default_excluded()).unwrap();
+        let msg = parse_chat_line(line).unwrap();
 
         assert_eq!(msg.channel, Some("Tell".to_string()));
         assert_eq!(msg.sender, Some("AnotherPlayer".to_string()));
@@ -693,7 +695,7 @@ Dying together\n\
     #[test]
     fn test_parse_tell_incoming() {
         let line = "26-03-11 12:46:21\t[Tell] AnotherPlayer->You: I JUST traded for it today haha";
-        let msg = parse_chat_line(line, &default_excluded()).unwrap();
+        let msg = parse_chat_line(line).unwrap();
 
         assert_eq!(msg.channel, Some("Tell".to_string()));
         assert_eq!(msg.sender, Some("AnotherPlayer".to_string()));
@@ -706,7 +708,7 @@ Dying together\n\
     fn test_parse_tell_message_with_colon() {
         // Message body contains colons — should not break parsing
         let line = "26-03-11 12:50:00\t[Tell] You->TraderJoe: price: 500 councils";
-        let msg = parse_chat_line(line, &default_excluded()).unwrap();
+        let msg = parse_chat_line(line).unwrap();
 
         assert_eq!(msg.sender, Some("TraderJoe".to_string()));
         assert_eq!(msg.message, "price: 500 councils");
@@ -717,7 +719,7 @@ Dying together\n\
     fn test_parse_tell_with_item_link() {
         let text = "26-03-11 12:46:01\t[Tell] You->AnotherPlayer: check this out\n\
                      [Item: Cow: Moo of Calm 7]";
-        let msgs = parse_chat_lines(text, &default_excluded());
+        let msgs = parse_chat_lines(text);
 
         assert_eq!(msgs.len(), 1);
         assert_eq!(msgs[0].sender, Some("AnotherPlayer".to_string()));
@@ -730,7 +732,7 @@ Dying together\n\
     fn test_parse_tell_conversation_both_sides() {
         let text = "26-03-11 12:46:01\t[Tell] You->AnotherPlayer: you need?\n\
                      26-03-11 12:46:21\t[Tell] AnotherPlayer->You: I JUST traded for it today haha";
-        let msgs = parse_chat_lines(text, &default_excluded());
+        let msgs = parse_chat_lines(text);
 
         assert_eq!(msgs.len(), 2);
         // Both messages should have the same sender (conversation partner)

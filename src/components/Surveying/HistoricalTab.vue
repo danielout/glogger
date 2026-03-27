@@ -68,7 +68,8 @@
             <span class="text-xs text-text-dim">{{ formatDuration(sess.elapsed_seconds) }}</span>
           </div>
           <div class="flex gap-6 items-center">
-            <span class="text-xs text-text-secondary">{{ sess.surveys_completed }} surveys</span>
+            <span v-if="sess.survey_types_used" class="text-xs text-text-dim max-w-64 truncate">{{ sess.survey_types_used }}</span>
+            <span class="text-xs text-text-secondary">{{ sess.total_completions }} surveys</span>
             <span :class="['text-xs font-semibold', sess.total_profit >= 0 ? 'text-[#7ec87e]' : 'text-[#c87e7e]']">
               {{ formatGold(sess.total_profit) }}
             </span>
@@ -97,7 +98,7 @@
                   </div>
                   <div class="flex justify-between text-xs">
                     <span class="text-text-muted">Completed</span>
-                    <span class="text-text-primary font-bold">{{ sess.surveys_completed }}</span>
+                    <span class="text-text-primary font-bold">{{ sess.total_completions }}</span>
                   </div>
                 </div>
               </div>
@@ -164,47 +165,49 @@
             <!-- Right: Loot breakdown -->
             <div class="flex-1 min-w-0">
               <div v-if="sessionLoot[sess.id]">
-                <!-- Primary Loot -->
+                <!-- Primary Loot Table -->
                 <div v-if="primaryLoot(sess.id).length > 0" class="mb-4">
-                  <div class="text-[0.65rem] uppercase tracking-widest text-text-dim mb-2 font-bold">Survey Rewards</div>
-                  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                  <div class="text-[0.65rem] uppercase tracking-widest text-text-dim mb-2 font-bold">
+                    Survey Rewards
+                    <span class="text-text-dim font-normal ml-2">{{ primaryLoot(sess.id).length }} unique items</span>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <div class="grid grid-cols-[1fr_60px_60px] gap-3 px-3 py-1 text-[0.6rem] uppercase tracking-wide text-text-muted font-bold">
+                      <div>Item</div>
+                      <div class="text-right">Total</div>
+                      <div class="text-right">Drops</div>
+                    </div>
                     <div
                       v-for="loot in primaryLoot(sess.id)"
                       :key="'p-' + loot.item_name"
-                      class="bg-black/20 border border-border-default rounded-md p-2.5 transition-all hover:bg-black/35 hover:border-border-hover">
-                      <div class="flex items-center gap-2">
-                        <div class="flex-1 min-w-0">
-                          <div class="text-text-primary text-xs font-medium truncate">
-                            <ItemInline :name="loot.item_name" />
-                          </div>
-                          <div class="flex items-center gap-2 mt-0.5">
-                            <span class="text-text-secondary text-xs font-semibold">&times;{{ loot.primary_quantity }}</span>
-                          </div>
-                        </div>
-                      </div>
+                      class="grid grid-cols-[1fr_60px_60px] gap-3 px-3 py-1.5 text-xs bg-black/20 border border-border-default rounded hover:bg-black/30">
+                      <div class="min-w-0"><ItemInline :reference="loot.item_name" /></div>
+                      <div class="text-right font-mono text-text-primary">{{ loot.primary_quantity }}</div>
+                      <div class="text-right font-mono text-text-secondary">{{ loot.times_received }}</div>
                     </div>
                   </div>
                 </div>
                 <div v-else class="text-text-dim italic text-xs mb-3">No primary loot recorded.</div>
 
-                <!-- Speed Bonus Loot -->
+                <!-- Speed Bonus Loot Table -->
                 <div v-if="bonusLoot(sess.id).length > 0">
-                  <div class="text-[0.65rem] uppercase tracking-widest text-[#c8b47e] mb-2 font-bold">Speed Bonus</div>
-                  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                  <div class="text-[0.65rem] uppercase tracking-widest text-[#c8b47e] mb-2 font-bold">
+                    Speed Bonus
+                    <span class="text-text-dim font-normal ml-2">{{ sess.speed_bonus_count }} procs</span>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <div class="grid grid-cols-[1fr_60px_60px] gap-3 px-3 py-1 text-[0.6rem] uppercase tracking-wide text-text-muted font-bold">
+                      <div>Item</div>
+                      <div class="text-right">Total</div>
+                      <div class="text-right">Drops</div>
+                    </div>
                     <div
                       v-for="loot in bonusLoot(sess.id)"
                       :key="'b-' + loot.item_name"
-                      class="bg-black/20 border border-[#4a3a2a] rounded-md p-2.5 transition-all hover:bg-black/35 hover:border-border-hover">
-                      <div class="flex items-center gap-2">
-                        <div class="flex-1 min-w-0">
-                          <div class="text-text-primary text-xs font-medium truncate">
-                            <ItemInline :name="loot.item_name" />
-                          </div>
-                          <div class="flex items-center gap-2 mt-0.5">
-                            <span class="text-[#c8b47e] text-xs font-semibold">&times;{{ loot.bonus_quantity }}</span>
-                          </div>
-                        </div>
-                      </div>
+                      class="grid grid-cols-[1fr_60px_60px] gap-3 px-3 py-1.5 text-xs bg-black/20 border border-[#4a3a2a] rounded hover:bg-black/30">
+                      <div class="min-w-0"><ItemInline :reference="loot.item_name" /></div>
+                      <div class="text-right font-mono text-[#c8b47e]">{{ loot.bonus_quantity }}</div>
+                      <div class="text-right font-mono text-text-secondary">{{ loot.times_received }}</div>
                     </div>
                   </div>
                 </div>
@@ -236,6 +239,7 @@ import { ref, computed, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import type { HistoricalSession } from "../../types/database";
 import ItemInline from "../Shared/Item/ItemInline.vue";
+import { formatDateTimeShort } from "../../composables/useTimestamp";
 
 interface LootBreakdownEntry {
   item_name: string;
@@ -253,7 +257,7 @@ const expandedId = ref<number | null>(null);
 const sessionLoot = ref<Record<number, LootBreakdownEntry[]>>({});
 
 const aggTotalSurveys = computed(() =>
-  sessions.value.reduce((sum, s) => sum + s.surveys_completed, 0)
+  sessions.value.reduce((sum, s) => sum + s.total_completions, 0)
 );
 
 const aggTotalProfit = computed(() =>
@@ -346,13 +350,7 @@ function formatGold(amount: number): string {
 }
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTimeShort(dateStr)
 }
 
 function formatDuration(seconds: number): string {

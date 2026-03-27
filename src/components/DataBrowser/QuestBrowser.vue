@@ -1,5 +1,5 @@
 <template>
-  <div class="h-[calc(100vh-130px)] flex flex-col">
+  <div class="h-full flex flex-col">
     <!-- Status banner if data not ready -->
     <div v-if="store.status !== 'ready'" class="p-4 text-sm">
       <span v-if="store.status === 'loading'" class="text-accent-gold"
@@ -66,12 +66,15 @@
           No quests found
         </div>
 
-        <ul v-else class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated">
+        <ul ref="listRef" v-else class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated">
           <li
-            v-for="quest in filteredQuests"
+            v-for="(quest, idx) in filteredQuests"
             :key="quest.internal_name"
             class="flex flex-col gap-1 px-2.5 py-2 cursor-pointer border-b border-surface-dark hover:bg-[#1e1e1e]"
-            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.internal_name === quest.internal_name }"
+            :class="{
+              'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.internal_name === quest.internal_name,
+              'bg-surface-elevated': selectedIndex === idx && selected?.internal_name !== quest.internal_name
+            }"
             @click="selectQuest(quest)">
             <div class="flex flex-col gap-0.5">
               <span class="text-text-primary/75 text-[0.85rem]">{{ getDisplayName(quest) }}</span>
@@ -218,8 +221,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
 import { useGameDataStore } from "../../stores/gameDataStore";
+import { useKeyboard } from "../../composables/useKeyboard";
+import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { QuestInfo, QuestReward, QuestRequirement, EntitySources } from "../../types/gameData";
 import SourcesPanel from "../Shared/SourcesPanel.vue";
+
+const props = defineProps<{
+  navTarget?: EntityNavigationTarget | null;
+}>();
 
 const store = useGameDataStore();
 
@@ -229,6 +238,8 @@ const selected = ref<QuestInfo | null>(null);
 const sources = ref<EntitySources | null>(null);
 const sourcesLoading = ref(false);
 const loading = ref(false);
+const selectedIndex = ref(0);
+const listRef = ref<HTMLElement | null>(null);
 
 // Filters
 const filterArea = ref<string>("all");
@@ -320,6 +331,22 @@ const filteredQuests = computed(() => {
   return filtered;
 });
 
+watch(filteredQuests, () => {
+  selectedIndex.value = 0;
+});
+
+useKeyboard({
+  listNavigation: {
+    items: filteredQuests,
+    selectedIndex,
+    onConfirm: (index: number) => {
+      const quest = filteredQuests.value[index];
+      if (quest) selectQuest(quest);
+    },
+    scrollContainerRef: listRef,
+  },
+});
+
 function selectQuest(quest: QuestInfo) {
   selected.value = quest;
   sources.value = null;
@@ -408,4 +435,17 @@ function formatReuseTime(quest: QuestInfo): string | null {
   }
   return null;
 }
+
+// Navigate to a specific quest when navTarget changes
+watch(() => props.navTarget, async (target) => {
+  if (!target || target.type !== 'quest') return;
+  const key = String(target.id);
+  if (selected.value?.internal_name === key) return;
+
+  const quest = await store.resolveQuest(key);
+  if (quest) {
+    query.value = quest.raw?.Name || quest.internal_name;
+    selectQuest(quest);
+  }
+}, { immediate: true });
 </script>

@@ -79,6 +79,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import type { ChatMessage } from '../../types/database'
 import MessageWithItemLinks from './MessageWithItemLinks.vue'
+import { formatTimeShort, formatDateTimeShort } from '../../composables/useTimestamp'
 
 const props = defineProps<{
   messages: ChatMessage[]
@@ -116,20 +117,15 @@ function channelColorClass(channel: string): string {
 }
 
 function formatTime(timestamp: string): string {
-  const date = new Date(timestamp)
+  // Timestamps from DB are UTC — convert to local for display
+  const date = new Date(timestamp.replace(' ', 'T') + 'Z')
   const now = new Date()
   const isToday = date.toDateString() === now.toDateString()
 
   if (isToday) {
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    return formatTimeShort(timestamp)
   } else {
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    })
+    return formatDateTimeShort(timestamp)
   }
 }
 

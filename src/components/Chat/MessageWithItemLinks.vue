@@ -4,7 +4,7 @@
       <template v-if="part.type === 'text'">{{ part.content }}</template>
       <ItemInline
         v-else-if="part.type === 'item' && part.link"
-        :name="part.link.item_name"
+        :reference="part.link.item_name"
       />
     </template>
   </span>

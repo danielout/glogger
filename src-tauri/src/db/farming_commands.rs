@@ -8,6 +8,7 @@ use super::DbPool;
 
 #[derive(Deserialize)]
 pub struct FarmingSkillInput {
+    pub skill_id: i64,
     pub skill_name: String,
     pub xp_gained: i64,
     pub levels_gained: i32,
@@ -21,8 +22,8 @@ pub struct FarmingItemInput {
 
 #[derive(Deserialize)]
 pub struct FarmingFavorInput {
+    pub npc_key: String,
     pub npc_name: String,
-    pub npc_id: Option<i64>,
     pub delta: f64,
 }
 
@@ -44,6 +45,7 @@ pub struct SaveFarmingSessionInput {
 
 #[derive(Serialize)]
 pub struct FarmingSkillRecord {
+    pub skill_id: i64,
     pub skill_name: String,
     pub xp_gained: i64,
     pub levels_gained: i32,
@@ -57,8 +59,8 @@ pub struct FarmingItemRecord {
 
 #[derive(Serialize)]
 pub struct FarmingFavorRecord {
+    pub npc_key: String,
     pub npc_name: String,
-    pub npc_id: Option<i64>,
     pub delta: f64,
 }
 
@@ -107,9 +109,9 @@ pub fn save_farming_session(
     // Insert skill records
     for skill in &input.skills {
         conn.execute(
-            "INSERT INTO farming_session_skills (session_id, skill_name, xp_gained, levels_gained)
-             VALUES (?1, ?2, ?3, ?4)",
-            rusqlite::params![session_id, skill.skill_name, skill.xp_gained, skill.levels_gained],
+            "INSERT INTO farming_session_skills (session_id, skill_id, skill_name, xp_gained, levels_gained)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![session_id, skill.skill_id, skill.skill_name, skill.xp_gained, skill.levels_gained],
         ).map_err(|e| format!("Failed to save farming skill: {e}"))?;
     }
 
@@ -125,9 +127,9 @@ pub fn save_farming_session(
     // Insert favor records
     for favor in &input.favors {
         conn.execute(
-            "INSERT INTO farming_session_favors (session_id, npc_name, npc_id, delta)
+            "INSERT INTO farming_session_favors (session_id, npc_key, npc_name, delta)
              VALUES (?1, ?2, ?3, ?4)",
-            rusqlite::params![session_id, favor.npc_name, favor.npc_id, favor.delta],
+            rusqlite::params![session_id, favor.npc_key, favor.npc_name, favor.delta],
         ).map_err(|e| format!("Failed to save farming favor: {e}"))?;
     }
 
@@ -177,14 +179,15 @@ pub fn get_farming_sessions(
     for session in &mut sessions {
         // Skills
         let mut skill_stmt = conn.prepare(
-            "SELECT skill_name, xp_gained, levels_gained FROM farming_session_skills WHERE session_id = ?1"
+            "SELECT skill_id, skill_name, xp_gained, levels_gained FROM farming_session_skills WHERE session_id = ?1"
         ).map_err(|e| format!("Failed to prepare skill query: {e}"))?;
 
         let skill_rows = skill_stmt.query_map([session.id], |row| {
             Ok(FarmingSkillRecord {
-                skill_name: row.get(0)?,
-                xp_gained: row.get(1)?,
-                levels_gained: row.get(2)?,
+                skill_id: row.get(0)?,
+                skill_name: row.get(1)?,
+                xp_gained: row.get(2)?,
+                levels_gained: row.get(3)?,
             })
         }).map_err(|e| format!("Skill query failed: {e}"))?;
 
@@ -210,13 +213,13 @@ pub fn get_farming_sessions(
 
         // Favors
         let mut favor_stmt = conn.prepare(
-            "SELECT npc_name, npc_id, delta FROM farming_session_favors WHERE session_id = ?1"
+            "SELECT npc_key, npc_name, delta FROM farming_session_favors WHERE session_id = ?1"
         ).map_err(|e| format!("Failed to prepare favor query: {e}"))?;
 
         let favor_rows = favor_stmt.query_map([session.id], |row| {
             Ok(FarmingFavorRecord {
-                npc_name: row.get(0)?,
-                npc_id: row.get(1)?,
+                npc_key: row.get(0)?,
+                npc_name: row.get(1)?,
                 delta: row.get(2)?,
             })
         }).map_err(|e| format!("Favor query failed: {e}"))?;

@@ -37,7 +37,7 @@
         v-for="entry in store.tracker.entries"
         :key="entry.recipe_id"
         class="flex items-center gap-2 text-xs">
-        <RecipeInline :name="entry.recipe_name" class="shrink-0" />
+        <RecipeInline :reference="entry.recipe_name" class="shrink-0" />
 
         <!-- Progress bar -->
         <div class="flex-1 flex items-center gap-2">
@@ -71,7 +71,7 @@
         :key="idx"
         class="flex items-center gap-2 text-[0.65rem] text-text-dim">
         <span class="text-text-muted shrink-0">{{ formatTime(evt.timestamp) }}</span>
-        <ItemInline :name="evt.item_name" />
+        <ItemInline :reference="evt.item_name" />
         <span v-if="evt.quantity > 0" class="text-accent-gold">+{{ evt.quantity }}</span>
       </div>
     </div>

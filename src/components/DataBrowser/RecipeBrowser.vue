@@ -1,5 +1,5 @@
 <template>
-  <div class="h-[calc(100vh-130px)] flex flex-col">
+  <div class="h-full flex flex-col">
     <!-- Status banner if data not ready -->
     <div v-if="store.status !== 'ready'" class="p-4 text-sm">
       <span v-if="store.status === 'loading'" class="text-accent-gold"
@@ -52,12 +52,12 @@
           No recipes for {{ selectedSkillFilter }}
         </div>
 
-        <ul v-else class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated">
+        <ul ref="listRef" v-else class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated">
           <li
-            v-for="recipe in filteredRecipes"
+            v-for="(recipe, idx) in filteredRecipes"
             :key="recipe.id"
             class="flex items-baseline gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
-            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === recipe.id }"
+            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === recipe.id, 'bg-surface-elevated': selectedIndex === idx && selected?.id !== recipe.id }"
             @click="selectRecipe(recipe)">
             <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
             <span class="text-text-primary/75 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ recipe.name }}</span>
@@ -131,7 +131,7 @@
                   <template v-if="ingredient.item_id !== null">
                     <ItemInline
                       v-if="ingredientItems[ingredient.item_id]?.name"
-                      :name="ingredientItems[ingredient.item_id].name" />
+                      :reference="ingredientItems[ingredient.item_id].name" />
                     <span v-else class="text-text-secondary text-xs">Item #{{ ingredient.item_id }}</span>
                   </template>
                   <!-- Wildcard/keyword ingredient -->
@@ -161,7 +161,7 @@
                 <span class="flex-1">
                   <ItemInline
                     v-if="resultItems[result.item_id]?.name"
-                    :name="resultItems[result.item_id].name" />
+                    :reference="resultItems[result.item_id].name" />
                   <span v-else class="text-text-secondary text-xs">Item #{{ result.item_id }}</span>
                 </span>
                 <span v-if="result.percent_chance !== null && result.percent_chance < 100" class="text-text-muted text-[0.72rem] italic">
@@ -260,9 +260,15 @@
 import { ref, onMounted, watch, computed } from "vue";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
+import { useKeyboard } from "../../composables/useKeyboard";
+import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { SkillInfo, RecipeInfo, ItemInfo, EntitySources } from "../../types/gameData";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 import SourcesPanel from "../Shared/SourcesPanel.vue";
+
+const props = defineProps<{
+  navTarget?: EntityNavigationTarget | null;
+}>();
 
 const store = useGameDataStore();
 
@@ -274,11 +280,13 @@ const allRecipes = ref<RecipeInfo[]>([]);
 const selected = ref<RecipeInfo | null>(null);
 const sources = ref<EntitySources | null>(null);
 const sourcesLoading = ref(false);
-const ingredientItems = ref<Record<number, ItemInfo>>({});
-const resultItems = ref<Record<number, ItemInfo>>({});
+const ingredientItems = ref<Record<string, ItemInfo>>({});
+const resultItems = ref<Record<string, ItemInfo>>({});
 const iconSrc = ref<string | null>(null);
 const iconLoading = ref(false);
 const loading = ref(false);
+const selectedIndex = ref(0);
+const listRef = ref<HTMLElement | null>(null);
 
 onMounted(async () => {
   if (store.status === "ready") {
@@ -368,6 +376,22 @@ const filteredRecipes = computed(() => {
   );
 });
 
+watch(filteredRecipes, () => {
+  selectedIndex.value = 0;
+});
+
+useKeyboard({
+  listNavigation: {
+    items: filteredRecipes,
+    selectedIndex,
+    onConfirm: (idx: number) => {
+      const recipe = filteredRecipes.value[idx];
+      if (recipe) selectRecipe(recipe);
+    },
+    scrollContainerRef: listRef,
+  },
+});
+
 async function selectRecipe(recipe: RecipeInfo) {
   selected.value = recipe;
   iconSrc.value = null;
@@ -398,7 +422,7 @@ async function selectRecipe(recipe: RecipeInfo) {
   // Load ingredient items
   if (recipe.ingredient_item_ids.length > 0) {
     try {
-      ingredientItems.value = await store.getItemsBatch(recipe.ingredient_item_ids);
+      ingredientItems.value = await store.resolveItemsBatch(recipe.ingredient_item_ids.map(String));
     } catch (e) {
       console.warn("Failed to load ingredient items:", e);
     }
@@ -407,7 +431,7 @@ async function selectRecipe(recipe: RecipeInfo) {
   // Load result items
   if (recipe.result_item_ids.length > 0) {
     try {
-      resultItems.value = await store.getItemsBatch(recipe.result_item_ids);
+      resultItems.value = await store.resolveItemsBatch(recipe.result_item_ids.map(String));
     } catch (e) {
       console.warn("Failed to load result items:", e);
     }
@@ -421,4 +445,17 @@ function clearSelection() {
   ingredientItems.value = {};
   resultItems.value = {};
 }
+
+// Navigate to a specific recipe when navTarget changes
+watch(() => props.navTarget, async (target) => {
+  if (!target || target.type !== 'recipe') return;
+  const name = String(target.id);
+  if (selected.value?.name === name) return;
+
+  const recipe = await store.resolveRecipe(name);
+  if (recipe) {
+    query.value = recipe.name;
+    selectRecipe(recipe);
+  }
+}, { immediate: true });
 </script>

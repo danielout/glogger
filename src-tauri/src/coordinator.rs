@@ -10,6 +10,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 use crate::log_watchers::{PlayerLogWatcher, ChatLogWatcher, LogFileWatcher, LogEvent};
 use crate::db::DbPool;
@@ -17,10 +18,20 @@ use crate::db::chat_commands::insert_chat_messages;
 use crate::db::queries::log_positions;
 use crate::settings::SettingsManager;
 use crate::watch_rules::evaluate_rules;
+use crate::chat_status_parser::parse_status_message;
 use crate::survey_persistence::SurveySessionTracker;
 use crate::survey_parser::KnownSurveyType;
+use crate::game_state::GameStateManager;
+use crate::cdn_commands::GameDataState;
 use serde::Serialize;
-use chrono::Datelike;
+use chrono::{Datelike, Local};
+
+/// Timestamped log line for startup diagnostics.
+macro_rules! startup_log {
+    ($($arg:tt)*) => {
+        eprintln!("[{}] {}", Local::now().format("%H:%M:%S%.3f"), format!($($arg)*));
+    };
+}
 
 /// Blocking operation type - prevents overlapping heavy operations
 /// Note: Player tailing and chat tailing run concurrently and are tracked
@@ -74,6 +85,7 @@ pub struct DataIngestCoordinator {
     settings: Arc<SettingsManager>,
     app_handle: AppHandle,
     survey_tracker: SurveySessionTracker,
+    game_state: GameStateManager,
 }
 
 impl DataIngestCoordinator {
@@ -82,7 +94,29 @@ impl DataIngestCoordinator {
         db_pool: DbPool,
         settings: Arc<SettingsManager>,
         app_handle: AppHandle,
+        game_data: GameDataState,
     ) -> Result<Self, String> {
+        // Seed game state manager with persisted character+server so that
+        // Player.log events during the initial replay have a valid server key.
+        let current_settings = settings.get();
+        let mut game_state = GameStateManager::new(game_data);
+        if let (Some(char_name), Some(server_name)) = (
+            &current_settings.active_character_name,
+            &current_settings.active_server_name,
+        ) {
+            game_state.set_active_character_name(char_name);
+            game_state.set_active_server_name(server_name);
+        }
+
+        // Seed timezone offset from persisted settings (manual override takes precedence)
+        let mut survey_tracker = SurveySessionTracker::new();
+        if let Some(offset) = current_settings.manual_timezone_override
+            .or(current_settings.timezone_offset_seconds)
+        {
+            game_state.set_timezone_offset(offset);
+            survey_tracker.set_timezone_offset(offset);
+        }
+
         Ok(Self {
             player_watcher: None,
             chat_watcher: None,
@@ -90,7 +124,8 @@ impl DataIngestCoordinator {
             db_pool,
             settings,
             app_handle,
-            survey_tracker: SurveySessionTracker::new(),
+            survey_tracker,
+            game_state,
         })
     }
 
@@ -141,13 +176,16 @@ impl DataIngestCoordinator {
 
         // Create watcher
         let mut watcher = if position > 0 {
+            startup_log!("Starting Player.log catch-up from byte position {}", position);
             PlayerLogWatcher::from_position(player_log_path, position, known_surveys)
         } else {
+            startup_log!("Starting Player.log from beginning (no saved position)");
             PlayerLogWatcher::new(player_log_path, known_surveys)
         };
 
         // Start watching
         watcher.start()?;
+        startup_log!("Player.log watcher started");
 
         // Store watcher
         self.player_watcher = Some(watcher);
@@ -207,14 +245,13 @@ impl DataIngestCoordinator {
         let position = log_positions::get_position(&conn, chat_log_path.to_str().unwrap_or("")).unwrap_or(0);
         drop(conn);
 
-        // Get excluded channels from settings
-        let excluded_channels = self.settings.get().excluded_chat_channels;
-
-        // Create watcher with excluded channels
+        // Create watcher — parses all channels; filtering happens at persistence layer
         let mut watcher = if position > 0 {
-            ChatLogWatcher::from_position(chat_log_path, position, excluded_channels)
+            startup_log!("Starting chat log catch-up from byte position {}", position);
+            ChatLogWatcher::from_position(chat_log_path, position)
         } else {
-            ChatLogWatcher::new(chat_log_path, excluded_channels)
+            startup_log!("Starting chat log from beginning");
+            ChatLogWatcher::new(chat_log_path)
         };
 
         // Set player name if known
@@ -272,24 +309,217 @@ impl DataIngestCoordinator {
             self.process_player_events(events)?;
         }
 
+        // After the first poll cycle, switch game state to live mode so future
+        // logins will properly clear transient state. During the initial catch-up
+        // replay we skip clearing to preserve data built for each character.
+        if !self.game_state.is_live() {
+            startup_log!("Player.log catch-up complete — switching to live tailing mode");
+            self.game_state.set_live_mode();
+        }
+
         // Poll chat log watcher
         if let Some(watcher) = &mut self.chat_watcher {
             let events = watcher.poll()?;
             self.process_chat_events(events)?;
         }
 
+        // Persist watcher positions every poll cycle so a crash doesn't
+        // lose all progress and cause a full re-parse on next launch.
+        self.save_watcher_positions();
+
         Ok(())
+    }
+
+    /// Persist current watcher byte offsets to the database.
+    /// Called every poll cycle so a crash only loses ~1 polling interval of progress.
+    fn save_watcher_positions(&self) {
+        let conn = match self.db_pool.get() {
+            Ok(c) => c,
+            Err(_) => return,
+        };
+
+        if let Some(watcher) = &self.player_watcher {
+            if let Some(path) = self.settings.get_player_log_path() {
+                log_positions::update_position(
+                    &conn,
+                    path.to_str().unwrap_or(""),
+                    "player",
+                    watcher.get_position(),
+                    watcher.get_active_character(),
+                    None,
+                ).ok();
+            }
+        }
+
+        if let Some(watcher) = &self.chat_watcher {
+            let file_path_str = watcher.get_file_path().to_string_lossy().to_string();
+            let file_name = watcher.get_file_name().to_string();
+            let metadata = serde_json::json!({ "file_name": file_name }).to_string();
+            log_positions::update_position(
+                &conn,
+                &file_path_str,
+                "chat",
+                watcher.get_position(),
+                None,
+                Some(&metadata),
+            ).ok();
+        }
     }
 
     /// Process events from player log
     fn process_player_events(&mut self, events: Vec<LogEvent>) -> Result<(), String> {
+        // Throttle: on catch-up after startup, this can receive thousands of events.
+        // Yield periodically so the Windows message queue doesn't overflow.
+        let mut last_yield = Instant::now();
+        let mut emits_since_yield: u32 = 0;
+
         for event in events {
             match event {
                 LogEvent::CharacterLogin { character_name, .. } => {
-                    // Emit character login event
-                    self.app_handle.emit("character-login", &character_name).ok();
+                    startup_log!("Character detected from Player.log: {}", character_name);
+                    // Player.log knows the character name but NOT the server.
+                    // Update the character name in settings; the chat log's
+                    // ServerDetected + CharacterLogin pair is the authoritative
+                    // source that calls set_active_character with both values.
+                    let mut settings = self.settings.get();
+                    settings.active_character_name = Some(character_name.clone());
+                    self.settings.update(settings).ok();
 
-                    // Auto-register character in user_characters table
+                    // Update game state character name only (server stays as-is)
+                    self.game_state.set_active_character_name(&character_name);
+
+                    self.app_handle.emit("character-login", &character_name).ok();
+                    emits_since_yield += 1;
+                }
+                LogEvent::ChatLogPath { path, .. } => {
+                    startup_log!("Chat log path detected: {}", path);
+                    // Chat log path changed - start/switch chat watcher
+                    // start_chat_log_tailing handles stopping the old watcher if needed
+                    self.start_chat_log_tailing(PathBuf::from(&path))?;
+                }
+                LogEvent::AreaTransition { area, .. } => {
+                    self.app_handle.emit("area-transition", &area).ok();
+                    emits_since_yield += 1;
+                }
+                LogEvent::SkillUpdated(update) => {
+                    self.app_handle.emit("skill-update", &update).ok();
+                    emits_since_yield += 1;
+                }
+                LogEvent::SurveyParsed(survey_event) => {
+                    // Persist to DB synchronously first, then emit to frontend
+                    let result = self.survey_tracker.process_event(&survey_event, &self.db_pool);
+                    // Wrap the event with session_id so the frontend can track it
+                    let mut payload = serde_json::to_value(&survey_event).unwrap_or_default();
+                    if let (serde_json::Value::Object(ref mut map), Some(sid)) = (&mut payload, result.session_id) {
+                        map.insert("session_id".to_string(), serde_json::Value::Number(sid.into()));
+                    }
+                    self.app_handle.emit("survey-event", &payload).ok();
+                    emits_since_yield += 1;
+
+                    // If the session auto-ended, notify frontend so it can patch in
+                    // elapsed/XP data that only the frontend knows about
+                    if result.session_ended {
+                        if let Some(sid) = result.session_id {
+                            self.app_handle.emit("survey-session-ended", sid).ok();
+                            emits_since_yield += 1;
+                        }
+                    }
+                }
+                LogEvent::PlayerEventParsed(player_event) => {
+                    // Persist to game state tables
+                    let result = self.game_state.process_event(&player_event, &self.db_pool);
+
+                    // Notify frontend which domains changed
+                    if !result.domains_updated.is_empty() {
+                        self.app_handle.emit("game-state-updated", &result.domains_updated).ok();
+                        emits_since_yield += 1;
+                    }
+
+                    // Still emit raw events for stores that haven't migrated yet
+                    self.app_handle.emit("player-event", &player_event).ok();
+                    emits_since_yield += 1;
+                }
+                _ => {
+                    // Other events not yet implemented
+                }
+            }
+
+            // Yield periodically to let the Windows message queue drain
+            if emits_since_yield >= 100 && last_yield.elapsed() < Duration::from_millis(50) {
+                std::thread::sleep(Duration::from_millis(5));
+                last_yield = Instant::now();
+                emits_since_yield = 0;
+            } else if last_yield.elapsed() >= Duration::from_millis(50) {
+                last_yield = Instant::now();
+                emits_since_yield = 0;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Process events from chat log
+    fn process_chat_events(&mut self, events: Vec<LogEvent>) -> Result<(), String> {
+        let mut messages = Vec::new();
+        let mut last_yield = Instant::now();
+        let mut emits_since_yield: u32 = 0;
+
+        for event in events {
+            match event {
+                LogEvent::ChatMessage(msg) => {
+                    // Run Status channel messages through the structured parser
+                    if let Some(status_event) = parse_status_message(&msg) {
+                        // Cross-reference with survey tracker for loot quantity correction.
+                        // No active-session gate — correct_loot_from_chat_status falls back
+                        // to last_session_id so corrections work after session auto-end.
+                        if let Some(correction) = self.survey_tracker
+                            .correct_loot_from_chat_status(&status_event, &self.db_pool)
+                        {
+                            self.app_handle.emit("survey-loot-correction", &correction).ok();
+                            emits_since_yield += 1;
+                        }
+                        self.app_handle.emit("chat-status-event", &status_event).ok();
+                        emits_since_yield += 1;
+                    }
+                    messages.push(msg);
+                }
+                LogEvent::ServerDetected { server_name, character_name, timezone_offset_seconds } => {
+                    startup_log!("Server detected: {} (character: {})", server_name, character_name);
+
+                    // Store timezone offset for UTC timestamp conversion
+                    if let Some(offset) = timezone_offset_seconds {
+                        startup_log!("Timezone offset detected: {}s from UTC", offset);
+                        let mut settings = self.settings.get();
+                        settings.timezone_offset_seconds = Some(offset);
+                        self.settings.update(settings).ok();
+                        self.game_state.set_timezone_offset(offset);
+                        self.survey_tracker.set_timezone_offset(offset);
+                    }
+
+                    // Auto-create server record
+                    if let Ok(conn) = self.db_pool.get() {
+                        conn.execute(
+                            "INSERT INTO servers (server_name) VALUES (?1) ON CONFLICT DO NOTHING",
+                            rusqlite::params![server_name],
+                        ).ok();
+                    }
+
+                    // Update active server in settings
+                    let mut settings = self.settings.get();
+                    settings.active_server_name = Some(server_name.clone());
+                    self.settings.update(settings).ok();
+
+                    // Emit to frontend
+                    self.app_handle.emit("server-detected", &server_name).ok();
+                    emits_since_yield += 1;
+                }
+                LogEvent::CharacterLogin { character_name, .. } => {
+                    // Chat log also detects character login — update active character
+                    // and emit so player_watcher can stay in sync
+                    self.app_handle.emit("character-login", &character_name).ok();
+                    emits_since_yield += 1;
+
+                    // Auto-register character with current server
                     if let Ok(conn) = self.db_pool.get() {
                         conn.execute(
                             "INSERT INTO user_characters (character_name, server_name, source, last_login_time)
@@ -306,53 +536,25 @@ impl DataIngestCoordinator {
 
                     // Update active character in settings
                     let mut settings = self.settings.get();
-                    settings.active_character_name = Some(character_name);
+                    settings.active_character_name = Some(character_name.clone());
+                    let server = settings.active_server_name.clone()
+                        .unwrap_or_else(|| "Unknown".to_string());
                     self.settings.update(settings).ok();
-                }
-                LogEvent::ChatLogPath { path, .. } => {
-                    // Chat log path changed - start/switch chat watcher
-                    // start_chat_log_tailing handles stopping the old watcher if needed
-                    self.start_chat_log_tailing(PathBuf::from(&path))?;
-                }
-                LogEvent::AreaTransition { area, .. } => {
-                    self.app_handle.emit("area-transition", &area).ok();
-                }
-                LogEvent::SkillUpdated(update) => {
-                    self.app_handle.emit("skill-update", &update).ok();
-                }
-                LogEvent::SurveyParsed(survey_event) => {
-                    // Persist to DB synchronously first, then emit to frontend
-                    let result = self.survey_tracker.process_event(&survey_event, &self.db_pool);
-                    self.app_handle.emit("survey-event", &survey_event).ok();
 
-                    // If the session auto-ended, notify frontend so it can patch in
-                    // elapsed/XP data that only the frontend knows about
-                    if result.session_ended {
-                        if let Some(sid) = result.session_id {
-                            self.app_handle.emit("survey-session-ended", sid).ok();
-                        }
-                    }
+                    // Update game state active character
+                    self.game_state.set_active_character(&character_name, &server, &self.db_pool);
                 }
-                LogEvent::PlayerEventParsed(player_event) => {
-                    // Emit to frontend — no DB persistence yet, features will add their own
-                    self.app_handle.emit("player-event", &player_event).ok();
-                }
-                _ => {
-                    // Other events not yet implemented
-                }
+                _ => {}
             }
-        }
 
-        Ok(())
-    }
-
-    /// Process events from chat log
-    fn process_chat_events(&mut self, events: Vec<LogEvent>) -> Result<(), String> {
-        let mut messages = Vec::new();
-
-        for event in events {
-            if let LogEvent::ChatMessage(msg) = event {
-                messages.push(msg);
+            // Yield periodically to let the Windows message queue drain
+            if emits_since_yield >= 100 && last_yield.elapsed() < Duration::from_millis(50) {
+                std::thread::sleep(Duration::from_millis(5));
+                last_yield = Instant::now();
+                emits_since_yield = 0;
+            } else if last_yield.elapsed() >= Duration::from_millis(50) {
+                last_yield = Instant::now();
+                emits_since_yield = 0;
             }
         }
 
@@ -506,6 +708,6 @@ fn load_known_surveys(conn: &rusqlite::Connection) -> HashMap<String, KnownSurve
         }
     }
 
-    eprintln!("[coordinator] Loaded {} known survey types", map.len());
+    startup_log!("Loaded {} known survey types", map.len());
     map
 }

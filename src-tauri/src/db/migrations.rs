@@ -274,6 +274,19 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
         CREATE INDEX idx_market_prices_observed ON market_prices(observed_at DESC);
         CREATE INDEX idx_market_prices_vendor_type ON market_prices(vendor_type);
 
+        -- Market Values (user-specified player-to-player prices)
+        CREATE TABLE market_values (
+            server_name TEXT NOT NULL,
+            item_type_id INTEGER NOT NULL,
+            item_name TEXT NOT NULL,
+            market_value INTEGER NOT NULL,
+            notes TEXT,
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            PRIMARY KEY (server_name, item_type_id)
+        );
+        CREATE INDEX idx_market_values_item ON market_values(item_type_id);
+        CREATE INDEX idx_market_values_name ON market_values(item_name);
+
         -- Sales History
         CREATE TABLE sales_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -356,7 +369,7 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp TIMESTAMP NOT NULL,
             session_id INTEGER,
-            event_type TEXT NOT NULL CHECK (event_type IN ('session_start', 'completed', 'map_crafted', 'survey_used')),
+            event_type TEXT NOT NULL CHECK (event_type IN ('session_start', 'completed', 'map_crafted', 'survey_used', 'motherlode_completed')),
             map_type TEXT,
             survey_type TEXT,
             speed_bonus_earned BOOLEAN DEFAULT 0,
@@ -561,8 +574,7 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
             tsys_imbue_power TEXT,
             tsys_imbue_power_tier INTEGER,
             pet_husbandry_state TEXT,
-            FOREIGN KEY (item_snapshot_id) REFERENCES character_item_snapshots(id) ON DELETE CASCADE,
-            FOREIGN KEY (type_id) REFERENCES items(id) ON DELETE SET NULL
+            FOREIGN KEY (item_snapshot_id) REFERENCES character_item_snapshots(id) ON DELETE CASCADE
         );
         CREATE INDEX idx_snapshot_items_snapshot ON character_snapshot_items(item_snapshot_id);
         CREATE INDEX idx_snapshot_items_vault ON character_snapshot_items(storage_vault);
@@ -650,6 +662,7 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
         CREATE TABLE farming_session_skills (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             session_id INTEGER NOT NULL,
+            skill_id INTEGER NOT NULL,
             skill_name TEXT NOT NULL,
             xp_gained INTEGER NOT NULL DEFAULT 0,
             levels_gained INTEGER NOT NULL DEFAULT 0,
@@ -671,8 +684,8 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
         CREATE TABLE farming_session_favors (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             session_id INTEGER NOT NULL,
+            npc_key TEXT NOT NULL,
             npc_name TEXT NOT NULL,
-            npc_id INTEGER,
             delta REAL NOT NULL DEFAULT 0,
             FOREIGN KEY (session_id) REFERENCES farming_sessions(id) ON DELETE CASCADE
         );
@@ -705,6 +718,186 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
             FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
         );
         CREATE INDEX idx_cpe_project ON crafting_project_entries(project_id);
+
+        -- ============================================================
+        -- GAME STATE TABLES (last-known-value, per character+server)
+        -- ============================================================
+
+        -- Known servers
+        CREATE TABLE servers (
+            server_name TEXT PRIMARY KEY,
+            display_name TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        -- Session singleton: tracks active character and last login
+        CREATE TABLE game_state_session (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            last_login_at TEXT,
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        -- Skills: one row per skill per character+server
+        CREATE TABLE game_state_skills (
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            skill_id INTEGER NOT NULL,
+            skill_name TEXT NOT NULL,
+            level INTEGER NOT NULL,
+            bonus_levels INTEGER NOT NULL DEFAULT 0,
+            xp INTEGER NOT NULL DEFAULT 0,
+            tnl INTEGER NOT NULL DEFAULT 0,
+            max_level INTEGER NOT NULL DEFAULT 0,
+            last_confirmed_at TEXT NOT NULL,
+            source TEXT NOT NULL DEFAULT 'log',
+            PRIMARY KEY (character_name, server_name, skill_id)
+        );
+        CREATE INDEX idx_gs_skills_char ON game_state_skills(character_name, server_name);
+
+        -- Active combat skills: single row per character+server
+        CREATE TABLE game_state_active_skills (
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            skill1_id INTEGER NOT NULL,
+            skill1_name TEXT NOT NULL,
+            skill2_id INTEGER NOT NULL,
+            skill2_name TEXT NOT NULL,
+            last_confirmed_at TEXT NOT NULL,
+            PRIMARY KEY (character_name, server_name)
+        );
+
+        -- Attributes: one row per attribute per character+server
+        CREATE TABLE game_state_attributes (
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            attribute_name TEXT NOT NULL,
+            value REAL NOT NULL,
+            last_confirmed_at TEXT NOT NULL,
+            PRIMARY KEY (character_name, server_name, attribute_name)
+        );
+        CREATE INDEX idx_gs_attributes_char ON game_state_attributes(character_name, server_name);
+
+        -- Weather: singleton (world state, not per-character)
+        CREATE TABLE game_state_weather (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            weather_name TEXT NOT NULL,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            last_confirmed_at TEXT NOT NULL
+        );
+
+        -- Combat state: single row per character+server
+        CREATE TABLE game_state_combat (
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            in_combat INTEGER NOT NULL DEFAULT 0,
+            last_confirmed_at TEXT NOT NULL,
+            PRIMARY KEY (character_name, server_name)
+        );
+
+        -- Mount state: single row per character+server
+        CREATE TABLE game_state_mount (
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            is_mounted INTEGER NOT NULL DEFAULT 0,
+            last_confirmed_at TEXT NOT NULL,
+            PRIMARY KEY (character_name, server_name)
+        );
+
+        -- Inventory: one row per item instance per character+server
+        CREATE TABLE game_state_inventory (
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            instance_id INTEGER NOT NULL,
+            item_name TEXT NOT NULL,
+            item_type_id INTEGER,
+            stack_size INTEGER NOT NULL DEFAULT 1,
+            slot_index INTEGER NOT NULL DEFAULT -1,
+            last_confirmed_at TEXT NOT NULL,
+            source TEXT NOT NULL DEFAULT 'log',
+            PRIMARY KEY (character_name, server_name, instance_id)
+        );
+        CREATE INDEX idx_gs_inventory_char ON game_state_inventory(character_name, server_name);
+        CREATE INDEX idx_gs_inventory_item ON game_state_inventory(item_name);
+
+        -- Recipes: one row per recipe per character+server (completion count)
+        CREATE TABLE game_state_recipes (
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            recipe_id INTEGER NOT NULL,
+            completion_count INTEGER NOT NULL DEFAULT 0,
+            last_confirmed_at TEXT NOT NULL,
+            source TEXT NOT NULL DEFAULT 'log',
+            PRIMARY KEY (character_name, server_name, recipe_id)
+        );
+        CREATE INDEX idx_gs_recipes_char ON game_state_recipes(character_name, server_name);
+
+        -- Equipment: one row per slot per character+server
+        CREATE TABLE game_state_equipment (
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            slot TEXT NOT NULL,
+            appearance_key TEXT NOT NULL,
+            last_confirmed_at TEXT NOT NULL,
+            PRIMARY KEY (character_name, server_name, slot)
+        );
+        CREATE INDEX idx_gs_equipment_char ON game_state_equipment(character_name, server_name);
+
+        -- NPC Favor: cumulative deltas from log + tier from snapshots
+        CREATE TABLE game_state_favor (
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            npc_key TEXT NOT NULL,
+            npc_name TEXT NOT NULL,
+            cumulative_delta REAL NOT NULL DEFAULT 0,
+            favor_tier TEXT,
+            last_confirmed_at TEXT NOT NULL,
+            source TEXT NOT NULL DEFAULT 'log',
+            PRIMARY KEY (character_name, server_name, npc_key)
+        );
+        CREATE INDEX idx_gs_favor_char ON game_state_favor(character_name, server_name);
+
+        -- Currencies: snapshot-only currencies (Gold, Councils, etc.)
+        CREATE TABLE game_state_currencies (
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            currency_name TEXT NOT NULL,
+            amount REAL NOT NULL DEFAULT 0,
+            last_confirmed_at TEXT NOT NULL,
+            source TEXT NOT NULL DEFAULT 'snapshot',
+            PRIMARY KEY (character_name, server_name, currency_name)
+        );
+        CREATE INDEX idx_gs_currencies_char ON game_state_currencies(character_name, server_name);
+
+        -- Active effects/buffs
+        CREATE TABLE game_state_effects (
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            effect_instance_id INTEGER NOT NULL,
+            effect_name TEXT,
+            source_entity_id INTEGER NOT NULL DEFAULT 0,
+            last_confirmed_at TEXT NOT NULL,
+            PRIMARY KEY (character_name, server_name, effect_instance_id)
+        );
+        CREATE INDEX idx_gs_effects_char ON game_state_effects(character_name, server_name);
+
+        -- Storage vault contents: one row per item per vault per character
+        CREATE TABLE game_state_storage (
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            vault_key TEXT NOT NULL,
+            instance_id INTEGER NOT NULL,
+            item_name TEXT NOT NULL,
+            item_type_id INTEGER,
+            stack_size INTEGER NOT NULL DEFAULT 1,
+            slot_index INTEGER NOT NULL DEFAULT -1,
+            last_confirmed_at TEXT NOT NULL,
+            source TEXT NOT NULL DEFAULT 'log',
+            PRIMARY KEY (character_name, server_name, vault_key, instance_id)
+        );
+        CREATE INDEX idx_gs_storage_char ON game_state_storage(character_name, server_name);
+        CREATE INDEX idx_gs_storage_vault ON game_state_storage(vault_key);
         "
     )?;
 

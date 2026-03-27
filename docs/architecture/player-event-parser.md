@@ -68,6 +68,7 @@ Each `SkillSnapshot` contains: `skill_type`, `raw`, `bonus`, `xp`, `tnl` (i32, -
 | Event | Log Source | Key Fields |
 |---|---|---|
 | `InteractionStarted` | `ProcessStartInteraction` | `entity_id`, `interaction_type`, `npc_name` |
+| `InteractionEnded` | `ProcessEndInteraction` | `entity_id` — clears `current_interaction` state |
 | `FavorChanged` | `ProcessDeltaFavor` | `npc_id`, `npc_name`, `delta` (f32), `is_gift` |
 
 ### Vendor Events
@@ -76,13 +77,16 @@ Each `SkillSnapshot` contains: `skill_type`, `raw`, `bonus`, `xp`, `tnl` (i32, -
 |---|---|---|
 | `VendorSold` | `ProcessVendorAddItem` | `price`, `item_name`, `instance_id`, `is_buyback` |
 | `VendorStackUpdated` | `ProcessVendorUpdateItem` | `instance_id`, `item_type_id`, `new_stack_size`, `price` |
+| `VendorGoldChanged` | `ProcessVendorUpdateAvailableGold` | `current_gold`, `server_id`, `max_gold` |
 
 ### Storage Events
 
 | Event | Log Source | Key Fields |
 |---|---|---|
-| `StorageDeposit` | `ProcessAddToStorageVault` | `npc_id`, `slot`, `item_name`, `instance_id` |
-| `StorageWithdrawal` | `ProcessRemoveFromStorageVault` | `npc_id`, `instance_id`, `quantity` |
+| `StorageDeposit` | `ProcessAddToStorageVault` | `npc_id`, `slot`, `item_name`, `instance_id`, `vault_key` |
+| `StorageWithdrawal` | `ProcessRemoveFromStorageVault` | `npc_id`, `instance_id`, `quantity`, `vault_key` |
+
+**Vault Key Enrichment** — Both storage events include a `vault_key` field populated from `current_interaction.npc_name` (set by the preceding `ProcessVendorScreen`). This provides the CDN-compatible key (e.g., `"NPC_Joe"`) since the `npc_id` in the log line is a game entity ID that doesn't match `storagevaults.json` IDs. The `GameStateManager` uses `vault_key` to persist storage items keyed by their CDN vault.
 
 ### Action Events
 
@@ -98,6 +102,46 @@ This is a general-purpose event for any timed action (surveying, eating, craftin
 |---|---|---|
 | `ScreenText` | `ProcessScreenText` | `category`, `message` |
 | `BookOpened` | `ProcessBook` | `title`, `content`, `book_type` |
+
+### Skill Bar / Mount Events
+
+| Event | Log Source | Key Fields |
+|---|---|---|
+| `ActiveSkillsChanged` | `ProcessSetActiveSkills` | `skill1`, `skill2` — active combat skill bar |
+| `MountStateChanged` | `ProcessPlayerMount` | `entity_id`, `is_mounting` (bool) |
+
+### World State Events
+
+| Event | Log Source | Key Fields |
+|---|---|---|
+| `WeatherChanged` | `ProcessSetWeather` | `weather_name`, `is_active` (bool) |
+| `CombatStateChanged` | `ProcessCombatModeStatus` | `in_combat` (bool) |
+
+### Recipe Events
+
+| Event | Log Source | Key Fields |
+|---|---|---|
+| `RecipeUpdated` | `ProcessUpdateRecipe` | `recipe_id`, `completion_count` |
+
+### Attribute Events
+
+| Event | Log Source | Key Fields |
+|---|---|---|
+| `AttributesChanged` | `ProcessSetAttributes` | `entity_id`, `attributes: Vec<AttributeValue>` — parallel arrays decoded into name/value pairs |
+
+Each `AttributeValue` contains: `name` (String), `value` (f32). A single event can carry 1 to hundreds of attributes (large batch on login, small incremental during play).
+
+### Login Snapshot Events
+
+| Event | Log Source | Key Fields |
+|---|---|---|
+| `AbilitiesLoaded` | `ProcessLoadAbilities` | `skill1`, `skill2` — active skill pair at login (opaque `System.Int32[]` and `AbilityBarContents[]` arrays ignored) |
+| `RecipesLoaded` | `ProcessLoadRecipes` | timestamp only — signal event (both `System.Int32[]` arrays are opaque C# types with no extractable data) |
+| `EquipmentChanged` | `ProcessSetEquippedItems` | `entity_id`, `appearance` (full string), `equipment: Vec<EquipmentSlot>` — parsed slot assignments |
+
+Each `EquipmentSlot` contains: `slot` (String — e.g., `"Chest"`, `"MainHand"`, `"MainHandEquip"`), `appearance_key` (String — the appearance model identifier including nested paren groups).
+
+**C# Opaque Arrays:** Several login events log C# array types as `System.Int32[]` or `AbilityBarContents[]`. Unity's default `.ToString()` prints only the type name, not the array contents. These fields are unparseable and are ignored by the parser.
 
 ## Internal State
 
@@ -175,8 +219,8 @@ type PlayerEvent =
   | { kind: 'FavorChanged'; npc_id: number; npc_name: string; delta: number; is_gift: boolean }
   | { kind: 'VendorSold'; price: number; item_name: string; instance_id: number; is_buyback: boolean }
   | { kind: 'VendorStackUpdated'; instance_id: number; item_type_id: number; new_stack_size: number; price: number }
-  | { kind: 'StorageDeposit'; npc_id: number; slot: number; item_name: string; instance_id: number }
-  | { kind: 'StorageWithdrawal'; npc_id: number; instance_id: number; quantity: number }
+  | { kind: 'StorageDeposit'; npc_id: number; slot: number; item_name: string; instance_id: number; vault_key: string | null }
+  | { kind: 'StorageWithdrawal'; npc_id: number; instance_id: number; quantity: number; vault_key: string | null }
   | { kind: 'DelayLoopStarted'; duration: number; action_type: string; label: string; entity_id: number; abort_condition: string }
   | { kind: 'ScreenText'; category: string; message: string }
   | { kind: 'BookOpened'; title: string; content: string; book_type: string }
@@ -219,6 +263,59 @@ LogEvent::PlayerEventParsed(player_event) => {
     self.app_handle.emit("player-event", &player_event).ok();
 }
 ```
+
+## Event Coverage
+
+The parser currently handles 24 of ~60 known event types. See `docs/architecture/player-log-events.md` for the full reference of all known events with formats and examples. Events marked **NOT YET PARSED** in that doc need to be added here.
+
+### Currently Parsed
+
+| Event | PlayerEvent Variant |
+|---|---|
+| `ProcessAddItem` | `ItemAdded` |
+| `ProcessUpdateItemCode` | `ItemStackChanged` |
+| `ProcessDeleteItem` | `ItemDeleted` |
+| `ProcessLoadSkills` | `SkillsLoaded` |
+| `ProcessStartInteraction` | `InteractionStarted` |
+| `ProcessEndInteraction` | `InteractionEnded` |
+| `ProcessDeltaFavor` | `FavorChanged` |
+| `ProcessVendorAddItem` | `VendorSold` |
+| `ProcessVendorUpdateItem` | `VendorStackUpdated` |
+| `ProcessVendorUpdateAvailableGold` | `VendorGoldChanged` |
+| `ProcessAddToStorageVault` | `StorageDeposit` |
+| `ProcessRemoveFromStorageVault` | `StorageWithdrawal` |
+| `ProcessDoDelayLoop` | `DelayLoopStarted` |
+| `ProcessScreenText` | `ScreenText` |
+| `ProcessBook` | `BookOpened` |
+| `ProcessSetActiveSkills` | `ActiveSkillsChanged` |
+| `ProcessPlayerMount` | `MountStateChanged` |
+| `ProcessSetWeather` | `WeatherChanged` |
+| `ProcessUpdateRecipe` | `RecipeUpdated` |
+| `ProcessCombatModeStatus` | `CombatStateChanged` |
+| `ProcessSetAttributes` | `AttributesChanged` |
+| `ProcessLoadAbilities` | `AbilitiesLoaded` |
+| `ProcessLoadRecipes` | `RecipesLoaded` |
+| `ProcessSetEquippedItems` | `EquipmentChanged` |
+| `ProcessAddEffects` | `EffectsAdded` | Effect IDs + login batch flag |
+| `ProcessRemoveEffects` | `EffectsRemoved` | Signal-only — opaque `System.Int32[]` |
+| `ProcessUpdateEffectName` | `EffectNameUpdated` | Display name for effect instance |
+
+### Planned — Medium Priority (Enrichment)
+
+| Log Event | Proposed Variant | Notes |
+|---|---|---|
+| `ProcessLoadQuests` | `QuestsLoaded` | Full quest state on login |
+| `ProcessAddQuest` | `QuestAdded` | New quest acquired |
+| `ProcessUpdateQuest` | `QuestUpdated` | Quest progress |
+| `ProcessCompleteQuest` | `QuestCompleted` | `(entityId, questId)` |
+| `ProcessMountXpStatus` | `MountXpStatus` | XP eligibility per area |
+| `ProcessSetStarredRecipes` | `StarredRecipesSet` | Favorited recipe IDs |
+| `ProcessSetRecipeReuseTimers` | `RecipeCooldownsSet` | Recipe cooldown timers |
+| `ProcessMapFx` | `MapMarkerAdded` | Survey results, resource discoveries |
+
+### Low Priority / Future
+
+Player vendor management, guild info, title/book lists, inventory folder settings, error messages, and other UI/system events. See `docs/architecture/player-log-events.md` for full details.
 
 ## Adding New Event Types
 

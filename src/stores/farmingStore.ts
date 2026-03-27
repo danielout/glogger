@@ -8,6 +8,7 @@ import type {
   SaveFarmingSessionInput,
 } from "../types/farming";
 import type { PlayerEvent } from "../types/playerEvents";
+import { useGameDataStore } from "./gameDataStore";
 
 export const useFarmingStore = defineStore("farming", () => {
   const sessionActive = ref(false);
@@ -67,7 +68,6 @@ export const useFarmingStore = defineStore("farming", () => {
           existing.delta += event.delta;
         } else {
           s.favorDeltas[event.npc_name] = {
-            npcId: event.npc_id,
             delta: event.delta,
           };
         }
@@ -190,23 +190,36 @@ export const useFarmingStore = defineStore("farming", () => {
         elapsed_seconds: getActiveSeconds(),
         total_paused_seconds: s.totalPausedSeconds,
         vendor_gold: s.vendorGold,
-        skills: Object.entries(s.skillXp)
-          .filter(([, v]) => v.gained > 0 || v.levelsGained > 0)
-          .map(([skill_name, v]) => ({
-            skill_name,
-            xp_gained: v.gained,
-            levels_gained: v.levelsGained,
-          })),
+        skills: await Promise.all(
+          Object.entries(s.skillXp)
+            .filter(([, v]) => v.gained > 0 || v.levelsGained > 0)
+            .map(async ([skillType, v]) => {
+              const gameData = useGameDataStore();
+              const resolved = await gameData.resolveSkill(skillType);
+              return {
+                skill_id: resolved?.id ?? 0,
+                skill_name: resolved?.name ?? skillType,
+                xp_gained: v.gained,
+                levels_gained: v.levelsGained,
+              };
+            })
+        ),
         items: Object.entries(s.itemDeltas)
           .filter(([name, qty]) => qty !== 0 && !s.ignoredItems.has(name))
           .map(([item_name, net_quantity]) => ({ item_name, net_quantity })),
-        favors: Object.entries(s.favorDeltas)
-          .filter(([, v]) => v.delta !== 0)
-          .map(([npc_name, v]) => ({
-            npc_name,
-            npc_id: v.npcId,
-            delta: v.delta,
-          })),
+        favors: await Promise.all(
+          Object.entries(s.favorDeltas)
+            .filter(([, v]) => v.delta !== 0)
+            .map(async ([npcName, v]) => {
+              const gameData = useGameDataStore();
+              const resolved = await gameData.resolveNpc(npcName);
+              return {
+                npc_key: resolved?.key ?? npcName,
+                npc_name: resolved?.name ?? npcName,
+                delta: v.delta,
+              };
+            })
+        ),
       };
 
       await invoke("save_farming_session", { input });
@@ -364,7 +377,6 @@ export const useFarmingStore = defineStore("farming", () => {
       .filter(([, v]) => v.delta !== 0)
       .map(([name, v]) => ({
         name,
-        npcId: v.npcId,
         delta: v.delta,
       }))
       .sort((a, b) => b.delta - a.delta);

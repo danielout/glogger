@@ -340,9 +340,10 @@ pub fn save_survey_session_stats(
     Ok(conn.last_insert_rowid())
 }
 
-/// Patch frontend-known fields onto a session that was already finalized by the backend.
-/// The backend computes revenue/cost/profit; the frontend patches in elapsed time (with
-/// pause accounting), XP gains, and manual flag.
+/// Patch frontend-known fields onto a session. Also (re-)runs finalization to compute
+/// revenue/cost/profit from DB data, then patches in elapsed time (with pause accounting),
+/// XP gains, and manual flag. This ensures both auto-ended and manually-ended sessions
+/// get correct economics.
 #[derive(Deserialize)]
 pub struct PatchSessionInput {
     pub elapsed_seconds: i64,
@@ -360,7 +361,11 @@ pub fn patch_survey_session(
 ) -> Result<(), String> {
     let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
 
-    // Update elapsed and recompute profit_per_hour with the frontend's accurate elapsed time
+    // (Re-)run finalization to compute revenue/cost/profit/bonus counts/summaries
+    crate::survey_persistence::finalize_session(&conn, session_id);
+
+    // Now read the freshly computed profit and recompute profit_per_hour with
+    // the frontend's accurate elapsed time (which accounts for pauses)
     let total_profit: f64 = conn.query_row(
         "SELECT total_profit FROM survey_session_stats WHERE id = ?1",
         [session_id],
@@ -401,6 +406,8 @@ pub struct HistoricalSession {
     pub end_time: Option<String>,
     pub maps_started: u32,
     pub surveys_completed: u32,
+    /// Total completions including motherlodes (computed from survey_events)
+    pub total_completions: u32,
     pub total_revenue: f64,
     pub total_cost: f64,
     pub total_profit: f64,
@@ -429,27 +436,30 @@ pub fn get_historical_sessions(
     let mut stmt = conn
         .prepare(
             "SELECT
-                id,
-                datetime(start_time) as start_time,
-                datetime(end_time) as end_time,
-                maps_started,
-                surveys_completed,
-                total_revenue,
-                total_cost,
-                total_profit,
-                profit_per_hour,
-                elapsed_seconds,
-                speed_bonus_count,
-                survey_types_used,
-                maps_used_summary,
-                name,
-                notes,
-                surveying_xp_gained,
-                mining_xp_gained,
-                geology_xp_gained
-             FROM survey_session_stats
-             WHERE surveys_completed > 0
-             ORDER BY start_time DESC
+                s.id,
+                datetime(s.start_time) as start_time,
+                datetime(s.end_time) as end_time,
+                s.maps_started,
+                s.surveys_completed,
+                COALESCE((SELECT COUNT(*) FROM survey_events se
+                          WHERE se.session_id = s.id
+                            AND se.event_type IN ('completed', 'motherlode_completed')), 0) as total_completions,
+                s.total_revenue,
+                s.total_cost,
+                s.total_profit,
+                s.profit_per_hour,
+                s.elapsed_seconds,
+                s.speed_bonus_count,
+                s.survey_types_used,
+                s.maps_used_summary,
+                s.name,
+                s.notes,
+                s.surveying_xp_gained,
+                s.mining_xp_gained,
+                s.geology_xp_gained
+             FROM survey_session_stats s
+             WHERE s.maps_started > 0
+             ORDER BY s.start_time DESC
              LIMIT ?1"
         )
         .map_err(|e| format!("Failed to prepare query: {e}"))?;
@@ -462,19 +472,20 @@ pub fn get_historical_sessions(
                 end_time: row.get(2)?,
                 maps_started: row.get(3)?,
                 surveys_completed: row.get(4)?,
-                total_revenue: row.get(5)?,
-                total_cost: row.get(6)?,
-                total_profit: row.get(7)?,
-                profit_per_hour: row.get(8)?,
-                elapsed_seconds: row.get(9)?,
-                speed_bonus_count: row.get(10)?,
-                survey_types_used: row.get(11)?,
-                maps_used_summary: row.get(12)?,
-                name: row.get(13)?,
-                notes: row.get(14)?,
-                surveying_xp_gained: row.get(15)?,
-                mining_xp_gained: row.get(16)?,
-                geology_xp_gained: row.get(17)?,
+                total_completions: row.get(5)?,
+                total_revenue: row.get(6)?,
+                total_cost: row.get(7)?,
+                total_profit: row.get(8)?,
+                profit_per_hour: row.get(9)?,
+                elapsed_seconds: row.get(10)?,
+                speed_bonus_count: row.get(11)?,
+                survey_types_used: row.get(12)?,
+                maps_used_summary: row.get(13)?,
+                name: row.get(14)?,
+                notes: row.get(15)?,
+                surveying_xp_gained: row.get(16)?,
+                mining_xp_gained: row.get(17)?,
+                geology_xp_gained: row.get(18)?,
             })
         })
         .map_err(|e| format!("Query failed: {e}"))?;
@@ -502,4 +513,5 @@ pub fn update_survey_session(
     .map_err(|e| format!("Failed to update session: {e}"))?;
     Ok(())
 }
+
 

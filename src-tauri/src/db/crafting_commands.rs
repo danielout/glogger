@@ -358,8 +358,8 @@ pub struct MaterialAvailability {
     pub total_available: i64,
 }
 
-/// Check material availability across the latest inventory snapshot for the active character,
-/// plus current live inventory. Takes a list of item type IDs to check.
+/// Check material availability across the persisted game state inventory (from log events),
+/// the latest storage snapshot, and item name lookups. Takes a list of item type IDs to check.
 #[tauri::command]
 pub fn check_material_availability(
     db: State<'_, DbPool>,
@@ -372,15 +372,6 @@ pub fn check_material_availability(
     }
 
     let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
-
-    // Find the latest inventory snapshot for this character
-    let latest_snapshot_id: Option<i64> = conn.query_row(
-        "SELECT id FROM character_item_snapshots
-         WHERE character_name = ?1 AND server_name = ?2
-         ORDER BY snapshot_timestamp DESC LIMIT 1",
-        rusqlite::params![character_name, server_name],
-        |row| row.get(0),
-    ).ok();
 
     let mut results: HashMap<i64, MaterialAvailability> = HashMap::new();
 
@@ -396,25 +387,76 @@ pub fn check_material_availability(
         });
     }
 
-    if let Some(snapshot_id) = latest_snapshot_id {
-        // Build SQL with placeholders for the item IDs
+    // ── 1. Query persisted inventory from game_state_inventory (log-driven) ────
+    {
         let placeholders: Vec<String> = item_type_ids.iter().enumerate()
             .map(|(i, _)| format!("?{}", i + 2))
             .collect();
         let placeholders_str = placeholders.join(",");
 
         let sql = format!(
-            "SELECT type_id, item_name, storage_vault, is_in_inventory, SUM(stack_size) as qty
+            "SELECT item_type_id, item_name, SUM(stack_size) as qty
+             FROM game_state_inventory
+             WHERE character_name = ?1 AND item_type_id IN ({})
+             GROUP BY item_type_id",
+            placeholders_str
+        );
+
+        let mut stmt = conn.prepare(&sql)
+            .map_err(|e| format!("Failed to prepare game state inventory query: {e}"))?;
+
+        let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+        params.push(Box::new(character_name.clone()));
+        for id in &item_type_ids {
+            params.push(Box::new(*id));
+        }
+        let param_refs: Vec<&dyn rusqlite::types::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+
+        let rows = stmt.query_map(param_refs.as_slice(), |row| {
+            Ok((
+                row.get::<_, i64>(0)?,    // item_type_id
+                row.get::<_, String>(1)?,  // item_name
+                row.get::<_, i64>(2)?,     // qty
+            ))
+        }).map_err(|e| format!("Game state inventory query failed: {e}"))?;
+
+        for row in rows {
+            let (type_id, item_name, qty) = row
+                .map_err(|e| format!("Row parse error: {e}"))?;
+
+            if let Some(entry) = results.get_mut(&type_id) {
+                entry.item_name = item_name;
+                entry.inventory_quantity = qty;
+            }
+        }
+    }
+
+    // ── 2. Query storage vaults from latest snapshot ───────────────────────────
+    let latest_snapshot_id: Option<i64> = conn.query_row(
+        "SELECT id FROM character_item_snapshots
+         WHERE character_name = ?1 AND server_name = ?2
+         ORDER BY snapshot_timestamp DESC LIMIT 1",
+        rusqlite::params![character_name, server_name],
+        |row| row.get(0),
+    ).ok();
+
+    if let Some(snapshot_id) = latest_snapshot_id {
+        let placeholders: Vec<String> = item_type_ids.iter().enumerate()
+            .map(|(i, _)| format!("?{}", i + 2))
+            .collect();
+        let placeholders_str = placeholders.join(",");
+
+        let sql = format!(
+            "SELECT type_id, item_name, storage_vault, SUM(stack_size) as qty
              FROM character_snapshot_items
-             WHERE item_snapshot_id = ?1 AND type_id IN ({})
-             GROUP BY type_id, storage_vault, is_in_inventory",
+             WHERE item_snapshot_id = ?1 AND type_id IN ({}) AND is_in_inventory = 0
+             GROUP BY type_id, storage_vault",
             placeholders_str
         );
 
         let mut stmt = conn.prepare(&sql)
             .map_err(|e| format!("Failed to prepare availability query: {e}"))?;
 
-        // Build params: snapshot_id followed by all item_type_ids
         let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
         params.push(Box::new(snapshot_id));
         for id in &item_type_ids {
@@ -427,34 +469,29 @@ pub fn check_material_availability(
                 row.get::<_, i64>(0)?,       // type_id
                 row.get::<_, String>(1)?,     // item_name
                 row.get::<_, String>(2)?,     // storage_vault
-                row.get::<_, bool>(3)?,       // is_in_inventory
-                row.get::<_, i64>(4)?,        // qty
+                row.get::<_, i64>(3)?,        // qty
             ))
         }).map_err(|e| format!("Availability query failed: {e}"))?;
 
         for row in rows {
-            let (type_id, item_name, vault, is_inv, qty) = row
+            let (type_id, item_name, vault, qty) = row
                 .map_err(|e| format!("Row parse error: {e}"))?;
 
             if let Some(entry) = results.get_mut(&type_id) {
-                entry.item_name = item_name;
-                if is_inv {
-                    // Snapshot inventory data (may be stale — live inventory overrides)
-                    // We still count it as storage_quantity since live overrides
-                } else {
-                    entry.storage_quantity += qty;
-                    let vault_name = if vault.is_empty() { "Unknown".to_string() } else { vault };
-                    entry.vault_breakdown.push(VaultStock {
-                        vault_name,
-                        quantity: qty,
-                    });
+                if entry.item_name.is_empty() {
+                    entry.item_name = item_name;
                 }
+                entry.storage_quantity += qty;
+                let vault_name = if vault.is_empty() { "Unknown".to_string() } else { vault };
+                entry.vault_breakdown.push(VaultStock {
+                    vault_name,
+                    quantity: qty,
+                });
             }
         }
     }
 
-    // Fill in item names for any items not found in the snapshot
-    // (they might still be needed for display)
+    // ── 3. Fill in item names and compute totals ───────────────────────────────
     for (&id, entry) in results.iter_mut() {
         if entry.item_name.is_empty() {
             let name: Option<String> = conn.query_row(
@@ -470,58 +507,6 @@ pub fn check_material_availability(
     Ok(item_type_ids.iter()
         .filter_map(|id| results.remove(id))
         .collect())
-}
-
-// ── Recipe completions from latest snapshot ─────────────────────────────────
-
-#[derive(Serialize)]
-pub struct RecipeCompletionEntry {
-    pub recipe_key: String,
-    pub completions: i64,
-}
-
-/// Get all recipe completions from the latest character snapshot.
-/// Returns a map of recipe_key → completions count.
-#[tauri::command]
-pub fn get_latest_recipe_completions(
-    db: State<'_, DbPool>,
-    character_name: String,
-    server_name: String,
-) -> Result<Vec<RecipeCompletionEntry>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
-
-    // Find the latest character snapshot
-    let latest_snapshot_id: Option<i64> = conn.query_row(
-        "SELECT id FROM character_snapshots
-         WHERE character_name = ?1 AND server_name = ?2
-         ORDER BY snapshot_timestamp DESC LIMIT 1",
-        rusqlite::params![character_name, server_name],
-        |row| row.get(0),
-    ).ok();
-
-    let Some(snapshot_id) = latest_snapshot_id else {
-        return Ok(Vec::new());
-    };
-
-    let mut stmt = conn.prepare(
-        "SELECT recipe_key, completions
-         FROM character_recipe_completions
-         WHERE snapshot_id = ?1"
-    ).map_err(|e| format!("Failed to prepare query: {e}"))?;
-
-    let rows = stmt.query_map([snapshot_id], |row| {
-        Ok(RecipeCompletionEntry {
-            recipe_key: row.get(0)?,
-            completions: row.get(1)?,
-        })
-    }).map_err(|e| format!("Query failed: {e}"))?;
-
-    let mut entries = Vec::new();
-    for row in rows {
-        entries.push(row.map_err(|e| format!("Row parse error: {e}"))?);
-    }
-
-    Ok(entries)
 }
 
 // ── Work order data from snapshot ────────────────────────────────────────────
@@ -591,37 +576,4 @@ pub fn get_work_orders_from_snapshot(
     }).unwrap_or_default();
 
     Ok(WorkOrderData { active, completed, inventory_item_ids })
-}
-
-/// Get the current skill level from the latest character snapshot.
-#[tauri::command]
-pub fn get_latest_skill_level(
-    db: State<'_, DbPool>,
-    character_name: String,
-    server_name: String,
-    skill_name: String,
-) -> Result<Option<(i32, i64, i64)>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
-
-    let latest_snapshot_id: Option<i64> = conn.query_row(
-        "SELECT id FROM character_snapshots
-         WHERE character_name = ?1 AND server_name = ?2
-         ORDER BY snapshot_timestamp DESC LIMIT 1",
-        rusqlite::params![character_name, server_name],
-        |row| row.get(0),
-    ).ok();
-
-    let Some(snapshot_id) = latest_snapshot_id else {
-        return Ok(None);
-    };
-
-    let result = conn.query_row(
-        "SELECT level, xp_toward_next, xp_needed_for_next
-         FROM character_skill_levels
-         WHERE snapshot_id = ?1 AND skill_name = ?2",
-        rusqlite::params![snapshot_id, skill_name],
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-    ).ok();
-
-    Ok(result)
 }

@@ -3,13 +3,16 @@
     border-class="border-entity-ability/50"
     @hover="loadIcon"
   >
-    <button
-      class="inline-flex items-center gap-1 cursor-pointer hover:underline"
+    <component
+      :is="plain ? 'span' : 'button'"
+      :class="plain
+        ? 'hover:underline cursor-pointer text-inherit'
+        : 'inline-flex items-center gap-1 cursor-pointer hover:underline'"
       @click="handleClick"
     >
-      <GameIcon v-if="ability.icon_id" :icon-id="ability.icon_id" :alt="ability.name" size="xs" />
-      <span class="text-entity-ability text-xs font-medium">{{ ability.name }}</span>
-    </button>
+      <GameIcon v-if="!plain && ability.icon_id" :icon-id="ability.icon_id" :alt="ability.name" size="xs" />
+      <span :class="plain ? '' : 'text-entity-ability text-xs font-medium'">{{ ability.name }}</span>
+    </component>
     <template #tooltip>
       <AbilityTooltip :ability="ability" :icon-src="iconSrc" />
     </template>
@@ -26,9 +29,12 @@ import EntityTooltipWrapper from "../EntityTooltipWrapper.vue";
 import GameIcon from "../GameIcon.vue";
 import AbilityTooltip from "./AbilityTooltip.vue";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   ability: AbilityInfo;
-}>();
+  plain?: boolean;
+}>(), {
+  plain: false,
+});
 
 const store = useGameDataStore();
 const { navigateToEntity } = useEntityNavigation();

@@ -12,7 +12,7 @@
         <div class="flex items-center gap-2">
           <div class="flex-1 min-w-0">
             <div class="text-text-primary text-xs font-medium truncate">
-              <ItemInline :name="entry.item" />
+              <ItemInline :reference="entry.item" />
             </div>
             <div class="flex items-center gap-2 mt-0.5">
               <span class="text-text-secondary text-xs font-semibold">&times;{{ entry.count }}</span>

@@ -1,5 +1,5 @@
 <template>
-  <div class="h-[calc(100vh-130px)] flex flex-col">
+  <div class="h-full flex flex-col">
     <!-- Status banner if data not ready -->
     <div v-if="store.status !== 'ready'" class="p-4 text-sm">
       <span v-if="store.status === 'loading'" class="text-accent-gold"
@@ -52,12 +52,12 @@
           No abilities for {{ selectedSkillFilter }}
         </div>
 
-        <ul v-else class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated">
+        <ul ref="listRef" v-else class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated">
           <li
-            v-for="ability in filteredAbilities"
+            v-for="(ability, idx) in filteredAbilities"
             :key="ability.id"
             class="flex items-baseline gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
-            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === ability.id }"
+            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === ability.id, 'bg-surface-elevated': selectedIndex === idx && selected?.id !== ability.id }"
             @click="selectAbility(ability)">
             <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ ability.level || 0 }}]</span>
             <span class="text-text-primary/75 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ ability.name }}</span>
@@ -235,6 +235,7 @@
 import { ref, onMounted, watch, computed } from "vue";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
+import { useKeyboard } from "../../composables/useKeyboard";
 import type { SkillInfo, AbilityInfo, EntitySources } from "../../types/gameData";
 import SourcesPanel from "../Shared/SourcesPanel.vue";
 
@@ -246,6 +247,8 @@ const selectedSkillFilter = ref<string>("All");
 const query = ref("");
 const allAbilities = ref<AbilityInfo[]>([]);
 const selected = ref<AbilityInfo | null>(null);
+const selectedIndex = ref(0);
+const listRef = ref<HTMLElement | null>(null);
 const sources = ref<EntitySources | null>(null);
 const sourcesLoading = ref(false);
 const iconSrc = ref<string | null>(null);
@@ -400,4 +403,16 @@ function clearSelection() {
   iconSrc.value = null;
   sources.value = null;
 }
+
+useKeyboard({
+  listNavigation: {
+    items: filteredAbilities,
+    selectedIndex,
+    onConfirm: (index: number) => {
+      const ability = filteredAbilities.value[index];
+      if (ability) selectAbility(ability);
+    },
+    scrollContainerRef: listRef,
+  },
+});
 </script>

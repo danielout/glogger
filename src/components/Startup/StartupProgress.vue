@@ -17,19 +17,31 @@
             <span v-else-if="task.status === 'error'" class="text-accent-red">&#10007;</span>
           </div>
 
-          <span :class="task.status === 'pending' ? 'text-text-muted' : 'text-text-primary'">
-            {{ task.label }}
-          </span>
+          <div>
+            <span :class="task.status === 'pending' ? 'text-text-muted' : task.status === 'error' ? 'text-accent-red' : 'text-text-primary'">
+              {{ task.label }}
+            </span>
+            <span v-if="task.detail" class="text-text-muted text-xs ml-2">{{ task.detail }}</span>
+          </div>
         </div>
+      </div>
+
+      <div v-if="hasError" class="mt-8 p-4 bg-accent-red/10 border border-accent-red/30 rounded text-sm text-text-primary">
+        <p class="font-medium text-accent-red mb-1">Startup failed</p>
+        <p class="text-text-muted">{{ errorMessage || 'A required startup task failed. Please restart the application.' }}</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import type { StartupTask } from "../../stores/startupStore";
 
-defineProps<{
+const props = defineProps<{
   tasks: StartupTask[];
+  errorMessage?: string | null;
 }>();
+
+const hasError = computed(() => props.tasks.some(t => t.status === "error"));
 </script>

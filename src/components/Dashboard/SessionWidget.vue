@@ -6,24 +6,25 @@
       <div class="text-sm text-accent-gold font-bold">{{ topSkill.skillType }}</div>
       <div class="text-xs text-text-secondary">{{ xpPerHour.toLocaleString() }} XP/hr</div>
     </div>
-    <div v-else class="text-text-dim text-sm italic">No session data yet</div>
+    <EmptyState v-else variant="compact" primary="No session data yet" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useSkillStore } from '../../stores/skillStore'
+import { useGameStateStore } from '../../stores/gameStateStore'
+import EmptyState from '../Shared/EmptyState.vue'
 
-const skillStore = useSkillStore()
+const store = useGameStateStore()
 
 const topSkill = computed(() => {
-  const skills = Object.values(skillStore.skills)
+  const skills = store.sessionSkillList
   if (skills.length === 0) return null
   return skills.reduce((best, s) => (s.xpGained > best.xpGained ? s : best))
 })
 
 const xpPerHour = computed(() => {
   if (!topSkill.value) return 0
-  return skillStore.xpPerHour(topSkill.value)
+  return store.xpPerHour(topSkill.value)
 })
 </script>

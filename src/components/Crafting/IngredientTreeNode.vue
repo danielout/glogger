@@ -11,7 +11,7 @@
       <span v-else class="w-3 text-center text-surface-elevated">·</span>
 
       <!-- Item name -->
-      <ItemInline :name="ingredient.item_name" />
+      <ItemInline :reference="ingredient.item_name" />
 
       <!-- Quantity -->
       <span class="text-text-primary font-mono ml-auto">

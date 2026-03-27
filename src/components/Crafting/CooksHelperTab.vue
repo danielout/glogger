@@ -31,14 +31,16 @@
     </div>
 
     <!-- Not imported state -->
-    <div v-if="!store.isImported && !store.loading" class="flex-1 flex items-center justify-center">
-      <div class="text-center text-text-muted text-sm max-w-md space-y-2">
-        <p>Import a player's gourmand skill report to see which foods you can cook for them.</p>
-        <p class="text-text-dim text-xs">
-          The player uses the Gourmand skill's "Request Skill Report" ability in-game,
-          then shares their SkillReport .txt file with you.
-        </p>
-      </div>
+    <div v-if="!store.isImported && !store.loading" class="flex flex-col items-center gap-4 py-8">
+      <EmptyState
+        variant="panel"
+        primary="No skill report imported"
+        secondary="Import a player's gourmand skill report, or start fresh to see all cookable foods." />
+      <button
+        class="btn-secondary text-xs py-1.5 px-4"
+        @click="store.startFresh()">
+        Start Fresh (all foods uneaten)
+      </button>
     </div>
 
     <!-- Loading -->
@@ -170,6 +172,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useCooksHelperStore } from '../../stores/cooksHelperStore'
 import { useCraftingStore } from '../../stores/craftingStore'
+import EmptyState from '../Shared/EmptyState.vue'
 import CooksHelperRecipeRow from './CooksHelperRecipeRow.vue'
 
 const store = useCooksHelperStore()

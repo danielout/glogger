@@ -75,17 +75,32 @@
     <div class="bg-[#1a1a2e] border border-border-light rounded-lg p-3">
       <div class="text-[0.65rem] uppercase tracking-widest text-[#7ec8e3] mb-2 font-bold">XP Gained</div>
       <div class="flex flex-col gap-1.5">
-        <div class="flex justify-between text-xs">
-          <span class="text-[#7ec87e]">Surveying</span>
-          <span class="font-bold text-[#7ec87e]">+{{ s.surveyingXpGained.toLocaleString() }}</span>
+        <div class="flex flex-col gap-0.5">
+          <div class="flex justify-between text-xs">
+            <span class="text-[#7ec87e]">Surveying</span>
+            <span class="font-bold text-[#7ec87e]">+{{ s.surveyingXpGained.toLocaleString() }}</span>
+          </div>
+          <div v-if="store.surveysToLevelSurveying != null" class="text-[0.6rem] text-text-dim text-right">
+            ~{{ store.surveysToLevelSurveying }} crafts to level
+          </div>
         </div>
-        <div class="flex justify-between text-xs">
-          <span class="text-[#c87e7e]">Mining</span>
-          <span class="font-bold text-[#c87e7e]">+{{ s.miningXpGained.toLocaleString() }}</span>
+        <div class="flex flex-col gap-0.5">
+          <div class="flex justify-between text-xs">
+            <span class="text-[#c87e7e]">Mining</span>
+            <span class="font-bold text-[#c87e7e]">+{{ s.miningXpGained.toLocaleString() }}</span>
+          </div>
+          <div v-if="store.surveysToLevelMining != null" class="text-[0.6rem] text-text-dim text-right">
+            ~{{ store.surveysToLevelMining }} completions to level
+          </div>
         </div>
-        <div class="flex justify-between text-xs">
-          <span class="text-[#c8b47e]">Geology</span>
-          <span class="font-bold text-[#c8b47e]">+{{ s.geologyXpGained.toLocaleString() }}</span>
+        <div class="flex flex-col gap-0.5">
+          <div class="flex justify-between text-xs">
+            <span class="text-[#c8b47e]">Geology</span>
+            <span class="font-bold text-[#c8b47e]">+{{ s.geologyXpGained.toLocaleString() }}</span>
+          </div>
+          <div v-if="store.surveysToLevelGeology != null" class="text-[0.6rem] text-text-dim text-right">
+            ~{{ store.surveysToLevelGeology }} completions to level
+          </div>
         </div>
       </div>
     </div>

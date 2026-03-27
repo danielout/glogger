@@ -1,5 +1,5 @@
 <template>
-  <div class="h-[calc(100vh-130px)] flex flex-col">
+  <div class="h-full flex flex-col">
     <!-- Status banner if data not ready -->
     <div v-if="store.status !== 'ready'" class="p-4 text-sm">
       <span v-if="store.status === 'loading'" class="text-accent-gold"
@@ -33,12 +33,12 @@
           No titles found for "{{ query }}"
         </div>
 
-        <ul v-else class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated">
+        <ul ref="listRef" v-else class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated">
           <li
-            v-for="title in filteredTitles"
+            v-for="(title, idx) in filteredTitles"
             :key="title.id"
             class="flex items-baseline gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
-            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === title.id }"
+            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === title.id, 'bg-surface-elevated': selectedIndex === idx && selected?.id !== title.id }"
             @click="selectTitle(title)">
             <span class="text-text-dim text-[0.72rem] min-w-12 shrink-0">#{{ title.id }}</span>
             <span
@@ -116,6 +116,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from "vue";
 import { useGameDataStore } from "../../stores/gameDataStore";
+import { useKeyboard } from "../../composables/useKeyboard";
 import type { PlayerTitleInfo } from "../../types/gameData";
 
 /** Strip color tags and return { text, color } */
@@ -135,6 +136,8 @@ const allTitles = ref<PlayerTitleInfo[]>([]);
 const filteredTitles = ref<PlayerTitleInfo[]>([]);
 const selected = ref<PlayerTitleInfo | null>(null);
 const loading = ref(false);
+const selectedIndex = ref(0);
+const listRef = ref<HTMLElement | null>(null);
 
 onMounted(async () => {
   if (store.status === "ready") {
@@ -168,6 +171,22 @@ watch(query, (val) => {
     parseColorTag(title.title).text.toLowerCase().includes(q) ||
     title.tooltip?.toLowerCase().includes(q)
   );
+});
+
+watch(filteredTitles, () => {
+  selectedIndex.value = 0;
+});
+
+useKeyboard({
+  listNavigation: {
+    items: filteredTitles,
+    selectedIndex,
+    onConfirm: (index: number) => {
+      const title = filteredTitles.value[index];
+      if (title) selectTitle(title);
+    },
+    scrollContainerRef: listRef,
+  },
 });
 
 function selectTitle(title: PlayerTitleInfo) {

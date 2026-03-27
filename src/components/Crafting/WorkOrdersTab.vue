@@ -52,9 +52,7 @@
         Loading work orders...
       </div>
 
-      <div v-else-if="workOrders.length === 0" class="flex items-center justify-center h-full text-border-default italic">
-        No work orders found. Import a character snapshot first.
-      </div>
+      <EmptyState v-else-if="workOrders.length === 0" variant="panel" primary="No work orders found" secondary="Import a character snapshot first." />
 
       <div v-else class="flex flex-col gap-1.5">
         <!-- Select all for project creation -->
@@ -114,7 +112,7 @@
 
           <!-- Item & quantity -->
           <div class="flex items-center gap-1.5 min-w-0 flex-1">
-            <ItemInline v-if="wo.item_name" :name="wo.item_name" />
+            <ItemInline v-if="wo.item_name" :reference="wo.item_name" />
             <span v-else class="text-text-dim">{{ wo.name }}</span>
             <span class="text-text-primary font-mono shrink-0">×{{ wo.quantity }}</span>
           </div>
@@ -122,7 +120,7 @@
           <!-- Craft skill -->
           <SkillInline
             v-if="wo.craft_skill"
-            :name="wo.craft_skill"
+            :reference="wo.craft_skill"
             :show-icon="true"
             class="shrink-0 text-[0.65rem]" />
 
@@ -170,6 +168,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useCraftingStore } from "../../stores/craftingStore";
 import type { EnrichedWorkOrder } from "../../types/crafting";
+import EmptyState from "../Shared/EmptyState.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 import SkillInline from "../Shared/Skill/SkillInline.vue";
 

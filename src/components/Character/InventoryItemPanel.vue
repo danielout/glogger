@@ -1,5 +1,5 @@
 <template>
-  <div class="item-panel-grid grid grid-cols-[repeat(auto-fill,minmax(12rem,1fr))] gap-2">
+  <div class="grid grid-cols-[repeat(auto-fill,minmax(12rem,1fr))] gap-2 [&>div]:flex [&>div]:w-full">
     <EntityTooltipWrapper
       v-for="item in items"
       :key="item.id"
@@ -55,7 +55,7 @@ const itemDataCache = reactive<Record<number, ItemInfo>>({})
 async function loadItem(item: SnapshotItem) {
   if (itemDataCache[item.type_id]) return
   try {
-    const data = await store.getItem(item.type_id)
+    const data = await store.resolveItem(item.type_id)
     if (!data) return
     itemDataCache[item.type_id] = data
     if (data.icon_id) {
@@ -93,10 +93,3 @@ function rarityClass(rarity: string): string {
 }
 </script>
 
-<style scoped>
-/* Override EntityTooltipWrapper's inline-flex so it fills the grid cell */
-.item-panel-grid > :deep(div) {
-  display: flex;
-  width: 100%;
-}
-</style>

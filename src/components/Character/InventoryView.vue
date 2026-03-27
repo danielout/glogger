@@ -130,17 +130,16 @@
     </div>
 
     <!-- No data -->
-    <div v-if="!store.inventorySnapshots.length && !store.loading"
-      class="text-text-muted text-sm py-8 text-center">
-      No inventory data found. Use /outputitems in-game, then import the report.
-    </div>
+    <EmptyState
+      v-if="!store.inventorySnapshots.length && !store.loading"
+      variant="panel"
+      primary="No inventory data found"
+      secondary="Use /outputitems in-game, then import the report." />
 
     <!-- Content -->
     <div v-if="store.selectedInventorySnapshot" class="overflow-auto flex-1 min-h-0">
       <!-- No search results -->
-      <div v-if="searchQuery && filteredItems.length === 0" class="text-text-muted text-sm py-8 text-center">
-        No items matching "{{ searchQuery }}"
-      </div>
+      <EmptyState v-if="searchQuery && filteredItems.length === 0" variant="compact" :primary="`No items matching &quot;${searchQuery}&quot;`" />
 
       <!-- Ungrouped -->
       <template v-else-if="groupMode === 'none'">
@@ -169,7 +168,10 @@
 import { ref, reactive, computed, onMounted, watch, type Component } from 'vue'
 import { useCharacterStore } from '../../stores/characterStore'
 import { useGameDataStore } from '../../stores/gameDataStore'
+import { useGameStateStore } from '../../stores/gameStateStore'
+import { formatDateTimeFull } from '../../composables/useTimestamp'
 import type { SnapshotItem } from '../../types/database'
+import EmptyState from '../Shared/EmptyState.vue'
 import InventoryTable from './InventoryTable.vue'
 import InventorySmallGrid from './InventorySmallGrid.vue'
 import InventoryLargeGrid from './InventoryLargeGrid.vue'
@@ -177,6 +179,7 @@ import InventoryItemPanel from './InventoryItemPanel.vue'
 
 const store = useCharacterStore()
 const gameStore = useGameDataStore()
+const gameState = useGameStateStore()
 
 type ViewMode = 'small-grid' | 'large-grid' | 'panel' | 'detail'
 type GroupMode = 'none' | 'storage' | 'zone'
@@ -239,26 +242,15 @@ function collapseAll() {
 
 // ── Vault name formatting ───────────────────────────────────────────────────
 
-const VAULT_NAMES: Record<string, string> = {
-  Inventory: 'Inventory',
-  CouncilVault: 'Council Vault',
-  TapestryInnChest: 'Tapestry Inn Chest',
-  SerbuleCommunityChest: 'Serbule Community Chest',
-  DreamRealmChest: 'Dream Realm Chest',
-  PovusStorageChest: 'Povus Storage Chest',
-  Saddlebag: 'Saddlebag',
-  Unknown: 'Unknown',
-}
-
 function formatVault(vault: string): string {
-  if (VAULT_NAMES[vault]) return VAULT_NAMES[vault]
+  if (vault === 'Inventory') return 'Inventory'
+  if (vault === 'Unknown') return 'Unknown'
+  // Look up CDN vault metadata for the proper display name
+  const vaultInfo = gameState.storageVaultsByKey[vault]
+  if (vaultInfo?.npc_friendly_name) return vaultInfo.npc_friendly_name
+  // Fallback for vaults not in CDN data
   if (vault.startsWith('*AccountStorage_')) {
-    const location = vault.replace('*AccountStorage_', '')
-    return `Account Storage (${location})`
-  }
-  if (vault.startsWith('NPC_')) {
-    const npcName = vault.replace('NPC_', '')
-    return `${npcName}'s Storage`
+    return `Account Storage (${vault.replace('*AccountStorage_', '')})`
   }
   return vault
 }
@@ -414,12 +406,13 @@ async function handleImport() {
 }
 
 function formatTimestamp(ts: string): string {
-  return ts.replace('T', ' ').replace('Z', '').substring(0, 19)
+  return formatDateTimeFull(ts)
 }
 
 onMounted(() => {
   if (!store.selectedInventorySnapshot && store.inventorySnapshots.length === 0) {
     store.initInventoryForActiveCharacter()
   }
+  gameState.loadStorageVaults()
 })
 </script>

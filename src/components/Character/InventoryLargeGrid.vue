@@ -55,7 +55,7 @@ const itemDataCache = reactive<Record<number, ItemInfo>>({})
 async function loadItem(item: SnapshotItem) {
   if (itemDataCache[item.type_id]) return
   try {
-    const data = await store.getItem(item.type_id)
+    const data = await store.resolveItem(item.type_id)
     if (!data) return
     itemDataCache[item.type_id] = data
     if (data.icon_id) {

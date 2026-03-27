@@ -7,6 +7,14 @@ use std::collections::HashMap;
 use std::path::Path;
 use serde::Deserialize;
 use tokio::fs;
+use chrono::Local;
+
+/// Timestamped log line for startup diagnostics.
+macro_rules! startup_log {
+    ($($arg:tt)*) => {
+        eprintln!("[{}] {}", Local::now().format("%H:%M:%S%.3f"), format!($($arg)*));
+    };
+}
 
 // ── Module declarations ──────────────────────────────────────────────────────
 mod items;
@@ -46,6 +54,7 @@ pub use areas::AreaInfo;
 pub use effects::EffectInfo;
 pub use player_titles::PlayerTitleInfo;
 pub use sources::{SourceEntry, SourceInfo};
+pub use storage_vaults::StorageVaultInfo;
 
 // ── Shared utilities ─────────────────────────────────────────────────────────
 
@@ -136,8 +145,14 @@ pub struct GameData {
     pub recipes_producing_item: HashMap<u32, Vec<u32>>,
     pub recipes_using_item:    HashMap<u32, Vec<u32>>,
     pub recipe_name_index:     HashMap<String, u32>,
+    pub recipe_internal_name_index: HashMap<String, u32>,
     pub npcs_by_skill:         HashMap<String, Vec<String>>,
     pub quest_internal_name_index: HashMap<String, String>,
+
+    // ── Entity resolution indices ────────────────────────────────────────
+    pub skill_internal_name_index: HashMap<String, u32>,
+    pub npc_name_index:            HashMap<String, String>,
+    pub area_name_index:           HashMap<String, String>,
 
     // ── Source cross-reference indices ───────────────────────────────────
     /// ability key (e.g. "ability_1002") → item IDs that bestow it
@@ -183,8 +198,12 @@ impl GameData {
             recipes_producing_item: HashMap::new(),
             recipes_using_item: HashMap::new(),
             recipe_name_index: HashMap::new(),
+            recipe_internal_name_index: HashMap::new(),
             npcs_by_skill: HashMap::new(),
             quest_internal_name_index: HashMap::new(),
+            skill_internal_name_index: HashMap::new(),
+            npc_name_index: HashMap::new(),
+            area_name_index: HashMap::new(),
             items_bestowing_ability: HashMap::new(),
             items_bestowing_recipe: HashMap::new(),
             items_bestowing_quest: HashMap::new(),
@@ -215,6 +234,82 @@ impl GameData {
     pub fn recipe_by_name(&self, name: &str) -> Option<&recipes::RecipeInfo> {
         let id = self.recipe_name_index.get(name)?;
         self.recipes.get(id)
+    }
+
+    // ── Unified entity resolvers ─────────────────────────────────────────
+    // Each accepts any known reference form and returns the entity.
+
+    /// Resolve any string reference to an ItemInfo.
+    /// Tries: numeric ID → display name → internal name.
+    pub fn resolve_item(&self, reference: &str) -> Option<&items::ItemInfo> {
+        if let Ok(id) = reference.parse::<u32>() {
+            if let Some(item) = self.items.get(&id) {
+                return Some(item);
+            }
+        }
+        if let Some(item) = self.item_by_name(reference) {
+            return Some(item);
+        }
+        self.item_by_internal_name(reference)
+    }
+
+    /// Resolve any string reference to a SkillInfo.
+    /// Tries: numeric ID → display name → internal name.
+    pub fn resolve_skill(&self, reference: &str) -> Option<&skills::SkillInfo> {
+        if let Ok(id) = reference.parse::<u32>() {
+            if let Some(skill) = self.skills.get(&id) {
+                return Some(skill);
+            }
+        }
+        if let Some(skill) = self.skill_by_name(reference) {
+            return Some(skill);
+        }
+        let id = self.skill_internal_name_index.get(reference)?;
+        self.skills.get(id)
+    }
+
+    /// Resolve any string reference to a RecipeInfo.
+    /// Tries: numeric ID → display name → internal name.
+    pub fn resolve_recipe(&self, reference: &str) -> Option<&recipes::RecipeInfo> {
+        if let Ok(id) = reference.parse::<u32>() {
+            if let Some(recipe) = self.recipes.get(&id) {
+                return Some(recipe);
+            }
+        }
+        if let Some(recipe) = self.recipe_by_name(reference) {
+            return Some(recipe);
+        }
+        let id = self.recipe_internal_name_index.get(reference)?;
+        self.recipes.get(id)
+    }
+
+    /// Resolve any string reference to a QuestInfo.
+    /// Tries: CDN key → internal name.
+    pub fn resolve_quest(&self, reference: &str) -> Option<&quests::QuestInfo> {
+        if let Some(quest) = self.quests.get(reference) {
+            return Some(quest);
+        }
+        self.quest_by_internal_name(reference)
+    }
+
+    /// Resolve any string reference to an NpcInfo.
+    /// Tries: CDN key → display name.
+    pub fn resolve_npc(&self, reference: &str) -> Option<&npcs::NpcInfo> {
+        if let Some(npc) = self.npcs.get(reference) {
+            return Some(npc);
+        }
+        let key = self.npc_name_index.get(reference)?;
+        self.npcs.get(key)
+    }
+
+    /// Resolve any string reference to an AreaInfo.
+    /// Tries: CDN key → friendly name → short friendly name.
+    pub fn resolve_area(&self, reference: &str) -> Option<&areas::AreaInfo> {
+        if let Some(area) = self.areas.get(reference) {
+            return Some(area);
+        }
+        let key = self.area_name_index.get(reference)?;
+        self.areas.get(key)
     }
 }
 
@@ -277,35 +372,80 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
 
     // Parse all data
+    startup_log!("Parsing game data files...");
+
     let items = items::parse(&items_json)?;
+    startup_log!("  items: {} entries", items.len());
+
     let skills = skills::parse(&skills_json)?;
+    startup_log!("  skills: {} entries", skills.len());
+
     let abilities = abilities::parse(&abilities_json)?;
+    startup_log!("  abilities: {} entries", abilities.len());
+
     let recipes = recipes::parse(&recipes_json)?;
+    startup_log!("  recipes: {} entries", recipes.len());
+
     let npcs = npcs::parse(&npcs_json)?;
+    startup_log!("  npcs: {} entries", npcs.len());
+
     let effects = effects::parse(&effects_json)?;
+    startup_log!("  effects: {} entries", effects.len());
+
     let areas = areas::parse(&areas_json)?;
+    startup_log!("  areas: {} entries", areas.len());
+
     let attributes = attributes::parse(&attributes_json)?;
+    startup_log!("  attributes: {} entries", attributes.len());
+
     let xp_tables = xp_tables::parse(&xp_tables_json)?;
+    startup_log!("  xp_tables: {} entries", xp_tables.len());
+
     let advancement_tables = advancement_tables::parse(&advancement_tables_json)?;
+    startup_log!("  advancement_tables: {} entries", advancement_tables.len());
+
     let ability_keywords = ability_keywords::parse(&ability_keywords_json)?;
+    startup_log!("  ability_keywords: {} entries", ability_keywords.len());
+
     let ability_dynamic = ability_dynamic::AbilityDynamicData::parse(
         &ability_dynamic_dots_json,
         &ability_dynamic_special_json
     )?;
+    startup_log!("  ability_dynamic: parsed");
+
     let ai = ai::parse(&ai_json)?;
+    startup_log!("  ai: {} entries", ai.len());
+
     let directed_goals = directed_goals::parse(&directed_goals_json)?;
+    startup_log!("  directed_goals: {} entries", directed_goals.len());
+
     let item_uses = item_uses::parse(&item_uses_json)?;
+    startup_log!("  item_uses: {} entries", item_uses.len());
+
     let landmarks = landmarks::parse(&landmarks_json)?;
+    startup_log!("  landmarks: {} entries", landmarks.len());
+
     let lorebooks = lorebooks::LorebookData::parse(&lorebooks_json, &lorebook_info_json)?;
+    startup_log!("  lorebooks: parsed");
+
     let player_titles = player_titles::parse(&player_titles_json)?;
+    startup_log!("  player_titles: {} entries", player_titles.len());
+
     let quests = quests::parse(&quests_json)?;
+    startup_log!("  quests: {} entries", quests.len());
+
     let sources = sources::SourcesData::parse(
         &sources_abilities_json,
         &sources_items_json,
         &sources_recipes_json
     )?;
+    startup_log!("  sources: parsed");
+
     let storage_vaults = storage_vaults::parse(&storage_vaults_json)?;
+    startup_log!("  storage_vaults: {} entries", storage_vaults.len());
+
     let tsys = tsys::TsysData::parse(&tsys_client_info_json, &tsys_profiles_json)?;
+    startup_log!("  tsys: parsed");
 
     // Build indices
     let item_name_index: HashMap<String, u32> = items
@@ -353,6 +493,13 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         .map(|(id, recipe)| (recipe.name.clone(), *id))
         .collect();
 
+    let recipe_internal_name_index: HashMap<String, u32> = recipes
+        .iter()
+        .filter_map(|(id, recipe)| {
+            recipe.internal_name.as_ref().map(|iname| (iname.clone(), *id))
+        })
+        .collect();
+
     let mut npcs_by_skill: HashMap<String, Vec<String>> = HashMap::new();
     for (npc_key, npc) in &npcs {
         for skill in &npc.trains_skills {
@@ -365,6 +512,27 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
     for (quest_key, quest) in &quests {
         if !quest.internal_name.is_empty() {
             quest_internal_name_index.insert(quest.internal_name.clone(), quest_key.clone());
+        }
+    }
+
+    // Build entity resolution indices
+    let skill_internal_name_index: HashMap<String, u32> = skills
+        .iter()
+        .map(|(id, skill)| (skill.internal_name.clone(), *id))
+        .collect();
+
+    let npc_name_index: HashMap<String, String> = npcs
+        .iter()
+        .map(|(key, npc)| (npc.name.clone(), key.clone()))
+        .collect();
+
+    let mut area_name_index: HashMap<String, String> = HashMap::new();
+    for (key, area) in &areas {
+        if let Some(ref name) = area.friendly_name {
+            area_name_index.insert(name.clone(), key.clone());
+        }
+        if let Some(ref name) = area.short_friendly_name {
+            area_name_index.insert(name.clone(), key.clone());
         }
     }
 
@@ -401,6 +569,8 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         }
     }
 
+    startup_log!("Game data indices built");
+
     Ok(GameData {
         version,
         items,
@@ -432,8 +602,12 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         recipes_producing_item,
         recipes_using_item,
         recipe_name_index,
+        recipe_internal_name_index,
         npcs_by_skill,
         quest_internal_name_index,
+        skill_internal_name_index,
+        npc_name_index,
+        area_name_index,
         items_bestowing_ability,
         items_bestowing_recipe,
         items_bestowing_quest,

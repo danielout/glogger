@@ -1,0 +1,175 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version bump type or explicit version (patch, minor, major, or x.y.z)"
+        required: true
+        default: "patch"
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_REPO: ${{ github.repository_owner }}/glogger-release
+
+jobs:
+  # ── Step 1: bump version, generate changelog, push tag ──
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump version
+        id: version
+        shell: bash
+        run: |
+          chmod +x scripts/bump-version.sh
+          scripts/bump-version.sh "${{ github.event.inputs.version }}"
+          NEW_VERSION=$(sed -n 's/.*"version"\s*:\s*"\([0-9]*\.[0-9]*\.[0-9]*\)".*/\1/p' src-tauri/tauri.conf.json | head -1)
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Generate changelog
+        shell: bash
+        run: |
+          chmod +x scripts/generate-changelog.sh
+          scripts/generate-changelog.sh > RELEASE_NOTES.md
+          cat RELEASE_NOTES.md
+
+      - name: Commit version bump and tag
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "release: v${{ steps.version.outputs.version }}"
+          git tag "v${{ steps.version.outputs.version }}"
+          git push origin main --tags
+
+      - name: Upload release notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: RELEASE_NOTES.md
+
+  # ── Step 2: build on all platforms in parallel ──
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: windows
+          - os: macos-latest
+            label: macos
+          - os: ubuntu-latest
+            label: linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout (at release tag)
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.prepare.outputs.version }}
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        shell: bash
+        run: npm run tauri build
+
+      - name: Collect artifacts
+        shell: bash
+        run: |
+          BUNDLE_DIR="src-tauri/target/release/bundle"
+          mkdir -p release-artifacts
+
+          # Windows: MSI + NSIS
+          find "$BUNDLE_DIR/msi" -name "*.msi" -exec cp {} release-artifacts/ \; 2>/dev/null || true
+          find "$BUNDLE_DIR/nsis" -name "*.exe" -exec cp {} release-artifacts/ \; 2>/dev/null || true
+
+          # macOS: DMG + app bundle
+          find "$BUNDLE_DIR/dmg" -name "*.dmg" -exec cp {} release-artifacts/ \; 2>/dev/null || true
+
+          # Linux: deb + AppImage
+          find "$BUNDLE_DIR/deb" -name "*.deb" -exec cp {} release-artifacts/ \; 2>/dev/null || true
+          find "$BUNDLE_DIR/appimage" -name "*.AppImage" -exec cp {} release-artifacts/ \; 2>/dev/null || true
+
+          echo "Collected artifacts:"
+          ls -la release-artifacts/
+
+      - name: Upload platform artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-${{ matrix.label }}
+          path: release-artifacts/*
+
+  # ── Step 3: collect all artifacts and publish to release repo ──
+  publish:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release notes
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+
+      - name: Download all platform artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: artifacts-*
+          path: all-artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la all-artifacts/
+
+      - name: Publish release to glogger-release repo
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+        run: |
+          TAG="v${{ needs.prepare.outputs.version }}"
+
+          gh release create "$TAG" \
+            --repo "$RELEASE_REPO" \
+            --title "$TAG" \
+            --notes-file RELEASE_NOTES.md
+
+          for file in all-artifacts/*; do
+            [ -f "$file" ] || continue
+            echo "Uploading: $file"
+            gh release upload "$TAG" "$file" --repo "$RELEASE_REPO"
+          done
+
+          echo "Release published: https://github.com/$RELEASE_REPO/releases/tag/$TAG"

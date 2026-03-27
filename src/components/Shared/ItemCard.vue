@@ -44,7 +44,7 @@ const iconSrc = ref<string | null>(null);
 async function loadItemData() {
   if (itemData.value) return;
   try {
-    const item = await store.getItemByName(props.itemName);
+    const item = await store.resolveItem(props.itemName);
     if (!item) return;
     itemData.value = item;
     if (item.icon_id) {

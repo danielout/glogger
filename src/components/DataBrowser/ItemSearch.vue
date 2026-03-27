@@ -1,5 +1,5 @@
 <template>
-  <div class="h-[calc(100vh-130px)] flex flex-col">
+  <div class="h-full flex flex-col">
     <!-- Status banner if data not ready -->
     <div v-if="store.status !== 'ready'" class="p-4 text-sm">
       <span v-if="store.status === 'loading'" class="text-accent-gold"
@@ -40,6 +40,39 @@
 
         <!-- Collapsible filter panel -->
         <div v-if="showFilters" class="flex flex-col gap-1.5 px-1 py-1.5 border border-surface-elevated bg-surface-dark text-xs">
+          <div class="flex items-center gap-2">
+            <label class="text-text-muted min-w-14 shrink-0">Keyword</label>
+            <div class="flex-1 relative" v-if="!filterKeyword">
+              <input
+                v-model="keywordQuery"
+                class="input w-full text-xs py-0.5"
+                placeholder="Search keywords…"
+                @focus="keywordDropdownOpen = true"
+                @blur="onKeywordBlur" />
+              <div
+                v-if="keywordDropdownOpen && filteredKeywords.length"
+                class="absolute z-10 top-full left-0 right-0 max-h-40 overflow-y-auto bg-surface-dark border border-surface-elevated mt-0.5">
+                <div
+                  v-for="kw in filteredKeywords"
+                  :key="kw"
+                  class="px-2 py-1 cursor-pointer text-[0.72rem] hover:bg-[#1e1e1e]"
+                  :class="{ 'text-[#887040]': kw.startsWith('Lint_'), 'text-[#7ec8e3]': !kw.startsWith('Lint_') }"
+                  @mousedown.prevent="selectKeyword(kw)">
+                  {{ kw }}
+                </div>
+              </div>
+            </div>
+            <div v-else class="flex items-center gap-1 flex-1">
+              <span
+                class="text-[0.72rem] px-1.5 py-0.5 border"
+                :class="filterKeyword.startsWith('Lint_') ? 'bg-[#1e1a10] border-[#3a3010] text-[#887040]' : 'bg-[#1a1a2e] border-[#2a2a4e] text-[#7ec8e3]'">
+                {{ filterKeyword }}
+              </span>
+              <button
+                class="bg-transparent border-none text-text-dim cursor-pointer text-xs hover:text-accent-red"
+                @click="filterKeyword = ''; keywordQuery = ''">✕</button>
+            </div>
+          </div>
           <div class="flex items-center gap-2">
             <label class="text-text-muted min-w-14 shrink-0">Slot</label>
             <select
@@ -82,12 +115,12 @@
           No items found{{ query ? ` for "${query}"` : '' }}{{ hasActiveFilters ? ' with current filters' : '' }}
         </div>
 
-        <ul v-else class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated">
+        <ul v-else ref="listRef" class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated">
           <li
-            v-for="item in results"
+            v-for="(item, idx) in results"
             :key="item.id"
             class="flex items-baseline gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
-            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === item.id }"
+            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === item.id, 'bg-surface-elevated': selectedIndex === idx && selected?.id !== item.id }"
             @click="selectItem(item)">
             <span class="text-text-dim text-[0.72rem] min-w-12 shrink-0">#{{ item.id }}</span>
             <span class="text-text-primary/75 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ item.name }}</span>
@@ -275,8 +308,14 @@
 import { ref, computed, watch, onMounted } from "vue";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
+import { useKeyboard } from "../../composables/useKeyboard";
+import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { ItemInfo, EntitySources } from "../../types/gameData";
 import SourcesPanel from "../Shared/SourcesPanel.vue";
+
+const props = defineProps<{
+  navTarget?: EntityNavigationTarget | null;
+}>();
 
 const store = useGameDataStore();
 
@@ -288,36 +327,67 @@ const sourcesLoading = ref(false);
 const iconSrc = ref<string | null>(null);
 const iconLoading = ref(false);
 const searching = ref(false);
+const selectedIndex = ref(0);
+const listRef = ref<HTMLElement | null>(null);
 
 // Advanced filters
 const showFilters = ref(false);
 const filterSlot = ref("");
+const filterKeyword = ref("");
+const keywordQuery = ref("");
+const keywordDropdownOpen = ref(false);
+const allKeywords = ref<string[]>([]);
 const filterLevelMin = ref<number | undefined>(undefined);
 const filterLevelMax = ref<number | undefined>(undefined);
 const equipSlots = ref<string[]>([]);
 
+const filteredKeywords = computed(() => {
+  const q = keywordQuery.value.toLowerCase();
+  if (!q) return allKeywords.value.slice(0, 50);
+  return allKeywords.value.filter(kw => kw.toLowerCase().includes(q)).slice(0, 50);
+});
+
+function selectKeyword(kw: string) {
+  filterKeyword.value = kw;
+  keywordQuery.value = kw;
+  keywordDropdownOpen.value = false;
+}
+
+function onKeywordBlur() {
+  // Delay to allow mousedown on dropdown items
+  setTimeout(() => { keywordDropdownOpen.value = false; }, 150);
+}
+
 const hasActiveFilters = computed(
-  () => filterSlot.value !== "" || filterLevelMin.value != null || filterLevelMax.value != null,
+  () => filterSlot.value !== "" || filterKeyword.value !== "" || filterLevelMin.value != null || filterLevelMax.value != null,
 );
 
 function clearFilters() {
   filterSlot.value = "";
+  filterKeyword.value = "";
+  keywordQuery.value = "";
   filterLevelMin.value = undefined;
   filterLevelMax.value = undefined;
 }
 
 onMounted(async () => {
   try {
-    equipSlots.value = await store.getEquipSlots();
+    const [slots, keywords] = await Promise.all([
+      store.getEquipSlots(),
+      store.getAllItemKeywords(),
+    ]);
+    equipSlots.value = slots;
+    allKeywords.value = keywords;
   } catch (e) {
-    console.warn("Failed to load equip slots:", e);
+    console.warn("Failed to load filter data:", e);
   }
 });
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-watch([query, filterSlot, filterLevelMin, filterLevelMax], () => {
+watch([query, filterSlot, filterKeyword, filterLevelMin, filterLevelMax], () => {
   if (debounceTimer) clearTimeout(debounceTimer);
+  selectedIndex.value = 0;
   const q = query.value.trim();
   if (!q && !hasActiveFilters.value) {
     results.value = [];
@@ -326,14 +396,45 @@ watch([query, filterSlot, filterLevelMin, filterLevelMax], () => {
   debounceTimer = setTimeout(() => doSearch(q), 250);
 });
 
+useKeyboard({
+  listNavigation: {
+    items: results,
+    selectedIndex,
+    onConfirm: (idx) => {
+      const item = results.value[idx];
+      if (item) selectItem(item);
+    },
+    scrollContainerRef: listRef,
+  },
+});
+
 async function doSearch(q: string) {
   searching.value = true;
   try {
-    results.value = await store.searchItems(q, 30, {
-      equipSlot: filterSlot.value || undefined,
-      levelMin: filterLevelMin.value,
-      levelMax: filterLevelMax.value,
-    });
+    if (filterKeyword.value) {
+      // Keyword filter: fetch all items with this keyword, then apply text + other filters client-side
+      let items = await store.getItemsByKeyword(filterKeyword.value);
+      if (q) {
+        const lower = q.toLowerCase();
+        items = items.filter(i => i.name.toLowerCase().includes(lower));
+      }
+      if (filterSlot.value) {
+        items = items.filter(i => i.equip_slot === filterSlot.value);
+      }
+      if (filterLevelMin.value != null) {
+        items = items.filter(i => i.crafting_target_level != null && i.crafting_target_level >= filterLevelMin.value!);
+      }
+      if (filterLevelMax.value != null) {
+        items = items.filter(i => i.crafting_target_level != null && i.crafting_target_level <= filterLevelMax.value!);
+      }
+      results.value = items.slice(0, 200);
+    } else {
+      results.value = await store.searchItems(q, 30, {
+        equipSlot: filterSlot.value || undefined,
+        levelMin: filterLevelMin.value,
+        levelMax: filterLevelMax.value,
+      });
+    }
   } finally {
     searching.value = false;
   }
@@ -369,4 +470,19 @@ function clearSelection() {
   iconSrc.value = null;
   sources.value = null;
 }
+
+// Navigate to a specific item when navTarget changes
+watch(() => props.navTarget, async (target) => {
+  if (!target || target.type !== 'item') return;
+  const name = String(target.id);
+
+  // If already selected, nothing to do
+  if (selected.value?.name === name) return;
+
+  const item = await store.resolveItem(name);
+  if (item) {
+    query.value = item.name;
+    selectItem(item);
+  }
+}, { immediate: true });
 </script>

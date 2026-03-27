@@ -24,9 +24,9 @@
       :key="i"
       class="text-text-secondary text-xs leading-relaxed pl-2 relative before:content-['•'] before:absolute before:left-0"
     >
-      ×{{ ing.stack_size }}
-      <span v-if="ing.chance_to_consume !== null" class="text-text-muted">
-        ({{ ing.chance_to_consume }}% consumed)
+      {{ ingredientName(ing) }} ×{{ ing.stack_size }}
+      <span v-if="ing.chance_to_consume !== null && ing.chance_to_consume < 1" class="text-text-muted">
+        ({{ Math.round(ing.chance_to_consume * 100) }}% consumed)
       </span>
     </div>
   </div>
@@ -38,8 +38,8 @@
       :key="i"
       class="text-accent-green text-xs leading-relaxed pl-2 relative before:content-['•'] before:absolute before:left-0"
     >
-      ×{{ res.stack_size }}
-      <span v-if="res.percent_chance !== null" class="text-text-muted">
+      {{ resultName(res) }} ×{{ res.stack_size }}
+      <span v-if="res.percent_chance !== null && res.percent_chance < 100" class="text-text-muted">
         ({{ res.percent_chance }}%)
       </span>
     </div>
@@ -64,10 +64,42 @@
 </template>
 
 <script setup lang="ts">
-import type { RecipeInfo } from "../../../types/gameData";
+import { ref, onMounted } from "vue";
+import { useGameDataStore } from "../../../stores/gameDataStore";
+import type { RecipeInfo, RecipeIngredient, RecipeResultItem } from "../../../types/gameData/recipes";
 
-defineProps<{
+const props = defineProps<{
   recipe: RecipeInfo;
   iconSrc: string | null;
 }>();
+
+const store = useGameDataStore();
+const itemNames = ref<Record<string, string>>({});
+
+onMounted(async () => {
+  const ids = [
+    ...props.recipe.ingredient_item_ids,
+    ...props.recipe.result_item_ids,
+  ].filter((id) => id > 0);
+  if (ids.length === 0) return;
+
+  const items = await store.resolveItemsBatch(ids.map(String));
+  const names: Record<string, string> = {};
+  for (const [id, item] of Object.entries(items)) {
+    if (item) names[id] = item.name;
+  }
+  itemNames.value = names;
+});
+
+function ingredientName(ing: RecipeIngredient): string {
+  if (ing.description) return ing.description;
+  if (ing.item_id && itemNames.value[ing.item_id]) return itemNames.value[ing.item_id];
+  if (ing.item_keys.length > 0) return ing.item_keys.join(" / ");
+  return "Unknown";
+}
+
+function resultName(res: RecipeResultItem): string {
+  if (res.item_id && itemNames.value[res.item_id]) return itemNames.value[res.item_id];
+  return `Item #${res.item_id}`;
+}
 </script>
