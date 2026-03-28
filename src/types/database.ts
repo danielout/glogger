@@ -303,6 +303,11 @@ export interface SnapshotCurrency {
   amount: number
 }
 
+export interface SnapshotActiveQuest {
+  quest_key: string
+  category: 'active' | 'work_order' | 'completed_work_order'
+}
+
 export interface ImportResult {
   character_name: string
   server_name: string
@@ -312,6 +317,7 @@ export interface ImportResult {
   recipes_imported: number
   stats_imported: number
   currencies_imported: number
+  quests_imported: number
   was_duplicate: boolean
 }
 

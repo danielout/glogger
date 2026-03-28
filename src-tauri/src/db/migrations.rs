@@ -613,6 +613,17 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
         CREATE INDEX idx_character_currencies_snapshot ON character_currencies(snapshot_id);
         CREATE INDEX idx_character_currencies_key ON character_currencies(currency_key, snapshot_id);
 
+        -- Active quests per snapshot (from /outputcharacter ActiveQuests + ActiveWorkOrders + CompletedWorkOrders)
+        CREATE TABLE character_active_quests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            snapshot_id INTEGER NOT NULL,
+            quest_key TEXT NOT NULL,
+            category TEXT NOT NULL DEFAULT 'active',
+            FOREIGN KEY (snapshot_id) REFERENCES character_snapshots(id) ON DELETE CASCADE
+        );
+        CREATE INDEX idx_active_quests_snapshot ON character_active_quests(snapshot_id);
+        CREATE INDEX idx_active_quests_key ON character_active_quests(quest_key, snapshot_id);
+
         -- ============================================================
         -- GOURMAND TRACKER TABLES
         -- ============================================================

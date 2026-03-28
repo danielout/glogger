@@ -24,6 +24,12 @@ pub struct CharacterReport {
     pub currencies: HashMap<String, i64>,
     #[serde(rename = "NPCs")]
     pub npcs: HashMap<String, NpcFavorData>,
+    #[serde(default)]
+    pub active_quests: Vec<String>,
+    #[serde(default)]
+    pub active_work_orders: Vec<String>,
+    #[serde(default)]
+    pub completed_work_orders: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -54,6 +60,7 @@ pub struct ImportResult {
     pub recipes_imported: usize,
     pub stats_imported: usize,
     pub currencies_imported: usize,
+    pub quests_imported: usize,
     pub was_duplicate: bool,
 }
 
@@ -99,6 +106,12 @@ pub struct SnapshotStat {
 pub struct SnapshotCurrency {
     pub currency_key: String,
     pub amount: i64,
+}
+
+#[derive(Serialize)]
+pub struct SnapshotActiveQuest {
+    pub quest_key: String,
+    pub category: String,
 }
 
 #[derive(Serialize)]
@@ -186,6 +199,7 @@ pub fn import_character_report_internal(
                 recipes_imported: 0,
                 stats_imported: 0,
                 currencies_imported: 0,
+                quests_imported: 0,
                 was_duplicate: true,
             });
         }
@@ -265,7 +279,29 @@ pub fn import_character_report_internal(
             ]).map_err(|e| format!("Failed to insert currency {currency_key}: {e}"))?;
         }
 
-        // 12. Seed game state from snapshot (timestamp deconfliction: only overwrite if newer)
+        // 12. Batch insert active quests
+        let mut quest_stmt = conn.prepare(
+            "INSERT INTO character_active_quests (snapshot_id, quest_key, category)
+             VALUES (?1, ?2, ?3)"
+        ).map_err(|e| format!("Failed to prepare quest insert: {e}"))?;
+
+        for quest_key in &report.active_quests {
+            quest_stmt.execute(rusqlite::params![snapshot_id, quest_key, "active"])
+                .map_err(|e| format!("Failed to insert active quest {quest_key}: {e}"))?;
+        }
+        for quest_key in &report.active_work_orders {
+            quest_stmt.execute(rusqlite::params![snapshot_id, quest_key, "work_order"])
+                .map_err(|e| format!("Failed to insert work order {quest_key}: {e}"))?;
+        }
+        for quest_key in &report.completed_work_orders {
+            quest_stmt.execute(rusqlite::params![snapshot_id, quest_key, "completed_work_order"])
+                .map_err(|e| format!("Failed to insert completed work order {quest_key}: {e}"))?;
+        }
+        let quests_imported = report.active_quests.len()
+            + report.active_work_orders.len()
+            + report.completed_work_orders.len();
+
+        // 13. Seed game state from snapshot (timestamp deconfliction: only overwrite if newer)
         seed_game_state_from_snapshot(&conn, &report, game_data)?;
 
         Ok(ImportResult {
@@ -277,6 +313,7 @@ pub fn import_character_report_internal(
             recipes_imported: report.recipe_completions.len(),
             stats_imported: report.current_stats.len(),
             currencies_imported: report.currencies.len(),
+            quests_imported,
             was_duplicate: false,
         })
     })();
@@ -498,6 +535,31 @@ pub fn get_snapshot_currencies(
         Ok(SnapshotCurrency {
             currency_key: row.get(0)?,
             amount: row.get(1)?,
+        })
+    }).map_err(|e| format!("Query failed: {e}"))?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Failed to read results: {e}"))
+}
+
+#[tauri::command]
+pub fn get_snapshot_active_quests(
+    db: State<'_, DbPool>,
+    snapshot_id: i64,
+) -> Result<Vec<SnapshotActiveQuest>, String> {
+    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+
+    let mut stmt = conn.prepare(
+        "SELECT quest_key, category
+         FROM character_active_quests
+         WHERE snapshot_id = ?1
+         ORDER BY category, quest_key"
+    ).map_err(|e| format!("Failed to prepare query: {e}"))?;
+
+    let rows = stmt.query_map([snapshot_id], |row| {
+        Ok(SnapshotActiveQuest {
+            quest_key: row.get(0)?,
+            category: row.get(1)?,
         })
     }).map_err(|e| format!("Query failed: {e}"))?;
 

@@ -106,6 +106,7 @@ use db::character_commands::{
     get_snapshot_recipes,
     get_snapshot_stats,
     get_snapshot_currencies,
+    get_snapshot_active_quests,
     compare_snapshots,
 };
 use db::inventory_commands::{
@@ -475,6 +476,7 @@ pub fn run() {
             get_snapshot_recipes,
             get_snapshot_stats,
             get_snapshot_currencies,
+            get_snapshot_active_quests,
             compare_snapshots,
             // Inventory import
             import_inventory_report,

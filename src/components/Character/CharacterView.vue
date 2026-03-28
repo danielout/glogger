@@ -76,18 +76,13 @@
     </div>
 
     <!-- NPCs -->
-    <div v-else-if="activeTab === 'npcs'" class="flex-1 flex flex-col gap-4 min-h-0 overflow-y-auto">
-      <EmptyState
-        v-if="!store.selectedCharacter"
-        primary="No character data found."
-        secondary="Import a character report to see NPC favor." />
-      <NpcFavorTable v-else-if="store.npcFavor.length" :favor="store.npcFavor" />
-      <EmptyState v-else primary="No NPC favor data." secondary="Import a character report with NPC data." />
-    </div>
+    <template v-else-if="activeTab === 'npcs'">
+      <NpcsScreen />
+    </template>
 
-    <!-- Quests (stub) -->
+    <!-- Quests -->
     <template v-else-if="activeTab === 'quests'">
-      <EmptyState primary="Quests" secondary="Coming soon." />
+      <QuestsScreen />
     </template>
 
     <!-- Gourmand -->
@@ -109,7 +104,8 @@ import { formatDateTimeFull } from '../../composables/useTimestamp'
 import EmptyState from '../Shared/EmptyState.vue'
 import SkillsScreen from './SkillsScreen.vue'
 import SkillTable from './SkillTable.vue'
-import NpcFavorTable from './NpcFavorTable.vue'
+import NpcsScreen from './NpcsScreen.vue'
+import QuestsScreen from './QuestsScreen.vue'
 import StatsTable from './StatsTable.vue'
 import CurrencyTable from './CurrencyTable.vue'
 import GourmandView from '../Gourmand/GourmandView.vue'

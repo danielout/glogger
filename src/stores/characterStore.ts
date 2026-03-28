@@ -12,6 +12,7 @@ import type {
   SnapshotRecipeCompletion,
   SnapshotStat,
   SnapshotCurrency,
+  SnapshotActiveQuest,
   ImportResult,
   SkillDiff,
   InventorySnapshotSummary,
@@ -30,6 +31,7 @@ export const useCharacterStore = defineStore('character', () => {
   const recipes = ref<SnapshotRecipeCompletion[]>([])
   const stats = ref<SnapshotStat[]>([])
   const currencies = ref<SnapshotCurrency[]>([])
+  const activeQuests = ref<SnapshotActiveQuest[]>([])
   const skillDiffs = ref<SkillDiff[]>([])
   const lastImport = ref<ImportResult | null>(null)
   const error = ref<string | null>(null)
@@ -160,6 +162,7 @@ export const useCharacterStore = defineStore('character', () => {
     recipes.value = []
     stats.value = []
     currencies.value = []
+    activeQuests.value = []
     skillDiffs.value = []
     await loadSnapshots(character.character_name, character.server_name)
   }
@@ -184,19 +187,21 @@ export const useCharacterStore = defineStore('character', () => {
   async function loadSnapshotDetails(snapshotId: number) {
     try {
       loading.value = true
-      const [skillsResult, favorResult, recipesResult, statsResult, currenciesResult] =
+      const [skillsResult, favorResult, recipesResult, statsResult, currenciesResult, questsResult] =
         await Promise.all([
           invoke<SnapshotSkillLevel[]>('get_snapshot_skills', { snapshotId }),
           invoke<SnapshotNpcFavor[]>('get_snapshot_npc_favor', { snapshotId }),
           invoke<SnapshotRecipeCompletion[]>('get_snapshot_recipes', { snapshotId }),
           invoke<SnapshotStat[]>('get_snapshot_stats', { snapshotId }),
           invoke<SnapshotCurrency[]>('get_snapshot_currencies', { snapshotId }),
+          invoke<SnapshotActiveQuest[]>('get_snapshot_active_quests', { snapshotId }),
         ])
       skills.value = skillsResult
       npcFavor.value = favorResult
       recipes.value = recipesResult
       stats.value = statsResult
       currencies.value = currenciesResult
+      activeQuests.value = questsResult
     } catch (e) {
       error.value = String(e)
     } finally {
@@ -386,6 +391,7 @@ export const useCharacterStore = defineStore('character', () => {
     recipes,
     stats,
     currencies,
+    activeQuests,
     skillDiffs,
     lastImport,
     error,

@@ -45,6 +45,18 @@ Documentation for individual features, both built and in-progress.
 - [dashboard.md](features/dashboard.md) — Dashboard: context bar, skill cards, transaction log, player notes, and aggregate server view.
 - [advanced-settings.md](features/advanced-settings.md) — Advanced Settings tab: log reparsing, database statistics, and diagnostics.
 
+## Screens
+
+Per-screen documentation for the Character view tabs.
+
+- [character-skills.md](features/screens/character-skills.md) — Skills screen: two-panel layout, tracked skills, XP progression, CDN enrichment.
+- [character-npcs.md](features/screens/character-npcs.md) — NPCs screen: favor progression, services (vendor/training/barter/storage), gift preferences.
+- [character-stats.md](features/screens/character-stats.md) — Stats screen: character report import, snapshot management.
+- [character-gourmand.md](features/screens/character-gourmand.md) — Gourmand screen.
+- [character-quests.md](features/screens/character-quests.md) — Quests screen: personalized quest reference with requirement eligibility checking.
+- [character-buildplanner.md](features/screens/character-buildplanner.md) — Build Planner screen (stub).
+- [dashboard.md](features/screens/dashboard.md) — Dashboard screen.
+
 ## Plans
 
 - [unified-event-stream.md](plans/unified-event-stream.md) — Unifying Player.log and Chat.log into a single event stream (Phase 0+1 complete, Phase 2+ remaining).
