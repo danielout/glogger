@@ -88,6 +88,9 @@ export const useGameStateStore = defineStore('gameState', () => {
   // ── Session Skill State (in-memory, not persisted) ────────────────────
   const sessionSkills = ref<Record<string, SkillSessionData>>({})
 
+  // ── Tracked Skills (persisted per character) ────────────────────────────
+  const trackedSkillNames = ref<string[]>([])
+
   // ── Live Inventory State (in-memory, not persisted) ─────────────────
   const liveItemMap = ref<Map<number, LiveInventoryItem>>(new Map())
   const liveEventLog = ref<InventoryEventLog[]>([])
@@ -349,6 +352,54 @@ export const useGameStateStore = defineStore('gameState', () => {
     sessionSkills.value = {}
   }
 
+  // ── Tracked Skills Methods ──────────────────────────────────────────
+
+  async function loadTrackedSkills() {
+    const characterName = getCharacterName()
+    const serverName = getServerName()
+    if (!characterName || !serverName) return
+
+    try {
+      const rows = await invoke<{ skill_name: string; sort_order: number }[]>(
+        'get_tracked_skills', { characterName, serverName }
+      )
+      trackedSkillNames.value = rows.map(r => r.skill_name)
+    } catch (e) {
+      console.error('[gameStateStore] Failed to load tracked skills:', e)
+    }
+  }
+
+  async function saveTrackedSkills() {
+    const characterName = getCharacterName()
+    const serverName = getServerName()
+    if (!characterName || !serverName) return
+
+    try {
+      const skills = trackedSkillNames.value.map((name, i) => ({
+        skill_name: name,
+        sort_order: i,
+      }))
+      await invoke('set_tracked_skills', { characterName, serverName, skills })
+    } catch (e) {
+      console.error('[gameStateStore] Failed to save tracked skills:', e)
+    }
+  }
+
+  async function trackSkill(skillName: string) {
+    if (trackedSkillNames.value.includes(skillName)) return
+    trackedSkillNames.value.push(skillName)
+    await saveTrackedSkills()
+  }
+
+  async function untrackSkill(skillName: string) {
+    trackedSkillNames.value = trackedSkillNames.value.filter(n => n !== skillName)
+    await saveTrackedSkills()
+  }
+
+  function isSkillTracked(skillName: string): boolean {
+    return trackedSkillNames.value.includes(skillName)
+  }
+
   // ── Live Inventory Methods ──────────────────────────────────────────
 
   function pushInventoryEvent(kind: InventoryEventKind, item_name: string, detail: string, timestamp: string) {
@@ -471,6 +522,8 @@ export const useGameStateStore = defineStore('gameState', () => {
       effects.value = eff
       storage.value = stor
       initialized.value = true
+      // Load tracked skills separately (non-blocking)
+      loadTrackedSkills()
     } catch (e) {
       console.error('[gameStateStore] Failed to load game state:', e)
     } finally {
@@ -604,6 +657,13 @@ export const useGameStateStore = defineStore('gameState', () => {
     xpPerHour,
     timeToNextLevel,
     resetSessionSkills,
+
+    // Tracked skills
+    trackedSkillNames,
+    loadTrackedSkills,
+    trackSkill,
+    untrackSkill,
+    isSkillTracked,
 
     // Live inventory
     liveItems,

@@ -898,6 +898,15 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
         );
         CREATE INDEX idx_gs_storage_char ON game_state_storage(character_name, server_name);
         CREATE INDEX idx_gs_storage_vault ON game_state_storage(vault_key);
+
+        -- Tracked skills: player-curated list of skills to watch closely
+        CREATE TABLE tracked_skills (
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            skill_name TEXT NOT NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (character_name, server_name, skill_name)
+        );
         "
     )?;
 

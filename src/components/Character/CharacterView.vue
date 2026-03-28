@@ -1,12 +1,12 @@
 <template>
-  <div class="flex flex-col gap-4 h-full">
-    <!-- Skills: live session skill tracking -->
+  <div class="flex flex-col gap-4 h-full min-h-0">
+    <!-- Skills: unified skill view (manages its own scroll) -->
     <template v-if="activeTab === 'skills'">
-      <SkillGrid />
+      <SkillsScreen />
     </template>
 
     <!-- Stats: character report data (skills, stats, currencies) -->
-    <template v-else-if="activeTab === 'stats'">
+    <div v-else-if="activeTab === 'stats'" class="flex-1 flex flex-col gap-4 min-h-0 overflow-y-auto">
       <!-- Header -->
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-4">
@@ -73,17 +73,17 @@
           <CurrencyTable :currencies="store.currencies" />
         </div>
       </template>
-    </template>
+    </div>
 
     <!-- NPCs -->
-    <template v-else-if="activeTab === 'npcs'">
+    <div v-else-if="activeTab === 'npcs'" class="flex-1 flex flex-col gap-4 min-h-0 overflow-y-auto">
       <EmptyState
         v-if="!store.selectedCharacter"
         primary="No character data found."
         secondary="Import a character report to see NPC favor." />
       <NpcFavorTable v-else-if="store.npcFavor.length" :favor="store.npcFavor" />
       <EmptyState v-else primary="No NPC favor data." secondary="Import a character report with NPC data." />
-    </template>
+    </div>
 
     <!-- Quests (stub) -->
     <template v-else-if="activeTab === 'quests'">
@@ -107,7 +107,7 @@ import { onMounted } from 'vue'
 import { useCharacterStore } from '../../stores/characterStore'
 import { formatDateTimeFull } from '../../composables/useTimestamp'
 import EmptyState from '../Shared/EmptyState.vue'
-import SkillGrid from '../Shared/SkillGrid.vue'
+import SkillsScreen from './SkillsScreen.vue'
 import SkillTable from './SkillTable.vue'
 import NpcFavorTable from './NpcFavorTable.vue'
 import StatsTable from './StatsTable.vue'

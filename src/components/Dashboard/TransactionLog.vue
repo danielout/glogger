@@ -11,7 +11,7 @@
     <div v-else class="flex flex-col gap-0.5 overflow-y-auto max-h-64 pr-1">
       <div
         v-for="(event, i) in store.liveEventLog"
-        :key="i"
+        :key="`${event.timestamp}-${event.item_name}-${event.detail}-${i}`"
         class="flex items-center gap-2 py-1 px-2 rounded text-xs hover:bg-surface-elevated/50">
         <!-- Kind indicator -->
         <span
