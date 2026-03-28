@@ -1,7 +1,7 @@
 /// Tauri commands for querying persisted game state
 
 use tauri::State;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use super::DbPool;
 
 // ── Response Types ──────────────────────────────────────────────────────────
@@ -448,4 +448,70 @@ pub fn get_game_state_storage(
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Row error: {e}"))
+}
+
+// ── Tracked Skills ─────────────────────────────────────────────────────────
+
+#[derive(Serialize)]
+pub struct TrackedSkill {
+    pub skill_name: String,
+    pub sort_order: i32,
+}
+
+#[derive(Deserialize)]
+pub struct TrackedSkillEntry {
+    pub skill_name: String,
+    pub sort_order: i32,
+}
+
+#[tauri::command]
+pub fn get_tracked_skills(
+    db: State<'_, DbPool>,
+    character_name: String,
+    server_name: String,
+) -> Result<Vec<TrackedSkill>, String> {
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+    let mut stmt = conn.prepare(
+        "SELECT skill_name, sort_order FROM tracked_skills
+         WHERE character_name = ?1 AND server_name = ?2
+         ORDER BY sort_order, skill_name"
+    ).map_err(|e| format!("Query error: {e}"))?;
+
+    let rows = stmt.query_map(rusqlite::params![character_name, server_name], |row| {
+        Ok(TrackedSkill {
+            skill_name: row.get(0)?,
+            sort_order: row.get(1)?,
+        })
+    }).map_err(|e| format!("Query error: {e}"))?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Row error: {e}"))
+}
+
+#[tauri::command]
+pub fn set_tracked_skills(
+    db: State<'_, DbPool>,
+    character_name: String,
+    server_name: String,
+    skills: Vec<TrackedSkillEntry>,
+) -> Result<(), String> {
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+
+    conn.execute(
+        "DELETE FROM tracked_skills WHERE character_name = ?1 AND server_name = ?2",
+        rusqlite::params![character_name, server_name],
+    ).map_err(|e| format!("Delete error: {e}"))?;
+
+    let mut stmt = conn.prepare(
+        "INSERT INTO tracked_skills (character_name, server_name, skill_name, sort_order)
+         VALUES (?1, ?2, ?3, ?4)"
+    ).map_err(|e| format!("Prepare error: {e}"))?;
+
+    for entry in &skills {
+        stmt.execute(rusqlite::params![
+            character_name, server_name, entry.skill_name, entry.sort_order
+        ]).map_err(|e| format!("Insert error: {e}"))?;
+    }
+
+    Ok(())
 }

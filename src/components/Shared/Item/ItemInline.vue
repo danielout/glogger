@@ -21,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../../stores/gameDataStore";
 import { useEntityNavigation } from "../../../composables/useEntityNavigation";
@@ -46,7 +46,6 @@ const itemData = ref<ItemInfo | null>(null);
 const iconSrc = ref<string | null>(null);
 
 async function loadData() {
-  if (itemData.value) return;
   try {
     const item = await store.resolveItem(props.reference);
     if (!item) return;
@@ -61,6 +60,12 @@ async function loadData() {
 }
 
 onMounted(loadData);
+
+watch(() => props.reference, () => {
+  itemData.value = null;
+  iconSrc.value = null;
+  loadData();
+});
 
 function handleClick() {
   const id = itemData.value?.name ?? props.reference;

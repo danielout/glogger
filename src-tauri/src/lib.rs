@@ -157,6 +157,8 @@ use db::game_state_commands::{
     get_game_state_currencies,
     get_game_state_effects,
     get_game_state_storage,
+    get_tracked_skills,
+    set_tracked_skills,
 };
 use db::market_commands::{
     get_market_values,
@@ -519,6 +521,8 @@ pub fn run() {
             get_game_state_currencies,
             get_game_state_effects,
             get_game_state_storage,
+            get_tracked_skills,
+            set_tracked_skills,
             get_market_values,
             get_market_value,
             set_market_value,

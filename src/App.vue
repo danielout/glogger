@@ -28,7 +28,7 @@
             <div v-if="visited.has('dashboard')" v-show="currentView === 'dashboard'" class="h-full overflow-y-auto">
               <DashboardView />
             </div>
-            <div v-if="visited.has('character')" v-show="currentView === 'character'" class="h-full overflow-y-auto">
+            <div v-if="visited.has('character')" v-show="currentView === 'character'" class="h-full">
               <CharacterView :active-tab="activeSubTab" />
             </div>
             <div v-if="visited.has('inventory')" v-show="currentView === 'inventory'" class="h-full">

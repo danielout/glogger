@@ -60,6 +60,16 @@ impl GameStateManager {
         self.live_mode
     }
 
+    /// Debug: get active character name
+    pub fn get_active_character(&self) -> Option<&str> {
+        self.active_character.as_deref()
+    }
+
+    /// Debug: get active server name
+    pub fn get_active_server(&self) -> Option<&str> {
+        self.active_server.as_deref()
+    }
+
     /// Update just the character name without touching the database or server.
     /// Used by Player.log handler which knows the character but not the server.
     pub fn set_active_character_name(&mut self, name: &str) {

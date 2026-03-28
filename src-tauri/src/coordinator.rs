@@ -168,7 +168,19 @@ impl DataIngestCoordinator {
 
         // Load saved position from database
         let conn = self.db_pool.get().map_err(|e| format!("Database error: {}", e))?;
-        let position = log_positions::get_position(&conn, player_log_path.to_str().unwrap_or("")).unwrap_or(0);
+        let mut position = log_positions::get_position(&conn, player_log_path.to_str().unwrap_or("")).unwrap_or(0);
+
+        // Detect file rotation: if saved position is past current file size,
+        // the game restarted and created a fresh Player.log
+        if position > 0 {
+            if let Ok(meta) = std::fs::metadata(&player_log_path) {
+                if meta.len() < position {
+                    startup_log!("Player.log was rotated (size {} < saved position {}), starting from beginning",
+                        meta.len(), position);
+                    position = 0;
+                }
+            }
+        }
 
         // Load known survey types for the survey parser
         let known_surveys = load_known_surveys(&conn);
@@ -508,6 +520,9 @@ impl DataIngestCoordinator {
                     let mut settings = self.settings.get();
                     settings.active_server_name = Some(server_name.clone());
                     self.settings.update(settings).ok();
+
+                    // Update game state so process_event doesn't early-return
+                    self.game_state.set_active_server_name(&server_name);
 
                     // Emit to frontend
                     self.app_handle.emit("server-detected", &server_name).ok();

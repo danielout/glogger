@@ -276,6 +276,16 @@ impl LogFileWatcher for PlayerLogWatcher {
             return Ok(Vec::new());
         }
 
+        // Detect file truncation / rotation (e.g. game restart creates a new Player.log)
+        if let Ok(meta) = std::fs::metadata(&self.file_path) {
+            if meta.len() < self.current_position {
+                eprintln!("[player-poll] Player.log was rotated (size {} < position {}), resetting to beginning",
+                    meta.len(), self.current_position);
+                self.current_position = 0;
+                self.player_event_parser = PlayerEventParser::new();
+            }
+        }
+
         let mut file = File::open(&self.file_path)
             .map_err(|e| format!("Failed to open Player.log: {}", e))?;
 
@@ -284,7 +294,6 @@ impl LogFileWatcher for PlayerLogWatcher {
 
         let reader = BufReader::new(file);
         let mut events = Vec::new();
-
         for line in reader.lines() {
             match line {
                 Ok(line_content) => {
