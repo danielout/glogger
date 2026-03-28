@@ -139,6 +139,20 @@
                 @click="addOnce(r)">
                 +1
               </button>
+              <input
+                v-model.number="recipeQuantities[r.recipe.id]"
+                type="number"
+                min="1"
+                placeholder="#"
+                class="input w-10 text-center text-[0.6rem] py-0.5 px-0.5"
+                title="Quantity to add"
+                @keydown.enter="addMultiple(r, recipeQuantities[r.recipe.id] || 1)" />
+              <button
+                class="text-[0.6rem] px-1.5 py-0.5 rounded bg-blue-900/30 text-blue-400 hover:bg-blue-900/50 border-none cursor-pointer"
+                title="Add specified quantity to the plan"
+                @click="addMultiple(r, recipeQuantities[r.recipe.id] || 1)">
+                +N
+              </button>
               <button
                 class="text-[0.6rem] px-1.5 py-0.5 rounded bg-green-900/30 text-green-400 hover:bg-green-900/50 border-none cursor-pointer"
                 title="Add enough crafts to reach next level"
@@ -207,7 +221,14 @@
               :key="`${lvl.from_level}-${eIdx}`"
               class="flex items-center gap-2 px-2 py-1 text-xs bg-surface-base border border-surface-elevated rounded mb-1">
               <span class="text-text-primary truncate flex-1">{{ entry.recipe_name }}</span>
-              <span class="text-text-primary font-mono shrink-0">×{{ entry.craft_count.toLocaleString() }}</span>
+              <span class="text-text-primary font-mono shrink-0 flex items-center gap-0.5">
+                ×<input
+                  :value="entry.craft_count"
+                  type="number"
+                  min="1"
+                  class="input w-12 text-center text-xs py-0 px-0.5 font-mono"
+                  @change="updateEntryCount(idx, eIdx, Math.max(1, parseInt(($event.target as HTMLInputElement).value) || 1))" />
+              </span>
               <span class="text-accent-gold text-[0.65rem] shrink-0">
                 {{ entry.total_xp.toLocaleString() }} XP
               </span>
@@ -336,6 +357,9 @@ const craftingSkills = ref<string[]>([]);
 const loading = ref(false);
 const creatingProject = ref(false);
 const materialsLoading = ref(false);
+
+// Per-recipe quantity inputs for the recipe list
+const recipeQuantities = ref<Record<number, number>>({});
 
 // Recipe panel resize
 const recipePanelWidth = ref(384); // 24rem default (w-96)
@@ -717,6 +741,74 @@ function addOnce(r: EnrichedRecipe) {
   checkAutoAdvance();
 }
 
+function addMultiple(r: EnrichedRecipe, count: number) {
+  if (count <= 0 || r.effectiveXp <= 0) return;
+
+  const costPerCraft = r.cost ?? 0;
+  let remaining = count;
+  let firstTimePending = r.firstTimeXp > 0;
+
+  while (remaining > 0) {
+    ensureCurrentLevel();
+    if (state.value.planLevels.length === 0) return;
+
+    const top = state.value.planLevels[0];
+    const xpRoom = top.xp_needed - top.xp_accumulated;
+    if (xpRoom <= 0) {
+      // Level already full, ensureCurrentLevel should have created a new one
+      // but if xpTable ran out, bail
+      break;
+    }
+
+    // Figure out how many crafts fit in this level
+    let craftsThisLevel: number;
+    let xpThisLevel: number;
+    let firstTimeUsed = false;
+
+    if (firstTimePending) {
+      // First craft gets the bonus
+      const firstCraftXp = r.effectiveXp + r.effectiveFirstTimeXp;
+      if (firstCraftXp >= xpRoom) {
+        // Just the first craft fills (or exceeds) this level
+        craftsThisLevel = 1;
+        xpThisLevel = firstCraftXp;
+        firstTimeUsed = true;
+      } else {
+        // First craft fits, see how many more fit
+        const roomAfterFirst = xpRoom - firstCraftXp;
+        const additionalCrafts = Math.min(remaining - 1, Math.ceil(roomAfterFirst / r.effectiveXp));
+        craftsThisLevel = 1 + additionalCrafts;
+        xpThisLevel = firstCraftXp + additionalCrafts * r.effectiveXp;
+        firstTimeUsed = true;
+      }
+    } else {
+      craftsThisLevel = Math.min(remaining, Math.ceil(xpRoom / r.effectiveXp));
+      xpThisLevel = craftsThisLevel * r.effectiveXp;
+    }
+
+    top.entries.push({
+      recipe_id: r.recipe.id,
+      recipe_name: r.recipe.name,
+      craft_count: craftsThisLevel,
+      xp_per_craft: r.xpPerCraft,
+      xp_first_time: firstTimeUsed ? r.firstTimeXp : 0,
+      total_xp: xpThisLevel,
+      estimated_cost: costPerCraft * craftsThisLevel,
+    });
+    top.xp_accumulated += xpThisLevel;
+
+    if (firstTimeUsed) {
+      markFirstTimeUsed(r);
+      firstTimePending = false;
+    }
+
+    remaining -= craftsThisLevel;
+
+    // Advance level if full
+    checkAutoAdvance();
+  }
+}
+
 function addToLevel(r: EnrichedRecipe) {
   ensureCurrentLevel();
   if (state.value.planLevels.length === 0) return;
@@ -811,6 +903,28 @@ function removeEntry(levelIdx: number, entryIdx: number) {
   if (lvl.entries.length === 0 && state.value.planLevels.length > 1) {
     state.value.planLevels.splice(levelIdx, 1);
   }
+
+  refreshRecipeState();
+}
+
+function updateEntryCount(levelIdx: number, entryIdx: number, newCount: number) {
+  if (newCount < 1) return;
+  const lvl = state.value.planLevels[levelIdx];
+  const entry = lvl.entries[entryIdx];
+  const oldXp = entry.total_xp;
+  const oldCost = entry.estimated_cost;
+  const costPerCraft = entry.craft_count > 0 ? oldCost / entry.craft_count : 0;
+
+  // Recalculate XP: first-time bonus applies once, rest is per-craft
+  const mult = 1 + (state.value.xpBuffPercent || 0) / 100;
+  const effectiveFirstTime = Math.floor(entry.xp_first_time * mult);
+  const effectiveXpPerCraft = Math.floor(entry.xp_per_craft * mult);
+
+  entry.craft_count = newCount;
+  entry.total_xp = (entry.xp_first_time > 0 ? effectiveFirstTime : 0) + newCount * effectiveXpPerCraft;
+  entry.estimated_cost = costPerCraft * newCount;
+
+  lvl.xp_accumulated += entry.total_xp - oldXp;
 
   refreshRecipeState();
 }
