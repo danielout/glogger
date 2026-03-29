@@ -257,32 +257,23 @@ pub fn run() {
             );
             startup_log!("Settings loaded");
 
-            // Step 3: Nuke database on prototype version upgrade
+            // Step 3: Track app version (database is preserved across upgrades via migrations)
             let db_path = settings_manager.get_db_path(&app_data_dir);
             {
                 let stored_version = settings_manager.get().last_app_version;
-                let version_changed = match &stored_version {
-                    Some(v) => current_version.as_ref().map_or(true, |cv| cv != v),
-                    None => false, // First run, no nuke needed
-                };
-                if version_changed {
+                if stored_version.as_ref() != current_version.as_ref() {
                     startup_log!(
-                        "Prototype version changed ({} -> {}), deleting old database",
-                        stored_version.as_deref().unwrap_or("unknown"),
+                        "App version changed ({} -> {}), migrations will handle schema updates",
+                        stored_version.as_deref().unwrap_or("first run"),
                         current_version.as_deref().unwrap_or("unknown"),
                     );
-                    // Delete main db file and WAL/SHM sidecars
-                    let _ = std::fs::remove_file(&db_path);
-                    let _ = std::fs::remove_file(db_path.with_extension("db-wal"));
-                    let _ = std::fs::remove_file(db_path.with_extension("db-shm"));
                 }
-                // Persist the current version so next launch knows
                 let mut updated = settings_manager.get();
                 updated.last_app_version = current_version.clone();
                 settings_manager.update(updated).expect("Failed to save version to settings");
             }
 
-            // Step 4: Initialize database (fresh if just nuked)
+            // Step 4: Initialize database (migrations run automatically)
             let db_pool = db::init_pool(db_path).expect("Failed to initialize database");
             startup_log!("Database initialized");
 

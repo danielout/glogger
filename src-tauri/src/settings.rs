@@ -119,7 +119,7 @@ pub struct AppSettings {
     #[serde(default)]
     pub view_preferences: Option<JsonValue>,
 
-    /// Last app version that was run (used to detect prototype version upgrades and nuke stale data)
+    /// Last app version that was run (used for logging version transitions)
     #[serde(default)]
     pub last_app_version: Option<String>,
 

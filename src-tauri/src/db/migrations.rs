@@ -1,6 +1,20 @@
 use rusqlite::{Connection, Result};
 
-/// Run all database migrations
+/// Run all database migrations in order.
+///
+/// Each migration is applied exactly once and tracked in `schema_migrations`.
+/// The v1 migration is the baseline schema — all tables as of the initial release.
+/// New schema changes MUST be added as new numbered migrations (v2, v3, …) below.
+/// Never modify migration_v1 after it has shipped — existing user databases already
+/// have that schema applied and won't re-run it.
+///
+/// Example of adding a new migration:
+/// ```
+/// if current_version < 2 {
+///     migration_v2_add_foo(conn)?;
+///     super::record_migration(conn, 2)?;
+/// }
+/// ```
 pub fn run_migrations(conn: &Connection) -> Result<()> {
     // Create migrations table if it doesn't exist
     conn.execute(
@@ -17,6 +31,12 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         migration_v1_unified_schema(conn)?;
         super::record_migration(conn, 1)?;
     }
+
+    // Future migrations go here:
+    // if current_version < 2 {
+    //     migration_v2_example(conn)?;
+    //     super::record_migration(conn, 2)?;
+    // }
 
     Ok(())
 }
