@@ -39,7 +39,7 @@ Documentation for individual features, both built and in-progress.
 - [character-import.md](features/character-import.md) — Character report JSON import from `/outputcharacter`.
 - [gourmand-tracker.md](features/gourmand-tracker.md) — Gourmand food tracker: progress tracking, report import, food buff comparison.
 - [farming-calculator.md](features/farming-calculator.md) — Farming Calculator: manual session tracking for XP, items, favor, and vendor gold.
-- [crafting-helper.md](features/crafting-helper.md) — Crafting Helper: project planning, ingredient resolution, XP leveling optimizer, live craft detection, work orders.
+- ~~crafting-helper.md~~ — Moved to [screens/crafting.md](features/screens/crafting.md) + per-tab docs
 - [storage-tracker.md](features/storage-tracker.md) — Storage Vault Database: CDN-driven vault reference, area-grouped capacity tracking, live deposit/withdrawal.
 - [surveying-tracker.md](features/surveying-tracker.md) — Surveying Tracker: real-time session tracking, survey event parsing, loot/XP/cost analytics.
 - [dashboard.md](features/dashboard.md) — Dashboard: context bar, skill cards, transaction log, player notes, and aggregate server view.
@@ -47,14 +47,26 @@ Documentation for individual features, both built and in-progress.
 
 ## Screens
 
-Per-screen documentation for the Character view tabs.
+Per-screen documentation organized by view.
 
-- [character-skills.md](features/screens/character-skills.md) — Skills screen: two-panel layout, tracked skills, XP progression, CDN enrichment.
-- [character-npcs.md](features/screens/character-npcs.md) — NPCs screen: favor progression, services (vendor/training/barter/storage), gift preferences.
-- [character-stats.md](features/screens/character-stats.md) — Stats screen: character report import, snapshot management.
-- [character-gourmand.md](features/screens/character-gourmand.md) — Gourmand screen.
-- [character-quests.md](features/screens/character-quests.md) — Quests screen: personalized quest reference with requirement eligibility checking.
-- [character-buildplanner.md](features/screens/character-buildplanner.md) — Build Planner screen (stub).
+### Character
+- [character-skills.md](features/screens/character/character-skills.md) — Skills screen: two-panel layout, tracked skills, XP progression, CDN enrichment.
+- [character-npcs.md](features/screens/character/character-npcs.md) — NPCs screen: favor progression, services (vendor/training/barter/storage), gift preferences.
+- [character-stats.md](features/screens/character/character-stats.md) — Stats screen: character report import, snapshot management.
+- [character-gourmand.md](features/screens/character/character-gourmand.md) — Gourmand screen.
+- [character-quests.md](features/screens/character/character-quests.md) — Quests screen: personalized quest reference with requirement eligibility checking.
+- [character-buildplanner.md](features/screens/character/character-buildplanner.md) — Build Planner screen (stub).
+
+### Crafting
+- [crafting.md](features/screens/crafting.md) — Crafting screen: architecture, component hierarchy, shared commands, design decisions.
+  - [crafting-quickcalc.md](features/screens/crafting/crafting-quickcalc.md) — Quick Calculator tab.
+  - [crafting-projects.md](features/screens/crafting/crafting-projects.md) — Projects tab: material breakdown, pickup list, shopping list, live crafting detection.
+  - [crafting-leveling.md](features/screens/crafting/crafting-leveling.md) — XP Leveling Optimizer tab.
+  - [crafting-history.md](features/screens/crafting/crafting-history.md) — Crafting History tab.
+  - [crafting-workorders.md](features/screens/crafting/crafting-workorders.md) — Work Orders tab.
+  - [crafting-cookshelper.md](features/screens/crafting/crafting-cookshelper.md) — Cook's Helper tab.
+
+### Other
 - [dashboard.md](features/screens/dashboard.md) — Dashboard screen.
 
 ## Plans
