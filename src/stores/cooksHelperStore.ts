@@ -66,7 +66,7 @@ export const useCooksHelperStore = defineStore('cooksHelper', () => {
     const results: HelpfulRecipe[] = []
     for (const recipe of allCookableRecipes.value) {
       // Only include recipes the cook has learned
-      if (known.size > 0 && !known.has(recipe.internal_name ?? '')) continue
+      if (known.size > 0 && !known.has(`Recipe_${recipe.id}`)) continue
 
       for (const resultId of recipe.result_item_ids) {
         const food = foodById.get(resultId)

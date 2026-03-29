@@ -2,7 +2,7 @@
 
 ## Overview
 
-A full-featured crafting assistant for Project Gorgon. Helps players plan crafting projects, calculate ingredient requirements, optimize XP leveling paths, track live crafting progress, process work orders, and review crafting history — all powered by CDN recipe/item/skill data, inventory snapshots, and character exports.
+A full-featured crafting assistant for Project Gorgon. Helps players plan crafting projects, calculate ingredient requirements, optimize XP leveling paths, track live crafting progress, process work orders, review crafting history, and find cookable uneaten foods for Gourmand progress — all powered by CDN recipe/item/skill data, inventory snapshots, and character exports.
 
 ## Architecture
 
@@ -15,7 +15,8 @@ A full-featured crafting assistant for Project Gorgon. Helps players plan crafti
 **Frontend (Vue/TS):**
 - `src/types/crafting.ts` — all TypeScript interfaces
 - `src/stores/craftingStore.ts` — Pinia store with project management, ingredient resolution, leveling optimizer, live tracking, work orders
-- `src/components/Crafting/` — 12 Vue components (see Component Hierarchy below)
+- `src/stores/cooksHelperStore.ts` — Pinia store for Cook's Helper (gourmand report import, recipe filtering, material checks)
+- `src/components/Crafting/` — Vue components (see Component Hierarchy below)
 
 ### Database Tables
 
@@ -27,7 +28,7 @@ Both cascade on delete from `crafting_projects`.
 ### Component Hierarchy
 
 ```
-CraftingView.vue                    — 5-tab container
+CraftingView.vue                    — 6-tab container
 ├── QuickCalcTab.vue                — single-recipe calculator
 │   └── IngredientTreeNode.vue      — recursive ingredient display
 ├── ProjectsTab.vue                 — project list + active project detail
@@ -39,7 +40,9 @@ CraftingView.vue                    — 5-tab container
 ├── LevelingTab.vue                 — XP leveling optimizer
 ├── HistoryTab.vue                  — crafting stats from character exports
 │   └── SkillCraftingProgress.vue   — per-skill completion bars
-└── WorkOrdersTab.vue               — work order harvester + project builder
+├── WorkOrdersTab.vue               — work order harvester + project builder
+└── CooksHelperTab.vue              — gourmand-aware uneaten food recipe finder
+    └── CooksHelperRecipeRow.vue    — per-recipe row with material status
 ```
 
 ---
@@ -194,6 +197,52 @@ Real-time tracking of crafting progress against active projects or quick-calc ta
 
 ---
 
+## Feature 7: Cook's Helper
+
+A gourmand-aware recipe finder that cross-references uneaten foods with known Cooking/Sushi Making recipes. Helps players efficiently work through their gourmand food list by showing only recipes they know that produce foods they haven't eaten yet.
+
+### Data Sources
+
+- **Uneaten foods** — imported from a gourmand skill report (same parser as the Gourmand Tracker), or "Start Fresh" mode treats all foods as uneaten
+- **Known recipes** — from `gameStateStore.knownRecipeKeys`, which tracks recipes the player has crafted at least once (keyed as `Recipe_{id}`)
+- **Cooking/Sushi recipes** — loaded from CDN via `gameDataStore.getRecipesForSkill()` for both `Cooking` and `Sushi Making`
+- **Food items** — from the `foods` table (populated during CDN ingestion)
+
+### How it works
+
+1. Player imports a gourmand skill report (or clicks "Start Fresh")
+2. The store loads all foods and all Cooking + Sushi Making recipes from CDN
+3. `helpfulRecipes` filters to recipes where:
+   - The player knows the recipe (has crafted it before, matched via `Recipe_{id}` key)
+   - The recipe produces at least one uneaten food item (matched via `result_item_ids` → food `item_id`)
+4. Results can be filtered by skill (Cooking / Sushi Making), material availability, and search text
+5. Optional "Check Materials" runs ingredient resolution + inventory availability for each recipe
+
+### UI
+
+- **Import bar** — import gourmand report or start fresh; shows eaten/uneaten/craftable counts
+- **Filter pills** — skill filter (All / Cooking / Sushi Making) with counts
+- **Availability filter** — All / Can Craft / Missing Materials (requires material check)
+- **Sort modes** — by name, skill level requirement, or food level
+- **Search** — text filter on recipe and food names
+- **Multi-select** — checkbox per recipe with select-all toggle
+- **Project integration** — add selected recipes to an existing crafting project or create a new one
+
+### Store
+
+[`src/stores/cooksHelperStore.ts`](../../src/stores/cooksHelperStore.ts) — separate from the main crafting store:
+
+- **State:** `importedEatenNames`, `allFoods`, `cookingRecipes`, `sushiRecipes`, filters, selection, material needs
+- **Computed:** `uneatenFoods`, `helpfulRecipes` (known + produces uneaten food), `filteredRecipes` (with filters/search/sort applied), `stats`
+- **Actions:** `importFile`, `startFresh`, `checkAllMaterials`, selection management, `addToProject`, `createProjectFromSelection`
+
+### Tauri Commands Used
+
+- `import_cooks_helper_file(filePath) → Vec<String>` — parses gourmand report, returns eaten food names
+- `get_all_foods() → Vec<FoodItem>` — all foods from CDN-populated `foods` table
+
+---
+
 ## Tauri Commands
 
 ### Project CRUD
@@ -216,6 +265,10 @@ Real-time tracking of crafting progress against active projects or quick-calc ta
 - `get_latest_skill_level(character_name, server_name, skill_name) → Option<(level, xp, xp_needed)>`
 - `get_work_orders_from_snapshot(character_name, server_name) → WorkOrderData`
 
+### Cook's Helper
+- `import_cooks_helper_file(file_path) → Vec<String>` — parse gourmand report, return eaten food names
+- `get_all_foods() → Vec<FoodItem>` — all food items from CDN `foods` table
+
 ### CDN Commands
 - `get_quest_by_internal_name(name) → Option<QuestInfo>` — resolves quest by InternalName (used for work order enrichment)
 - `get_xp_table_for_skill(skill) → Vec<number>` — per-level XP amounts for leveling optimizer
@@ -230,3 +283,4 @@ Real-time tracking of crafting progress against active projects or quick-calc ta
 - **Work order key formats**: Character exports store work orders by quest `InternalName` (e.g., `Carpentry_QualityMeleeStaves`), while the CDN indexes quests by numeric keys (e.g., `quest_50344`). A `quest_internal_name_index` bridges this gap.
 - **Inventory scroll detection**: Work order scrolls appear in inventory exports with either display names (`Work Order for ...`) or internal names (`Scroll_...`). The SQL query matches both patterns.
 - **Ingredient resolution is frontend-side**: The recursive ingredient resolver runs in the store (TypeScript), not Rust, since it needs to call multiple CDN lookup functions and handle UI-driven expansion toggles.
+- **Recipe known-status key format**: `knownRecipeKeys` uses `Recipe_{numeric_id}` format (e.g., `Recipe_12345`), matching the CDN recipe ID — not the recipe's `internal_name`. All code checking whether a player knows a recipe must use this format.
