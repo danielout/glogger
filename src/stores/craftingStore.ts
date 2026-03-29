@@ -27,6 +27,7 @@ import type {
 } from "../types/crafting";
 import type { RecipeInfo } from "../types/gameData/recipes";
 import type { PlayerEvent } from "../types/playerEvents";
+import { type GameStateSkill } from "../types/gameState";
 
 export const useCraftingStore = defineStore("crafting", () => {
   const gameData = useGameDataStore();
@@ -434,11 +435,11 @@ export const useCraftingStore = defineStore("crafting", () => {
    * Get the player's current skill level from game state.
    * Resolves display name → CDN internal name → game state lookup.
    */
-  async function getSkillLevel(skillName: string): Promise<{ level: number; xpTowardNext: number; xpNeededForNext: number } | null> {
+  async function getSkillLevel(skillName: string): Promise<{ baseLevel: number; bonusLevels: number; totalLevel: number; xpTowardNext: number; xpNeededForNext: number } | null> {
     const gameStateStore = useGameStateStore()
 
-    function toResult(skill: { level: number; bonus_levels: number; xp: number; tnl: number }) {
-      return { level: skill.level + skill.bonus_levels, xpTowardNext: skill.xp, xpNeededForNext: skill.tnl }
+    function toResult(skill: GameStateSkill) {
+      return { baseLevel: skill.base_level, bonusLevels: skill.bonus_levels, totalLevel: skill.level, xpTowardNext: skill.xp, xpNeededForNext: skill.tnl }
     }
 
     // Try direct lookup first (works if skillName is already an internal name)
@@ -460,6 +461,7 @@ export const useCraftingStore = defineStore("crafting", () => {
   const levelingState = ref<{
     selectedSkill: string
     currentLevel: number
+    bonusLevels: number
     snapshotLevel: number | null
     xpBuffPercent: number
     xpTable: number[]
@@ -467,6 +469,7 @@ export const useCraftingStore = defineStore("crafting", () => {
   }>({
     selectedSkill: "",
     currentLevel: 0,
+    bonusLevels: 0,
     snapshotLevel: null,
     xpBuffPercent: 0,
     xpTable: [],

@@ -14,9 +14,9 @@
       </div>
 
       <template v-if="state.selectedSkill">
-        <!-- Current level (editable) -->
+        <!-- Current level (editable, shows total level) -->
         <div class="flex flex-col gap-1">
-          <label class="text-text-dim text-xs">Current Level</label>
+          <label class="text-text-dim text-xs">Level</label>
           <div class="flex items-center gap-1.5">
             <input
               v-model.number="state.currentLevel"
@@ -182,7 +182,7 @@
             <!-- Level header -->
             <div class="flex items-center gap-2 mb-1.5">
               <span class="text-text-secondary text-xs font-semibold">
-                Lv {{ lvl.from_level }} → {{ lvl.to_level }}
+                Lv {{ lvl.from_level + state.bonusLevels }} → {{ lvl.to_level + state.bonusLevels }}
               </span>
               <span class="text-text-muted text-[0.65rem]">
                 {{ lvl.xp_accumulated.toLocaleString() }} / {{ lvl.xp_needed.toLocaleString() }} XP
@@ -414,12 +414,18 @@ const effectiveMultiplier = computed(() =>
 
 const multiplier = computed(() => 1 + (state.value.xpBuffPercent || 0) / 100);
 
-/** The level we're currently planning for (topmost incomplete level) */
-const planningLevel = computed(() => {
-  if (state.value.planLevels.length === 0) return state.value.currentLevel;
+/** Base level (total minus bonus) — used for XP table indexing */
+const baseLevel = computed(() => state.value.currentLevel - state.value.bonusLevels);
+
+/** The base level we're currently planning for (topmost incomplete level) — used for XP table indexing */
+const planningBaseLevel = computed(() => {
+  if (state.value.planLevels.length === 0) return baseLevel.value;
   const top = state.value.planLevels[0];
   return top.from_level;
 });
+
+/** Total level (planning base + bonus) for recipe unlock and drop-off checks */
+const planningLevel = computed(() => planningBaseLevel.value + state.value.bonusLevels);
 
 const currentLevelComplete = computed(() => {
   if (state.value.planLevels.length === 0) return false;
@@ -429,7 +435,7 @@ const currentLevelComplete = computed(() => {
 
 const currentLevelXpNeeded = computed(() => {
   if (state.value.planLevels.length === 0) {
-    return state.value.xpTable[state.value.currentLevel] ?? 0;
+    return state.value.xpTable[baseLevel.value] ?? 0;
   }
   return state.value.planLevels[0].xp_needed;
 });
@@ -489,6 +495,7 @@ async function onSkillChange() {
   state.value.xpTable = [];
   state.value.snapshotLevel = null;
   state.value.currentLevel = 0;
+  state.value.bonusLevels = 0;
   aggregatedMaterials.value = [];
 
   if (!state.value.selectedSkill) return;
@@ -498,8 +505,9 @@ async function onSkillChange() {
   // Get current level from game state
   const skillData = await craftingStore.getSkillLevel(state.value.selectedSkill);
   if (skillData) {
-    state.value.snapshotLevel = skillData.level;
-    state.value.currentLevel = skillData.level;
+    state.value.snapshotLevel = skillData.totalLevel;
+    state.value.currentLevel = skillData.totalLevel;
+    state.value.bonusLevels = skillData.bonusLevels;
   }
 
   // Load XP table
@@ -698,8 +706,8 @@ watch(
 
 function ensureCurrentLevel() {
   if (state.value.planLevels.length === 0 || state.value.planLevels[0].xp_accumulated >= state.value.planLevels[0].xp_needed) {
-    // Need a new level at the top
-    const lvl = planningLevel.value + (state.value.planLevels.length > 0 && state.value.planLevels[0].xp_accumulated >= state.value.planLevels[0].xp_needed ? 1 : 0);
+    // Need a new level at the top — use base level for XP table indexing
+    const lvl = planningBaseLevel.value + (state.value.planLevels.length > 0 && state.value.planLevels[0].xp_accumulated >= state.value.planLevels[0].xp_needed ? 1 : 0);
     const xpNeeded = state.value.xpTable[lvl] ?? 0;
     if (xpNeeded <= 0) return; // Can't level further
 

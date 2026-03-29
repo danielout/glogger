@@ -14,7 +14,7 @@
         <div>
           <span class="text-text-muted">Total Levels:</span>
           <span class="text-accent-gold font-bold ml-1">{{ totalLevels.toLocaleString() }}</span>
-          <span v-if="totalBonusLevels > 0" class="text-text-dim ml-1">(+{{ totalBonusLevels }})</span>
+          <span v-if="totalBonusLevels > 0" class="text-text-dim ml-1">({{ totalBonusLevels }} from bonuses)</span>
         </div>
       </div>
     </div>
@@ -86,6 +86,7 @@ const selectedGameStateSkill = computed<GameStateSkill | null>(() => {
       skill_id: 0,
       skill_name: selectedSkill.value,
       level: session.currentLevel,
+      base_level: session.currentLevel,
       bonus_levels: 0,
       xp: 0,
       tnl: session.tnl,

@@ -187,8 +187,8 @@ impl GameStateManager {
                     rusqlite::params![character, server]).ok();
 
                 let mut stmt = conn.prepare(
-                    "INSERT INTO game_state_skills (character_name, server_name, skill_id, skill_name, level, bonus_levels, xp, tnl, max_level, last_confirmed_at, source)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 'log')"
+                    "INSERT INTO game_state_skills (character_name, server_name, skill_id, skill_name, level, base_level, bonus_levels, xp, tnl, max_level, last_confirmed_at, source)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, 'log')"
                 ).ok();
 
                 if let Some(stmt) = stmt.as_mut() {
@@ -202,12 +202,14 @@ impl GameStateManager {
                             None => (0i64, skill.skill_type.clone()),
                         };
 
+                        let total_level = skill.raw as i32 + skill.bonus as i32;
                         stmt.execute(rusqlite::params![
                             character,
                             server,
                             skill_id,
                             display_name,
-                            skill.raw,
+                            total_level,     // level (total = base + bonus)
+                            skill.raw,       // base_level (raw, without bonuses)
                             skill.bonus,
                             skill.xp,
                             skill.tnl,

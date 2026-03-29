@@ -6,8 +6,7 @@
     <div class="mb-1.5">
       <div class="text-sm font-bold text-accent-gold truncate">{{ skill.skill_name }}</div>
       <div class="text-xs text-text-secondary">
-        Lv <span class="text-white font-bold">{{ skill.level + skill.bonus_levels }}</span>
-        <span v-if="skill.bonus_levels > 0" class="text-accent-gold/60 ml-0.5">({{ skill.level }} + {{ skill.bonus_levels }})</span>
+        Lv <SkillLevelDisplay :skill="skill"><span class="text-white font-bold">{{ skillTotalLevel(skill) }}</span></SkillLevelDisplay>
       </div>
     </div>
 
@@ -28,7 +27,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useGameStateStore, type SkillSessionData } from '../../stores/gameStateStore'
-import type { GameStateSkill } from '../../types/gameState'
+import { skillTotalLevel, type GameStateSkill } from '../../types/gameState'
+import SkillLevelDisplay from '../Shared/SkillLevelDisplay.vue'
 
 const props = defineProps<{
   skill: GameStateSkill

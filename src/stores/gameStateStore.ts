@@ -3,19 +3,20 @@ import { ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { useSettingsStore } from './settingsStore'
-import type {
-  GameStateSkill,
-  GameStateAttribute,
-  GameStateActiveSkills,
-  GameStateWorld,
-  GameStateInventoryItem,
-  GameStateRecipe,
-  GameStateEquipmentSlot,
-  GameStateFavor,
-  GameStateCurrency,
-  GameStateEffect,
-  GameStateStorageItem,
-  StorageVaultDetail,
+import {
+  skillTotalLevel,
+  type GameStateSkill,
+  type GameStateAttribute,
+  type GameStateActiveSkills,
+  type GameStateWorld,
+  type GameStateInventoryItem,
+  type GameStateRecipe,
+  type GameStateEquipmentSlot,
+  type GameStateFavor,
+  type GameStateCurrency,
+  type GameStateEffect,
+  type GameStateStorageItem,
+  type StorageVaultDetail,
 } from '../types/gameState'
 import type { PlayerEvent } from '../types/playerEvents'
 
@@ -634,6 +635,7 @@ export const useGameStateStore = defineStore('gameState', () => {
 
     // Persisted computed
     skillsByName,
+    skillTotalLevel,
     ownedItemCounts,
     attributesByName,
     recipesById,

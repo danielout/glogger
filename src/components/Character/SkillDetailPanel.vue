@@ -12,8 +12,7 @@
         <div class="flex-1 min-w-0">
           <div class="text-accent-gold text-base font-bold mb-0.5">{{ skill.skill_name }}</div>
           <div class="text-xs text-text-secondary mb-1">
-            Level <span class="text-white font-bold">{{ skill.level + skill.bonus_levels }}</span>
-            <span v-if="skill.bonus_levels > 0" class="text-text-muted ml-1">({{ skill.level }} + {{ skill.bonus_levels }} bonus)</span>
+            Level <SkillLevelDisplay :skill="skill"><span class="text-white font-bold">{{ skillTotalLevel(skill) }}</span></SkillLevelDisplay>
           </div>
           <div class="flex items-center gap-2">
             <span v-if="cdnData?.combat === true" class="text-[0.65rem] px-1.5 py-0.5 bg-red-900/30 border border-red-700/40 text-red-300 rounded">Combat</span>
@@ -158,8 +157,9 @@
 import { ref, computed, watch } from 'vue'
 import { useGameStateStore } from '../../stores/gameStateStore'
 import { useGameDataStore } from '../../stores/gameDataStore'
-import type { GameStateSkill } from '../../types/gameState'
+import { skillTotalLevel, type GameStateSkill } from '../../types/gameState'
 import type { SkillInfo, AbilityInfo, EntitySources } from '../../types/gameData'
+import SkillLevelDisplay from '../Shared/SkillLevelDisplay.vue'
 import AbilityInline from '../Shared/Ability/AbilityInline.vue'
 import SkillInline from '../Shared/Skill/SkillInline.vue'
 

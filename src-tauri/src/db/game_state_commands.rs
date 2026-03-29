@@ -11,6 +11,7 @@ pub struct GameStateSkill {
     pub skill_id: i64,
     pub skill_name: String,
     pub level: i32,
+    pub base_level: i32,
     pub bonus_levels: i32,
     pub xp: i64,
     pub tnl: i64,
@@ -135,7 +136,7 @@ pub fn get_game_state_skills(
 ) -> Result<Vec<GameStateSkill>, String> {
     let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
     let mut stmt = conn.prepare(
-        "SELECT skill_id, skill_name, level, bonus_levels, xp, tnl, max_level, last_confirmed_at, source
+        "SELECT skill_id, skill_name, level, base_level, bonus_levels, xp, tnl, max_level, last_confirmed_at, source
          FROM game_state_skills WHERE character_name = ?1 AND server_name = ?2
          ORDER BY skill_name"
     ).map_err(|e| format!("Query error: {e}"))?;
@@ -145,12 +146,13 @@ pub fn get_game_state_skills(
             skill_id: row.get(0)?,
             skill_name: row.get(1)?,
             level: row.get(2)?,
-            bonus_levels: row.get(3)?,
-            xp: row.get(4)?,
-            tnl: row.get(5)?,
-            max_level: row.get(6)?,
-            last_confirmed_at: row.get(7)?,
-            source: row.get(8)?,
+            base_level: row.get(3)?,
+            bonus_levels: row.get(4)?,
+            xp: row.get(5)?,
+            tnl: row.get(6)?,
+            max_level: row.get(7)?,
+            last_confirmed_at: row.get(8)?,
+            source: row.get(9)?,
         })
     }).map_err(|e| format!("Query error: {e}"))?;
 

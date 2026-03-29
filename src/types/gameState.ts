@@ -4,12 +4,23 @@ export interface GameStateSkill {
   skill_id: number
   skill_name: string
   level: number
+  base_level: number
   bonus_levels: number
   xp: number
   tnl: number
   max_level: number
   last_confirmed_at: string
   source: 'log' | 'snapshot'
+}
+
+/** Total effective level (base + bonus) — this is what the game displays and what `level` stores */
+export function skillTotalLevel(skill: Pick<GameStateSkill, 'level'>): number {
+  return skill.level
+}
+
+/** Base level without bonuses — used for XP table indexing */
+export function skillBaseLevel(skill: Pick<GameStateSkill, 'base_level'>): number {
+  return skill.base_level
 }
 
 export interface GameStateAttribute {

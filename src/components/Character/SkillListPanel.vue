@@ -72,9 +72,10 @@
               title="Equipped combat skill">&#x2694;</span>
 
             <!-- Level: always show effective (base+bonus) -->
-            <span class="text-accent-gold text-right min-w-8 shrink-0 font-bold">{{ row.level + row.bonus_levels }}</span>
-            <span v-if="row.bonus_levels > 0" class="text-text-dim text-right min-w-12 shrink-0 text-[0.65rem]">({{ row.level }}+{{ row.bonus_levels }})</span>
-            <span v-else class="min-w-12 shrink-0"></span>
+            <SkillLevelDisplay :skill="row" class="text-right min-w-8 shrink-0">
+              <span class="text-accent-gold font-bold">{{ skillTotalLevel(row) }}</span>
+            </SkillLevelDisplay>
+            <span v-if="!row.bonus_levels" class="min-w-12 shrink-0"></span>
 
             <!-- Compact progress bar -->
             <div class="w-12 h-1 bg-border-default rounded-sm overflow-hidden shrink-0">
@@ -94,12 +95,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useGameStateStore } from '../../stores/gameStateStore'
-import type { GameStateSkill } from '../../types/gameState'
+import { skillTotalLevel, type GameStateSkill } from '../../types/gameState'
 import type { SkillInfo } from '../../types/gameData'
 import type { SkillSessionData } from '../../stores/gameStateStore'
+import SkillLevelDisplay from '../Shared/SkillLevelDisplay.vue'
 interface SkillRow {
   skill_name: string
   level: number
+  base_level: number
   bonus_levels: number
   xp: number
   tnl: number
@@ -150,6 +153,7 @@ const allRows = computed<SkillRow[]>(() => {
   const rows: SkillRow[] = store.skills.map((s: GameStateSkill) => ({
     skill_name: s.skill_name,
     level: s.level,
+    base_level: s.base_level,
     bonus_levels: s.bonus_levels,
     xp: s.xp,
     tnl: s.tnl,
@@ -165,6 +169,7 @@ const allRows = computed<SkillRow[]>(() => {
       rows.push({
         skill_name: name,
         level: session.currentLevel,
+        base_level: session.currentLevel,
         bonus_levels: 0,
         xp: 0,
         tnl: session.tnl,
@@ -202,13 +207,13 @@ const sortedRows = computed(() => {
   const rows = [...filteredRows.value]
   switch (sortBy.value) {
     case 'level':
-      rows.sort((a, b) => (b.level + b.bonus_levels) - (a.level + a.bonus_levels) || a.skill_name.localeCompare(b.skill_name))
+      rows.sort((a, b) => skillTotalLevel(b) - skillTotalLevel(a) || a.skill_name.localeCompare(b.skill_name))
       break
     case 'name':
       rows.sort((a, b) => a.skill_name.localeCompare(b.skill_name))
       break
     case 'session':
-      rows.sort((a, b) => (b.session?.xpGained ?? 0) - (a.session?.xpGained ?? 0) || (b.level + b.bonus_levels) - (a.level + a.bonus_levels))
+      rows.sort((a, b) => (b.session?.xpGained ?? 0) - (a.session?.xpGained ?? 0) || skillTotalLevel(b) - skillTotalLevel(a))
       break
   }
   return rows
@@ -233,7 +238,7 @@ const groupedSkills = computed<SkillGroup[]>(() => {
     return ranges
       .map(r => ({
         label: r.label,
-        skills: rows.filter(s => (s.level + s.bonus_levels) >= r.min && (s.level + s.bonus_levels) <= r.max),
+        skills: rows.filter(s => skillTotalLevel(s) >= r.min && skillTotalLevel(s) <= r.max),
       }))
       .filter(g => g.skills.length > 0)
   }

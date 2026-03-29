@@ -49,7 +49,7 @@
     <DomainTable
       title="Skills"
       :count="gameState.skills.length"
-      :columns="['skill_name', 'level', 'bonus_levels', 'xp', 'tnl', 'max_level', 'source', 'last_confirmed_at']"
+      :columns="['skill_name', 'level', 'base_level', 'bonus_levels', 'xp', 'tnl', 'max_level', 'source', 'last_confirmed_at']"
       :rows="gameState.skills"
     />
 

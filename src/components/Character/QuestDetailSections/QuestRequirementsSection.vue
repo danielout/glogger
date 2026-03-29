@@ -54,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import type { GameStateSkill } from '../../../types/gameState'
+import { skillTotalLevel, type GameStateSkill } from '../../../types/gameState'
 import { requirementStatusIcon, requirementStatusColor, type EvaluatedRequirement } from '../../../composables/useQuestRequirements'
 import { extractNpcKeyFromFavorPath } from '../../../utils/questDisplay'
 import { tierDisplayName } from '../../../composables/useFavorTiers'
@@ -69,6 +69,6 @@ const props = defineProps<{
 
 function playerSkillLevel(skillName: string): number {
   const skill = props.skillsByName[skillName]
-  return skill ? skill.level + skill.bonus_levels : 0
+  return skill ? skillTotalLevel(skill) : 0
 }
 </script>

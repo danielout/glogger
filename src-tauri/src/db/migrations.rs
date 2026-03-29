@@ -32,12 +32,42 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         super::record_migration(conn, 1)?;
     }
 
-    // Future migrations go here:
-    // if current_version < 2 {
-    //     migration_v2_example(conn)?;
-    //     super::record_migration(conn, 2)?;
-    // }
+    if current_version < 2 {
+        migration_v2_skill_base_level(conn)?;
+        super::record_migration(conn, 2)?;
+    }
 
+    if current_version < 3 {
+        migration_v3_fix_skill_levels(conn)?;
+        super::record_migration(conn, 3)?;
+    }
+
+    Ok(())
+}
+
+/// Migration V3: Fix skill level data after the incorrect v2 migration.
+/// v2 set base_level = level - bonus_levels, but level was still the raw (base) value,
+/// so base_level ended up as raw - bonus (wrong). Level was never updated to be the total.
+/// Fix: set base_level = level (which is still raw/base), then level = base_level + bonus_levels.
+fn migration_v3_fix_skill_levels(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "UPDATE game_state_skills SET base_level = level;
+         UPDATE game_state_skills SET level = base_level + bonus_levels;"
+    )?;
+    Ok(())
+}
+
+/// Migration V2: Add base_level column to game_state_skills.
+/// `level` stores the total (base + bonus) — what the game displays.
+/// `base_level` stores level without bonuses — used for XP table indexing.
+fn migration_v2_skill_base_level(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "ALTER TABLE game_state_skills ADD COLUMN base_level INTEGER NOT NULL DEFAULT 0;
+         -- Existing `level` column stores the base (raw=). Copy it to base_level,
+         -- then update level to be the total (base + bonus).
+         UPDATE game_state_skills SET base_level = level;
+         UPDATE game_state_skills SET level = level + bonus_levels;"
+    )?;
     Ok(())
 }
 

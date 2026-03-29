@@ -1,5 +1,5 @@
 import type { QuestInfo, QuestRequirement } from '../types/gameData'
-import type { GameStateSkill, GameStateFavor } from '../types/gameState'
+import { skillTotalLevel, type GameStateSkill, type GameStateFavor } from '../types/gameState'
 import { isTierAtOrAbove, tierDisplayName } from './useFavorTiers'
 import { extractNpcKeyFromFavorPath, extractNpcDisplayFromFavorPath } from '../utils/questDisplay'
 
@@ -31,7 +31,7 @@ export function evaluateRequirement(
 ): EvaluatedRequirement {
   if (req.T === 'MinSkillLevel' && req.Skill && req.MinSkillLevel != null) {
     const skill = skillsByName[req.Skill]
-    const playerLevel = skill ? skill.level + skill.bonus_levels : 0
+    const playerLevel = skill ? skillTotalLevel(skill) : 0
     const needed = req.MinSkillLevel
     if (playerLevel >= needed) {
       return { requirement: req, status: 'met', detail: `${req.Skill} ${playerLevel}/${needed}` }

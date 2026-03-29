@@ -627,11 +627,12 @@ fn seed_game_state_from_snapshot(
 
     // Seed skills — resolve internal names to canonical IDs + display names
     let mut skill_stmt = conn.prepare(
-        "INSERT INTO game_state_skills (character_name, server_name, skill_id, skill_name, level, bonus_levels, xp, tnl, max_level, last_confirmed_at, source)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 0, ?9, 'snapshot')
+        "INSERT INTO game_state_skills (character_name, server_name, skill_id, skill_name, level, base_level, bonus_levels, xp, tnl, max_level, last_confirmed_at, source)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 0, ?10, 'snapshot')
          ON CONFLICT(character_name, server_name, skill_id) DO UPDATE SET
             skill_name = excluded.skill_name,
             level = excluded.level,
+            base_level = excluded.base_level,
             bonus_levels = excluded.bonus_levels,
             xp = excluded.xp,
             tnl = excluded.tnl,
@@ -645,12 +646,14 @@ fn seed_game_state_from_snapshot(
             Some(info) => (info.id as i64, info.name.clone()),
             None => (0i64, skill_name.clone()),
         };
+        let total_level = skill_data.level + skill_data.bonus_levels;
         skill_stmt.execute(rusqlite::params![
             character,
             server,
             skill_id,
             display_name,
-            skill_data.level,
+            total_level,              // level (total = base + bonus)
+            skill_data.level,         // base_level (without bonuses)
             skill_data.bonus_levels,
             skill_data.xp_toward_next_level,
             skill_data.xp_needed_for_next_level,

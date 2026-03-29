@@ -3,7 +3,7 @@
     <div class="text-base font-bold text-accent-gold mb-1">{{ skill.skillType }}</div>
     <div class="text-xs text-text-secondary mb-3">
       Lv <span class="text-white font-bold">{{ effectiveLevel }}</span>
-      <span v-if="bonusLevels > 0" class="text-accent-gold/60 ml-1">({{ skill.currentLevel }} + {{ bonusLevels }})</span>
+      <span v-if="bonusLevels > 0" class="text-accent-gold/60 ml-1" :title="`Base ${skill.currentLevel - bonusLevels} + ${bonusLevels} bonus = ${effectiveLevel}`">({{ skill.currentLevel - bonusLevels }} + {{ bonusLevels }})</span>
     </div>
 
     <div class="grid grid-cols-2 gap-2 mb-3">
@@ -35,6 +35,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useGameStateStore, type SkillSessionData } from '../../stores/gameStateStore'
+import { skillTotalLevel } from '../../types/gameState'
 
 const props = defineProps<{ skill: SkillSessionData }>()
 const store = useGameStateStore()
@@ -44,7 +45,10 @@ const bonusLevels = computed(() => {
   return gs?.bonus_levels ?? 0
 })
 
-const effectiveLevel = computed(() => props.skill.currentLevel + bonusLevels.value)
+const effectiveLevel = computed(() => {
+  const gs = store.skillsByName[props.skill.skillType]
+  return gs ? skillTotalLevel(gs) : props.skill.currentLevel
+})
 
 const xphr = computed(() => store.xpPerHour(props.skill).toLocaleString())
 const ttl  = computed(() => store.timeToNextLevel(props.skill))
