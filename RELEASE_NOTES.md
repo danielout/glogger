@@ -1,8 +1,9 @@
-## What's Changed since v0.2.0
+## What's Changed since v0.2.1
 
 ### Other
-- new skills page that hopefully is more useful! (`e647a38`)
-- fixed an issue with file position watchers and reactive components (`09bc459`)
+- fixing a bug with Cook's Help Brought To You By ReyDash (`8d3a3c9`)
+- moving gourmand doc slight ui tweaks for the crafting levelling tab. (`192413e`)
+- NPC and Quest screens for character (`abe86f7`)
 
 ---
-*2 commits since v0.2.0*
+*4 commits since v0.2.1*
