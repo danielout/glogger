@@ -25,6 +25,9 @@
       <template v-else-if="activeTab === 'titles'">
         <TitleBrowser />
       </template>
+      <template v-else-if="activeTab === 'treasure'">
+        <TsysBrowser />
+      </template>
     </div>
   </div>
 </template>
@@ -39,6 +42,7 @@ import QuestBrowser from "./QuestBrowser.vue";
 import NpcBrowser from "./NpcBrowser.vue";
 import EffectBrowser from "./EffectBrowser.vue";
 import TitleBrowser from "./TitleBrowser.vue";
+import TsysBrowser from "./TsysBrowser.vue";
 
 const props = defineProps<{
   navTarget?: EntityNavigationTarget | null;

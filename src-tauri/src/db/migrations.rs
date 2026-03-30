@@ -62,6 +62,16 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         super::record_migration(conn, 7)?;
     }
 
+    if current_version < 8 {
+        migration_v8_slot_item_level_rarity(conn)?;
+        super::record_migration(conn, 8)?;
+    }
+
+    if current_version < 9 {
+        migration_v9_slot_per_slot_skills(conn)?;
+        super::record_migration(conn, 9)?;
+    }
+
     Ok(())
 }
 
@@ -111,6 +121,28 @@ fn migration_v7_build_preset_abilities(conn: &Connection) -> Result<()> {
         );
 
         CREATE INDEX idx_build_preset_abilities_preset ON build_preset_abilities(preset_id);",
+    )?;
+    Ok(())
+}
+
+/// Migration V8: Add per-slot level, rarity, and crafting flags to slot items.
+/// Items can now have individual level/rarity instead of using a single global value.
+fn migration_v8_slot_item_level_rarity(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "ALTER TABLE build_preset_slot_items ADD COLUMN slot_level INTEGER NOT NULL DEFAULT 90;
+         ALTER TABLE build_preset_slot_items ADD COLUMN slot_rarity TEXT NOT NULL DEFAULT 'Epic';
+         ALTER TABLE build_preset_slot_items ADD COLUMN is_crafted INTEGER NOT NULL DEFAULT 0;
+         ALTER TABLE build_preset_slot_items ADD COLUMN is_masterwork INTEGER NOT NULL DEFAULT 0;",
+    )?;
+    Ok(())
+}
+
+/// Migration V9: Add per-slot skill overrides to build preset slot items.
+/// Each slot can now independently choose which two skills its mods come from.
+fn migration_v9_slot_per_slot_skills(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "ALTER TABLE build_preset_slot_items ADD COLUMN slot_skill_primary TEXT;
+         ALTER TABLE build_preset_slot_items ADD COLUMN slot_skill_secondary TEXT;",
     )?;
     Ok(())
 }

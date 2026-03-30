@@ -31,6 +31,12 @@ export interface BuildPresetSlotItem {
   equip_slot: string
   item_id: number
   item_name: string | null
+  slot_level: number
+  slot_rarity: string
+  is_crafted: boolean
+  is_masterwork: boolean
+  slot_skill_primary: string | null
+  slot_skill_secondary: string | null
 }
 
 /** A saved ability assignment in a build bar */
@@ -72,6 +78,7 @@ export interface SlotTsysPower {
   raw_effects: string[]
   min_rarity: string | null
   skill_level_prereq: number | null
+  icon_id: number | null
 }
 
 /** Equipment slot definition for the build planner */
@@ -81,13 +88,17 @@ export interface EquipSlotDef {
   group: 'armor' | 'weapon' | 'jewelry' | 'extra'
 }
 
-/** Rarity levels with their mod slot distributions */
+/** Rarity levels with their mod slot distributions.
+ *  primarySlots/secondarySlots represent the default distribution of skill-specific
+ *  mod slots. Any skill slot can be replaced by generic/endurance. */
 export interface RarityDef {
   id: string
   label: string
   totalMods: number
-  skillMods: number
-  genericMods: number
+  /** Number of mod slots defaulting to primary skill */
+  primarySlots: number
+  /** Number of mod slots defaulting to secondary skill */
+  secondarySlots: number
 }
 
 // ── Constants ───────────────────────────────────────────────────────────────
@@ -102,14 +113,15 @@ export const EQUIPMENT_SLOTS: EquipSlotDef[] = [
   { id: 'OffHand', label: 'Off Hand', group: 'weapon' },
   { id: 'Ring', label: 'Ring', group: 'jewelry' },
   { id: 'Necklace', label: 'Necklace', group: 'jewelry' },
+  { id: 'Belt', label: 'Belt', group: 'extra' },
 ]
 
 export const RARITY_DEFS: RarityDef[] = [
-  { id: 'Uncommon', label: 'Uncommon', totalMods: 3, skillMods: 1, genericMods: 2 },
-  { id: 'Rare', label: 'Rare', totalMods: 3, skillMods: 2, genericMods: 1 },
-  { id: 'Exceptional', label: 'Exceptional', totalMods: 3, skillMods: 3, genericMods: 0 },
-  { id: 'Epic', label: 'Epic', totalMods: 4, skillMods: 4, genericMods: 0 },
-  { id: 'Legendary', label: 'Legendary', totalMods: 5, skillMods: 5, genericMods: 0 },
+  { id: 'Uncommon', label: 'Uncommon', totalMods: 3, primarySlots: 1, secondarySlots: 0 },
+  { id: 'Rare', label: 'Rare', totalMods: 3, primarySlots: 1, secondarySlots: 1 },
+  { id: 'Exceptional', label: 'Exceptional', totalMods: 3, primarySlots: 2, secondarySlots: 1 },
+  { id: 'Epic', label: 'Epic', totalMods: 4, primarySlots: 2, secondarySlots: 2 },
+  { id: 'Legendary', label: 'Legendary', totalMods: 5, primarySlots: 3, secondarySlots: 2 },
 ]
 
 export const ABILITY_BARS = [
@@ -120,6 +132,39 @@ export const ABILITY_BARS = [
 
 export function getRarityDef(rarity: string): RarityDef {
   return RARITY_DEFS.find(r => r.id === rarity) ?? RARITY_DEFS[3] // default to Epic
+}
+
+/** Cost in crafting points to apply an augment */
+export const AUGMENT_CP_COST = 100
+
+/** Calculate total crafting points budget for a slot based on its properties.
+ *  Mastercrafted/foretold legendaries are a flat 160 CP.
+ *  Otherwise: crafted = 120, dropped = 100. */
+export function getSlotCraftingPoints(slotItem: BuildPresetSlotItem | undefined): number {
+  if (!slotItem) return 0
+  if (slotItem.is_masterwork) return 160
+  return slotItem.is_crafted ? 120 : 100
+}
+
+/** Armor type keywords used to detect material type */
+export const ARMOR_TYPE_KEYWORDS = ['ClothArmor', 'LeatherArmor', 'MetalArmor', 'OrganicArmor'] as const
+export type ArmorType = 'Cloth' | 'Leather' | 'Metal' | 'Organic'
+
+/** Map keyword to display name */
+export function getArmorTypeFromKeywords(keywords: string[]): ArmorType | null {
+  if (keywords.includes('ClothArmor')) return 'Cloth'
+  if (keywords.includes('LeatherArmor')) return 'Leather'
+  if (keywords.includes('MetalArmor')) return 'Metal'
+  if (keywords.includes('OrganicArmor')) return 'Organic'
+  return null
+}
+
+/** Armor slots that count toward 3-piece set bonus */
+export const ARMOR_SET_SLOTS = ['Head', 'Chest', 'Legs', 'Hands', 'Feet']
+
+/** Get max mods for a specific rarity */
+export function getMaxModsForRarity(rarity: string): number {
+  return getRarityDef(rarity).totalMods
 }
 
 /** Get a display name for a TSys power */

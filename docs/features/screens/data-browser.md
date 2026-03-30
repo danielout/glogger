@@ -2,14 +2,14 @@
 
 ## Overview
 
-A multi-tab reference browser for exploring all CDN game data. Eight tabs cover the major entity types: Items, Skills, Abilities, Recipes, Quests, NPCs, Effects, and Titles. All browsers share a consistent two-panel layout with search/filter on the left and detail view on the right.
+A multi-tab reference browser for exploring all CDN game data. Nine tabs cover the major entity types: Items, Skills, Abilities, Recipes, Quests, NPCs, Effects, Titles, and Treasure (TSys mods). All browsers share a consistent two-panel layout with search/filter on the left and detail view on the right.
 
 ## Architecture
 
 ### Files
 
 **Frontend (Vue/TS):**
-- `src/components/DataBrowser/DataBrowser.vue` — 8-tab container
+- `src/components/DataBrowser/DataBrowser.vue` — 9-tab container
 - `src/components/DataBrowser/ItemSearch.vue` — items browser
 - `src/components/DataBrowser/SkillBrowser.vue` — skills browser
 - `src/components/DataBrowser/AbilityBrowser.vue` — abilities browser
@@ -18,6 +18,7 @@ A multi-tab reference browser for exploring all CDN game data. Eight tabs cover 
 - `src/components/DataBrowser/NpcBrowser.vue` — NPCs browser
 - `src/components/DataBrowser/EffectBrowser.vue` — effects browser
 - `src/components/DataBrowser/TitleBrowser.vue` — titles browser
+- `src/components/DataBrowser/TsysBrowser.vue` — treasure system mods browser
 
 **Store:**
 - `gameDataStore` — CDN data loading, entity resolution, query methods, icon caching
@@ -29,7 +30,7 @@ A multi-tab reference browser for exploring all CDN game data. Eight tabs cover 
 ### Component Hierarchy
 
 ```
-DataBrowser.vue                     — 8-tab container
+DataBrowser.vue                     — 9-tab container
 ├── ItemSearch.vue                  — items with advanced filters
 ├── SkillBrowser.vue                — skills with abilities
 ├── AbilityBrowser.vue              — abilities by skill
@@ -37,7 +38,8 @@ DataBrowser.vue                     — 8-tab container
 ├── QuestBrowser.vue                — quests with area/sort filters
 ├── NpcBrowser.vue                  — NPCs with area filter
 ├── EffectBrowser.vue               — effects
-└── TitleBrowser.vue                — titles with color rendering
+├── TitleBrowser.vue                — titles with color rendering
+└── TsysBrowser.vue                — treasure mods with skill filter + tier breakdown
 ```
 
 ## Shared Patterns
@@ -71,6 +73,7 @@ All browsers follow a consistent two-panel layout:
 - [data-browser-npcs.md](data-browser/data-browser-npcs.md) — NPCs
 - [data-browser-effects.md](data-browser/data-browser-effects.md) — Effects
 - [data-browser-titles.md](data-browser/data-browser-titles.md) — Titles
+- [data-browser-treasure.md](data-browser/data-browser-treasure.md) — Treasure (TSys)
 
 ## Search & Filter Summary
 
@@ -84,6 +87,7 @@ All browsers follow a consistent two-panel layout:
 | NPCs | Text (name, description) | Area | Computed |
 | Effects | Text (name) | — | 250ms |
 | Titles | Text (title, tooltip) | — | Computed |
+| Treasure | Text (name, skill, prefix, suffix, slot, key) | Skill | 250ms |
 
 ## Data Source & Backend
 
@@ -130,6 +134,9 @@ The `provideEntityNavigation` composable enables other parts of the app to navig
 
 ### NPCs
 - `get_all_npcs()` / `search_npcs(query)` / `get_npcs_in_area(area)`
+
+### Treasure (TSys)
+- `get_all_tsys()` / `search_tsys(query, limit?)` / `get_tsys_profiles()`
 
 ### Icons
 - `get_icon_path(icon_id)` — filesystem path; fetches from CDN if not cached

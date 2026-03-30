@@ -2,6 +2,7 @@
   <div
     class="flex items-start gap-2 px-2 py-1.5 rounded text-sm group"
     :class="mod.is_augment ? 'bg-purple-900/15 border border-purple-700/30' : 'bg-surface-elevated border border-border-default'">
+    <GameIcon v-if="resolvedIconId" :icon-id="resolvedIconId" size="xs" class="shrink-0 mt-0.5" />
     <div class="flex-1 min-w-0">
       <div class="flex items-center gap-1.5">
         <span
@@ -9,7 +10,7 @@
           class="text-[10px] font-semibold text-purple-400 uppercase">
           AUG
         </span>
-        <span class="font-medium text-text-primary truncate">{{ mod.power_name }}</span>
+        <span class="font-medium text-text-primary truncate">{{ resolvedDisplayName }}</span>
       </div>
       <div v-if="resolvedEffects.length > 0" class="text-xs text-text-secondary mt-0.5">
         <div v-for="(effect, i) in resolvedEffects" :key="i">{{ effect }}</div>
@@ -28,6 +29,7 @@
 import { ref, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import type { BuildPresetMod } from '../../../types/buildPlanner'
+import GameIcon from '../../Shared/GameIcon.vue'
 
 const props = defineProps<{
   mod: BuildPresetMod
@@ -38,6 +40,8 @@ const emit = defineEmits<{
 }>()
 
 const resolvedEffects = ref<string[]>([])
+const resolvedDisplayName = ref(props.mod.power_name)
+const resolvedIconId = ref<number | null>(null)
 
 onMounted(async () => {
   if (!props.mod.power_name || props.mod.tier == null) return
@@ -45,13 +49,18 @@ onMounted(async () => {
     const info = await invoke<{
       internal_name: string
       skill: string | null
+      prefix: string | null
+      suffix: string | null
       tier_effects: string[]
+      icon_id: number | null
     } | null>('get_tsys_power_info', {
       powerName: props.mod.power_name,
       tier: props.mod.tier,
     })
-    if (info?.tier_effects) {
-      resolvedEffects.value = info.tier_effects
+    if (info) {
+      if (info.tier_effects) resolvedEffects.value = info.tier_effects
+      resolvedDisplayName.value = info.prefix ?? info.suffix ?? props.mod.power_name
+      resolvedIconId.value = info.icon_id ?? null
     }
   } catch {
     // Power might not resolve — that's fine

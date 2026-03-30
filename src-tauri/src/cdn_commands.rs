@@ -11,7 +11,7 @@ use serde_json::Value;
 use crate::cdn;
 use crate::game_data::{
     self, AbilityInfo, AreaInfo, EffectInfo, GameData, ItemInfo, NpcInfo, PlayerTitleInfo,
-    QuestInfo, RecipeInfo, SkillInfo, SourceEntry,
+    QuestInfo, RecipeInfo, SkillInfo, SourceEntry, TsysClientInfo,
 };
 
 /// Timestamped log line for startup diagnostics.
@@ -905,7 +905,7 @@ pub async fn get_quest_sources(
 
 // ── Effect description resolution ───────────────────────────────────────────
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, Clone)]
 pub struct ResolvedEffect {
     pub label: String,
     pub value: String,
@@ -941,42 +941,83 @@ pub async fn resolve_effect_descs(
     Ok(results)
 }
 
+/// Strip `<icon=XXXX>` tags from text and return (cleaned_text, first_icon_id)
+fn strip_icon_tags(text: &str) -> (String, Option<u32>) {
+    let mut first_icon: Option<u32> = None;
+    let mut result = String::with_capacity(text.len());
+    let mut remaining = text;
+
+    while let Some(start) = remaining.find("<icon=") {
+        result.push_str(&remaining[..start]);
+        if let Some(end) = remaining[start..].find('>') {
+            let icon_str = &remaining[start + 6..start + end];
+            if first_icon.is_none() {
+                first_icon = icon_str.parse::<u32>().ok();
+            }
+            remaining = &remaining[start + end + 1..];
+        } else {
+            // Malformed tag, just keep it
+            result.push_str(&remaining[start..start + 6]);
+            remaining = &remaining[start + 6..];
+        }
+    }
+    result.push_str(remaining);
+
+    (result, first_icon)
+}
+
 fn resolve_single_effect(desc: &str, data: &GameData) -> Option<ResolvedEffect> {
     // Parse "{TOKEN}{VALUE}" format
     let parts: Vec<&str> = desc.split('{').filter(|s| !s.is_empty()).collect();
-    if parts.len() < 2 {
-        return None;
+    if parts.len() >= 2 {
+        let token = parts[0].trim_end_matches('}');
+        let value_str = parts[1].trim_end_matches('}');
+
+        if let Some(attr) = data.attributes.get(token) {
+            if let Some(label) = attr.raw.get("Label").and_then(|v| v.as_str()) {
+                let label = label.to_string();
+                let display_type = attr
+                    .raw
+                    .get("DisplayType")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("AsInt")
+                    .to_string();
+                let icon_id = attr
+                    .raw
+                    .get("IconIds")
+                    .and_then(|v| v.as_array())
+                    .and_then(|arr| arr.first())
+                    .and_then(|v| v.as_u64())
+                    .map(|v| v as u32);
+
+                let value: f64 = value_str.parse().unwrap_or(0.0);
+                let formatted = format_effect_value(&label, value, &display_type);
+
+                return Some(ResolvedEffect {
+                    label,
+                    value: value_str.to_string(),
+                    display_type,
+                    formatted,
+                    icon_id,
+                });
+            }
+        }
     }
 
-    let token = parts[0].trim_end_matches('}');
-    let value_str = parts[1].trim_end_matches('}');
+    // Handle "<icon=XXXX>text" format (pre-rendered effect descriptions)
+    if desc.contains("<icon=") {
+        let (cleaned, icon_id) = strip_icon_tags(desc);
+        let cleaned = cleaned.trim().to_string();
+        return Some(ResolvedEffect {
+            label: cleaned.clone(),
+            value: String::new(),
+            display_type: String::new(),
+            formatted: cleaned,
+            icon_id,
+        });
+    }
 
-    let attr = data.attributes.get(token)?;
-    let label = attr.raw.get("Label")?.as_str()?.to_string();
-    let display_type = attr
-        .raw
-        .get("DisplayType")
-        .and_then(|v| v.as_str())
-        .unwrap_or("AsInt")
-        .to_string();
-    let icon_id = attr
-        .raw
-        .get("IconIds")
-        .and_then(|v| v.as_array())
-        .and_then(|arr| arr.first())
-        .and_then(|v| v.as_u64())
-        .map(|v| v as u32);
-
-    let value: f64 = value_str.parse().unwrap_or(0.0);
-    let formatted = format_effect_value(&label, value, &display_type);
-
-    Some(ResolvedEffect {
-        label,
-        value: value_str.to_string(),
-        display_type,
-        formatted,
-        icon_id,
-    })
+    None
 }
 
 fn format_effect_value(label: &str, value: f64, display_type: &str) -> String {
@@ -1009,6 +1050,10 @@ pub struct TsysPowerInfo {
     pub suffix: Option<String>,
     pub slots: Vec<String>,
     pub tier_effects: Vec<String>,
+    /// Structured effect data for aggregation (label, numeric value, display_type)
+    pub tier_effects_structured: Vec<ResolvedEffect>,
+    /// Icon ID from the first effect's attribute definition
+    pub icon_id: Option<u32>,
 }
 
 /// Look up a TSys power by internal name and tier, returning human-readable info.
@@ -1033,32 +1078,53 @@ pub async fn get_tsys_power_info(
 
     // Get the effect descriptions for the requested tier
     let tier_key = format!("id_{}", tier);
-    let tier_effects: Vec<String> = info
+    let mut tier_effects = Vec::new();
+    let mut tier_effects_structured = Vec::new();
+    let mut icon_id: Option<u32> = None;
+
+    if let Some(descs) = info
         .tiers
         .as_ref()
         .and_then(|tiers| tiers.get(&tier_key))
         .and_then(|t| t.get("EffectDescs"))
         .and_then(|descs| descs.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| v.as_str())
-                .map(|desc| {
-                    // Try to resolve the effect desc to human-readable
-                    resolve_single_effect(desc, &data)
-                        .map(|r| r.formatted)
-                        .unwrap_or_else(|| desc.to_string())
-                })
-                .collect()
-        })
-        .unwrap_or_default();
+    {
+        for desc_val in descs {
+            if let Some(desc) = desc_val.as_str() {
+                if let Some(resolved) = resolve_single_effect(desc, &data) {
+                    if icon_id.is_none() {
+                        icon_id = resolved.icon_id;
+                    }
+                    tier_effects.push(resolved.formatted.clone());
+                    tier_effects_structured.push(resolved);
+                } else {
+                    tier_effects.push(desc.to_string());
+                    tier_effects_structured.push(ResolvedEffect {
+                        label: desc.to_string(),
+                        value: String::new(),
+                        display_type: String::new(),
+                        formatted: desc.to_string(),
+                        icon_id: None,
+                    });
+                }
+            }
+        }
+    }
+
+    // Resolve skill internal name to display name
+    let resolved_skill = info.skill.as_deref().and_then(|s| {
+        data.resolve_skill(s).map(|si| si.name.clone())
+    }).or_else(|| info.skill.clone());
 
     Ok(Some(TsysPowerInfo {
         internal_name: power_name,
-        skill: info.skill.clone(),
+        skill: resolved_skill,
         prefix: info.prefix.clone(),
         suffix: info.suffix.clone(),
         slots: info.slots.clone(),
         tier_effects,
+        tier_effects_structured,
+        icon_id,
     }))
 }
 
@@ -1199,6 +1265,8 @@ pub struct SlotTsysPower {
     pub min_rarity: Option<String>,
     /// Skill level prerequisite for this tier
     pub skill_level_prereq: Option<i64>,
+    /// Icon ID from the first effect's attribute definition
+    pub icon_id: Option<u32>,
 }
 
 /// Get all eligible TSys powers for a given equipment slot, filtered by skills and target level.
@@ -1225,15 +1293,8 @@ pub async fn get_tsys_powers_for_slot(
             continue;
         }
 
-        // Filter by skill: must match primary, secondary, or be generic (no skill)
-        let power_skill = info.skill.as_deref();
-        let matches_skill = match power_skill {
-            None => true, // generic mod
-            Some(s) => skill_primary.as_deref() == Some(s) || skill_secondary.as_deref() == Some(s),
-        };
-        if !matches_skill {
-            continue;
-        }
+        // No skill filter — return all mods for this slot.
+        // The frontend filters by skill per-column.
 
         // Find the best tier for the target level
         let tiers = match &info.tiers {
@@ -1246,6 +1307,7 @@ pub async fn get_tsys_powers_for_slot(
         let mut best_raw_effects: Vec<String> = Vec::new();
         let mut best_min_rarity: Option<String> = None;
         let mut best_skill_prereq: Option<i64> = None;
+        let mut best_icon_id: Option<u32> = None;
 
         for (tier_key, tier_val) in tiers {
             let min_level = tier_val
@@ -1276,12 +1338,18 @@ pub async fn get_tsys_powers_for_slot(
                     .unwrap_or_default();
 
                 best_raw_effects = raw_descs.clone();
+                best_icon_id = None;
                 best_effects = raw_descs
                     .iter()
                     .map(|desc| {
-                        resolve_single_effect(desc, &data)
-                            .map(|r| r.formatted)
-                            .unwrap_or_else(|| desc.clone())
+                        if let Some(resolved) = resolve_single_effect(desc, &data) {
+                            if best_icon_id.is_none() {
+                                best_icon_id = resolved.icon_id;
+                            }
+                            resolved.formatted
+                        } else {
+                            desc.clone()
+                        }
                     })
                     .collect();
                 break; // First matching tier wins
@@ -1290,7 +1358,7 @@ pub async fn get_tsys_powers_for_slot(
 
         // If no tier matched, try to find the highest tier at or below target level
         if best_tier_id.is_none() {
-            let mut best_min = 0;
+            let mut best_min: i64 = 0;
             for (tier_key, tier_val) in tiers {
                 let min_level = tier_val
                     .get("MinLevel")
@@ -1316,12 +1384,65 @@ pub async fn get_tsys_powers_for_slot(
                         .unwrap_or_default();
 
                     best_raw_effects = raw_descs.clone();
+                    best_icon_id = None;
                     best_effects = raw_descs
                         .iter()
                         .map(|desc| {
-                            resolve_single_effect(desc, &data)
-                                .map(|r| r.formatted)
-                                .unwrap_or_else(|| desc.clone())
+                            if let Some(resolved) = resolve_single_effect(desc, &data) {
+                                if best_icon_id.is_none() {
+                                    best_icon_id = resolved.icon_id;
+                                }
+                                resolved.formatted
+                            } else {
+                                desc.clone()
+                            }
+                        })
+                        .collect();
+                }
+            }
+        }
+
+        // Final fallback: if target level is below all tiers, pick the lowest tier
+        // (higher-level mods can go on lower-level gear, raising the equip requirement)
+        if best_tier_id.is_none() {
+            let mut lowest_min: i64 = i64::MAX;
+            for (tier_key, tier_val) in tiers {
+                let min_level = tier_val
+                    .get("MinLevel")
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(0);
+                if min_level < lowest_min {
+                    lowest_min = min_level;
+                    best_tier_id = Some(tier_key.clone());
+                    best_min_rarity = tier_val
+                        .get("MinRarity")
+                        .and_then(|v| v.as_str())
+                        .map(String::from);
+                    best_skill_prereq = tier_val.get("SkillLevelPrereq").and_then(|v| v.as_i64());
+
+                    let raw_descs: Vec<String> = tier_val
+                        .get("EffectDescs")
+                        .and_then(|v| v.as_array())
+                        .map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str().map(String::from))
+                                .collect()
+                        })
+                        .unwrap_or_default();
+
+                    best_raw_effects = raw_descs.clone();
+                    best_icon_id = None;
+                    best_effects = raw_descs
+                        .iter()
+                        .map(|desc| {
+                            if let Some(resolved) = resolve_single_effect(desc, &data) {
+                                if best_icon_id.is_none() {
+                                    best_icon_id = resolved.icon_id;
+                                }
+                                resolved.formatted
+                            } else {
+                                desc.clone()
+                            }
                         })
                         .collect();
                 }
@@ -1329,10 +1450,15 @@ pub async fn get_tsys_powers_for_slot(
         }
 
         if best_tier_id.is_some() {
+            // Resolve skill internal name to display name (e.g. "FireMagic" -> "Fire Magic")
+            let resolved_skill = info.skill.as_deref().and_then(|s| {
+                data.resolve_skill(s).map(|si| si.name.clone())
+            }).or_else(|| info.skill.clone());
+
             results.push(SlotTsysPower {
                 key: key.clone(),
                 internal_name: info.internal_name.clone(),
-                skill: info.skill.clone(),
+                skill: resolved_skill,
                 prefix: info.prefix.clone(),
                 suffix: info.suffix.clone(),
                 tier_id: best_tier_id,
@@ -1340,6 +1466,7 @@ pub async fn get_tsys_powers_for_slot(
                 raw_effects: best_raw_effects,
                 min_rarity: best_min_rarity,
                 skill_level_prereq: best_skill_prereq,
+                icon_id: best_icon_id,
             });
         }
     }
@@ -1371,4 +1498,130 @@ pub async fn get_tsys_powers_for_slot(
     });
 
     Ok(results)
+}
+
+// ── TSys browser commands ────────────────────────────────────────────────────
+
+/// Flattened TSys entry for the frontend browser (includes the CDN key).
+#[derive(Debug, serde::Serialize, Clone)]
+pub struct TsysBrowserEntry {
+    pub key: String,
+    pub internal_name: Option<String>,
+    pub skill: Option<String>,
+    pub slots: Vec<String>,
+    pub prefix: Option<String>,
+    pub suffix: Option<String>,
+    pub tiers: Option<Value>,
+    pub is_unavailable: Option<bool>,
+    pub is_hidden_from_transmutation: Option<bool>,
+    pub tier_count: usize,
+    pub raw_json: Value,
+}
+
+impl TsysBrowserEntry {
+    fn from_entry(key: &str, info: &TsysClientInfo) -> Self {
+        let tier_count = info
+            .tiers
+            .as_ref()
+            .and_then(|t| t.as_object())
+            .map(|m| m.len())
+            .unwrap_or(0);
+        Self {
+            key: key.to_string(),
+            internal_name: info.internal_name.clone(),
+            skill: info.skill.clone(),
+            slots: info.slots.clone(),
+            prefix: info.prefix.clone(),
+            suffix: info.suffix.clone(),
+            tiers: info.tiers.clone(),
+            is_unavailable: info.is_unavailable,
+            is_hidden_from_transmutation: info.is_hidden_from_transmutation,
+            tier_count,
+            raw_json: info.raw_json.clone(),
+        }
+    }
+}
+
+/// Get all TSys client info entries for the browser.
+#[tauri::command]
+pub async fn get_all_tsys(
+    state: State<'_, GameDataState>,
+) -> Result<Vec<TsysBrowserEntry>, String> {
+    let data = state.read().await;
+    let mut results: Vec<TsysBrowserEntry> = data
+        .tsys
+        .client_info
+        .iter()
+        .map(|(key, info)| TsysBrowserEntry::from_entry(key, info))
+        .collect();
+    results.sort_by(|a, b| {
+        let a_name = a.internal_name.as_deref().unwrap_or(&a.key);
+        let b_name = b.internal_name.as_deref().unwrap_or(&b.key);
+        a_name.cmp(b_name)
+    });
+    Ok(results)
+}
+
+/// Search TSys entries by name, skill, prefix, suffix, or key.
+#[tauri::command]
+pub async fn search_tsys(
+    query: String,
+    limit: Option<usize>,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<TsysBrowserEntry>, String> {
+    let data = state.read().await;
+    let q = query.to_lowercase();
+    let limit = limit.unwrap_or(100);
+
+    let mut results: Vec<TsysBrowserEntry> = data
+        .tsys
+        .client_info
+        .iter()
+        .filter(|(key, info)| {
+            let key_match = key.to_lowercase().contains(&q);
+            let name_match = info
+                .internal_name
+                .as_ref()
+                .map(|n| n.to_lowercase().contains(&q))
+                .unwrap_or(false);
+            let skill_match = info
+                .skill
+                .as_ref()
+                .map(|s| s.to_lowercase().contains(&q))
+                .unwrap_or(false);
+            let prefix_match = info
+                .prefix
+                .as_ref()
+                .map(|p| p.to_lowercase().contains(&q))
+                .unwrap_or(false);
+            let suffix_match = info
+                .suffix
+                .as_ref()
+                .map(|s| s.to_lowercase().contains(&q))
+                .unwrap_or(false);
+            let slot_match = info
+                .slots
+                .iter()
+                .any(|s| s.to_lowercase().contains(&q));
+            key_match || name_match || skill_match || prefix_match || suffix_match || slot_match
+        })
+        .map(|(key, info)| TsysBrowserEntry::from_entry(key, info))
+        .collect();
+
+    results.sort_by(|a, b| {
+        let a_name = a.internal_name.as_deref().unwrap_or(&a.key);
+        let b_name = b.internal_name.as_deref().unwrap_or(&b.key);
+        a_name.cmp(b_name)
+    });
+    results.truncate(limit);
+    Ok(results)
+}
+
+/// Get TSys profiles (raw JSON).
+#[tauri::command]
+pub async fn get_tsys_profiles(
+    state: State<'_, GameDataState>,
+) -> Result<Value, String> {
+    let data = state.read().await;
+    Ok(data.tsys.profiles.clone())
 }

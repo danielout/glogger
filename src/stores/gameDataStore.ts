@@ -11,6 +11,7 @@ import type {
   NpcInfo,
   EffectInfo,
   PlayerTitleInfo,
+  TsysBrowserEntry,
   CacheStatus,
   EntitySources,
 } from "../types/gameData";
@@ -218,6 +219,16 @@ export const useGameDataStore = defineStore("gameData", () => {
     return invoke<EffectInfo | null>("get_effect", { id });
   }
 
+  // ── TSys browser queries ────────────────────────────────────────────────
+
+  async function getAllTsys(): Promise<TsysBrowserEntry[]> {
+    return invoke<TsysBrowserEntry[]>("get_all_tsys");
+  }
+
+  async function searchTsys(query: string, limit = 100): Promise<TsysBrowserEntry[]> {
+    return invoke<TsysBrowserEntry[]>("search_tsys", { query, limit });
+  }
+
   // ── Player Title queries ──────────────────────────────────────────────────
 
   async function getAllPlayerTitles(): Promise<PlayerTitleInfo[]> {
@@ -321,6 +332,8 @@ export const useGameDataStore = defineStore("gameData", () => {
     loadAllNpcsMap,
     searchEffects,
     getEffect,
+    getAllTsys,
+    searchTsys,
     getAllPlayerTitles,
     searchPlayerTitles,
     getAbilitySources,

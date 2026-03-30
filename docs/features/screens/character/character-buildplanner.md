@@ -21,9 +21,11 @@ Each piece of equipment has mods determined by its rarity. The rarity controls h
 | Epic | 4 | 2 + 2 (two skills) | possible replacements |
 | Legendary | 5 | 3 + 2 (two skills) | possible replacements |
 
-- **Augmentation** adds one extra mod to any item (via the augmentation crafting system), without changing rarity.
+- **Augmentation** adds one extra mod to any item (via the augmentation crafting system), without changing rarity. Costs 100 crafting points from the item's budget.
 - **Mods are unique per item** — no duplicates of the same power on one piece of gear.
 - **Mastercrafted/Foretold** items follow legendary distribution but with 160 crafting points.
+- **Crafting points**: Crafted items have 120 CP, dropped items have 100 CP. Mastercrafted/Foretold legendaries have a flat 160 CP.
+- **Armor types**: Each armor piece has a material type (Cloth, Leather, Metal, Organic). Equipping 3+ armor pieces of the same type grants a 3-piece set bonus.
 
 ### Treasure Effect (TSys) System
 
@@ -52,7 +54,8 @@ Main equipment slots for planning:
 - **Off Hand** — shield, orb, bow, claw, etc.
 - **Head, Chest, Legs, Hands, Feet** — armor slots
 - **Ring, Necklace** — jewelry
-- **Earring, Navel, Belt** — less common but exist (include as optional/expandable)
+- **Belt** — extra slot (limited mods available)
+- **Earring, Navel** — less common, may be added later
 
 Some skills use unique items that replace standard slots (e.g. cow barding in chest slot) — these are just alternate items for the same slot.
 
@@ -98,29 +101,38 @@ The full mod planning system is implemented and functional:
 | Component | Status | Notes |
 |-----------|--------|-------|
 | `BuildPlannerScreen.vue` | Done | Two-panel layout, auto-selects first preset |
-| `BuildHeader.vue` | Done | Build selector, skill pickers, target level/rarity |
-| `SlotGrid.vue` | Done | 3x3 equipment slot grid with fill indicators and color coding |
-| `SlotModPicker.vue` | Done | Two-column: assigned mods + available mods browser with filtering |
-| `ModOption.vue` | Done | Available mod display with skill badge, effects, +/+A buttons |
-| `ModAssignment.vue` | Done | Assigned mod with resolved effects and remove button |
-| `BuildSummary.vue` | Done | Per-slot mod counts and build totals |
+| `BuildHeader.vue` | Done | Build selector, skill pickers, default level/rarity |
+| `SlotGrid.vue` | Done | Vertical equipment slot list with per-slot level/rarity/crafted/masterwork controls |
+| `SlotModPicker.vue` | Done | 3-column layout (Primary Skill, Secondary Skill, Craft Points) with per-slot skill pickers |
+| `ModColumn.vue` | Done | Reusable mod column with skill dropdown, assigned mods pinned to top, available mods below |
+| `ModOption.vue` | Done | Available mod with icon, skill badge, effects, +/+A buttons |
+| `ModAssignment.vue` | Done | Assigned mod with icon, resolved display name and effects |
+| `BuildSummary.vue` | Done | Slide-out panel with armor sets, CP overview, slot breakdown, and tabbed effect views (By Skill, Effect Totals, By Ability) |
 
 **Working features:**
 - Build CRUD (create, rename, delete, select)
 - Two combat skill selection from CDN skill list
-- Target level (1-125) and rarity (Uncommon–Legendary) configuration
-- Per-slot mod browsing filtered by skill + slot + level tier
+- Default target level (1-125) and rarity (Uncommon–Legendary) with per-slot overrides
+- Per-slot skill selection: each slot can independently choose primary/secondary skills (overriding build defaults)
+- Per-slot mod browsing filtered by slot's skills + slot + level tier
 - Mod assignment with duplicate prevention and slot capacity enforcement
-- Augment support (1 per slot, separate badge/button)
+- Augment support (1 per slot, from any skill, costs 100 CP from slot budget)
+- Mod/augment icons displayed from CDN attribute data
+- Crafting points tracking: crafted items = 120 CP, dropped = 100 CP, mastercrafted/foretold = 160 CP flat
+- Armor type detection from item keywords (Cloth, Leather, Metal, Organic) with 3-piece set bonus tracking
+- Build summary with armor type breakdown, CP budget overview, and collapsible all-effects view grouped by skill
 - Text filter/search across mod names and effect descriptions
-- Mods grouped by skill (primary, secondary, generic, other) in browser
+- 3-column mod layout: Primary Skill, Secondary Skill, and Craft Points columns with per-column skill dropdowns
+- Column skill defaults based on slot's assigned skills, can be freely changed for browsing
+- Selected mods pinned to top of their respective column (no separate "selected mods" panel)
+- Generic and Endurance available as column skill options alongside all combat skills
+- Filterable equipment browser for base item selection (browse by slot, skill requirement, level range)
 - Persistence to SQLite with replace-all save strategy
 - Character-scoped builds (`characterName@serverName`)
 
 **Not yet implemented from Phase 1 design:**
 - Build notes field (exists in DB, not exposed in UI)
 - Drag-to-reorder mods within a slot
-- Distinction between skill-specific and generic mod slot limits in UI
 
 ### Phase 2: Ability Selection — Complete
 
@@ -137,7 +149,7 @@ Ability bar planning for primary, secondary, and sidebar bars.
 |-----------|--------|-------|
 | `AbilityBarEditor.vue` | Done | Two-column: assigned bar + available abilities browser |
 | `AbilityOption.vue` | Done | Ability display with icon, level, cooldown, damage type, costs |
-| `AbilityBarSummary.vue` | Done | Left panel bar buttons with fill counts (primary/secondary/sidebar) |
+| `AbilityBarSummary.vue` | Done | Accordion-style bar buttons with fill counts and ability icons |
 
 **Working features:**
 - Primary (6 slots), secondary (6 slots), and sidebar (10 slots) ability bars
@@ -370,7 +382,7 @@ New components in `src/components/Character/BuildPlanner/`:
 | `SlotModPicker.vue` | Right panel: selected mods + available mods browser for a slot |
 | `ModOption.vue` | Single mod in the available list — name, skill badge, effect text, add button |
 | `ModAssignment.vue` | Single assigned mod — name, effect, remove button |
-| `BuildSummary.vue` | Aggregate footer of all mods across the build |
+| `BuildSummary.vue` | Slide-out overlay panel with build overview and tabbed effect views |
 
 Reuses existing:
 - `ModPowerInline.vue` — mod display with tooltip
@@ -406,7 +418,9 @@ Per-slot item selection so users can choose which base item they want for each e
 
 **Backend:**
 - Database migration v6: `build_preset_slot_items` table mapping `(preset_id, equip_slot)` → `item_id`
-- New commands: `set_build_preset_slot_item`, `clear_build_preset_slot_item`, `get_build_preset_slot_items`
+- Database migration v8: added `slot_level`, `slot_rarity`, `is_crafted`, `is_masterwork` columns to `build_preset_slot_items`
+- Database migration v9: added `slot_skill_primary`, `slot_skill_secondary` columns for per-slot skill overrides
+- New commands: `set_build_preset_slot_item`, `clear_build_preset_slot_item`, `get_build_preset_slot_items`, `update_build_preset_slot_props`
 - Item search already available via existing `search_items` command with `equip_slot` filter
 
 **Frontend:**
@@ -443,7 +457,7 @@ Per-slot item selection so users can choose which base item they want for each e
 |-------|------|---------|
 | Backend | `src-tauri/src/db/build_planner_commands.rs` | Build planner persistence (presets, mods, slot items, abilities) |
 | Backend | `src-tauri/src/cdn_commands.rs` | CDN queries (combat skills, TSys powers, power info, abilities) |
-| Backend | `src-tauri/src/db/migrations.rs` | v5: build tables, v6: slot items, v7: abilities |
+| Backend | `src-tauri/src/db/migrations.rs` | v5: build tables, v6: slot items, v7: abilities, v8: per-slot level/rarity, v9: per-slot skills |
 | Store | `src/stores/buildPlannerStore.ts` | Pinia store for build state + CRUD |
 | Types | `src/types/buildPlanner.ts` | TypeScript interfaces for builds, mods, slot items, abilities |
 | Screen | `src/components/Character/BuildPlanner/BuildPlannerScreen.vue` | Top-level screen |

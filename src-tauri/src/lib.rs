@@ -48,8 +48,11 @@ use cdn_commands::{
     get_recipes_using_item,
     get_storage_vault_metadata,
     get_storage_vault_zones,
+    get_all_tsys,
     get_tsys_power_info,
     get_tsys_powers_for_slot,
+    get_tsys_profiles,
+    search_tsys,
     get_xp_table_for_skill,
     init_game_data,
     resolve_area,
@@ -86,7 +89,7 @@ use db::build_planner_commands::{
     clear_build_preset_slot_item, create_build_preset, delete_build_preset,
     get_build_preset_abilities, get_build_preset_mods, get_build_preset_slot_items,
     get_build_presets, set_build_preset_abilities, set_build_preset_mods,
-    set_build_preset_slot_item, update_build_preset,
+    set_build_preset_slot_item, update_build_preset, update_build_preset_slot_props,
 };
 use db::character_commands::{
     compare_snapshots, get_character_snapshots, get_characters, get_snapshot_active_quests,
@@ -306,6 +309,10 @@ pub fn run() {
             get_effect,
             resolve_effect_descs,
             get_tsys_power_info,
+            // TSys browser queries
+            get_all_tsys,
+            search_tsys,
+            get_tsys_profiles,
             // Player Title queries
             get_all_player_titles,
             search_player_titles,
@@ -439,6 +446,7 @@ pub fn run() {
             set_build_preset_slot_item,
             clear_build_preset_slot_item,
             get_build_preset_slot_items,
+            update_build_preset_slot_props,
             set_build_preset_abilities,
             get_build_preset_abilities,
             // Game state queries

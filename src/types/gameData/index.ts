@@ -14,6 +14,7 @@ export type {
 export type { NpcPreference, NpcInfo } from './npcs'
 export type { EffectInfo } from './effects'
 export type { PlayerTitleInfo } from './playerTitles'
+export type { TsysBrowserEntry } from './tsys'
 export type { SourceEntry, QuestSummary, EntitySources } from './sources'
 
 // CacheStatus lives here since it's not really a game data type

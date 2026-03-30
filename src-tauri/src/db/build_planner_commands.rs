@@ -41,6 +41,10 @@ pub struct SetSlotItemInput {
     pub equip_slot: String,
     pub item_id: i64,
     pub item_name: Option<String>,
+    pub slot_level: Option<i32>,
+    pub slot_rarity: Option<String>,
+    pub is_crafted: Option<bool>,
+    pub is_masterwork: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -69,6 +73,12 @@ pub struct BuildPresetSlotItem {
     pub equip_slot: String,
     pub item_id: i64,
     pub item_name: Option<String>,
+    pub slot_level: i32,
+    pub slot_rarity: String,
+    pub is_crafted: bool,
+    pub is_masterwork: bool,
+    pub slot_skill_primary: Option<String>,
+    pub slot_skill_secondary: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -307,14 +317,18 @@ pub fn set_build_preset_slot_item(
         .map_err(|e| format!("Database connection error: {e}"))?;
 
     conn.execute(
-        "INSERT INTO build_preset_slot_items (preset_id, equip_slot, item_id, item_name)
-         VALUES (?1, ?2, ?3, ?4)
-         ON CONFLICT(preset_id, equip_slot) DO UPDATE SET item_id = ?3, item_name = ?4",
+        "INSERT INTO build_preset_slot_items (preset_id, equip_slot, item_id, item_name, slot_level, slot_rarity, is_crafted, is_masterwork)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+         ON CONFLICT(preset_id, equip_slot) DO UPDATE SET item_id = ?3, item_name = ?4, slot_level = ?5, slot_rarity = ?6, is_crafted = ?7, is_masterwork = ?8",
         rusqlite::params![
             input.preset_id,
             input.equip_slot,
             input.item_id,
             input.item_name,
+            input.slot_level.unwrap_or(90),
+            input.slot_rarity.as_deref().unwrap_or("Epic"),
+            input.is_crafted.unwrap_or(false) as i32,
+            input.is_masterwork.unwrap_or(false) as i32,
         ],
     )
     .map_err(|e| format!("Failed to set slot item: {e}"))?;
@@ -322,6 +336,76 @@ pub fn set_build_preset_slot_item(
     conn.execute(
         "UPDATE build_presets SET updated_at = datetime('now') WHERE id = ?1",
         [input.preset_id],
+    )
+    .ok();
+
+    Ok(())
+}
+
+/// Update slot properties (level, rarity, crafted, masterwork, skills) without changing the item.
+#[tauri::command]
+pub fn update_build_preset_slot_props(
+    db: State<'_, DbPool>,
+    preset_id: i64,
+    equip_slot: String,
+    slot_level: Option<i32>,
+    slot_rarity: Option<String>,
+    is_crafted: Option<bool>,
+    is_masterwork: Option<bool>,
+    slot_skill_primary: Option<String>,
+    slot_skill_secondary: Option<String>,
+) -> Result<(), String> {
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
+
+    // Build dynamic SET clause for provided fields
+    let mut sets = Vec::new();
+    let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+
+    if let Some(level) = slot_level {
+        sets.push("slot_level = ?");
+        params.push(Box::new(level));
+    }
+    if let Some(rarity) = &slot_rarity {
+        sets.push("slot_rarity = ?");
+        params.push(Box::new(rarity.clone()));
+    }
+    if let Some(crafted) = is_crafted {
+        sets.push("is_crafted = ?");
+        params.push(Box::new(crafted as i32));
+    }
+    if let Some(mw) = is_masterwork {
+        sets.push("is_masterwork = ?");
+        params.push(Box::new(mw as i32));
+    }
+    if let Some(ref skill) = slot_skill_primary {
+        sets.push("slot_skill_primary = ?");
+        params.push(Box::new(skill.clone()));
+    }
+    if let Some(ref skill) = slot_skill_secondary {
+        sets.push("slot_skill_secondary = ?");
+        params.push(Box::new(skill.clone()));
+    }
+
+    if sets.is_empty() {
+        return Ok(());
+    }
+
+    let sql = format!(
+        "UPDATE build_preset_slot_items SET {} WHERE preset_id = ? AND equip_slot = ?",
+        sets.join(", ")
+    );
+    params.push(Box::new(preset_id));
+    params.push(Box::new(equip_slot));
+
+    let param_refs: Vec<&dyn rusqlite::types::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+    conn.execute(&sql, param_refs.as_slice())
+        .map_err(|e| format!("Failed to update slot props: {e}"))?;
+
+    conn.execute(
+        "UPDATE build_presets SET updated_at = datetime('now') WHERE id = ?1",
+        [preset_id],
     )
     .ok();
 
@@ -360,7 +444,7 @@ pub fn get_build_preset_slot_items(
 
     let mut stmt = conn
         .prepare(
-            "SELECT preset_id, equip_slot, item_id, item_name
+            "SELECT preset_id, equip_slot, item_id, item_name, slot_level, slot_rarity, is_crafted, is_masterwork, slot_skill_primary, slot_skill_secondary
          FROM build_preset_slot_items
          WHERE preset_id = ?1",
         )
@@ -373,6 +457,12 @@ pub fn get_build_preset_slot_items(
                 equip_slot: row.get(1)?,
                 item_id: row.get(2)?,
                 item_name: row.get(3)?,
+                slot_level: row.get(4)?,
+                slot_rarity: row.get(5)?,
+                is_crafted: row.get::<_, i32>(6).map(|v| v != 0)?,
+                is_masterwork: row.get::<_, i32>(7).map(|v| v != 0)?,
+                slot_skill_primary: row.get(8)?,
+                slot_skill_secondary: row.get(9)?,
             })
         })
         .map_err(|e| format!("Query failed: {e}"))?;
