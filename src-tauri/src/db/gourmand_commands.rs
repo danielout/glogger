@@ -307,24 +307,14 @@ fn parse_gourmand_report(content: &str) -> Result<Vec<GourmandFoodEntry>, String
     Ok(entries)
 }
 
-/// Strip parenthetical tags like "(HAS MEAT)" from a food name
+/// Strip known parenthetical tags like "(HAS MEAT)", "(HAS DAIRY)", "(HAS EGGS)" from a food name,
+/// but preserve other parenthetical content (e.g. "Flesh Lump (Elf)").
 fn strip_food_tags(name: &str) -> String {
-    let mut result = String::with_capacity(name.len());
-    let mut depth = 0;
-
-    for ch in name.chars() {
-        match ch {
-            '(' => depth += 1,
-            ')' => {
-                if depth > 0 {
-                    depth -= 1;
-                }
-            }
-            _ if depth == 0 => result.push(ch),
-            _ => {}
-        }
+    const TAGS: &[&str] = &["(HAS MEAT)", "(HAS DAIRY)", "(HAS EGGS)"];
+    let mut result = name.to_string();
+    for tag in TAGS {
+        result = result.replace(tag, "");
     }
-
     result.trim().to_string()
 }
 
@@ -342,6 +332,15 @@ mod tests {
         assert_eq!(
             strip_food_tags("Cottage Pie (HAS MEAT) (HAS DAIRY)"),
             "Cottage Pie"
+        );
+        // Parenthetical content that is NOT a known tag should be preserved
+        assert_eq!(
+            strip_food_tags("Flesh Lump (Elf) (HAS MEAT)"),
+            "Flesh Lump (Elf)"
+        );
+        assert_eq!(
+            strip_food_tags("Flesh Lump (Human) (HAS MEAT)"),
+            "Flesh Lump (Human)"
         );
     }
 
