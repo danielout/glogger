@@ -85,13 +85,23 @@
             <input v-model="showXp" type="checkbox" class="accent-accent-gold" />
             XP
           </label>
-          <div class="flex items-center gap-1 ml-auto">
-            <label class="text-text-dim text-[0.65rem]">Min lvl:</label>
-            <input
-              v-model.number="minLevel"
-              type="number"
-              min="0"
-              class="input w-14 text-center text-[0.65rem]" />
+          <div class="flex items-center gap-3 ml-auto">
+            <div class="flex items-center gap-1">
+              <label class="text-text-dim text-[0.65rem]">+N:</label>
+              <input
+                v-model.number="addQuantity"
+                type="number"
+                min="1"
+                class="input w-14 text-center text-[0.65rem]" />
+            </div>
+            <div class="flex items-center gap-1">
+              <label class="text-text-dim text-[0.65rem]">Min lvl:</label>
+              <input
+                v-model.number="minLevel"
+                type="number"
+                min="0"
+                class="input w-14 text-center text-[0.65rem]" />
+            </div>
           </div>
         </div>
 
@@ -116,22 +126,7 @@
             </span>
             <!-- Separator -->
             <span class="text-text-muted/40 shrink-0">-</span>
-            <!-- Recipe name -->
-            <span class="truncate flex-1">
-              <RecipeInline :reference="r.recipe.name" :plain="true" />
-            </span>
-            <!-- XP info -->
-            <span v-if="showXp" class="text-text-muted text-[0.6rem] shrink-0">
-              {{ r.effectiveXp.toLocaleString() }}xp
-            </span>
-            <!-- First-time badge -->
-            <span
-              v-if="showXp && r.firstTimeXp > 0"
-              class="text-accent-gold text-[0.55rem] shrink-0"
-              :title="`+${r.effectiveFirstTimeXp.toLocaleString()} first-time bonus XP`">
-              +{{ r.effectiveFirstTimeXp.toLocaleString() }}
-            </span>
-            <!-- Action buttons -->
+            <!-- Action buttons (left of name) -->
             <div class="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
                 class="text-[0.6rem] px-1.5 py-0.5 rounded bg-accent-gold/10 text-accent-gold hover:bg-accent-gold/20 border-none cursor-pointer"
@@ -139,18 +134,10 @@
                 @click="addOnce(r)">
                 +1
               </button>
-              <input
-                v-model.number="recipeQuantities[r.recipe.id]"
-                type="number"
-                min="1"
-                placeholder="#"
-                class="input w-10 text-center text-[0.6rem] py-0.5 px-0.5"
-                title="Quantity to add"
-                @keydown.enter="addMultiple(r, recipeQuantities[r.recipe.id] || 1)" />
               <button
                 class="text-[0.6rem] px-1.5 py-0.5 rounded bg-blue-900/30 text-blue-400 hover:bg-blue-900/50 border-none cursor-pointer"
-                title="Add specified quantity to the plan"
-                @click="addMultiple(r, recipeQuantities[r.recipe.id] || 1)">
+                :title="`Add ${addQuantity || 1} to the plan`"
+                @click="addMultiple(r, addQuantity || 1)">
                 +N
               </button>
               <button
@@ -160,6 +147,21 @@
                 +Lvl
               </button>
             </div>
+            <!-- Recipe name -->
+            <span class="truncate min-w-0">
+              <RecipeInline :reference="r.recipe.name" :plain="true" />
+            </span>
+            <!-- XP info -->
+            <span v-if="showXp" class="text-text-muted text-[0.6rem] shrink-0 ml-auto">
+              {{ r.effectiveXp.toLocaleString() }}xp
+            </span>
+            <!-- First-time badge -->
+            <span
+              v-if="showXp && r.firstTimeXp > 0"
+              class="text-accent-gold text-[0.55rem] shrink-0"
+              :title="`+${r.effectiveFirstTimeXp.toLocaleString()} first-time bonus XP`">
+              +{{ r.effectiveFirstTimeXp.toLocaleString() }}
+            </span>
           </div>
         </div>
       </div>
@@ -358,8 +360,8 @@ const loading = ref(false);
 const creatingProject = ref(false);
 const materialsLoading = ref(false);
 
-// Per-recipe quantity inputs for the recipe list
-const recipeQuantities = ref<Record<number, number>>({});
+// Shared quantity input for "+N" button
+const addQuantity = ref<number>(1);
 
 // Recipe panel resize
 const recipePanelWidth = ref(384); // 24rem default (w-96)
