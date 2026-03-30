@@ -106,7 +106,7 @@ jobs:
 
       - name: Build Tauri app
         shell: bash
-        run: npm run tauri build
+        run: npm run tauri:build
 
       - name: Collect artifacts
         shell: bash

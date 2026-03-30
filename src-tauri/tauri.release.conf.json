@@ -1,0 +1,10 @@
+{
+  "identifier": "glogger.Release",
+  "app": {
+    "windows": [
+      {
+        "title": "glogger alpha v0.2.2"
+      }
+    ]
+  }
+}
