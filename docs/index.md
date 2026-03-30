@@ -30,32 +30,35 @@ Core structure, patterns, and standards used across the app.
 
 ## Features
 
-Documentation for individual features, both built and in-progress.
+Cross-cutting feature documentation not tied to a single screen.
 
 - [chat-parser.md](features/chat-parser.md) — Chat log parser: file format, line parsing, channel exclusion, item link extraction, watch rules.
 - [chat-item-linking.md](features/chat-item-linking.md) — Detecting and linking item references in chat messages to CDN data.
-- [data-browser.md](features/data-browser.md) — Multi-tab Data Browser (Items, Skills, Abilities, Recipes, Quests, NPCs).
-- [inventory-import.md](features/inventory-import.md) — Inventory snapshot import: data flow, auto-polling, backend commands.
-- [character-import.md](features/character-import.md) — Character report JSON import from `/outputcharacter`.
-- [gourmand-tracker.md](features/gourmand-tracker.md) — Gourmand food tracker: progress tracking, report import, food buff comparison.
-- [farming-calculator.md](features/farming-calculator.md) — Farming Calculator: manual session tracking for XP, items, favor, and vendor gold.
-- ~~crafting-helper.md~~ — Moved to [screens/crafting.md](features/screens/crafting.md) + per-tab docs
-- [storage-tracker.md](features/storage-tracker.md) — Storage Vault Database: CDN-driven vault reference, area-grouped capacity tracking, live deposit/withdrawal.
-- [surveying-tracker.md](features/surveying-tracker.md) — Surveying Tracker: real-time session tracking, survey event parsing, loot/XP/cost analytics.
-- [dashboard.md](features/dashboard.md) — Dashboard: context bar, skill cards, transaction log, player notes, and aggregate server view.
 - [advanced-settings.md](features/advanced-settings.md) — Advanced Settings tab: log reparsing, database statistics, and diagnostics.
+
+*Feature docs that were specific to a single screen have been merged into the corresponding screen docs below (character import → [character-stats](features/screens/character/character-stats.md), inventory import → [inventory-snapshots](features/screens/inventory/inventory-snapshots.md), farming → [economics-farming](features/screens/economics/economics-farming.md), surveying → [economics-surveying](features/screens/economics/economics-surveying.md), storage vaults → [inventory-vaults](features/screens/inventory/inventory-vaults.md), data browser → [data-browser](features/screens/data-browser.md), dashboard → [dashboard](features/screens/dashboard.md), gourmand → [character-gourmand](features/screens/character/character-gourmand.md)).*
 
 ## Screens
 
 Per-screen documentation organized by view.
 
+### Dashboard
+- [dashboard.md](features/screens/dashboard.md) — Dashboard screen: active character live view, aggregate server-wide analytics.
+
 ### Character
-- [character-skills.md](features/screens/character/character-skills.md) — Skills screen: two-panel layout, tracked skills, XP progression, CDN enrichment.
-- [character-npcs.md](features/screens/character/character-npcs.md) — NPCs screen: favor progression, services (vendor/training/barter/storage), gift preferences.
-- [character-stats.md](features/screens/character/character-stats.md) — Stats screen: character report import, snapshot management.
-- [character-gourmand.md](features/screens/character/character-gourmand.md) — Gourmand screen.
-- [character-quests.md](features/screens/character/character-quests.md) — Quests screen: personalized quest reference with requirement eligibility checking.
-- [character-buildplanner.md](features/screens/character/character-buildplanner.md) — Build Planner screen (stub).
+- [character.md](features/screens/character.md) — Character screen: architecture, component hierarchy, data sources.
+  - [character-skills.md](features/screens/character/character-skills.md) — Skills tab: two-panel layout, tracked skills, XP progression, CDN enrichment.
+  - [character-stats.md](features/screens/character/character-stats.md) — Stats tab: character report import, snapshot management.
+  - [character-npcs.md](features/screens/character/character-npcs.md) — NPCs tab: favor progression, services, gift preferences.
+  - [character-quests.md](features/screens/character/character-quests.md) — Quests tab: personalized quest reference with requirement eligibility.
+  - [character-gourmand.md](features/screens/character/character-gourmand.md) — Gourmand tab.
+  - [character-buildplanner.md](features/screens/character/character-buildplanner.md) — Build Planner tab (stub).
+
+### Inventory
+- [inventory.md](features/screens/inventory.md) — Inventory screen: architecture, component hierarchy, vault capacity models.
+  - [inventory-live.md](features/screens/inventory/inventory-live.md) — Live Inventory tab: real-time tracking from player log.
+  - [inventory-snapshots.md](features/screens/inventory/inventory-snapshots.md) — Snapshots tab: point-in-time browsing from /outputitems.
+  - [inventory-vaults.md](features/screens/inventory/inventory-vaults.md) — Storage Vault Database tab: area-grouped vault browser with capacity tracking.
 
 ### Crafting
 - [crafting.md](features/screens/crafting.md) — Crafting screen: architecture, component hierarchy, shared commands, design decisions.
@@ -66,8 +69,31 @@ Per-screen documentation organized by view.
   - [crafting-workorders.md](features/screens/crafting/crafting-workorders.md) — Work Orders tab.
   - [crafting-cookshelper.md](features/screens/crafting/crafting-cookshelper.md) — Cook's Helper tab.
 
-### Other
-- [dashboard.md](features/screens/dashboard.md) — Dashboard screen.
+### Economics
+- [economics.md](features/screens/economics.md) — Economics screen: architecture, component hierarchy, market/farming/surveying.
+  - [economics-market.md](features/screens/economics/economics-market.md) — Market Prices tab: player-maintained price database.
+  - [economics-farming.md](features/screens/economics/economics-farming.md) — Farming tab: session-based profitability tracking.
+  - [economics-surveying.md](features/screens/economics/economics-surveying.md) — Surveying tab: session tracking with loot/profit analytics.
+  - Stall Tracker — not yet implemented.
+
+### Chat Logs
+- [chat.md](features/screens/chat.md) — Chat Logs screen: architecture, FTS search, item linking, shared components.
+  - [chat-channels.md](features/screens/chat/chat-channels.md) — Channels tab: public/custom channel browser.
+  - [chat-tells.md](features/screens/chat/chat-tells.md) — Tells tab: direct message conversations.
+  - [chat-simple.md](features/screens/chat/chat-simple.md) — Party, Nearby, Guild, System tabs.
+  - [chat-all.md](features/screens/chat/chat-all.md) — All Messages tab: global search with advanced filtering.
+  - [chat-watchwords.md](features/screens/chat/chat-watchwords.md) — Watchwords tab: rule-based alerts and notifications.
+
+### Data Browser
+- [data-browser.md](features/screens/data-browser.md) — Data Browser screen: architecture, shared patterns, search/filter summary.
+  - [data-browser-items.md](features/screens/data-browser/data-browser-items.md) — Items tab.
+  - [data-browser-skills.md](features/screens/data-browser/data-browser-skills.md) — Skills tab.
+  - [data-browser-abilities.md](features/screens/data-browser/data-browser-abilities.md) — Abilities tab.
+  - [data-browser-recipes.md](features/screens/data-browser/data-browser-recipes.md) — Recipes tab.
+  - [data-browser-quests.md](features/screens/data-browser/data-browser-quests.md) — Quests tab.
+  - [data-browser-npcs.md](features/screens/data-browser/data-browser-npcs.md) — NPCs tab.
+  - [data-browser-effects.md](features/screens/data-browser/data-browser-effects.md) — Effects tab.
+  - [data-browser-titles.md](features/screens/data-browser/data-browser-titles.md) — Titles tab.
 
 ## Plans
 

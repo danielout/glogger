@@ -380,10 +380,18 @@ pub async fn get_abilities_for_skill(
     state: State<'_, GameDataState>,
 ) -> Result<Vec<AbilityInfo>, String> {
     let data = state.read().await;
+
+    // Abilities store skill as internal name (e.g. "FireMagic"), but callers
+    // may pass the display name ("Fire Magic"). Try both.
+    let internal_name = data.skills.values()
+        .find(|s| s.name == skill)
+        .map(|s| s.internal_name.clone());
+    let match_name = internal_name.as_deref().unwrap_or(&skill);
+
     let mut abilities: Vec<AbilityInfo> = data
         .abilities
         .values()
-        .filter(|a| a.skill.as_deref() == Some(&skill))
+        .filter(|a| a.skill.as_deref() == Some(match_name))
         .cloned()
         .collect();
     abilities.sort_by(|a, b| a.level.unwrap_or(0.0).partial_cmp(&b.level.unwrap_or(0.0)).unwrap_or(std::cmp::Ordering::Equal));
