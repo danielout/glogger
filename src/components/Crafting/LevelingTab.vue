@@ -567,7 +567,7 @@ async function loadRecipes() {
         xpPerCraft,
         firstTimeXp,
         effectiveXp: Math.round(xpPerCraft * multiplier.value),
-        effectiveFirstTimeXp: Math.round(firstTimeXp * multiplier.value),
+        effectiveFirstTimeXp: firstTimeXp,
         cost: costMap.get(recipe.id) ?? null,
       };
     })
@@ -613,7 +613,7 @@ function refreshRecipeState() {
       isDropOff,
       isTooHigh,
       effectiveXp: Math.round(r.xpPerCraft * mult),
-      effectiveFirstTimeXp: Math.round(r.firstTimeXp * mult),
+      effectiveFirstTimeXp: r.firstTimeXp,
     };
   });
 }
@@ -925,7 +925,7 @@ function updateEntryCount(levelIdx: number, entryIdx: number, newCount: number) 
 
   // Recalculate XP: first-time bonus applies once, rest is per-craft
   const mult = 1 + (state.value.xpBuffPercent || 0) / 100;
-  const effectiveFirstTime = Math.floor(entry.xp_first_time * mult);
+  const effectiveFirstTime = entry.xp_first_time;
   const effectiveXpPerCraft = Math.floor(entry.xp_per_craft * mult);
 
   entry.craft_count = newCount;

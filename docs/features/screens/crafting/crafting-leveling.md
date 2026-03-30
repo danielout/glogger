@@ -17,6 +17,7 @@ Given a skill and target level, computes a crafting plan considering XP rewards,
 
 - XP needed is computed from CDN `xp_tables` (per-level amounts, not cumulative)
 - Per-recipe XP uses `reward_skill_xp` (standard) and `reward_skill_xp_first_time` (bonus for first craft)
+- First-time bonus XP is not modified by XP buffs — it is always applied at its base value
 - Recipes are matched by `reward_skill` (not `skill`) — some recipes grant XP in a different skill than the one used to craft
 - First-time bonus eligibility checked against `character_recipe_completions` from character export
 - `reward_skill_xp_drop_off_level` flags recipes that become inefficient past a certain level
