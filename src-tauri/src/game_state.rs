@@ -324,14 +324,19 @@ impl GameStateManager {
 
             PlayerEvent::ItemAdded { timestamp, item_name, instance_id, slot_index, .. } => {
                 let dt = self.to_utc(timestamp);
+                // Resolve item_type_id from CDN game data using internal name
+                let item_type_id: Option<i64> = game_data_guard.as_ref()
+                    .and_then(|gd| gd.resolve_item(item_name))
+                    .map(|info| info.id as i64);
                 conn.execute(
-                    "INSERT INTO game_state_inventory (character_name, server_name, instance_id, item_name, stack_size, slot_index, last_confirmed_at, source)
-                     VALUES (?1, ?2, ?3, ?4, 0, ?5, ?6, 'log')
+                    "INSERT INTO game_state_inventory (character_name, server_name, instance_id, item_name, item_type_id, stack_size, slot_index, last_confirmed_at, source)
+                     VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6, ?7, 'log')
                      ON CONFLICT(character_name, server_name, instance_id) DO UPDATE SET
                         item_name = excluded.item_name,
+                        item_type_id = COALESCE(excluded.item_type_id, game_state_inventory.item_type_id),
                         slot_index = excluded.slot_index,
                         last_confirmed_at = excluded.last_confirmed_at",
-                    rusqlite::params![character, server, *instance_id as i64, item_name, slot_index, dt],
+                    rusqlite::params![character, server, *instance_id as i64, item_name, item_type_id, slot_index, dt],
                 ).ok();
                 domains.push("inventory");
             }

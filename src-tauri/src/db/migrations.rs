@@ -42,6 +42,37 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         super::record_migration(conn, 3)?;
     }
 
+    if current_version < 4 {
+        migration_v4_fix_crafting_project_cascade(conn)?;
+        super::record_migration(conn, 4)?;
+    }
+
+    Ok(())
+}
+
+/// Migration V4: Remove the ON DELETE CASCADE foreign key from crafting_project_entries.recipe_id.
+/// The recipes table is CDN data that gets wiped and reloaded on each CDN update.
+/// The CASCADE FK caused all project entries to be deleted whenever CDN data refreshed.
+/// We keep the project_id CASCADE (user-owned data) but drop the recipe_id FK entirely,
+/// since recipe_name is already denormalized for display purposes.
+fn migration_v4_fix_crafting_project_cascade(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE crafting_project_entries_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            recipe_id INTEGER NOT NULL,
+            recipe_name TEXT NOT NULL,
+            quantity INTEGER NOT NULL DEFAULT 1,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            expanded_ingredient_ids TEXT NOT NULL DEFAULT '[]',
+            FOREIGN KEY (project_id) REFERENCES crafting_projects(id) ON DELETE CASCADE
+        );
+        INSERT INTO crafting_project_entries_new
+            SELECT * FROM crafting_project_entries;
+        DROP TABLE crafting_project_entries;
+        ALTER TABLE crafting_project_entries_new RENAME TO crafting_project_entries;
+        CREATE INDEX idx_cpe_project ON crafting_project_entries(project_id);"
+    )?;
     Ok(())
 }
 

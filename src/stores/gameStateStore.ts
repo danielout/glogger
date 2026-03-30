@@ -423,7 +423,7 @@ export const useGameStateStore = defineStore('gameState', () => {
           instance_id: event.instance_id,
           item_name: event.item_name,
           item_type_id: null,
-          stack_size: 0,
+          stack_size: 1,
           slot_index: event.slot_index,
           added_at: event.timestamp,
           is_new: event.is_new,

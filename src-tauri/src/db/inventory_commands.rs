@@ -265,6 +265,55 @@ pub fn import_inventory_report_internal(
             ]).ok();
         }
 
+        // 9. Seed game_state_inventory from this snapshot (inventory items only)
+        conn.execute(
+            "DELETE FROM game_state_inventory WHERE character_name = ?1 AND server_name = ?2 AND source = 'snapshot'",
+            rusqlite::params![report.character, report.server_name],
+        ).ok();
+
+        let mut inv_query = conn.prepare(
+            "SELECT type_id, item_name, stack_size
+             FROM character_snapshot_items
+             WHERE item_snapshot_id = ?1 AND is_in_inventory = 1"
+        ).map_err(|e| format!("Failed to prepare inventory query: {e}"))?;
+
+        let mut inv_insert = conn.prepare(
+            "INSERT INTO game_state_inventory (character_name, server_name, instance_id, item_name, item_type_id, stack_size, last_confirmed_at, source)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'snapshot')
+             ON CONFLICT(character_name, server_name, instance_id) DO UPDATE SET
+                item_name = excluded.item_name,
+                item_type_id = excluded.item_type_id,
+                stack_size = excluded.stack_size,
+                last_confirmed_at = excluded.last_confirmed_at,
+                source = 'snapshot'"
+        ).map_err(|e| format!("Failed to prepare inventory insert: {e}"))?;
+
+        let inv_rows: Vec<(i64, String, i64)> = inv_query.query_map(
+            rusqlite::params![snapshot_id],
+            |row| Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, i64>(2)?,
+            ))
+        ).map_err(|e| format!("Failed to query inventory items: {e}"))?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        // Use negative synthetic IDs offset from storage to avoid collisions
+        let inv_offset = storage_rows.len() as i64;
+        for (i, (type_id, item_name, stack_size)) in inv_rows.iter().enumerate() {
+            let synthetic_id = -(inv_offset + i as i64 + 1);
+            inv_insert.execute(rusqlite::params![
+                report.character,
+                report.server_name,
+                synthetic_id,
+                item_name,
+                type_id,
+                stack_size,
+                now,
+            ]).ok();
+        }
+
         Ok(InventoryImportResult {
             character_name: report.character.clone(),
             server_name: report.server_name.clone(),

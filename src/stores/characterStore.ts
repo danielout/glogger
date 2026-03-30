@@ -316,10 +316,13 @@ export const useCharacterStore = defineStore('character', () => {
         )
       }
 
-      // Refresh game state storage domain (inventory import seeds game_state_storage)
+      // Refresh game state domains (inventory import seeds both game_state_storage and game_state_inventory)
       if (!result.was_duplicate) {
         const gameState = useGameStateStore()
-        await gameState.refreshDomain('storage')
+        await Promise.all([
+          gameState.refreshDomain('storage'),
+          gameState.refreshDomain('inventory'),
+        ])
       }
 
       return result
