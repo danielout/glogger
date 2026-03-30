@@ -1,23 +1,24 @@
+use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{Connection, Result};
 use std::path::PathBuf;
-use r2d2_sqlite::SqliteConnectionManager;
 
-pub mod migrations;
-pub mod queries;
+pub mod admin_commands;
+pub mod aggregate_commands;
+pub mod build_planner_commands;
 pub mod cdn_persistence;
+pub mod character_commands;
+pub mod chat_commands;
+pub mod crafting_commands;
+pub mod farming_commands;
+pub mod game_state_commands;
+pub mod gourmand_commands;
+pub mod inventory_commands;
+pub mod market_commands;
+pub mod migrations;
 pub mod player_commands;
 pub mod player_commands_survey_events;
-pub mod admin_commands;
-pub mod chat_commands;
-pub mod character_commands;
-pub mod inventory_commands;
-pub mod gourmand_commands;
+pub mod queries;
 pub mod survey_commands;
-pub mod farming_commands;
-pub mod crafting_commands;
-pub mod game_state_commands;
-pub mod market_commands;
-pub mod aggregate_commands;
 
 pub type DbPool = r2d2::Pool<SqliteConnectionManager>;
 pub type DbConnection = r2d2::PooledConnection<SqliteConnectionManager>;
@@ -29,15 +30,14 @@ pub fn init_pool(db_path: PathBuf) -> Result<DbPool, Box<dyn std::error::Error>>
         std::fs::create_dir_all(parent)?;
     }
 
-    let manager = SqliteConnectionManager::file(&db_path)
-        .with_init(|conn| {
-            conn.execute_batch(
-                "PRAGMA journal_mode=WAL;
+    let manager = SqliteConnectionManager::file(&db_path).with_init(|conn| {
+        conn.execute_batch(
+            "PRAGMA journal_mode=WAL;
                  PRAGMA busy_timeout=5000;
                  PRAGMA synchronous=NORMAL;
-                 PRAGMA foreign_keys=ON;"
-            )
-        });
+                 PRAGMA foreign_keys=ON;",
+        )
+    });
     let pool = r2d2::Pool::builder()
         .max_size(15) // Allow multiple concurrent connections
         .build(manager)?;
@@ -52,11 +52,13 @@ pub fn init_pool(db_path: PathBuf) -> Result<DbPool, Box<dyn std::error::Error>>
 
 /// Get current schema version
 pub fn get_schema_version(conn: &Connection) -> Result<i32> {
-    let version: i32 = conn.query_row(
-        "SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1",
-        [],
-        |row| row.get(0),
-    ).unwrap_or(0);
+    let version: i32 = conn
+        .query_row(
+            "SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
 
     Ok(version)
 }

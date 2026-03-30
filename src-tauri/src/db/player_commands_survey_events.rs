@@ -1,25 +1,23 @@
-/// Survey event logging commands
-
-use tauri::State;
-use serde::{Deserialize, Serialize};
 use super::DbPool;
+use serde::{Deserialize, Serialize};
+/// Survey event logging commands
+use tauri::State;
 
 #[derive(Deserialize)]
 pub struct LogSurveyEventInput {
     pub timestamp: String,
     pub session_id: Option<i64>,
-    pub event_type: String,  // "session_start", "completed"
+    pub event_type: String, // "session_start", "completed"
     pub map_type: Option<String>,
     pub survey_type: Option<String>,
     pub speed_bonus_earned: bool,
 }
 
 #[tauri::command]
-pub fn log_survey_event(
-    db: State<'_, DbPool>,
-    input: LogSurveyEventInput,
-) -> Result<i64, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+pub fn log_survey_event(db: State<'_, DbPool>, input: LogSurveyEventInput) -> Result<i64, String> {
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     conn.execute(
         "INSERT INTO survey_events (
@@ -58,7 +56,9 @@ pub fn get_survey_events(
     session_id: Option<i64>,
     limit: Option<usize>,
 ) -> Result<Vec<SurveyEventRecord>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     let limit = limit.unwrap_or(100);
     let mut results = Vec::new();
@@ -72,7 +72,7 @@ pub fn get_survey_events(
                  FROM survey_events
                  WHERE session_id = ?1
                  ORDER BY timestamp DESC
-                 LIMIT ?2"
+                 LIMIT ?2",
             )
             .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
@@ -102,7 +102,7 @@ pub fn get_survey_events(
                         datetime(created_at) as created_at
                  FROM survey_events
                  ORDER BY timestamp DESC
-                 LIMIT ?1"
+                 LIMIT ?1",
             )
             .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
@@ -146,7 +146,9 @@ pub fn log_survey_loot_item(
     db: State<'_, DbPool>,
     input: LogSurveyLootItemInput,
 ) -> Result<i64, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     conn.execute(
         "INSERT INTO survey_loot_items (
@@ -184,7 +186,9 @@ pub fn get_survey_loot_items(
     event_id: Option<i64>,
     limit: Option<usize>,
 ) -> Result<Vec<SurveyLootItemRecord>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     let limit = limit.unwrap_or(100);
     let mut results = Vec::new();
@@ -197,7 +201,7 @@ pub fn get_survey_loot_items(
                  FROM survey_loot_items
                  WHERE event_id = ?1
                  ORDER BY is_primary DESC, is_speed_bonus DESC, id ASC
-                 LIMIT ?2"
+                 LIMIT ?2",
             )
             .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
@@ -226,7 +230,7 @@ pub fn get_survey_loot_items(
                         is_primary, datetime(obtained_at) as obtained_at
                  FROM survey_loot_items
                  ORDER BY obtained_at DESC
-                 LIMIT ?1"
+                 LIMIT ?1",
             )
             .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
@@ -269,7 +273,9 @@ pub fn get_speed_bonus_stats(
     db: State<'_, DbPool>,
     session_id: Option<i64>,
 ) -> Result<SpeedBonusStats, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     let (total_surveys, speed_bonus_count): (i64, i64) = if let Some(sid) = session_id {
         conn.query_row(
@@ -279,7 +285,7 @@ pub fn get_speed_bonus_stats(
              FROM survey_events
              WHERE event_type IN ('completed', 'motherlode_completed') AND session_id = ?1",
             [sid],
-            |row| Ok((row.get(0)?, row.get(1)?))
+            |row| Ok((row.get(0)?, row.get(1)?)),
         )
     } else {
         conn.query_row(
@@ -289,7 +295,7 @@ pub fn get_speed_bonus_stats(
              FROM survey_events
              WHERE event_type IN ('completed', 'motherlode_completed')",
             [],
-            |row| Ok((row.get(0)?, row.get(1)?))
+            |row| Ok((row.get(0)?, row.get(1)?)),
         )
     }
     .map_err(|e| format!("Failed to query speed bonus stats: {e}"))?;
@@ -303,7 +309,7 @@ pub fn get_speed_bonus_stats(
              JOIN survey_events se ON sli.event_id = se.id
              WHERE sli.is_speed_bonus = 1 AND se.session_id = ?1",
             [sid],
-            |row| Ok((row.get(0).unwrap_or(0), row.get(1).unwrap_or(0)))
+            |row| Ok((row.get(0).unwrap_or(0), row.get(1).unwrap_or(0))),
         )
     } else {
         conn.query_row(
@@ -313,7 +319,7 @@ pub fn get_speed_bonus_stats(
              FROM survey_loot_items sli
              WHERE sli.is_speed_bonus = 1",
             [],
-            |row| Ok((row.get(0).unwrap_or(0), row.get(1).unwrap_or(0)))
+            |row| Ok((row.get(0).unwrap_or(0), row.get(1).unwrap_or(0))),
         )
     }
     .map_err(|e| format!("Failed to query bonus items: {e}"))?;
@@ -349,7 +355,9 @@ pub fn get_loot_breakdown(
     session_id: Option<i64>,
     limit: Option<usize>,
 ) -> Result<Vec<LootBreakdownEntry>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     let limit = limit.unwrap_or(100);
     let mut results = Vec::new();
@@ -369,7 +377,7 @@ pub fn get_loot_breakdown(
                  WHERE se.session_id = ?1
                  GROUP BY sli.item_name, sli.item_id
                  ORDER BY total_qty DESC
-                 LIMIT ?2"
+                 LIMIT ?2",
             )
             .map_err(|e| format!("Failed to prepare loot breakdown query: {e}"))?;
 
@@ -402,7 +410,7 @@ pub fn get_loot_breakdown(
                  FROM survey_loot_items sli
                  GROUP BY sli.item_name, sli.item_id
                  ORDER BY total_qty DESC
-                 LIMIT ?1"
+                 LIMIT ?1",
             )
             .map_err(|e| format!("Failed to prepare loot breakdown query: {e}"))?;
 
@@ -443,14 +451,20 @@ pub fn get_survey_type_metrics(
     db: State<'_, DbPool>,
     session_id: Option<i64>,
 ) -> Result<Vec<SurveyTypeMetrics>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     let mut results = Vec::new();
 
     // Use two separate queries to avoid row multiplication from LEFT JOIN:
     // 1. Event-level stats (completed count, speed bonus count) from survey_events
     // 2. Loot-level stats (total items, bonus items) from survey_loot_items via events
-    let session_filter = if session_id.is_some() { "AND se.session_id = ?1" } else { "" };
+    let session_filter = if session_id.is_some() {
+        "AND se.session_id = ?1"
+    } else {
+        ""
+    };
 
     // Event-level stats
     let event_query = format!(
@@ -462,7 +476,8 @@ pub fn get_survey_type_metrics(
          GROUP BY se.survey_type
          ORDER BY total_completed DESC"
     );
-    let mut event_stmt = conn.prepare(&event_query)
+    let mut event_stmt = conn
+        .prepare(&event_query)
         .map_err(|e| format!("Failed to prepare survey type metrics query: {e}"))?;
 
     let mut event_rows: Vec<(String, i64, i64)> = Vec::new();
@@ -474,9 +489,12 @@ pub fn get_survey_type_metrics(
             event_stmt.query_map([sid], map_row)
         } else {
             event_stmt.query_map([], map_row)
-        }.map_err(|e| format!("Survey type metrics query failed: {e}"))?;
+        }
+        .map_err(|e| format!("Survey type metrics query failed: {e}"))?;
         for r in rows {
-            if let Ok(row) = r { event_rows.push(row); }
+            if let Ok(row) = r {
+                event_rows.push(row);
+            }
         }
     }
 
@@ -490,10 +508,12 @@ pub fn get_survey_type_metrics(
          WHERE se.event_type IN ('completed', 'motherlode_completed') AND se.survey_type IS NOT NULL {session_filter}
          GROUP BY se.survey_type"
     );
-    let mut loot_stmt = conn.prepare(&loot_query)
+    let mut loot_stmt = conn
+        .prepare(&loot_query)
         .map_err(|e| format!("Failed to prepare loot metrics query: {e}"))?;
 
-    let mut loot_map: std::collections::HashMap<String, (i64, i64)> = std::collections::HashMap::new();
+    let mut loot_map: std::collections::HashMap<String, (i64, i64)> =
+        std::collections::HashMap::new();
     {
         let map_row = |row: &rusqlite::Row| -> rusqlite::Result<(String, i64, i64)> {
             Ok((row.get(0)?, row.get(1)?, row.get(2)?))
@@ -502,14 +522,18 @@ pub fn get_survey_type_metrics(
             loot_stmt.query_map([sid], map_row)
         } else {
             loot_stmt.query_map([], map_row)
-        }.map_err(|e| format!("Loot metrics query failed: {e}"))?;
+        }
+        .map_err(|e| format!("Loot metrics query failed: {e}"))?;
         for r in rows {
-            if let Ok((st, total, bonus)) = r { loot_map.insert(st, (total, bonus)); }
+            if let Ok((st, total, bonus)) = r {
+                loot_map.insert(st, (total, bonus));
+            }
         }
     }
 
     for (survey_type, total_completed, speed_bonus_count) in event_rows {
-        let (total_items, total_bonus_items) = loot_map.get(&survey_type).copied().unwrap_or((0, 0));
+        let (total_items, total_bonus_items) =
+            loot_map.get(&survey_type).copied().unwrap_or((0, 0));
 
         let speed_bonus_rate = if total_completed > 0 {
             (speed_bonus_count as f64 / total_completed as f64) * 100.0
@@ -587,32 +611,36 @@ pub struct ZoneAnalytics {
 }
 
 #[tauri::command]
-pub fn get_zone_analytics(
-    db: State<'_, DbPool>,
-) -> Result<Vec<ZoneAnalytics>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+pub fn get_zone_analytics(db: State<'_, DbPool>) -> Result<Vec<ZoneAnalytics>, String> {
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     // ── 1. Per-zone+category event-level stats ───────────────────────────────
     let mut zone_cat_stats: std::collections::HashMap<(String, String), (i64, i64)> =
         std::collections::HashMap::new();
     {
-        let mut stmt = conn.prepare(
-            "SELECT st.zone, st.survey_category,
+        let mut stmt = conn
+            .prepare(
+                "SELECT st.zone, st.survey_category,
                     COUNT(*) as total_completed,
                     SUM(CASE WHEN se.speed_bonus_earned = 1 THEN 1 ELSE 0 END) as bonus_count
              FROM survey_events se
              JOIN survey_types st ON se.survey_type = st.name COLLATE NOCASE
              WHERE se.event_type IN ('completed', 'motherlode_completed') AND st.zone IS NOT NULL
-             GROUP BY st.zone, st.survey_category"
-        ).map_err(|e| format!("Failed to prepare zone stats query: {e}"))?;
+             GROUP BY st.zone, st.survey_category",
+            )
+            .map_err(|e| format!("Failed to prepare zone stats query: {e}"))?;
 
-        let rows = stmt.query_map([], |row| {
-            let zone: String = row.get(0)?;
-            let cat: String = row.get(1)?;
-            let total: i64 = row.get(2)?;
-            let bonus: i64 = row.get(3)?;
-            Ok((zone, cat, total, bonus))
-        }).map_err(|e| format!("Zone stats query failed: {e}"))?;
+        let rows = stmt
+            .query_map([], |row| {
+                let zone: String = row.get(0)?;
+                let cat: String = row.get(1)?;
+                let total: i64 = row.get(2)?;
+                let bonus: i64 = row.get(3)?;
+                Ok((zone, cat, total, bonus))
+            })
+            .map_err(|e| format!("Zone stats query failed: {e}"))?;
 
         for r in rows {
             if let Ok((zone, cat, total, bonus)) = r {
@@ -622,11 +650,14 @@ pub fn get_zone_analytics(
     }
 
     // ── 2. Speed bonus item stats per zone+category ──────────────────────────
-    let mut bonus_item_stats: std::collections::HashMap<(String, String), Vec<SpeedBonusItemStats>> =
-        std::collections::HashMap::new();
+    let mut bonus_item_stats: std::collections::HashMap<
+        (String, String),
+        Vec<SpeedBonusItemStats>,
+    > = std::collections::HashMap::new();
     {
-        let mut stmt = conn.prepare(
-            "WITH per_proc AS (
+        let mut stmt = conn
+            .prepare(
+                "WITH per_proc AS (
                 SELECT se.id as event_id, st.zone, st.survey_category, sli.item_name,
                        SUM(sli.quantity) as qty
                 FROM survey_loot_items sli
@@ -645,24 +676,37 @@ pub fn get_zone_analytics(
                    AVG(qty) as avg_qty
             FROM per_proc
             GROUP BY zone, survey_category, item_name
-            ORDER BY zone, survey_category, total_qty DESC"
-        ).map_err(|e| format!("Failed to prepare bonus item stats query: {e}"))?;
+            ORDER BY zone, survey_category, total_qty DESC",
+            )
+            .map_err(|e| format!("Failed to prepare bonus item stats query: {e}"))?;
 
-        let rows = stmt.query_map([], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, String>(2)?,
-                row.get::<_, i64>(3)?,
-                row.get::<_, i64>(4)?,
-                row.get::<_, i64>(5)?,
-                row.get::<_, i64>(6)?,
-                row.get::<_, f64>(7)?,
-            ))
-        }).map_err(|e| format!("Bonus item stats query failed: {e}"))?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, i64>(3)?,
+                    row.get::<_, i64>(4)?,
+                    row.get::<_, i64>(5)?,
+                    row.get::<_, i64>(6)?,
+                    row.get::<_, f64>(7)?,
+                ))
+            })
+            .map_err(|e| format!("Bonus item stats query failed: {e}"))?;
 
         for r in rows {
-            if let Ok((zone, cat, item_name, total_quantity, times_seen, min_per_proc, max_per_proc, avg_per_proc)) = r {
+            if let Ok((
+                zone,
+                cat,
+                item_name,
+                total_quantity,
+                times_seen,
+                min_per_proc,
+                max_per_proc,
+                avg_per_proc,
+            )) = r
+            {
                 bonus_item_stats
                     .entry((zone, cat))
                     .or_default()
@@ -683,8 +727,9 @@ pub fn get_zone_analytics(
     let mut avg_bonus_values: std::collections::HashMap<(String, String), f64> =
         std::collections::HashMap::new();
     {
-        let mut stmt = conn.prepare(
-            "WITH bonus_event_values AS (
+        let mut stmt = conn
+            .prepare(
+                "WITH bonus_event_values AS (
                 SELECT se.id as event_id, st.zone, st.survey_category,
                        SUM(sli.quantity * COALESCE(i.value, 0)) as bonus_value
                 FROM survey_events se
@@ -699,12 +744,19 @@ pub fn get_zone_analytics(
             )
             SELECT zone, survey_category, AVG(bonus_value) as avg_value
             FROM bonus_event_values
-            GROUP BY zone, survey_category"
-        ).map_err(|e| format!("Failed to prepare avg bonus value query: {e}"))?;
+            GROUP BY zone, survey_category",
+            )
+            .map_err(|e| format!("Failed to prepare avg bonus value query: {e}"))?;
 
-        let rows = stmt.query_map([], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, f64>(2)?))
-        }).map_err(|e| format!("Avg bonus value query failed: {e}"))?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, f64>(2)?,
+                ))
+            })
+            .map_err(|e| format!("Avg bonus value query failed: {e}"))?;
 
         for r in rows {
             if let Ok((zone, cat, avg_value)) = r {
@@ -717,26 +769,30 @@ pub fn get_zone_analytics(
     let mut type_stats: std::collections::HashMap<String, Vec<SurveyTypeAnalytics>> =
         std::collections::HashMap::new();
     {
-        let mut stmt = conn.prepare(
-            "SELECT st.zone, st.survey_category, se.survey_type,
+        let mut stmt = conn
+            .prepare(
+                "SELECT st.zone, st.survey_category, se.survey_type,
                     COALESCE(st.crafting_cost, 0) as crafting_cost,
                     COUNT(*) as total_completed
              FROM survey_events se
              JOIN survey_types st ON se.survey_type = st.name COLLATE NOCASE
              WHERE se.event_type IN ('completed', 'motherlode_completed') AND st.zone IS NOT NULL
              GROUP BY st.zone, st.survey_category, se.survey_type
-             ORDER BY st.zone, st.survey_category, total_completed DESC"
-        ).map_err(|e| format!("Failed to prepare type stats query: {e}"))?;
+             ORDER BY st.zone, st.survey_category, total_completed DESC",
+            )
+            .map_err(|e| format!("Failed to prepare type stats query: {e}"))?;
 
-        let rows = stmt.query_map([], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, String>(2)?,
-                row.get::<_, f64>(3)?,
-                row.get::<_, i64>(4)?,
-            ))
-        }).map_err(|e| format!("Type stats query failed: {e}"))?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, f64>(3)?,
+                    row.get::<_, i64>(4)?,
+                ))
+            })
+            .map_err(|e| format!("Type stats query failed: {e}"))?;
 
         for r in rows {
             if let Ok((zone, cat, survey_type, crafting_cost, total_completed)) = r {
@@ -756,8 +812,9 @@ pub fn get_zone_analytics(
 
     // ── 5. Per-survey-type item stats (min/max/avg per completion) ────────────
     {
-        let mut stmt = conn.prepare(
-            "WITH per_completion AS (
+        let mut stmt = conn
+            .prepare(
+                "WITH per_completion AS (
                 SELECT se.id as event_id, se.survey_type, sli.item_name,
                        SUM(sli.quantity) as qty
                 FROM survey_loot_items sli
@@ -776,26 +833,38 @@ pub fn get_zone_analytics(
                    AVG(qty) as avg_qty
             FROM per_completion
             GROUP BY survey_type, item_name
-            ORDER BY survey_type, total_qty DESC"
-        ).map_err(|e| format!("Failed to prepare type item stats query: {e}"))?;
+            ORDER BY survey_type, total_qty DESC",
+            )
+            .map_err(|e| format!("Failed to prepare type item stats query: {e}"))?;
 
         let mut type_item_map: std::collections::HashMap<String, Vec<SurveyItemStats>> =
             std::collections::HashMap::new();
 
-        let rows = stmt.query_map([], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, i64>(2)?,
-                row.get::<_, i64>(3)?,
-                row.get::<_, i64>(4)?,
-                row.get::<_, i64>(5)?,
-                row.get::<_, f64>(6)?,
-            ))
-        }).map_err(|e| format!("Type item stats query failed: {e}"))?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, i64>(2)?,
+                    row.get::<_, i64>(3)?,
+                    row.get::<_, i64>(4)?,
+                    row.get::<_, i64>(5)?,
+                    row.get::<_, f64>(6)?,
+                ))
+            })
+            .map_err(|e| format!("Type item stats query failed: {e}"))?;
 
         for r in rows {
-            if let Ok((survey_type, item_name, total_quantity, times_seen, min_per_completion, max_per_completion, avg_per_completion)) = r {
+            if let Ok((
+                survey_type,
+                item_name,
+                total_quantity,
+                times_seen,
+                min_per_completion,
+                max_per_completion,
+                avg_per_completion,
+            )) = r
+            {
                 type_item_map
                     .entry(survey_type)
                     .or_default()

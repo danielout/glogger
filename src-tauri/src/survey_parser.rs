@@ -1,3 +1,5 @@
+use crate::parsers::{parse_loot_items, LootItem};
+use crate::player_event_parser::PlayerEvent;
 /// Survey parser — consumes PlayerEvents from the player event parser
 /// to track survey session state machines.
 ///
@@ -9,10 +11,7 @@
 /// - ItemDeleted with item_name → confirm survey map consumption (not locate)
 /// - ItemStackChanged with negative delta → track ingredient consumption during crafting
 /// - DelayLoopStarted → detect "Using X Survey" and "Surveying" crafting ticks
-
 use std::collections::HashMap;
-use crate::parsers::{LootItem, parse_loot_items};
-use crate::player_event_parser::PlayerEvent;
 
 // ============================================================
 // Public Types
@@ -127,7 +126,10 @@ impl CraftingWindow {
     fn drain(self) -> Vec<ConsumedIngredient> {
         self.ingredients
             .into_iter()
-            .map(|(item_name, quantity)| ConsumedIngredient { item_name, quantity })
+            .map(|(item_name, quantity)| ConsumedIngredient {
+                item_name,
+                quantity,
+            })
             .collect()
     }
 }
@@ -194,17 +196,11 @@ impl SurveyParser {
     }
 
     /// Detect crafting ticks, ingredient consumption, and crafted survey maps
-    fn process_crafting(
-        &mut self,
-        player_events: &[PlayerEvent],
-        events: &mut Vec<SurveyEvent>,
-    ) {
+    fn process_crafting(&mut self, player_events: &[PlayerEvent], events: &mut Vec<SurveyEvent>) {
         for event in player_events {
             match event {
                 // "Surveying" crafting tick — open crafting window
-                PlayerEvent::DelayLoopStarted { label, .. }
-                    if label == "Surveying" =>
-                {
+                PlayerEvent::DelayLoopStarted { label, .. } if label == "Surveying" => {
                     if self.crafting_window.is_none() {
                         self.crafting_window = Some(CraftingWindow::new());
                     }
@@ -235,9 +231,11 @@ impl SurveyParser {
                 }
 
                 // Survey map added to inventory — crafting completed
-                PlayerEvent::ItemAdded { timestamp, item_name, .. }
-                    if self.known_surveys.contains_key(item_name.as_str()) =>
-                {
+                PlayerEvent::ItemAdded {
+                    timestamp,
+                    item_name,
+                    ..
+                } if self.known_surveys.contains_key(item_name.as_str()) => {
                     let survey_type = &self.known_surveys[item_name.as_str()];
                     let ingredients = self
                         .crafting_window
@@ -283,7 +281,11 @@ impl SurveyParser {
 
                 // ItemDeleted for a known survey → map consumed
                 if let Some(deleted_survey) = player_events.iter().find_map(|e| {
-                    if let PlayerEvent::ItemDeleted { item_name: Some(name), .. } = e {
+                    if let PlayerEvent::ItemDeleted {
+                        item_name: Some(name),
+                        ..
+                    } = e
+                    {
                         self.known_surveys.get(name.as_str()).map(|st| st.clone())
                     } else {
                         None
@@ -391,11 +393,7 @@ impl SurveyParser {
     }
 
     /// Check for loot text in the current events (used when transitioning to AwaitingLoot)
-    fn check_loot_text(
-        &mut self,
-        player_events: &[PlayerEvent],
-        events: &mut Vec<SurveyEvent>,
-    ) {
+    fn check_loot_text(&mut self, player_events: &[PlayerEvent], events: &mut Vec<SurveyEvent>) {
         if let Some(Pending::AwaitingLoot {
             timestamp,
             survey_name,
@@ -428,11 +426,7 @@ impl SurveyParser {
     ///   captured as motherlode loot
     /// - If we already have loot when a non-mining activity happens, we finalize
     /// - A "Mining ..." delay loop (re)enables loot accumulation
-    fn resolve_motherlode(
-        &mut self,
-        player_events: &[PlayerEvent],
-        events: &mut Vec<SurveyEvent>,
-    ) {
+    fn resolve_motherlode(&mut self, player_events: &[PlayerEvent], events: &mut Vec<SurveyEvent>) {
         let pending = match self.motherlode_pending.take() {
             Some(p) => p,
             None => return,
@@ -462,8 +456,9 @@ impl SurveyParser {
             // means we've moved past the loot window.
             if mining_started && !loot_items.is_empty() {
                 let is_loot_event = match event {
-                    PlayerEvent::ItemAdded { item_name, .. } =>
-                        !self.known_surveys.contains_key(item_name.as_str()),
+                    PlayerEvent::ItemAdded { item_name, .. } => {
+                        !self.known_surveys.contains_key(item_name.as_str())
+                    }
                     PlayerEvent::ItemStackChanged { delta, .. } if *delta > 0 => true,
                     _ => false,
                 };
@@ -488,9 +483,9 @@ impl SurveyParser {
 
                 // "Mining ..." delay loop — only accept if this is the same entity
                 // we first mined (or if we haven't identified the entity yet).
-                PlayerEvent::DelayLoopStarted { action_type, label, .. }
-                    if action_type == "ChopLumber" && label == "Mining ..." =>
-                {
+                PlayerEvent::DelayLoopStarted {
+                    action_type, label, ..
+                } if action_type == "ChopLumber" && label == "Mining ..." => {
                     let entity = last_interaction_entity;
                     if mining_entity_id.is_none() {
                         // First mining interaction — adopt this entity as our motherlode node
@@ -545,9 +540,9 @@ impl SurveyParser {
 
                 // Non-mining delay loop (combat ability, crafting, etc.)
                 // Reset mining_started so we stop capturing loot.
-                PlayerEvent::DelayLoopStarted { action_type, label, .. }
-                    if !(action_type == "ChopLumber" && label == "Mining ...") =>
-                {
+                PlayerEvent::DelayLoopStarted {
+                    action_type, label, ..
+                } if !(action_type == "ChopLumber" && label == "Mining ...") => {
                     mining_started = false;
                 }
 
@@ -595,7 +590,12 @@ impl SurveyParser {
         }
 
         for event in player_events {
-            if let PlayerEvent::ItemDeleted { item_name: Some(name), timestamp, .. } = event {
+            if let PlayerEvent::ItemDeleted {
+                item_name: Some(name),
+                timestamp,
+                ..
+            } = event
+            {
                 if let Some(survey_type) = self.known_surveys.get(name.as_str()) {
                     if survey_type.is_motherlode {
                         eprintln!(
@@ -657,9 +657,11 @@ impl SurveyParser {
 /// Extract a "Using ... Survey/Map" from a DelayLoopStarted event
 fn find_using_survey(events: &[PlayerEvent]) -> Option<(String, String)> {
     for event in events {
-        if let PlayerEvent::DelayLoopStarted { timestamp, label, .. } = event {
-            if label.starts_with("Using ")
-                && (label.ends_with("Survey") || label.ends_with("Map"))
+        if let PlayerEvent::DelayLoopStarted {
+            timestamp, label, ..
+        } = event
+        {
+            if label.starts_with("Using ") && (label.ends_with("Survey") || label.ends_with("Map"))
             {
                 let name = label.strip_prefix("Using ").unwrap_or(label);
                 return Some((timestamp.clone(), name.to_string()));
@@ -672,7 +674,10 @@ fn find_using_survey(events: &[PlayerEvent]) -> Option<(String, String)> {
 /// Extract loot message from a ScreenText event containing "collected!"
 fn find_loot_screen_text(events: &[PlayerEvent]) -> Option<String> {
     for event in events {
-        if let PlayerEvent::ScreenText { category, message, .. } = event {
+        if let PlayerEvent::ScreenText {
+            category, message, ..
+        } = event
+        {
             if category == "ImportantInfo" && message.contains("collected!") {
                 return Some(message.clone());
             }
@@ -768,7 +773,10 @@ mod tests {
             &mut survey,
             r#"[16:17:48] LocalPlayer: ProcessDoDelayLoop(0.5, Unset, "Using Eltibule Green Mineral Survey", 5305, AbortIfAttacked)"#,
         );
-        assert!(events2.is_empty(), "Repeated Using should NOT emit SurveyUsed");
+        assert!(
+            events2.is_empty(),
+            "Repeated Using should NOT emit SurveyUsed"
+        );
     }
 
     #[test]
@@ -898,7 +906,10 @@ mod tests {
             } => {
                 // Ingredients may or may not be captured depending on UpdateItemCode behavior
                 // The key test is that MapCrafted was emitted and the crafting window closed
-                assert!(survey.crafting_window.is_none(), "Crafting window should be closed");
+                assert!(
+                    survey.crafting_window.is_none(),
+                    "Crafting window should be closed"
+                );
             }
             _ => panic!("Expected MapCrafted"),
         }
@@ -1203,7 +1214,11 @@ mod tests {
         );
         assert_eq!(events.len(), 1, "Mount should finalize motherlode");
         match &events[0] {
-            SurveyEvent::MotherlodeCompleted { map_name, loot_items, .. } => {
+            SurveyEvent::MotherlodeCompleted {
+                map_name,
+                loot_items,
+                ..
+            } => {
                 assert_eq!(map_name, "Kur Mountains Good Metal Motherlode Map");
                 assert_eq!(loot_items.len(), 1);
                 assert_eq!(loot_items[0].item_name, "Tungsten");
@@ -1321,7 +1336,10 @@ mod tests {
             final_events.is_empty(),
             "Timeout without mining should not emit MotherlodeCompleted"
         );
-        assert!(survey.motherlode_pending.is_none(), "Pending should be cleared");
+        assert!(
+            survey.motherlode_pending.is_none(),
+            "Pending should be cleared"
+        );
     }
 
     #[test]
@@ -1387,7 +1405,10 @@ mod tests {
             &mut survey,
             r#"[14:02:34] LocalPlayer: ProcessDoDelayLoop(6, ChopLumber, "Mining ...", 0, AbortIfAttacked, IsInteractorDelayLoop)"#,
         );
-        assert!(survey.motherlode_pending.is_some(), "Should have motherlode pending after flush + mining");
+        assert!(
+            survey.motherlode_pending.is_some(),
+            "Should have motherlode pending after flush + mining"
+        );
         process_line(
             &mut parser,
             &mut survey,
@@ -1453,7 +1474,8 @@ mod tests {
         for i in 0..5 {
             let line = format!(
                 r#"[14:01:{:02}] LocalPlayer: ProcessSetAttributes(5008166, "[CUR_HEALTH], [{}]")"#,
-                10 + i, 500 - i * 50
+                10 + i,
+                500 - i * 50
             );
             process_line(&mut parser, &mut survey, &line);
         }
@@ -1465,8 +1487,14 @@ mod tests {
             &mut survey,
             r#"[14:01:20] LocalPlayer: ProcessStartInteraction(12345, 7, 0, False, "")"#,
         );
-        assert!(events.is_empty(), "InteractionStarted with no loot should not finalize");
-        assert!(survey.motherlode_pending.is_some(), "Motherlode pending should survive combat interruption");
+        assert!(
+            events.is_empty(),
+            "InteractionStarted with no loot should not finalize"
+        );
+        assert!(
+            survey.motherlode_pending.is_some(),
+            "Motherlode pending should survive combat interruption"
+        );
 
         // Corpse drops a TrooperHelm — should NOT be captured (mining_started was reset)
         let (_, events) = process_line(
@@ -1474,7 +1502,10 @@ mod tests {
             &mut survey,
             r#"[14:01:21] LocalPlayer: ProcessAddItem(TrooperHelm(300001), -1, True)"#,
         );
-        assert!(events.is_empty(), "Corpse loot should not finalize motherlode");
+        assert!(
+            events.is_empty(),
+            "Corpse loot should not finalize motherlode"
+        );
 
         // Player returns to mine motherlode again
         process_line(
@@ -1499,7 +1530,11 @@ mod tests {
         assert_eq!(events.len(), 1);
         match &events[0] {
             SurveyEvent::MotherlodeCompleted { loot_items, .. } => {
-                assert_eq!(loot_items.len(), 1, "Should only have motherlode loot, not corpse loot");
+                assert_eq!(
+                    loot_items.len(),
+                    1,
+                    "Should only have motherlode loot, not corpse loot"
+                );
                 assert_eq!(loot_items[0].item_name, "Paladium");
             }
             _ => panic!("Expected MotherlodeCompleted"),
@@ -1575,7 +1610,10 @@ mod tests {
             r#"[14:01:10] LocalPlayer: ProcessUpdateItemCode(200001, 5705959, True)"#,
         );
         // Motherlode should still be pending (loot captured, waiting for finalization)
-        assert!(survey.motherlode_pending.is_some(), "Should still be pending with loot");
+        assert!(
+            survey.motherlode_pending.is_some(),
+            "Should still be pending with loot"
+        );
 
         // Next line: combat state change — should finalize the motherlode
         let (_, events) = process_line(
@@ -1583,15 +1621,24 @@ mod tests {
             &mut survey,
             r#"[14:01:11] LocalPlayer: ProcessCombatModeStatus(InCombat, System.Int32[])"#,
         );
-        assert_eq!(events.len(), 1, "CombatStateChanged should finalize motherlode");
+        assert_eq!(
+            events.len(),
+            1,
+            "CombatStateChanged should finalize motherlode"
+        );
         match &events[0] {
             SurveyEvent::MotherlodeCompleted { loot_items, .. } => {
-                assert!(loot_items.iter().all(|l| l.item_name != "Campfire0"),
-                    "Campfire should not be in motherlode loot");
+                assert!(
+                    loot_items.iter().all(|l| l.item_name != "Campfire0"),
+                    "Campfire should not be in motherlode loot"
+                );
             }
             _ => panic!("Expected MotherlodeCompleted"),
         }
-        assert!(survey.motherlode_pending.is_none(), "Motherlode should be resolved");
+        assert!(
+            survey.motherlode_pending.is_none(),
+            "Motherlode should be resolved"
+        );
 
         // Campfire stack update arrives later — should NOT be captured
         let (_, events) = process_line(
@@ -1599,6 +1646,9 @@ mod tests {
             &mut survey,
             r#"[14:01:15] LocalPlayer: ProcessUpdateItemCode(300001, 210039, True)"#,
         );
-        assert!(events.is_empty(), "No events after motherlode already finalized");
+        assert!(
+            events.is_empty(),
+            "No events after motherlode already finalized"
+        );
     }
 }

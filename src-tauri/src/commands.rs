@@ -1,14 +1,14 @@
 use std::collections::HashMap;
-use std::io::BufRead;
 use std::fs::File;
+use std::io::BufRead;
 use std::path::PathBuf;
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::parsers::parse_skill_update;
-use crate::survey_parser::{SurveyParser, KnownSurveyType};
-use crate::survey_persistence::SurveySessionTracker;
-use crate::player_event_parser::PlayerEventParser;
 use crate::db::DbPool;
+use crate::parsers::parse_skill_update;
+use crate::player_event_parser::PlayerEventParser;
+use crate::survey_parser::{KnownSurveyType, SurveyParser};
+use crate::survey_persistence::SurveySessionTracker;
 
 /// Parse an entire Player.log file at once (used by "Upload Player.log" in Advanced Settings).
 /// Runs all parsers: skill updates, survey events, and player events.
@@ -38,7 +38,13 @@ pub async fn parse_log(path: String, app: AppHandle) -> Result<(), String> {
             match line {
                 Ok(l) => {
                     let l = l.trim_end().to_string();
-                    emit_events(&app, &l, &mut survey_parser, &mut survey_tracker, &mut player_parser);
+                    emit_events(
+                        &app,
+                        &l,
+                        &mut survey_parser,
+                        &mut survey_tracker,
+                        &mut player_parser,
+                    );
                 }
                 Err(e) => eprintln!("Read error: {}", e),
             }
@@ -92,9 +98,8 @@ fn emit_events(
 /// Load known survey types from DB for the parse_log command
 fn load_known_surveys_for_parse(conn: &rusqlite::Connection) -> HashMap<String, KnownSurveyType> {
     let mut map = HashMap::new();
-    let mut stmt = match conn.prepare(
-        "SELECT internal_name, name, is_motherlode FROM survey_types"
-    ) {
+    let mut stmt = match conn.prepare("SELECT internal_name, name, is_motherlode FROM survey_types")
+    {
         Ok(s) => s,
         Err(_) => return map,
     };
@@ -110,10 +115,13 @@ fn load_known_surveys_for_parse(conn: &rusqlite::Connection) -> HashMap<String, 
     if let Ok(rows) = rows {
         for row in rows.flatten() {
             let (internal_name, display_name, is_motherlode) = row;
-            map.insert(internal_name, KnownSurveyType {
-                display_name,
-                is_motherlode,
-            });
+            map.insert(
+                internal_name,
+                KnownSurveyType {
+                    display_name,
+                    is_motherlode,
+                },
+            );
         }
     }
 

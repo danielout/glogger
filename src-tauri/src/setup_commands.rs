@@ -1,17 +1,16 @@
+use chrono::Local;
+use serde::{Deserialize, Serialize};
 /// Tauri commands for first-time setup and character management
 ///
 /// Handles game folder validation, character discovery from Reports,
 /// and user_characters CRUD for the startup flow.
-
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-use serde::{Deserialize, Serialize};
 use tauri::State;
-use chrono::Local;
 
-use crate::db::DbPool;
 use crate::cdn_commands::GameDataState;
+use crate::db::DbPool;
 use crate::settings::SettingsManager;
 
 /// Timestamped log line for startup diagnostics.
@@ -151,7 +150,9 @@ pub fn save_user_character(
     server_name: String,
     source: String,
 ) -> Result<(), String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     conn.execute(
         "INSERT INTO user_characters (character_name, server_name, source)
@@ -164,35 +165,40 @@ pub fn save_user_character(
             END,
             updated_at = CURRENT_TIMESTAMP",
         rusqlite::params![character_name, server_name, source],
-    ).map_err(|e| format!("Failed to save user character: {e}"))?;
+    )
+    .map_err(|e| format!("Failed to save user character: {e}"))?;
 
     Ok(())
 }
 
 #[tauri::command]
-pub fn get_user_characters(
-    db: State<'_, DbPool>,
-) -> Result<Vec<UserCharacter>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+pub fn get_user_characters(db: State<'_, DbPool>) -> Result<Vec<UserCharacter>, String> {
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
-    let mut stmt = conn.prepare(
-        "SELECT id, character_name, server_name, source, is_active,
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, character_name, server_name, source, is_active,
                 latest_report_time, last_login_time
          FROM user_characters
-         ORDER BY is_active DESC, updated_at DESC"
-    ).map_err(|e| format!("Failed to prepare query: {e}"))?;
+         ORDER BY is_active DESC, updated_at DESC",
+        )
+        .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
-    let rows = stmt.query_map([], |row| {
-        Ok(UserCharacter {
-            id: row.get(0)?,
-            character_name: row.get(1)?,
-            server_name: row.get(2)?,
-            source: row.get(3)?,
-            is_active: row.get(4)?,
-            latest_report_time: row.get(5)?,
-            last_login_time: row.get(6)?,
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(UserCharacter {
+                id: row.get(0)?,
+                character_name: row.get(1)?,
+                server_name: row.get(2)?,
+                source: row.get(3)?,
+                is_active: row.get(4)?,
+                latest_report_time: row.get(5)?,
+                last_login_time: row.get(6)?,
+            })
         })
-    }).map_err(|e| format!("Query failed: {e}"))?;
+        .map_err(|e| format!("Query failed: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Failed to read results: {e}"))
@@ -205,7 +211,9 @@ pub fn set_active_character(
     character_name: String,
     server_name: String,
 ) -> Result<(), String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     // Clear all active flags
     conn.execute("UPDATE user_characters SET is_active = 0", [])
@@ -216,7 +224,8 @@ pub fn set_active_character(
         "UPDATE user_characters SET is_active = 1, updated_at = CURRENT_TIMESTAMP
          WHERE character_name = ?1 AND server_name = ?2",
         rusqlite::params![character_name, server_name],
-    ).map_err(|e| format!("Failed to set active character: {e}"))?;
+    )
+    .map_err(|e| format!("Failed to set active character: {e}"))?;
 
     // Update settings
     let mut settings = settings_manager.get();
@@ -228,9 +237,7 @@ pub fn set_active_character(
 }
 
 #[tauri::command]
-pub fn complete_setup(
-    settings_manager: State<'_, Arc<SettingsManager>>,
-) -> Result<(), String> {
+pub fn complete_setup(settings_manager: State<'_, Arc<SettingsManager>>) -> Result<(), String> {
     let mut settings = settings_manager.get();
     settings.setup_completed = true;
     settings_manager.update(settings)
@@ -245,7 +252,9 @@ pub fn delete_character(
     character_name: String,
     server_name: String,
 ) -> Result<(), String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     // All character-scoped tables to cascade delete
     let tables = [
@@ -269,58 +278,94 @@ pub fn delete_character(
         conn.execute(
             &format!("DELETE FROM {table} WHERE character_name = ?1 AND server_name = ?2"),
             rusqlite::params![character_name, server_name],
-        ).ok();
+        )
+        .ok();
     }
 
     // Delete character snapshots and their child data
-    let snapshot_ids: Vec<i64> = {
-        let mut stmt = conn.prepare(
+    let snapshot_ids: Vec<i64> =
+        {
+            let mut stmt = conn.prepare(
             "SELECT id FROM character_snapshots WHERE character_name = ?1 AND server_name = ?2"
         ).map_err(|e| format!("Query error: {e}"))?;
-        let ids: Vec<i64> = stmt.query_map(rusqlite::params![character_name, server_name], |row| row.get(0))
-            .map_err(|e| format!("Query error: {e}"))?
-            .flatten()
-            .collect();
-        ids
-    };
+            let ids: Vec<i64> = stmt
+                .query_map(rusqlite::params![character_name, server_name], |row| {
+                    row.get(0)
+                })
+                .map_err(|e| format!("Query error: {e}"))?
+                .flatten()
+                .collect();
+            ids
+        };
 
     for sid in &snapshot_ids {
-        conn.execute("DELETE FROM character_skill_levels WHERE snapshot_id = ?1", rusqlite::params![sid]).ok();
-        conn.execute("DELETE FROM character_npc_favor WHERE snapshot_id = ?1", rusqlite::params![sid]).ok();
-        conn.execute("DELETE FROM character_recipe_completions WHERE snapshot_id = ?1", rusqlite::params![sid]).ok();
-        conn.execute("DELETE FROM character_stats WHERE snapshot_id = ?1", rusqlite::params![sid]).ok();
-        conn.execute("DELETE FROM character_currencies WHERE snapshot_id = ?1", rusqlite::params![sid]).ok();
+        conn.execute(
+            "DELETE FROM character_skill_levels WHERE snapshot_id = ?1",
+            rusqlite::params![sid],
+        )
+        .ok();
+        conn.execute(
+            "DELETE FROM character_npc_favor WHERE snapshot_id = ?1",
+            rusqlite::params![sid],
+        )
+        .ok();
+        conn.execute(
+            "DELETE FROM character_recipe_completions WHERE snapshot_id = ?1",
+            rusqlite::params![sid],
+        )
+        .ok();
+        conn.execute(
+            "DELETE FROM character_stats WHERE snapshot_id = ?1",
+            rusqlite::params![sid],
+        )
+        .ok();
+        conn.execute(
+            "DELETE FROM character_currencies WHERE snapshot_id = ?1",
+            rusqlite::params![sid],
+        )
+        .ok();
     }
     conn.execute(
         "DELETE FROM character_snapshots WHERE character_name = ?1 AND server_name = ?2",
         rusqlite::params![character_name, server_name],
-    ).ok();
+    )
+    .ok();
 
     // Delete inventory snapshots and their child data
-    let inv_snapshot_ids: Vec<i64> = {
-        let mut stmt = conn.prepare(
+    let inv_snapshot_ids: Vec<i64> =
+        {
+            let mut stmt = conn.prepare(
             "SELECT id FROM inventory_snapshots WHERE character_name = ?1 AND server_name = ?2"
         ).map_err(|e| format!("Query error: {e}"))?;
-        let ids: Vec<i64> = stmt.query_map(rusqlite::params![character_name, server_name], |row| row.get(0))
-            .map_err(|e| format!("Query error: {e}"))?
-            .flatten()
-            .collect();
-        ids
-    };
+            let ids: Vec<i64> = stmt
+                .query_map(rusqlite::params![character_name, server_name], |row| {
+                    row.get(0)
+                })
+                .map_err(|e| format!("Query error: {e}"))?
+                .flatten()
+                .collect();
+            ids
+        };
 
     for sid in &inv_snapshot_ids {
-        conn.execute("DELETE FROM inventory_snapshot_items WHERE snapshot_id = ?1", rusqlite::params![sid]).ok();
+        conn.execute(
+            "DELETE FROM inventory_snapshot_items WHERE snapshot_id = ?1",
+            rusqlite::params![sid],
+        )
+        .ok();
     }
     conn.execute(
         "DELETE FROM inventory_snapshots WHERE character_name = ?1 AND server_name = ?2",
         rusqlite::params![character_name, server_name],
-    ).ok();
+    )
+    .ok();
 
     // Delete the user_characters record
     conn.execute(
         "DELETE FROM user_characters WHERE character_name = ?1 AND server_name = ?2",
         rusqlite::params![character_name, server_name],
-    ).ok();
+    )
+    .ok();
 
     conn.execute("COMMIT", []).ok();
 
@@ -400,7 +445,10 @@ pub fn import_latest_report_for_character(
         }
 
         if let Some(ref ts) = header.timestamp {
-            if best_file.as_ref().map_or(true, |(existing_ts, _)| ts > existing_ts) {
+            if best_file
+                .as_ref()
+                .map_or(true, |(existing_ts, _)| ts > existing_ts)
+            {
                 best_file = Some((ts.clone(), file_path));
             }
         }
@@ -413,7 +461,9 @@ pub fn import_latest_report_for_character(
     let file_path_str = file_path.to_string_lossy().to_string();
     let data = cdn.blocking_read();
     let result = crate::db::character_commands::import_character_report_internal(
-        &db, &file_path_str, &data,
+        &db,
+        &file_path_str,
+        &data,
     )?;
 
     // If it was a duplicate, return None (already imported)
@@ -479,7 +529,8 @@ pub fn import_reports_for_server(
         }
 
         if let Some(ref ts) = header.timestamp {
-            let is_newer = best_per_character.get(&header.character)
+            let is_newer = best_per_character
+                .get(&header.character)
                 .map_or(true, |(existing_ts, _)| ts > existing_ts);
             if is_newer {
                 best_per_character.insert(header.character.clone(), (ts.clone(), file_path));
@@ -492,20 +543,36 @@ pub fn import_reports_for_server(
     let mut imported = 0u32;
     for (character, (_, file_path)) in &best_per_character {
         let file_path_str = file_path.to_string_lossy().to_string();
-        match crate::db::character_commands::import_character_report_internal(&db, &file_path_str, &data) {
+        match crate::db::character_commands::import_character_report_internal(
+            &db,
+            &file_path_str,
+            &data,
+        ) {
             Ok(result) if !result.was_duplicate => {
-                startup_log!("Imported account character report: {} on {}", character, server_name);
+                startup_log!(
+                    "Imported account character report: {} on {}",
+                    character,
+                    server_name
+                );
                 imported += 1;
             }
             Ok(_) => {} // duplicate, skip
             Err(e) => {
-                startup_log!("Failed to import report for {} on {}: {e}", character, server_name);
+                startup_log!(
+                    "Failed to import report for {} on {}: {e}",
+                    character,
+                    server_name
+                );
             }
         }
     }
 
     if imported > 0 {
-        startup_log!("Account-wide import: {} new report(s) for {}", imported, server_name);
+        startup_log!(
+            "Account-wide import: {} new report(s) for {}",
+            imported,
+            server_name
+        );
     }
 
     Ok(imported)
@@ -571,7 +638,10 @@ pub fn import_latest_inventory_for_character(
         }
 
         if let Some(ref ts) = header.timestamp {
-            if best_file.as_ref().map_or(true, |(existing_ts, _)| ts > existing_ts) {
+            if best_file
+                .as_ref()
+                .map_or(true, |(existing_ts, _)| ts > existing_ts)
+            {
                 best_file = Some((ts.clone(), file_path));
             }
         }
@@ -582,14 +652,17 @@ pub fn import_latest_inventory_for_character(
     };
 
     let file_path_str = file_path.to_string_lossy().to_string();
-    let result = crate::db::inventory_commands::import_inventory_report_internal(
-        &db, &file_path_str,
-    )?;
+    let result =
+        crate::db::inventory_commands::import_inventory_report_internal(&db, &file_path_str)?;
 
     if result.was_duplicate {
         return Ok(None);
     }
 
-    startup_log!("Imported inventory report for {} ({} items)", character_name, result.items_imported);
+    startup_log!(
+        "Imported inventory report for {} ({} items)",
+        character_name,
+        result.items_imported
+    );
     Ok(Some(result))
 }

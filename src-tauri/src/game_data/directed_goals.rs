@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // ── Raw CDN shapes ────────────────────────────────────────────────────────────
 
@@ -24,13 +24,19 @@ pub struct DirectedGoalInfo {
 
 pub fn parse(json: &str) -> Result<HashMap<String, DirectedGoalInfo>, String> {
     // directedgoals.json is an array, not a map
-    let raw: Vec<serde_json::Value> = serde_json::from_str(json)
-        .map_err(|e| format!("directedgoals.json: parse error at line {}, col {}: {e}", e.line(), e.column()))?;
+    let raw: Vec<serde_json::Value> = serde_json::from_str(json).map_err(|e| {
+        format!(
+            "directedgoals.json: parse error at line {}, col {}: {e}",
+            e.line(),
+            e.column()
+        )
+    })?;
 
     // Convert to HashMap keyed by Id (as string) if available, otherwise use index
     let mut result = HashMap::with_capacity(raw.len());
     for (idx, value) in raw.into_iter().enumerate() {
-        let key = value.get("Id")
+        let key = value
+            .get("Id")
             .and_then(|v| v.as_u64())
             .map(|id| id.to_string())
             .unwrap_or_else(|| idx.to_string());

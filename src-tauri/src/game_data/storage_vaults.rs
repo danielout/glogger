@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 use super::parse_string_map;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // ── Raw CDN shape ───────────────────────────────────────────────────────────
 

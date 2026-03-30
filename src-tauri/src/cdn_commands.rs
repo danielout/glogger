@@ -1,14 +1,18 @@
+use chrono::Local;
 /// Tauri commands for CDN data management and game data queries.
 /// These are the invoke() endpoints the Vue frontend calls.
-
 use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::RwLock;
-use chrono::Local;
+
+use serde_json::Value;
 
 use crate::cdn;
-use crate::game_data::{self, GameData, ItemInfo, SkillInfo, AbilityInfo, RecipeInfo, QuestInfo, NpcInfo, EffectInfo, PlayerTitleInfo, SourceEntry, AreaInfo};
+use crate::game_data::{
+    self, AbilityInfo, AreaInfo, EffectInfo, GameData, ItemInfo, NpcInfo, PlayerTitleInfo,
+    QuestInfo, RecipeInfo, SkillInfo, SourceEntry,
+};
 
 /// Timestamped log line for startup diagnostics.
 macro_rules! startup_log {
@@ -299,9 +303,7 @@ pub async fn get_items_by_keyword(
 
 /// Return a sorted list of all distinct keyword values across all items.
 #[tauri::command]
-pub async fn get_all_item_keywords(
-    state: State<'_, GameDataState>,
-) -> Result<Vec<String>, String> {
+pub async fn get_all_item_keywords(state: State<'_, GameDataState>) -> Result<Vec<String>, String> {
     let data = state.read().await;
     let mut keywords: Vec<String> = data
         .items
@@ -316,9 +318,7 @@ pub async fn get_all_item_keywords(
 
 /// Return a sorted list of all distinct equip_slot values across all items.
 #[tauri::command]
-pub async fn get_equip_slots(
-    state: State<'_, GameDataState>,
-) -> Result<Vec<String>, String> {
+pub async fn get_equip_slots(state: State<'_, GameDataState>) -> Result<Vec<String>, String> {
     let data = state.read().await;
     let mut slots: Vec<String> = data
         .items
@@ -335,9 +335,7 @@ pub async fn get_equip_slots(
 
 /// Get all skills as a flat list.
 #[tauri::command]
-pub async fn get_all_skills(
-    state: State<'_, GameDataState>,
-) -> Result<Vec<SkillInfo>, String> {
+pub async fn get_all_skills(state: State<'_, GameDataState>) -> Result<Vec<SkillInfo>, String> {
     let data = state.read().await;
     let mut skills: Vec<SkillInfo> = data.skills.values().cloned().collect();
     skills.sort_by(|a, b| a.name.cmp(&b.name));
@@ -354,11 +352,14 @@ pub async fn get_xp_table_for_skill(
     let data = state.read().await;
 
     // Find the skill
-    let skill = data.skill_by_name(&skill_name)
+    let skill = data
+        .skill_by_name(&skill_name)
         .ok_or_else(|| format!("Skill not found: {skill_name}"))?;
 
     // Get the XP table name
-    let table_name = skill.xp_table.as_deref()
+    let table_name = skill
+        .xp_table
+        .as_deref()
         .ok_or_else(|| format!("Skill {skill_name} has no XP table"))?;
 
     // Find the matching XP table by internal name
@@ -368,7 +369,9 @@ pub async fn get_xp_table_for_skill(
         }
     }
 
-    Err(format!("XP table '{table_name}' not found for skill {skill_name}"))
+    Err(format!(
+        "XP table '{table_name}' not found for skill {skill_name}"
+    ))
 }
 
 // ── Ability query commands ────────────────────────────────────────────────────
@@ -383,7 +386,9 @@ pub async fn get_abilities_for_skill(
 
     // Abilities store skill as internal name (e.g. "FireMagic"), but callers
     // may pass the display name ("Fire Magic"). Try both.
-    let internal_name = data.skills.values()
+    let internal_name = data
+        .skills
+        .values()
         .find(|s| s.name == skill)
         .map(|s| s.internal_name.clone());
     let match_name = internal_name.as_deref().unwrap_or(&skill);
@@ -394,7 +399,12 @@ pub async fn get_abilities_for_skill(
         .filter(|a| a.skill.as_deref() == Some(match_name))
         .cloned()
         .collect();
-    abilities.sort_by(|a, b| a.level.unwrap_or(0.0).partial_cmp(&b.level.unwrap_or(0.0)).unwrap_or(std::cmp::Ordering::Equal));
+    abilities.sort_by(|a, b| {
+        a.level
+            .unwrap_or(0.0)
+            .partial_cmp(&b.level.unwrap_or(0.0))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     Ok(abilities)
 }
 
@@ -480,17 +490,19 @@ pub async fn get_recipes_for_skill(
 
 /// Get all quests.
 #[tauri::command]
-pub async fn get_all_quests(
-    state: State<'_, GameDataState>,
-) -> Result<Vec<QuestInfo>, String> {
+pub async fn get_all_quests(state: State<'_, GameDataState>) -> Result<Vec<QuestInfo>, String> {
     let data = state.read().await;
     let mut results: Vec<QuestInfo> = data.quests.values().cloned().collect();
     results.sort_by(|a, b| {
         // Sort by internal_name for now since we don't have parsed display names yet
-        let a_name = a.raw.get("DisplayName")
+        let a_name = a
+            .raw
+            .get("DisplayName")
             .and_then(|v| v.as_str())
             .unwrap_or("");
-        let b_name = b.raw.get("DisplayName")
+        let b_name = b
+            .raw
+            .get("DisplayName")
             .and_then(|v| v.as_str())
             .unwrap_or("");
         a_name.cmp(b_name)
@@ -512,11 +524,15 @@ pub async fn search_quests(
         .values()
         .filter(|quest| {
             // Search in DisplayName, InternalName, or Description
-            let display_name = quest.raw.get("DisplayName")
+            let display_name = quest
+                .raw
+                .get("DisplayName")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_lowercase();
-            let description = quest.raw.get("Description")
+            let description = quest
+                .raw
+                .get("Description")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_lowercase();
@@ -527,10 +543,14 @@ pub async fn search_quests(
         .collect();
 
     results.sort_by(|a, b| {
-        let a_name = a.raw.get("DisplayName")
+        let a_name = a
+            .raw
+            .get("DisplayName")
             .and_then(|v| v.as_str())
             .unwrap_or("");
-        let b_name = b.raw.get("DisplayName")
+        let b_name = b
+            .raw
+            .get("DisplayName")
             .and_then(|v| v.as_str())
             .unwrap_or("");
         a_name.cmp(b_name)
@@ -543,9 +563,7 @@ pub async fn search_quests(
 
 /// Get all NPCs.
 #[tauri::command]
-pub async fn get_all_npcs(
-    state: State<'_, GameDataState>,
-) -> Result<Vec<NpcInfo>, String> {
+pub async fn get_all_npcs(state: State<'_, GameDataState>) -> Result<Vec<NpcInfo>, String> {
     let data = state.read().await;
     let mut results: Vec<NpcInfo> = data.npcs.values().cloned().collect();
     results.sort_by(|a, b| a.name.cmp(&b.name));
@@ -566,7 +584,8 @@ pub async fn search_npcs(
         .values()
         .filter(|npc| {
             let name_match = npc.name.to_lowercase().contains(&q);
-            let desc_match = npc.desc
+            let desc_match = npc
+                .desc
                 .as_ref()
                 .map(|d| d.to_lowercase().contains(&q))
                 .unwrap_or(false);
@@ -590,9 +609,7 @@ pub async fn get_npcs_in_area(
     let mut results: Vec<NpcInfo> = data
         .npcs
         .values()
-        .filter(|npc| {
-            npc.area_name.as_ref().map(|a| a == &area).unwrap_or(false)
-        })
+        .filter(|npc| npc.area_name.as_ref().map(|a| a == &area).unwrap_or(false))
         .cloned()
         .collect();
 
@@ -617,10 +634,14 @@ pub async fn search_effects(
         .effects
         .values()
         .filter(|e| {
-            let name_match = e.name.as_ref()
+            let name_match = e
+                .name
+                .as_ref()
                 .map(|n| n.to_lowercase().contains(&q))
                 .unwrap_or(false);
-            let desc_match = e.desc.as_ref()
+            let desc_match = e
+                .desc
+                .as_ref()
                 .map(|d| d.to_lowercase().contains(&q))
                 .unwrap_or(false);
             name_match || desc_match
@@ -676,10 +697,14 @@ pub async fn search_player_titles(
         .player_titles
         .values()
         .filter(|t| {
-            let title_match = t.title.as_ref()
+            let title_match = t
+                .title
+                .as_ref()
                 .map(|n| n.to_lowercase().contains(&q))
                 .unwrap_or(false);
-            let tooltip_match = t.tooltip.as_ref()
+            let tooltip_match = t
+                .tooltip
+                .as_ref()
                 .map(|d| d.to_lowercase().contains(&q))
                 .unwrap_or(false);
             title_match || tooltip_match
@@ -739,7 +764,9 @@ pub async fn get_ability_sources(
 ) -> Result<EntitySources, String> {
     let data = state.read().await;
 
-    let cdn_sources = data.sources.abilities
+    let cdn_sources = data
+        .sources
+        .abilities
         .get(&id)
         .map(|s| s.entries.clone())
         .unwrap_or_default();
@@ -747,17 +774,23 @@ pub async fn get_ability_sources(
     // Find items that bestow this ability via bestow_ability field.
     // bestow_ability stores the internal name like "ability_1002"
     let ability_key = format!("ability_{id}");
-    let bestowed_by_items = data.items_bestowing_ability
+    let bestowed_by_items = data
+        .items_bestowing_ability
         .get(&ability_key)
         .map(|item_ids| {
-            item_ids.iter()
+            item_ids
+                .iter()
                 .filter_map(|iid| data.items.get(iid))
                 .cloned()
                 .collect()
         })
         .unwrap_or_default();
 
-    Ok(EntitySources { cdn_sources, bestowed_by_items, rewarded_by_quests: vec![] })
+    Ok(EntitySources {
+        cdn_sources,
+        bestowed_by_items,
+        rewarded_by_quests: vec![],
+    })
 }
 
 /// Get all known sources for an item.
@@ -768,30 +801,43 @@ pub async fn get_item_sources(
 ) -> Result<EntitySources, String> {
     let data = state.read().await;
 
-    let cdn_sources = data.sources.items
+    let cdn_sources = data
+        .sources
+        .items
         .get(&id)
         .map(|s| s.entries.clone())
         .unwrap_or_default();
 
     // Find quests that reward this item
     let item_key = format!("item_{id}");
-    let rewarded_by_quests = data.quests_rewarding_item
+    let rewarded_by_quests = data
+        .quests_rewarding_item
         .get(&item_key)
         .map(|quest_keys| {
-            quest_keys.iter()
+            quest_keys
+                .iter()
                 .filter_map(|qk| {
                     let quest = data.quests.get(qk)?;
-                    let name = quest.raw.get("Name")
+                    let name = quest
+                        .raw
+                        .get("Name")
                         .and_then(|v| v.as_str())
                         .unwrap_or(qk.as_str())
                         .to_string();
-                    Some(QuestSummary { key: qk.clone(), name })
+                    Some(QuestSummary {
+                        key: qk.clone(),
+                        name,
+                    })
                 })
                 .collect()
         })
         .unwrap_or_default();
 
-    Ok(EntitySources { cdn_sources, bestowed_by_items: vec![], rewarded_by_quests })
+    Ok(EntitySources {
+        cdn_sources,
+        bestowed_by_items: vec![],
+        rewarded_by_quests,
+    })
 }
 
 /// Get all known sources for a recipe.
@@ -802,24 +848,32 @@ pub async fn get_recipe_sources(
 ) -> Result<EntitySources, String> {
     let data = state.read().await;
 
-    let cdn_sources = data.sources.recipes
+    let cdn_sources = data
+        .sources
+        .recipes
         .get(&id)
         .map(|s| s.entries.clone())
         .unwrap_or_default();
 
     // Find items that bestow this recipe
     let recipe_key = format!("recipe_{id}");
-    let bestowed_by_items = data.items_bestowing_recipe
+    let bestowed_by_items = data
+        .items_bestowing_recipe
         .get(&recipe_key)
         .map(|item_ids| {
-            item_ids.iter()
+            item_ids
+                .iter()
                 .filter_map(|iid| data.items.get(iid))
                 .cloned()
                 .collect()
         })
         .unwrap_or_default();
 
-    Ok(EntitySources { cdn_sources, bestowed_by_items, rewarded_by_quests: vec![] })
+    Ok(EntitySources {
+        cdn_sources,
+        bestowed_by_items,
+        rewarded_by_quests: vec![],
+    })
 }
 
 /// Get all known sources for a quest (items that bestow it).
@@ -830,17 +884,23 @@ pub async fn get_quest_sources(
 ) -> Result<EntitySources, String> {
     let data = state.read().await;
 
-    let bestowed_by_items = data.items_bestowing_quest
+    let bestowed_by_items = data
+        .items_bestowing_quest
         .get(&key)
         .map(|item_ids| {
-            item_ids.iter()
+            item_ids
+                .iter()
                 .filter_map(|iid| data.items.get(iid))
                 .cloned()
                 .collect()
         })
         .unwrap_or_default();
 
-    Ok(EntitySources { cdn_sources: vec![], bestowed_by_items, rewarded_by_quests: vec![] })
+    Ok(EntitySources {
+        cdn_sources: vec![],
+        bestowed_by_items,
+        rewarded_by_quests: vec![],
+    })
 }
 
 // ── Effect description resolution ───────────────────────────────────────────
@@ -893,11 +953,15 @@ fn resolve_single_effect(desc: &str, data: &GameData) -> Option<ResolvedEffect> 
 
     let attr = data.attributes.get(token)?;
     let label = attr.raw.get("Label")?.as_str()?.to_string();
-    let display_type = attr.raw.get("DisplayType")
+    let display_type = attr
+        .raw
+        .get("DisplayType")
         .and_then(|v| v.as_str())
         .unwrap_or("AsInt")
         .to_string();
-    let icon_id = attr.raw.get("IconIds")
+    let icon_id = attr
+        .raw
+        .get("IconIds")
         .and_then(|v| v.as_array())
         .and_then(|arr| arr.first())
         .and_then(|v| v.as_u64())
@@ -957,7 +1021,10 @@ pub async fn get_tsys_power_info(
     let data = state.read().await;
 
     // Find the power in tsys client_info by internal_name
-    let entry = data.tsys.client_info.values()
+    let entry = data
+        .tsys
+        .client_info
+        .values()
         .find(|info| info.internal_name.as_deref() == Some(&power_name));
 
     let Some(info) = entry else {
@@ -966,7 +1033,9 @@ pub async fn get_tsys_power_info(
 
     // Get the effect descriptions for the requested tier
     let tier_key = format!("id_{}", tier);
-    let tier_effects: Vec<String> = info.tiers.as_ref()
+    let tier_effects: Vec<String> = info
+        .tiers
+        .as_ref()
         .and_then(|tiers| tiers.get(&tier_key))
         .and_then(|t| t.get("EffectDescs"))
         .and_then(|descs| descs.as_array())
@@ -1015,7 +1084,8 @@ pub async fn get_storage_vault_zones(
         .iter()
         .map(|(key, vault)| {
             let area_key = vault.area.clone();
-            let area_name = area_key.as_ref()
+            let area_name = area_key
+                .as_ref()
                 .and_then(|ak| data.areas.get(ak))
                 .and_then(|a| a.short_friendly_name.clone().or(a.friendly_name.clone()));
 
@@ -1059,7 +1129,9 @@ pub async fn get_storage_vault_metadata(
         .storage_vaults
         .iter()
         .map(|(key, vault)| {
-            let area_name = vault.area.as_ref()
+            let area_name = vault
+                .area
+                .as_ref()
                 .and_then(|ak| data.areas.get(ak))
                 .and_then(|a| a.short_friendly_name.clone().or(a.friendly_name.clone()));
             let grouping_area = vault.grouping.as_ref().or(vault.area.as_ref());
@@ -1085,5 +1157,218 @@ pub async fn get_storage_vault_metadata(
         })
         .collect();
     results.sort_by(|a, b| a.key.cmp(&b.key));
+    Ok(results)
+}
+
+// ── Build Planner CDN queries ───────────────────────────────────────────────
+
+/// Get all combat skills (where combat == true in CDN data).
+#[tauri::command]
+pub async fn get_combat_skills(state: State<'_, GameDataState>) -> Result<Vec<SkillInfo>, String> {
+    let data = state.read().await;
+    let mut skills: Vec<SkillInfo> = data
+        .skills
+        .values()
+        .filter(|s| s.combat == Some(true))
+        .cloned()
+        .collect();
+    skills.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(skills)
+}
+
+/// A single TSys power eligible for a specific equipment slot, with resolved effect text.
+#[derive(serde::Serialize)]
+pub struct SlotTsysPower {
+    /// The CDN key for this power (e.g. "power_12345")
+    pub key: String,
+    /// Internal name (e.g. "SwordBoost")
+    pub internal_name: Option<String>,
+    /// Which skill this mod belongs to, or None for generic
+    pub skill: Option<String>,
+    /// Display prefix (e.g. "Sword Damage")
+    pub prefix: Option<String>,
+    /// Display suffix
+    pub suffix: Option<String>,
+    /// The tier index that matched the target level
+    pub tier_id: Option<String>,
+    /// Resolved effect descriptions at this tier
+    pub effects: Vec<String>,
+    /// Raw effect descriptions (unresolved tokens)
+    pub raw_effects: Vec<String>,
+    /// Minimum rarity required for this tier
+    pub min_rarity: Option<String>,
+    /// Skill level prerequisite for this tier
+    pub skill_level_prereq: Option<i64>,
+}
+
+/// Get all eligible TSys powers for a given equipment slot, filtered by skills and target level.
+/// Returns powers belonging to skill_primary, skill_secondary, or generic (no skill).
+#[tauri::command]
+pub async fn get_tsys_powers_for_slot(
+    skill_primary: Option<String>,
+    skill_secondary: Option<String>,
+    equip_slot: String,
+    target_level: i64,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<SlotTsysPower>, String> {
+    let data = state.read().await;
+    let mut results: Vec<SlotTsysPower> = Vec::new();
+
+    for (key, info) in &data.tsys.client_info {
+        // Skip unavailable powers
+        if info.is_unavailable == Some(true) {
+            continue;
+        }
+
+        // Must include this equipment slot
+        if !info.slots.iter().any(|s| s == &equip_slot) {
+            continue;
+        }
+
+        // Filter by skill: must match primary, secondary, or be generic (no skill)
+        let power_skill = info.skill.as_deref();
+        let matches_skill = match power_skill {
+            None => true, // generic mod
+            Some(s) => skill_primary.as_deref() == Some(s) || skill_secondary.as_deref() == Some(s),
+        };
+        if !matches_skill {
+            continue;
+        }
+
+        // Find the best tier for the target level
+        let tiers = match &info.tiers {
+            Some(Value::Object(map)) => map,
+            _ => continue,
+        };
+
+        let mut best_tier_id: Option<String> = None;
+        let mut best_effects: Vec<String> = Vec::new();
+        let mut best_raw_effects: Vec<String> = Vec::new();
+        let mut best_min_rarity: Option<String> = None;
+        let mut best_skill_prereq: Option<i64> = None;
+
+        for (tier_key, tier_val) in tiers {
+            let min_level = tier_val
+                .get("MinLevel")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0);
+            let max_level = tier_val
+                .get("MaxLevel")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(999);
+
+            if target_level >= min_level && target_level <= max_level {
+                best_tier_id = Some(tier_key.clone());
+                best_min_rarity = tier_val
+                    .get("MinRarity")
+                    .and_then(|v| v.as_str())
+                    .map(String::from);
+                best_skill_prereq = tier_val.get("SkillLevelPrereq").and_then(|v| v.as_i64());
+
+                let raw_descs: Vec<String> = tier_val
+                    .get("EffectDescs")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_str().map(String::from))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+
+                best_raw_effects = raw_descs.clone();
+                best_effects = raw_descs
+                    .iter()
+                    .map(|desc| {
+                        resolve_single_effect(desc, &data)
+                            .map(|r| r.formatted)
+                            .unwrap_or_else(|| desc.clone())
+                    })
+                    .collect();
+                break; // First matching tier wins
+            }
+        }
+
+        // If no tier matched, try to find the highest tier at or below target level
+        if best_tier_id.is_none() {
+            let mut best_min = 0;
+            for (tier_key, tier_val) in tiers {
+                let min_level = tier_val
+                    .get("MinLevel")
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(0);
+                if min_level <= target_level && min_level >= best_min {
+                    best_min = min_level;
+                    best_tier_id = Some(tier_key.clone());
+                    best_min_rarity = tier_val
+                        .get("MinRarity")
+                        .and_then(|v| v.as_str())
+                        .map(String::from);
+                    best_skill_prereq = tier_val.get("SkillLevelPrereq").and_then(|v| v.as_i64());
+
+                    let raw_descs: Vec<String> = tier_val
+                        .get("EffectDescs")
+                        .and_then(|v| v.as_array())
+                        .map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str().map(String::from))
+                                .collect()
+                        })
+                        .unwrap_or_default();
+
+                    best_raw_effects = raw_descs.clone();
+                    best_effects = raw_descs
+                        .iter()
+                        .map(|desc| {
+                            resolve_single_effect(desc, &data)
+                                .map(|r| r.formatted)
+                                .unwrap_or_else(|| desc.clone())
+                        })
+                        .collect();
+                }
+            }
+        }
+
+        if best_tier_id.is_some() {
+            results.push(SlotTsysPower {
+                key: key.clone(),
+                internal_name: info.internal_name.clone(),
+                skill: info.skill.clone(),
+                prefix: info.prefix.clone(),
+                suffix: info.suffix.clone(),
+                tier_id: best_tier_id,
+                effects: best_effects,
+                raw_effects: best_raw_effects,
+                min_rarity: best_min_rarity,
+                skill_level_prereq: best_skill_prereq,
+            });
+        }
+    }
+
+    // Sort: skill-specific first (grouped by skill), then generic, then by name
+    results.sort_by(|a, b| {
+        let a_is_generic = a.skill.is_none();
+        let b_is_generic = b.skill.is_none();
+        if a_is_generic != b_is_generic {
+            return a_is_generic.cmp(&b_is_generic);
+        }
+        let skill_cmp = a.skill.cmp(&b.skill);
+        if skill_cmp != std::cmp::Ordering::Equal {
+            return skill_cmp;
+        }
+        let a_name = a
+            .prefix
+            .as_deref()
+            .or(a.suffix.as_deref())
+            .or(a.internal_name.as_deref())
+            .unwrap_or("");
+        let b_name = b
+            .prefix
+            .as_deref()
+            .or(b.suffix.as_deref())
+            .or(b.internal_name.as_deref())
+            .unwrap_or("");
+        a_name.cmp(b_name)
+    });
+
     Ok(results)
 }

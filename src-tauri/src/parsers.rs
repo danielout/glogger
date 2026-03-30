@@ -16,11 +16,17 @@ pub fn parse_skill_update(line: &str) -> Option<SkillUpdate> {
 
     let timestamp = parse_timestamp(line)?;
     let skill_type = extract_field(line, "type=")?;
-    let level: u32  = extract_field(line, "raw=")?.parse().ok()?;
-    let xp: u32     = extract_field(line, "xp=")?.parse().ok()?;
-    let tnl: u32    = extract_field(line, "tnl=")?.parse().ok()?;
+    let level: u32 = extract_field(line, "raw=")?.parse().ok()?;
+    let xp: u32 = extract_field(line, "xp=")?.parse().ok()?;
+    let tnl: u32 = extract_field(line, "tnl=")?.parse().ok()?;
 
-    Some(SkillUpdate { skill_type, level, xp, tnl, timestamp })
+    Some(SkillUpdate {
+        skill_type,
+        level,
+        xp,
+        tnl,
+        timestamp,
+    })
 }
 
 // Parses "[HH:MM:SS] " from the start of a line, returns "HH:MM:SS"
@@ -41,7 +47,7 @@ pub fn parse_timestamp(line: &str) -> Option<String> {
 /// `tz_offset_seconds`: offset from UTC in seconds (e.g., -25200 for UTC-7).
 /// The log time is local, so UTC = local_time - offset.
 pub fn to_utc_datetime(time_str: &str, tz_offset_seconds: i32) -> String {
-    use chrono::{Utc, NaiveTime, Duration};
+    use chrono::{Duration, NaiveTime, Utc};
 
     let today = Utc::now().date_naive();
 

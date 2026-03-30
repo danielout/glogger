@@ -1,8 +1,7 @@
-/// Tauri commands for querying persisted game state
-
-use tauri::State;
-use serde::{Deserialize, Serialize};
 use super::DbPool;
+use serde::{Deserialize, Serialize};
+/// Tauri commands for querying persisted game state
+use tauri::State;
 
 // ── Response Types ──────────────────────────────────────────────────────────
 
@@ -141,20 +140,22 @@ pub fn get_game_state_skills(
          ORDER BY skill_name"
     ).map_err(|e| format!("Query error: {e}"))?;
 
-    let rows = stmt.query_map(rusqlite::params![character_name, server_name], |row| {
-        Ok(GameStateSkill {
-            skill_id: row.get(0)?,
-            skill_name: row.get(1)?,
-            level: row.get(2)?,
-            base_level: row.get(3)?,
-            bonus_levels: row.get(4)?,
-            xp: row.get(5)?,
-            tnl: row.get(6)?,
-            max_level: row.get(7)?,
-            last_confirmed_at: row.get(8)?,
-            source: row.get(9)?,
+    let rows = stmt
+        .query_map(rusqlite::params![character_name, server_name], |row| {
+            Ok(GameStateSkill {
+                skill_id: row.get(0)?,
+                skill_name: row.get(1)?,
+                level: row.get(2)?,
+                base_level: row.get(3)?,
+                bonus_levels: row.get(4)?,
+                xp: row.get(5)?,
+                tnl: row.get(6)?,
+                max_level: row.get(7)?,
+                last_confirmed_at: row.get(8)?,
+                source: row.get(9)?,
+            })
         })
-    }).map_err(|e| format!("Query error: {e}"))?;
+        .map_err(|e| format!("Query error: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Row error: {e}"))
@@ -167,19 +168,23 @@ pub fn get_game_state_attributes(
     server_name: String,
 ) -> Result<Vec<GameStateAttribute>, String> {
     let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
-    let mut stmt = conn.prepare(
-        "SELECT attribute_name, value, last_confirmed_at
+    let mut stmt = conn
+        .prepare(
+            "SELECT attribute_name, value, last_confirmed_at
          FROM game_state_attributes WHERE character_name = ?1 AND server_name = ?2
-         ORDER BY attribute_name"
-    ).map_err(|e| format!("Query error: {e}"))?;
+         ORDER BY attribute_name",
+        )
+        .map_err(|e| format!("Query error: {e}"))?;
 
-    let rows = stmt.query_map(rusqlite::params![character_name, server_name], |row| {
-        Ok(GameStateAttribute {
-            attribute_name: row.get(0)?,
-            value: row.get(1)?,
-            last_confirmed_at: row.get(2)?,
+    let rows = stmt
+        .query_map(rusqlite::params![character_name, server_name], |row| {
+            Ok(GameStateAttribute {
+                attribute_name: row.get(0)?,
+                value: row.get(1)?,
+                last_confirmed_at: row.get(2)?,
+            })
         })
-    }).map_err(|e| format!("Query error: {e}"))?;
+        .map_err(|e| format!("Query error: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Row error: {e}"))
@@ -259,7 +264,11 @@ pub fn get_game_state_world(
         },
     ).ok();
 
-    Ok(GameStateWorld { weather, combat, mount })
+    Ok(GameStateWorld {
+        weather,
+        combat,
+        mount,
+    })
 }
 
 #[tauri::command]
@@ -275,17 +284,19 @@ pub fn get_game_state_inventory(
          ORDER BY slot_index"
     ).map_err(|e| format!("Query error: {e}"))?;
 
-    let rows = stmt.query_map(rusqlite::params![character_name, server_name], |row| {
-        Ok(GameStateInventoryItem {
-            instance_id: row.get(0)?,
-            item_name: row.get(1)?,
-            item_type_id: row.get(2)?,
-            stack_size: row.get(3)?,
-            slot_index: row.get(4)?,
-            last_confirmed_at: row.get(5)?,
-            source: row.get(6)?,
+    let rows = stmt
+        .query_map(rusqlite::params![character_name, server_name], |row| {
+            Ok(GameStateInventoryItem {
+                instance_id: row.get(0)?,
+                item_name: row.get(1)?,
+                item_type_id: row.get(2)?,
+                stack_size: row.get(3)?,
+                slot_index: row.get(4)?,
+                last_confirmed_at: row.get(5)?,
+                source: row.get(6)?,
+            })
         })
-    }).map_err(|e| format!("Query error: {e}"))?;
+        .map_err(|e| format!("Query error: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Row error: {e}"))
@@ -298,20 +309,24 @@ pub fn get_game_state_recipes(
     server_name: String,
 ) -> Result<Vec<GameStateRecipe>, String> {
     let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
-    let mut stmt = conn.prepare(
-        "SELECT recipe_id, completion_count, last_confirmed_at, source
+    let mut stmt = conn
+        .prepare(
+            "SELECT recipe_id, completion_count, last_confirmed_at, source
          FROM game_state_recipes WHERE character_name = ?1 AND server_name = ?2
-         ORDER BY recipe_id"
-    ).map_err(|e| format!("Query error: {e}"))?;
+         ORDER BY recipe_id",
+        )
+        .map_err(|e| format!("Query error: {e}"))?;
 
-    let rows = stmt.query_map(rusqlite::params![character_name, server_name], |row| {
-        Ok(GameStateRecipe {
-            recipe_id: row.get(0)?,
-            completion_count: row.get(1)?,
-            last_confirmed_at: row.get(2)?,
-            source: row.get(3)?,
+    let rows = stmt
+        .query_map(rusqlite::params![character_name, server_name], |row| {
+            Ok(GameStateRecipe {
+                recipe_id: row.get(0)?,
+                completion_count: row.get(1)?,
+                last_confirmed_at: row.get(2)?,
+                source: row.get(3)?,
+            })
         })
-    }).map_err(|e| format!("Query error: {e}"))?;
+        .map_err(|e| format!("Query error: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Row error: {e}"))
@@ -324,19 +339,23 @@ pub fn get_game_state_equipment(
     server_name: String,
 ) -> Result<Vec<GameStateEquipmentSlot>, String> {
     let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
-    let mut stmt = conn.prepare(
-        "SELECT slot, appearance_key, last_confirmed_at
+    let mut stmt = conn
+        .prepare(
+            "SELECT slot, appearance_key, last_confirmed_at
          FROM game_state_equipment WHERE character_name = ?1 AND server_name = ?2
-         ORDER BY slot"
-    ).map_err(|e| format!("Query error: {e}"))?;
+         ORDER BY slot",
+        )
+        .map_err(|e| format!("Query error: {e}"))?;
 
-    let rows = stmt.query_map(rusqlite::params![character_name, server_name], |row| {
-        Ok(GameStateEquipmentSlot {
-            slot: row.get(0)?,
-            appearance_key: row.get(1)?,
-            last_confirmed_at: row.get(2)?,
+    let rows = stmt
+        .query_map(rusqlite::params![character_name, server_name], |row| {
+            Ok(GameStateEquipmentSlot {
+                slot: row.get(0)?,
+                appearance_key: row.get(1)?,
+                last_confirmed_at: row.get(2)?,
+            })
         })
-    }).map_err(|e| format!("Query error: {e}"))?;
+        .map_err(|e| format!("Query error: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Row error: {e}"))
@@ -349,22 +368,26 @@ pub fn get_game_state_favor(
     server_name: String,
 ) -> Result<Vec<GameStateFavor>, String> {
     let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
-    let mut stmt = conn.prepare(
-        "SELECT npc_key, npc_name, cumulative_delta, favor_tier, last_confirmed_at, source
+    let mut stmt = conn
+        .prepare(
+            "SELECT npc_key, npc_name, cumulative_delta, favor_tier, last_confirmed_at, source
          FROM game_state_favor WHERE character_name = ?1 AND server_name = ?2
-         ORDER BY npc_name"
-    ).map_err(|e| format!("Query error: {e}"))?;
+         ORDER BY npc_name",
+        )
+        .map_err(|e| format!("Query error: {e}"))?;
 
-    let rows = stmt.query_map(rusqlite::params![character_name, server_name], |row| {
-        Ok(GameStateFavor {
-            npc_key: row.get(0)?,
-            npc_name: row.get(1)?,
-            cumulative_delta: row.get(2)?,
-            favor_tier: row.get(3)?,
-            last_confirmed_at: row.get(4)?,
-            source: row.get(5)?,
+    let rows = stmt
+        .query_map(rusqlite::params![character_name, server_name], |row| {
+            Ok(GameStateFavor {
+                npc_key: row.get(0)?,
+                npc_name: row.get(1)?,
+                cumulative_delta: row.get(2)?,
+                favor_tier: row.get(3)?,
+                last_confirmed_at: row.get(4)?,
+                source: row.get(5)?,
+            })
         })
-    }).map_err(|e| format!("Query error: {e}"))?;
+        .map_err(|e| format!("Query error: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Row error: {e}"))
@@ -377,20 +400,24 @@ pub fn get_game_state_currencies(
     server_name: String,
 ) -> Result<Vec<GameStateCurrency>, String> {
     let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
-    let mut stmt = conn.prepare(
-        "SELECT currency_name, amount, last_confirmed_at, source
+    let mut stmt = conn
+        .prepare(
+            "SELECT currency_name, amount, last_confirmed_at, source
          FROM game_state_currencies WHERE character_name = ?1 AND server_name = ?2
-         ORDER BY currency_name"
-    ).map_err(|e| format!("Query error: {e}"))?;
+         ORDER BY currency_name",
+        )
+        .map_err(|e| format!("Query error: {e}"))?;
 
-    let rows = stmt.query_map(rusqlite::params![character_name, server_name], |row| {
-        Ok(GameStateCurrency {
-            currency_name: row.get(0)?,
-            amount: row.get(1)?,
-            last_confirmed_at: row.get(2)?,
-            source: row.get(3)?,
+    let rows = stmt
+        .query_map(rusqlite::params![character_name, server_name], |row| {
+            Ok(GameStateCurrency {
+                currency_name: row.get(0)?,
+                amount: row.get(1)?,
+                last_confirmed_at: row.get(2)?,
+                source: row.get(3)?,
+            })
         })
-    }).map_err(|e| format!("Query error: {e}"))?;
+        .map_err(|e| format!("Query error: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Row error: {e}"))
@@ -403,20 +430,24 @@ pub fn get_game_state_effects(
     server_name: String,
 ) -> Result<Vec<GameStateEffect>, String> {
     let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
-    let mut stmt = conn.prepare(
-        "SELECT effect_instance_id, effect_name, source_entity_id, last_confirmed_at
+    let mut stmt = conn
+        .prepare(
+            "SELECT effect_instance_id, effect_name, source_entity_id, last_confirmed_at
          FROM game_state_effects WHERE character_name = ?1 AND server_name = ?2
-         ORDER BY effect_instance_id"
-    ).map_err(|e| format!("Query error: {e}"))?;
+         ORDER BY effect_instance_id",
+        )
+        .map_err(|e| format!("Query error: {e}"))?;
 
-    let rows = stmt.query_map(rusqlite::params![character_name, server_name], |row| {
-        Ok(GameStateEffect {
-            effect_instance_id: row.get(0)?,
-            effect_name: row.get(1)?,
-            source_entity_id: row.get(2)?,
-            last_confirmed_at: row.get(3)?,
+    let rows = stmt
+        .query_map(rusqlite::params![character_name, server_name], |row| {
+            Ok(GameStateEffect {
+                effect_instance_id: row.get(0)?,
+                effect_name: row.get(1)?,
+                source_entity_id: row.get(2)?,
+                last_confirmed_at: row.get(3)?,
+            })
         })
-    }).map_err(|e| format!("Query error: {e}"))?;
+        .map_err(|e| format!("Query error: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Row error: {e}"))
@@ -435,18 +466,20 @@ pub fn get_game_state_storage(
          ORDER BY vault_key, item_name"
     ).map_err(|e| format!("Query error: {e}"))?;
 
-    let rows = stmt.query_map(rusqlite::params![character_name, server_name], |row| {
-        Ok(GameStateStorageItem {
-            vault_key: row.get(0)?,
-            instance_id: row.get(1)?,
-            item_name: row.get(2)?,
-            item_type_id: row.get(3)?,
-            stack_size: row.get(4)?,
-            slot_index: row.get(5)?,
-            last_confirmed_at: row.get(6)?,
-            source: row.get(7)?,
+    let rows = stmt
+        .query_map(rusqlite::params![character_name, server_name], |row| {
+            Ok(GameStateStorageItem {
+                vault_key: row.get(0)?,
+                instance_id: row.get(1)?,
+                item_name: row.get(2)?,
+                item_type_id: row.get(3)?,
+                stack_size: row.get(4)?,
+                slot_index: row.get(5)?,
+                last_confirmed_at: row.get(6)?,
+                source: row.get(7)?,
+            })
         })
-    }).map_err(|e| format!("Query error: {e}"))?;
+        .map_err(|e| format!("Query error: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Row error: {e}"))
@@ -473,18 +506,22 @@ pub fn get_tracked_skills(
     server_name: String,
 ) -> Result<Vec<TrackedSkill>, String> {
     let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
-    let mut stmt = conn.prepare(
-        "SELECT skill_name, sort_order FROM tracked_skills
+    let mut stmt = conn
+        .prepare(
+            "SELECT skill_name, sort_order FROM tracked_skills
          WHERE character_name = ?1 AND server_name = ?2
-         ORDER BY sort_order, skill_name"
-    ).map_err(|e| format!("Query error: {e}"))?;
+         ORDER BY sort_order, skill_name",
+        )
+        .map_err(|e| format!("Query error: {e}"))?;
 
-    let rows = stmt.query_map(rusqlite::params![character_name, server_name], |row| {
-        Ok(TrackedSkill {
-            skill_name: row.get(0)?,
-            sort_order: row.get(1)?,
+    let rows = stmt
+        .query_map(rusqlite::params![character_name, server_name], |row| {
+            Ok(TrackedSkill {
+                skill_name: row.get(0)?,
+                sort_order: row.get(1)?,
+            })
         })
-    }).map_err(|e| format!("Query error: {e}"))?;
+        .map_err(|e| format!("Query error: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Row error: {e}"))
@@ -502,17 +539,24 @@ pub fn set_tracked_skills(
     conn.execute(
         "DELETE FROM tracked_skills WHERE character_name = ?1 AND server_name = ?2",
         rusqlite::params![character_name, server_name],
-    ).map_err(|e| format!("Delete error: {e}"))?;
+    )
+    .map_err(|e| format!("Delete error: {e}"))?;
 
-    let mut stmt = conn.prepare(
-        "INSERT INTO tracked_skills (character_name, server_name, skill_name, sort_order)
-         VALUES (?1, ?2, ?3, ?4)"
-    ).map_err(|e| format!("Prepare error: {e}"))?;
+    let mut stmt = conn
+        .prepare(
+            "INSERT INTO tracked_skills (character_name, server_name, skill_name, sort_order)
+         VALUES (?1, ?2, ?3, ?4)",
+        )
+        .map_err(|e| format!("Prepare error: {e}"))?;
 
     for entry in &skills {
         stmt.execute(rusqlite::params![
-            character_name, server_name, entry.skill_name, entry.sort_order
-        ]).map_err(|e| format!("Insert error: {e}"))?;
+            character_name,
+            server_name,
+            entry.skill_name,
+            entry.sort_order
+        ])
+        .map_err(|e| format!("Insert error: {e}"))?;
     }
 
     Ok(())

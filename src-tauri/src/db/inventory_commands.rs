@@ -1,9 +1,8 @@
+use super::DbPool;
+use serde::{Deserialize, Serialize};
 /// Tauri commands for inventory report import and querying
-
 use std::collections::HashMap;
 use tauri::State;
-use serde::{Deserialize, Serialize};
-use super::DbPool;
 
 // ── JSON Deserialization Structs (match game's /outputitems format) ───────────
 
@@ -127,8 +126,8 @@ pub fn import_inventory_report_internal(
     file_path: &str,
 ) -> Result<InventoryImportResult, String> {
     // 1. Read file
-    let raw_json = std::fs::read_to_string(file_path)
-        .map_err(|e| format!("Failed to read file: {e}"))?;
+    let raw_json =
+        std::fs::read_to_string(file_path).map_err(|e| format!("Failed to read file: {e}"))?;
 
     // 2. Deserialize
     let report: StorageReport = serde_json::from_str(&raw_json)
@@ -142,7 +141,9 @@ pub fn import_inventory_report_internal(
         ));
     }
 
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     // 4. Begin transaction
     conn.execute("BEGIN", [])
@@ -192,77 +193,86 @@ pub fn import_inventory_report_internal(
             let is_crafted = item.is_crafted.unwrap_or(false);
 
             // Serialize TSysPowers to JSON string if present
-            let tsys_powers_json = item.tsys_powers.as_ref().map(|powers| {
-                serde_json::to_string(powers).unwrap_or_default()
-            });
+            let tsys_powers_json = item
+                .tsys_powers
+                .as_ref()
+                .map(|powers| serde_json::to_string(powers).unwrap_or_default());
 
-            item_stmt.execute(rusqlite::params![
-                snapshot_id,
-                item.type_id,
-                item.storage_vault,
-                is_inv,
-                item.stack_size,
-                item.value,
-                item.name,
-                item.rarity,
-                item.slot,
-                item.level,
-                is_crafted,
-                item.crafter,
-                item.durability,
-                item.craft_points,
-                item.uses_remaining,
-                item.transmute_count,
-                item.attuned_to,
-                tsys_powers_json,
-                item.tsys_imbue_power,
-                item.tsys_imbue_power_tier,
-                item.pet_husbandry_state,
-            ]).map_err(|e| format!("Failed to insert item {}: {e}", item.name))?;
+            item_stmt
+                .execute(rusqlite::params![
+                    snapshot_id,
+                    item.type_id,
+                    item.storage_vault,
+                    is_inv,
+                    item.stack_size,
+                    item.value,
+                    item.name,
+                    item.rarity,
+                    item.slot,
+                    item.level,
+                    is_crafted,
+                    item.crafter,
+                    item.durability,
+                    item.craft_points,
+                    item.uses_remaining,
+                    item.transmute_count,
+                    item.attuned_to,
+                    tsys_powers_json,
+                    item.tsys_imbue_power,
+                    item.tsys_imbue_power_tier,
+                    item.pet_husbandry_state,
+                ])
+                .map_err(|e| format!("Failed to insert item {}: {e}", item.name))?;
         }
 
         // 8. Seed game_state_storage from this snapshot
         conn.execute(
             "DELETE FROM game_state_storage WHERE character_name = ?1 AND server_name = ?2",
             rusqlite::params![report.character, report.server_name],
-        ).ok();
+        )
+        .ok();
 
-        let mut storage_query = conn.prepare(
-            "SELECT storage_vault, type_id, item_name, stack_size
+        let mut storage_query = conn
+            .prepare(
+                "SELECT storage_vault, type_id, item_name, stack_size
              FROM character_snapshot_items
-             WHERE item_snapshot_id = ?1 AND storage_vault != '' AND is_in_inventory = 0"
-        ).map_err(|e| format!("Failed to prepare storage query: {e}"))?;
+             WHERE item_snapshot_id = ?1 AND storage_vault != '' AND is_in_inventory = 0",
+            )
+            .map_err(|e| format!("Failed to prepare storage query: {e}"))?;
 
         let mut storage_insert = conn.prepare(
             "INSERT INTO game_state_storage (character_name, server_name, vault_key, instance_id, item_name, item_type_id, stack_size, last_confirmed_at, source)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'snapshot')"
         ).map_err(|e| format!("Failed to prepare storage insert: {e}"))?;
 
-        let storage_rows: Vec<(String, i64, String, i64)> = storage_query.query_map(
-            rusqlite::params![snapshot_id],
-            |row| Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, i64>(1)?,
-                row.get::<_, String>(2)?,
-                row.get::<_, i64>(3)?,
-            ))
-        ).map_err(|e| format!("Failed to query storage items: {e}"))?
+        let storage_rows: Vec<(String, i64, String, i64)> = storage_query
+            .query_map(rusqlite::params![snapshot_id], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, i64>(3)?,
+                ))
+            })
+            .map_err(|e| format!("Failed to query storage items: {e}"))?
             .filter_map(|r| r.ok())
             .collect();
 
         let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
         for (i, (vault_key, type_id, item_name, stack_size)) in storage_rows.iter().enumerate() {
             let synthetic_id = -(i as i64 + 1);
-            storage_insert.execute(rusqlite::params![
-                report.character,
-                report.server_name,
-                vault_key,
-                synthetic_id,
-                item_name,
-                type_id,
-                stack_size,
-                now,
-            ]).ok();
+            storage_insert
+                .execute(rusqlite::params![
+                    report.character,
+                    report.server_name,
+                    vault_key,
+                    synthetic_id,
+                    item_name,
+                    type_id,
+                    stack_size,
+                    now,
+                ])
+                .ok();
         }
 
         // 9. Seed game_state_inventory from this snapshot (inventory items only)
@@ -271,11 +281,13 @@ pub fn import_inventory_report_internal(
             rusqlite::params![report.character, report.server_name],
         ).ok();
 
-        let mut inv_query = conn.prepare(
-            "SELECT type_id, item_name, stack_size
+        let mut inv_query = conn
+            .prepare(
+                "SELECT type_id, item_name, stack_size
              FROM character_snapshot_items
-             WHERE item_snapshot_id = ?1 AND is_in_inventory = 1"
-        ).map_err(|e| format!("Failed to prepare inventory query: {e}"))?;
+             WHERE item_snapshot_id = ?1 AND is_in_inventory = 1",
+            )
+            .map_err(|e| format!("Failed to prepare inventory query: {e}"))?;
 
         let mut inv_insert = conn.prepare(
             "INSERT INTO game_state_inventory (character_name, server_name, instance_id, item_name, item_type_id, stack_size, last_confirmed_at, source)
@@ -288,14 +300,15 @@ pub fn import_inventory_report_internal(
                 source = 'snapshot'"
         ).map_err(|e| format!("Failed to prepare inventory insert: {e}"))?;
 
-        let inv_rows: Vec<(i64, String, i64)> = inv_query.query_map(
-            rusqlite::params![snapshot_id],
-            |row| Ok((
-                row.get::<_, i64>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, i64>(2)?,
-            ))
-        ).map_err(|e| format!("Failed to query inventory items: {e}"))?
+        let inv_rows: Vec<(i64, String, i64)> = inv_query
+            .query_map(rusqlite::params![snapshot_id], |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, i64>(2)?,
+                ))
+            })
+            .map_err(|e| format!("Failed to query inventory items: {e}"))?
             .filter_map(|r| r.ok())
             .collect();
 
@@ -303,15 +316,17 @@ pub fn import_inventory_report_internal(
         let inv_offset = storage_rows.len() as i64;
         for (i, (type_id, item_name, stack_size)) in inv_rows.iter().enumerate() {
             let synthetic_id = -(inv_offset + i as i64 + 1);
-            inv_insert.execute(rusqlite::params![
-                report.character,
-                report.server_name,
-                synthetic_id,
-                item_name,
-                type_id,
-                stack_size,
-                now,
-            ]).ok();
+            inv_insert
+                .execute(rusqlite::params![
+                    report.character,
+                    report.server_name,
+                    synthetic_id,
+                    item_name,
+                    type_id,
+                    stack_size,
+                    now,
+                ])
+                .ok();
         }
 
         Ok(InventoryImportResult {
@@ -343,9 +358,13 @@ pub fn get_inventory_snapshots(
     character_name: String,
     server_name: Option<String>,
 ) -> Result<Vec<InventorySnapshotSummary>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
-    let (sql, params): (&str, Vec<Box<dyn rusqlite::types::ToSql>>) = if let Some(ref server) = server_name {
+    let (sql, params): (&str, Vec<Box<dyn rusqlite::types::ToSql>>) = if let Some(ref server) =
+        server_name
+    {
         (
             "SELECT cis.id, cis.character_name, cis.server_name, cis.snapshot_timestamp,
                     datetime(cis.import_date) as import_date,
@@ -370,21 +389,24 @@ pub fn get_inventory_snapshots(
         )
     };
 
-    let mut stmt = conn.prepare(sql)
+    let mut stmt = conn
+        .prepare(sql)
         .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
     let param_refs: Vec<&dyn rusqlite::types::ToSql> = params.iter().map(|p| p.as_ref()).collect();
 
-    let rows = stmt.query_map(param_refs.as_slice(), |row| {
-        Ok(InventorySnapshotSummary {
-            id: row.get(0)?,
-            character_name: row.get(1)?,
-            server_name: row.get(2)?,
-            snapshot_timestamp: row.get(3)?,
-            import_date: row.get(4)?,
-            item_count: row.get(5)?,
+    let rows = stmt
+        .query_map(param_refs.as_slice(), |row| {
+            Ok(InventorySnapshotSummary {
+                id: row.get(0)?,
+                character_name: row.get(1)?,
+                server_name: row.get(2)?,
+                snapshot_timestamp: row.get(3)?,
+                import_date: row.get(4)?,
+                item_count: row.get(5)?,
+            })
         })
-    }).map_err(|e| format!("Query failed: {e}"))?;
+        .map_err(|e| format!("Query failed: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Failed to read results: {e}"))
@@ -395,43 +417,49 @@ pub fn get_snapshot_items(
     db: State<'_, DbPool>,
     snapshot_id: i64,
 ) -> Result<Vec<SnapshotItem>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
-    let mut stmt = conn.prepare(
-        "SELECT id, type_id, storage_vault, is_in_inventory, stack_size, value,
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, type_id, storage_vault, is_in_inventory, stack_size, value,
                 item_name, rarity, slot, level, is_crafted, crafter, durability,
                 craft_points, uses_remaining, transmute_count, attuned_to,
                 tsys_powers, tsys_imbue_power, tsys_imbue_power_tier, pet_husbandry_state
          FROM character_snapshot_items
          WHERE item_snapshot_id = ?1
-         ORDER BY item_name"
-    ).map_err(|e| format!("Failed to prepare query: {e}"))?;
+         ORDER BY item_name",
+        )
+        .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
-    let rows = stmt.query_map([snapshot_id], |row| {
-        Ok(SnapshotItem {
-            id: row.get(0)?,
-            type_id: row.get(1)?,
-            storage_vault: row.get(2)?,
-            is_in_inventory: row.get(3)?,
-            stack_size: row.get(4)?,
-            value: row.get(5)?,
-            item_name: row.get(6)?,
-            rarity: row.get(7)?,
-            slot: row.get(8)?,
-            level: row.get(9)?,
-            is_crafted: row.get(10)?,
-            crafter: row.get(11)?,
-            durability: row.get(12)?,
-            craft_points: row.get(13)?,
-            uses_remaining: row.get(14)?,
-            transmute_count: row.get(15)?,
-            attuned_to: row.get(16)?,
-            tsys_powers: row.get(17)?,
-            tsys_imbue_power: row.get(18)?,
-            tsys_imbue_power_tier: row.get(19)?,
-            pet_husbandry_state: row.get(20)?,
+    let rows = stmt
+        .query_map([snapshot_id], |row| {
+            Ok(SnapshotItem {
+                id: row.get(0)?,
+                type_id: row.get(1)?,
+                storage_vault: row.get(2)?,
+                is_in_inventory: row.get(3)?,
+                stack_size: row.get(4)?,
+                value: row.get(5)?,
+                item_name: row.get(6)?,
+                rarity: row.get(7)?,
+                slot: row.get(8)?,
+                level: row.get(9)?,
+                is_crafted: row.get(10)?,
+                crafter: row.get(11)?,
+                durability: row.get(12)?,
+                craft_points: row.get(13)?,
+                uses_remaining: row.get(14)?,
+                transmute_count: row.get(15)?,
+                attuned_to: row.get(16)?,
+                tsys_powers: row.get(17)?,
+                tsys_imbue_power: row.get(18)?,
+                tsys_imbue_power_tier: row.get(19)?,
+                pet_husbandry_state: row.get(20)?,
+            })
         })
-    }).map_err(|e| format!("Query failed: {e}"))?;
+        .map_err(|e| format!("Query failed: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Failed to read results: {e}"))
@@ -442,35 +470,43 @@ pub fn get_inventory_summary(
     db: State<'_, DbPool>,
     snapshot_id: i64,
 ) -> Result<InventorySummary, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     // Get aggregate stats
-    let (total_stacks, total_items, total_value, unique_items): (i64, i64, i64, i64) = conn.query_row(
-        "SELECT COUNT(*), COALESCE(SUM(stack_size), 0),
+    let (total_stacks, total_items, total_value, unique_items): (i64, i64, i64, i64) = conn
+        .query_row(
+            "SELECT COUNT(*), COALESCE(SUM(stack_size), 0),
                 COALESCE(SUM(COALESCE(value, 0) * stack_size), 0),
                 COUNT(DISTINCT type_id)
          FROM character_snapshot_items
          WHERE item_snapshot_id = ?1",
-        [snapshot_id],
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
-    ).map_err(|e| format!("Failed to query summary: {e}"))?;
+            [snapshot_id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        )
+        .map_err(|e| format!("Failed to query summary: {e}"))?;
 
     // Items by vault
-    let mut vault_stmt = conn.prepare(
-        "SELECT CASE WHEN is_in_inventory THEN 'Inventory'
+    let mut vault_stmt = conn
+        .prepare(
+            "SELECT CASE WHEN is_in_inventory THEN 'Inventory'
                      WHEN storage_vault = '' THEN 'Unknown'
                      ELSE storage_vault END as vault,
                 SUM(stack_size)
          FROM character_snapshot_items
          WHERE item_snapshot_id = ?1
          GROUP BY vault
-         ORDER BY vault"
-    ).map_err(|e| format!("Failed to prepare vault query: {e}"))?;
+         ORDER BY vault",
+        )
+        .map_err(|e| format!("Failed to prepare vault query: {e}"))?;
 
     let mut items_by_vault = HashMap::new();
-    let vault_rows = vault_stmt.query_map([snapshot_id], |row| {
-        Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
-    }).map_err(|e| format!("Vault query failed: {e}"))?;
+    let vault_rows = vault_stmt
+        .query_map([snapshot_id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+        })
+        .map_err(|e| format!("Vault query failed: {e}"))?;
 
     for row in vault_rows {
         let (vault, count) = row.map_err(|e| format!("Failed to read vault row: {e}"))?;
@@ -478,18 +514,22 @@ pub fn get_inventory_summary(
     }
 
     // Items by rarity
-    let mut rarity_stmt = conn.prepare(
-        "SELECT COALESCE(rarity, 'Common'), SUM(stack_size)
+    let mut rarity_stmt = conn
+        .prepare(
+            "SELECT COALESCE(rarity, 'Common'), SUM(stack_size)
          FROM character_snapshot_items
          WHERE item_snapshot_id = ?1
          GROUP BY COALESCE(rarity, 'Common')
-         ORDER BY COALESCE(rarity, 'Common')"
-    ).map_err(|e| format!("Failed to prepare rarity query: {e}"))?;
+         ORDER BY COALESCE(rarity, 'Common')",
+        )
+        .map_err(|e| format!("Failed to prepare rarity query: {e}"))?;
 
     let mut items_by_rarity = HashMap::new();
-    let rarity_rows = rarity_stmt.query_map([snapshot_id], |row| {
-        Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
-    }).map_err(|e| format!("Rarity query failed: {e}"))?;
+    let rarity_rows = rarity_stmt
+        .query_map([snapshot_id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+        })
+        .map_err(|e| format!("Rarity query failed: {e}"))?;
 
     for row in rarity_rows {
         let (rarity, count) = row.map_err(|e| format!("Failed to read rarity row: {e}"))?;

@@ -3,7 +3,6 @@
 /// Version check:  GET http://client.projectgorgon.com/fileversion.txt  → integer
 /// Data files:     https://cdn.projectgorgon.com/v{ver}/data/{file}.json
 /// Icons:          https://cdn.projectgorgon.com/v{ver}/icons/icon_{id}.png
-
 use std::path::{Path, PathBuf};
 use tokio::fs;
 
@@ -75,11 +74,7 @@ pub async fn write_cached_version(cache_dir: &Path, version: u32) -> Result<(), 
 // ── Data file helpers ─────────────────────────────────────────────────────────
 
 /// Download one JSON data file and write it to `cache_dir/{name}.json`.
-pub async fn download_data_file(
-    version: u32,
-    name: &str,
-    cache_dir: &Path,
-) -> Result<(), String> {
+pub async fn download_data_file(version: u32, name: &str, cache_dir: &Path) -> Result<(), String> {
     let url = format!("{CDN_BASE}/v{version}/data/{name}.json");
     let bytes = reqwest::get(&url)
         .await

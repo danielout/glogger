@@ -1,14 +1,13 @@
+use super::DbPool;
+use crate::settings::SettingsManager;
+use serde::{Deserialize, Serialize};
 /// Tauri commands for market values — user-specified "sells for X to players" prices.
 ///
 /// Supports two modes controlled by settings.market_price_mode:
 /// - "universal": all prices stored with server_name = "*"
 /// - "per_server": prices stored per actual server_name
-
 use std::sync::Arc;
 use tauri::State;
-use serde::{Deserialize, Serialize};
-use super::DbPool;
-use crate::settings::SettingsManager;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,7 +45,8 @@ fn resolve_server(settings: &SettingsManager, server_name: &Option<String>) -> S
     if mode == "universal" {
         "*".to_string()
     } else {
-        server_name.clone()
+        server_name
+            .clone()
             .or_else(|| settings.get().active_server_name.clone())
             .unwrap_or_else(|| "*".to_string())
     }
@@ -63,22 +63,26 @@ pub fn get_market_values(
     let server = resolve_server(&settings_manager, &server_name);
     let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
 
-    let mut stmt = conn.prepare(
-        "SELECT server_name, item_type_id, item_name, market_value, notes, updated_at
+    let mut stmt = conn
+        .prepare(
+            "SELECT server_name, item_type_id, item_name, market_value, notes, updated_at
          FROM market_values WHERE server_name = ?1
-         ORDER BY item_name"
-    ).map_err(|e| format!("Query error: {e}"))?;
+         ORDER BY item_name",
+        )
+        .map_err(|e| format!("Query error: {e}"))?;
 
-    let rows = stmt.query_map(rusqlite::params![server], |row| {
-        Ok(MarketValue {
-            server_name: row.get(0)?,
-            item_type_id: row.get(1)?,
-            item_name: row.get(2)?,
-            market_value: row.get(3)?,
-            notes: row.get(4)?,
-            updated_at: row.get(5)?,
+    let rows = stmt
+        .query_map(rusqlite::params![server], |row| {
+            Ok(MarketValue {
+                server_name: row.get(0)?,
+                item_type_id: row.get(1)?,
+                item_name: row.get(2)?,
+                market_value: row.get(3)?,
+                notes: row.get(4)?,
+                updated_at: row.get(5)?,
+            })
         })
-    }).map_err(|e| format!("Query error: {e}"))?;
+        .map_err(|e| format!("Query error: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Row error: {e}"))
@@ -157,7 +161,8 @@ pub fn delete_market_value(
     conn.execute(
         "DELETE FROM market_values WHERE server_name = ?1 AND item_type_id = ?2",
         rusqlite::params![server, item_type_id],
-    ).map_err(|e| format!("Delete error: {e}"))?;
+    )
+    .map_err(|e| format!("Delete error: {e}"))?;
 
     Ok(())
 }
@@ -169,8 +174,7 @@ pub fn export_market_values(
     server_name: Option<String>,
 ) -> Result<String, String> {
     let values = get_market_values_internal(&db, &settings_manager, &server_name)?;
-    serde_json::to_string_pretty(&values)
-        .map_err(|e| format!("Serialization error: {e}"))
+    serde_json::to_string_pretty(&values).map_err(|e| format!("Serialization error: {e}"))
 }
 
 #[tauri::command]
@@ -181,8 +185,8 @@ pub fn import_market_values(
     strategy: String,
     server_name: Option<String>,
 ) -> Result<ImportMarketValuesResult, String> {
-    let entries: Vec<MarketValueImportEntry> = serde_json::from_str(&json_data)
-        .map_err(|e| format!("Invalid JSON: {e}"))?;
+    let entries: Vec<MarketValueImportEntry> =
+        serde_json::from_str(&json_data).map_err(|e| format!("Invalid JSON: {e}"))?;
 
     let server = resolve_server(&settings_manager, &server_name);
     let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
@@ -195,17 +199,20 @@ pub fn import_market_values(
 
     for entry in &entries {
         // Check for existing value
-        let existing: Option<String> = conn.query_row(
-            "SELECT updated_at FROM market_values WHERE server_name = ?1 AND item_type_id = ?2",
-            rusqlite::params![server, entry.item_type_id],
-            |row| row.get(0),
-        ).ok();
+        let existing: Option<String> = conn
+            .query_row(
+                "SELECT updated_at FROM market_values WHERE server_name = ?1 AND item_type_id = ?2",
+                rusqlite::params![server, entry.item_type_id],
+                |row| row.get(0),
+            )
+            .ok();
 
         let should_write = match (existing.as_deref(), strategy.as_str()) {
-            (None, _) => true,                           // No existing value — always import
-            (Some(_), "overwrite") => true,              // Always overwrite
-            (Some(_), "keep_existing") => false,         // Keep what we have
-            (Some(existing_ts), "newest") => {           // Accept newest by updated_at
+            (None, _) => true,                   // No existing value — always import
+            (Some(_), "overwrite") => true,      // Always overwrite
+            (Some(_), "keep_existing") => false, // Keep what we have
+            (Some(existing_ts), "newest") => {
+                // Accept newest by updated_at
                 entry.updated_at.as_str() > existing_ts
             }
             _ => true, // Default: import
@@ -235,7 +242,11 @@ pub fn import_market_values(
 
     conn.execute("COMMIT", []).ok();
 
-    Ok(ImportMarketValuesResult { imported, skipped, updated })
+    Ok(ImportMarketValuesResult {
+        imported,
+        skipped,
+        updated,
+    })
 }
 
 // ── Internal helpers ─────────────────────────────────────────────────────────
@@ -249,28 +260,33 @@ fn get_market_values_internal(
     let server = if mode == "universal" {
         "*".to_string()
     } else {
-        server_name.clone()
+        server_name
+            .clone()
             .or_else(|| settings_manager.get().active_server_name.clone())
             .unwrap_or_else(|| "*".to_string())
     };
 
     let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
-    let mut stmt = conn.prepare(
-        "SELECT server_name, item_type_id, item_name, market_value, notes, updated_at
+    let mut stmt = conn
+        .prepare(
+            "SELECT server_name, item_type_id, item_name, market_value, notes, updated_at
          FROM market_values WHERE server_name = ?1
-         ORDER BY item_name"
-    ).map_err(|e| format!("Query error: {e}"))?;
+         ORDER BY item_name",
+        )
+        .map_err(|e| format!("Query error: {e}"))?;
 
-    let rows = stmt.query_map(rusqlite::params![server], |row| {
-        Ok(MarketValue {
-            server_name: row.get(0)?,
-            item_type_id: row.get(1)?,
-            item_name: row.get(2)?,
-            market_value: row.get(3)?,
-            notes: row.get(4)?,
-            updated_at: row.get(5)?,
+    let rows = stmt
+        .query_map(rusqlite::params![server], |row| {
+            Ok(MarketValue {
+                server_name: row.get(0)?,
+                item_type_id: row.get(1)?,
+                item_name: row.get(2)?,
+                market_value: row.get(3)?,
+                notes: row.get(4)?,
+                updated_at: row.get(5)?,
+            })
         })
-    }).map_err(|e| format!("Query error: {e}"))?;
+        .map_err(|e| format!("Query error: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Row error: {e}"))

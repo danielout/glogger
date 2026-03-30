@@ -1,219 +1,142 @@
-mod parsers;
-mod commands;
-mod survey_parser;
-mod survey_persistence;
-mod player_event_parser;
 mod cdn;
-mod game_data;
 mod cdn_commands;
-mod db;
-mod settings;
+mod chat_commands;
 mod chat_parser;
 mod chat_status_parser;
-mod chat_commands;
-mod log_watchers;
+mod commands;
 mod coordinator;
+mod db;
+mod game_data;
 mod game_state;
-mod setup_commands;
-mod watch_rules;
+mod log_watchers;
+mod parsers;
+mod player_event_parser;
 mod replay;
+mod settings;
+mod setup_commands;
+mod survey_parser;
+mod survey_persistence;
+mod watch_rules;
 
+use chrono::Local;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
-use tokio::sync::RwLock;
 use tauri::{Emitter, Manager};
-use chrono::Local;
+use tokio::sync::RwLock;
 
-use commands::parse_log;
-use replay::replay_dual_logs;
 use cdn_commands::{
-    GameDataState,
-    init_game_data,
-    get_cache_status,
     force_refresh_cdn,
+    get_abilities_for_skill,
+    get_ability_sources,
+    get_all_item_keywords,
+    get_all_npcs,
+    get_all_player_titles,
+    get_all_quests,
+    get_all_skills,
+    get_cache_status,
+    get_combat_skills,
+    get_effect,
+    get_equip_slots,
+    get_icon_path,
+    get_item_sources,
+    get_items_by_keyword,
+    get_npcs_in_area,
+    get_quest_sources,
+    get_recipe_sources,
+    get_recipes_for_item,
+    get_recipes_for_skill,
+    get_recipes_using_item,
+    get_storage_vault_metadata,
+    get_storage_vault_zones,
+    get_tsys_power_info,
+    get_tsys_powers_for_slot,
+    get_xp_table_for_skill,
+    init_game_data,
+    resolve_area,
+    resolve_effect_descs,
     // Unified entity resolvers
     resolve_item,
     resolve_items_batch,
-    resolve_skill,
-    resolve_recipe,
-    resolve_quest,
     resolve_npc,
-    resolve_area,
+    resolve_quest,
+    resolve_recipe,
+    resolve_skill,
+    search_effects,
     // Query/filter commands (not replaced by resolvers)
     search_items,
-    get_items_by_keyword,
-    get_all_item_keywords,
-    get_equip_slots,
-    get_all_skills,
-    get_abilities_for_skill,
-    get_recipes_for_item,
-    get_recipes_using_item,
-    search_recipes,
-    get_recipes_for_skill,
-    get_all_quests,
-    search_quests,
-    get_all_npcs,
     search_npcs,
-    get_npcs_in_area,
-    search_effects,
-    get_effect,
-    get_all_player_titles,
     search_player_titles,
-    get_icon_path,
-    get_ability_sources,
-    get_item_sources,
-    get_recipe_sources,
-    get_quest_sources,
-    resolve_effect_descs,
-    get_tsys_power_info,
-    get_storage_vault_zones,
-    get_storage_vault_metadata,
-    get_xp_table_for_skill,
-};
-use db::player_commands::{
-    add_market_price,
-    get_market_prices_for_item,
-    add_sale,
-    get_recent_sales,
-    save_survey_session_stats,
-    patch_survey_session,
-    get_historical_sessions,
-    update_survey_session,
-    log_event,
-    get_recent_events,
-};
-use db::player_commands_survey_events::{
-    log_survey_event,
-    get_survey_events,
-    log_survey_loot_item,
-    get_survey_loot_items,
-    get_speed_bonus_stats,
-    get_loot_breakdown,
-    get_survey_type_metrics,
-    get_zone_analytics,
-};
-use db::admin_commands::{
-    get_database_stats,
-    force_rebuild_cdn_tables,
-    purge_player_data,
-};
-use db::character_commands::{
-    import_character_report,
-    get_characters,
-    get_character_snapshots,
-    get_snapshot_skills,
-    get_snapshot_npc_favor,
-    get_snapshot_recipes,
-    get_snapshot_stats,
-    get_snapshot_currencies,
-    get_snapshot_active_quests,
-    compare_snapshots,
-};
-use db::inventory_commands::{
-    import_inventory_report,
-    get_inventory_snapshots,
-    get_snapshot_items,
-    get_inventory_summary,
-};
-use db::gourmand_commands::{
-    get_all_foods,
-    import_gourmand_report,
-    import_cooks_helper_file,
-    get_gourmand_eaten_foods,
-    export_text_file,
-    import_latest_gourmand_report,
-};
-use db::survey_commands::{
-    get_all_survey_types,
-};
-use db::farming_commands::{
-    save_farming_session,
-    get_farming_sessions,
-    update_farming_session,
-    delete_farming_session,
-};
-use db::crafting_commands::{
-    create_crafting_project,
-    get_crafting_projects,
-    get_crafting_project,
-    update_crafting_project,
-    delete_crafting_project,
-    add_project_entry,
-    update_project_entry,
-    remove_project_entry,
-    reorder_project_entries,
-    duplicate_crafting_project,
-    check_material_availability,
-    get_work_orders_from_snapshot,
-};
-use db::game_state_commands::{
-    get_game_state_skills,
-    get_game_state_attributes,
-    get_game_state_active_skills,
-    get_game_state_world,
-    get_game_state_inventory,
-    get_game_state_recipes,
-    get_game_state_equipment,
-    get_game_state_favor,
-    get_game_state_currencies,
-    get_game_state_effects,
-    get_game_state_storage,
-    get_tracked_skills,
-    set_tracked_skills,
-};
-use db::market_commands::{
-    get_market_values,
-    get_market_value,
-    set_market_value,
-    delete_market_value,
-    export_market_values,
-    import_market_values,
-};
-use db::aggregate_commands::{
-    get_aggregate_inventory,
-    get_aggregate_wealth,
-    get_aggregate_skills,
-};
-use settings::{
-    SettingsManager,
-    load_settings,
-    save_settings,
-    get_settings_file_path,
-    get_server_list,
-};
-use setup_commands::{
-    validate_game_data_path,
-    scan_reports_for_characters,
-    save_user_character,
-    get_user_characters,
-    set_active_character,
-    delete_character,
-    complete_setup,
-    import_latest_report_for_character,
-    import_latest_inventory_for_character,
-    import_reports_for_server,
+    search_quests,
+    search_recipes,
+    GameDataState,
 };
 use chat_commands::{
-    scan_chat_logs,
-    scan_chat_log_file,
-    get_chat_messages,
-    get_chat_channels,
-    get_chat_channel_stats,
-    get_chat_stats,
-    tail_chat_log,
-    get_tell_conversations,
-    purge_chat_messages,
-    delete_all_chat_messages,
-    get_watch_rule_messages,
+    delete_all_chat_messages, get_chat_channel_stats, get_chat_channels, get_chat_messages,
+    get_chat_stats, get_tell_conversations, get_watch_rule_messages, purge_chat_messages,
+    scan_chat_log_file, scan_chat_logs, tail_chat_log,
 };
+use commands::parse_log;
 use coordinator::{
-    start_player_tailing,
-    stop_player_tailing,
-    start_chat_tailing,
-    stop_chat_tailing,
-    get_coordinator_status,
-    poll_watchers,
-    DataIngestCoordinator,
+    get_coordinator_status, poll_watchers, start_chat_tailing, start_player_tailing,
+    stop_chat_tailing, stop_player_tailing, DataIngestCoordinator,
+};
+use db::admin_commands::{force_rebuild_cdn_tables, get_database_stats, purge_player_data};
+use db::aggregate_commands::{get_aggregate_inventory, get_aggregate_skills, get_aggregate_wealth};
+use db::build_planner_commands::{
+    clear_build_preset_slot_item, create_build_preset, delete_build_preset,
+    get_build_preset_abilities, get_build_preset_mods, get_build_preset_slot_items,
+    get_build_presets, set_build_preset_abilities, set_build_preset_mods,
+    set_build_preset_slot_item, update_build_preset,
+};
+use db::character_commands::{
+    compare_snapshots, get_character_snapshots, get_characters, get_snapshot_active_quests,
+    get_snapshot_currencies, get_snapshot_npc_favor, get_snapshot_recipes, get_snapshot_skills,
+    get_snapshot_stats, import_character_report,
+};
+use db::crafting_commands::{
+    add_project_entry, check_material_availability, create_crafting_project,
+    delete_crafting_project, duplicate_crafting_project, get_crafting_project,
+    get_crafting_projects, get_work_orders_from_snapshot, remove_project_entry,
+    reorder_project_entries, update_crafting_project, update_project_entry,
+};
+use db::farming_commands::{
+    delete_farming_session, get_farming_sessions, save_farming_session, update_farming_session,
+};
+use db::game_state_commands::{
+    get_game_state_active_skills, get_game_state_attributes, get_game_state_currencies,
+    get_game_state_effects, get_game_state_equipment, get_game_state_favor,
+    get_game_state_inventory, get_game_state_recipes, get_game_state_skills,
+    get_game_state_storage, get_game_state_world, get_tracked_skills, set_tracked_skills,
+};
+use db::gourmand_commands::{
+    export_text_file, get_all_foods, get_gourmand_eaten_foods, import_cooks_helper_file,
+    import_gourmand_report, import_latest_gourmand_report,
+};
+use db::inventory_commands::{
+    get_inventory_snapshots, get_inventory_summary, get_snapshot_items, import_inventory_report,
+};
+use db::market_commands::{
+    delete_market_value, export_market_values, get_market_value, get_market_values,
+    import_market_values, set_market_value,
+};
+use db::player_commands::{
+    add_market_price, add_sale, get_historical_sessions, get_market_prices_for_item,
+    get_recent_events, get_recent_sales, log_event, patch_survey_session,
+    save_survey_session_stats, update_survey_session,
+};
+use db::player_commands_survey_events::{
+    get_loot_breakdown, get_speed_bonus_stats, get_survey_events, get_survey_loot_items,
+    get_survey_type_metrics, get_zone_analytics, log_survey_event, log_survey_loot_item,
+};
+use db::survey_commands::get_all_survey_types;
+use replay::replay_dual_logs;
+use settings::{
+    get_server_list, get_settings_file_path, load_settings, save_settings, SettingsManager,
+};
+use setup_commands::{
+    complete_setup, delete_character, get_user_characters, import_latest_inventory_for_character,
+    import_latest_report_for_character, import_reports_for_server, save_user_character,
+    scan_reports_for_characters, set_active_character, validate_game_data_path,
 };
 
 /// Timestamped log line for startup diagnostics.
@@ -234,6 +157,7 @@ pub fn run() {
     let game_data_state: GameDataState = Arc::new(RwLock::new(game_data::GameData::empty()));
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(game_data_state.clone())
@@ -502,6 +426,21 @@ pub fn run() {
             get_work_orders_from_snapshot,
             // CDN - XP tables
             get_xp_table_for_skill,
+            // CDN - Build planner queries
+            get_combat_skills,
+            get_tsys_powers_for_slot,
+            // Build planner persistence
+            create_build_preset,
+            get_build_presets,
+            update_build_preset,
+            delete_build_preset,
+            get_build_preset_mods,
+            set_build_preset_mods,
+            set_build_preset_slot_item,
+            clear_build_preset_slot_item,
+            get_build_preset_slot_items,
+            set_build_preset_abilities,
+            get_build_preset_abilities,
             // Game state queries
             get_game_state_skills,
             get_game_state_attributes,

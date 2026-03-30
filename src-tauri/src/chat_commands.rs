@@ -1,11 +1,11 @@
 /// Tauri commands for chat functionality
 use crate::chat_parser;
-use crate::db::{DbPool, chat_commands};
 use crate::db::queries::log_positions;
+use crate::db::{chat_commands, DbPool};
 use crate::settings::SettingsManager;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tauri::{State, AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, State};
 
 #[derive(Clone, serde::Serialize)]
 struct ScanProgress {
@@ -32,11 +32,14 @@ pub async fn scan_chat_logs(
     let mut files_processed = 0;
 
     for (index, log_file) in log_files.iter().enumerate() {
-        let _ = app.emit("chat-scan-progress", ScanProgress {
-            current: index + 1,
-            total: total_files,
-            file_name: log_file.file_name.clone(),
-        });
+        let _ = app.emit(
+            "chat-scan-progress",
+            ScanProgress {
+                current: index + 1,
+                total: total_files,
+                file_name: log_file.file_name.clone(),
+            },
+        );
 
         let conn = db_pool.get().map_err(|e| format!("Database error: {e}"))?;
 
@@ -51,14 +54,18 @@ pub async fn scan_chat_logs(
             None
         };
 
-        let (messages, new_position) = chat_parser::read_chat_log(
-            &log_file.file_path,
-            start_position,
-        ).map_err(|e| format!("Failed to read chat log: {e}"))?;
+        let (messages, new_position) =
+            chat_parser::read_chat_log(&log_file.file_path, start_position)
+                .map_err(|e| format!("Failed to read chat log: {e}"))?;
 
         if !messages.is_empty() {
-            let inserted = chat_commands::insert_chat_messages(&conn, &messages, &log_file.file_name, &excluded_channels)
-                .map_err(|e| format!("Failed to insert messages: {e}"))?;
+            let inserted = chat_commands::insert_chat_messages(
+                &conn,
+                &messages,
+                &log_file.file_name,
+                &excluded_channels,
+            )
+            .map_err(|e| format!("Failed to insert messages: {e}"))?;
             total_messages += inserted;
         }
 
@@ -67,7 +74,8 @@ pub async fn scan_chat_logs(
         let metadata = serde_json::json!({
             "file_name": log_file.file_name,
             "file_date": log_file.file_date.format("%Y-%m-%d").to_string()
-        }).to_string();
+        })
+        .to_string();
 
         log_positions::update_position(
             &conn,
@@ -76,7 +84,8 @@ pub async fn scan_chat_logs(
             new_position,
             player_name.as_deref(),
             Some(&metadata),
-        ).map_err(|e| format!("Failed to update log position: {e}"))?;
+        )
+        .map_err(|e| format!("Failed to update log position: {e}"))?;
     }
 
     Ok(ScanResult {
@@ -123,15 +132,14 @@ pub async fn scan_chat_log_file(
         None
     };
 
-    let (messages, new_position) = chat_parser::read_chat_log(
-        &log_path,
-        start_position,
-    ).map_err(|e| format!("Failed to read chat log: {e}"))?;
+    let (messages, new_position) = chat_parser::read_chat_log(&log_path, start_position)
+        .map_err(|e| format!("Failed to read chat log: {e}"))?;
 
     let mut messages_imported = 0;
     if !messages.is_empty() {
-        messages_imported = chat_commands::insert_chat_messages(&conn, &messages, &file_name, &excluded_channels)
-            .map_err(|e| format!("Failed to insert messages: {e}"))?;
+        messages_imported =
+            chat_commands::insert_chat_messages(&conn, &messages, &file_name, &excluded_channels)
+                .map_err(|e| format!("Failed to insert messages: {e}"))?;
     }
 
     let file_date = chat_parser::parse_chat_log_filename(&file_name);
@@ -139,7 +147,8 @@ pub async fn scan_chat_log_file(
         serde_json::json!({
             "file_name": file_name,
             "file_date": d.format("%Y-%m-%d").to_string()
-        }).to_string()
+        })
+        .to_string()
     });
 
     log_positions::update_position(
@@ -149,7 +158,8 @@ pub async fn scan_chat_log_file(
         new_position,
         player_name.as_deref(),
         metadata.as_deref(),
-    ).map_err(|e| format!("Failed to update log position: {e}"))?;
+    )
+    .map_err(|e| format!("Failed to update log position: {e}"))?;
 
     Ok(ScanResult {
         files_processed: 1,
@@ -191,13 +201,10 @@ pub async fn get_chat_messages(
 }
 
 #[tauri::command]
-pub async fn get_chat_channels(
-    db_pool: State<'_, DbPool>,
-) -> Result<Vec<String>, String> {
+pub async fn get_chat_channels(db_pool: State<'_, DbPool>) -> Result<Vec<String>, String> {
     let conn = db_pool.get().map_err(|e| format!("Database error: {e}"))?;
 
-    chat_commands::get_channels(&conn)
-        .map_err(|e| format!("Failed to get channels: {e}"))
+    chat_commands::get_channels(&conn).map_err(|e| format!("Failed to get channels: {e}"))
 }
 
 #[tauri::command]
@@ -240,10 +247,8 @@ pub async fn tail_chat_log(
     let start_position = log_positions::get_position(&conn, &file_path_str)
         .map_err(|e| format!("Failed to get log position: {e}"))?;
 
-    let (messages, new_position) = chat_parser::read_chat_log(
-        &log_path,
-        start_position,
-    ).map_err(|e| format!("Failed to read chat log: {e}"))?;
+    let (messages, new_position) = chat_parser::read_chat_log(&log_path, start_position)
+        .map_err(|e| format!("Failed to read chat log: {e}"))?;
 
     if messages.is_empty() {
         return Ok(Vec::new());
@@ -270,7 +275,8 @@ pub async fn tail_chat_log(
     let metadata = serde_json::json!({
         "file_name": file_name,
         "file_date": file_date.format("%Y-%m-%d").to_string()
-    }).to_string();
+    })
+    .to_string();
 
     log_positions::update_position(
         &conn,
@@ -279,7 +285,8 @@ pub async fn tail_chat_log(
         new_position,
         player_name.as_deref(),
         Some(&metadata),
-    ).map_err(|e| format!("Failed to update log position: {e}"))?;
+    )
+    .map_err(|e| format!("Failed to update log position: {e}"))?;
 
     // Convert to ChatMessageRow for return
     let rows: Vec<chat_commands::ChatMessageRow> = messages
@@ -293,11 +300,15 @@ pub async fn tail_chat_log(
             message: msg.message.clone(),
             is_system: msg.is_system,
             from_player: msg.from_player,
-            item_links: msg.item_links.iter().map(|link| chat_commands::ChatItemLinkRow {
-                raw_text: link.raw_text.clone(),
-                item_name: link.item_name.clone(),
-                item_id: None,
-            }).collect(),
+            item_links: msg
+                .item_links
+                .iter()
+                .map(|link| chat_commands::ChatItemLinkRow {
+                    raw_text: link.raw_text.clone(),
+                    item_name: link.item_name.clone(),
+                    item_id: None,
+                })
+                .collect(),
         })
         .collect();
 
@@ -310,8 +321,7 @@ pub async fn get_chat_stats(
 ) -> Result<chat_commands::ChatStats, String> {
     let conn = db_pool.get().map_err(|e| format!("Database error: {e}"))?;
 
-    chat_commands::get_chat_stats(&conn)
-        .map_err(|e| format!("Failed to get chat stats: {e}"))
+    chat_commands::get_chat_stats(&conn).map_err(|e| format!("Failed to get chat stats: {e}"))
 }
 
 #[tauri::command]
@@ -330,10 +340,7 @@ pub async fn get_tell_conversations(
 }
 
 #[tauri::command]
-pub async fn purge_chat_messages(
-    days: u32,
-    db_pool: State<'_, DbPool>,
-) -> Result<usize, String> {
+pub async fn purge_chat_messages(days: u32, db_pool: State<'_, DbPool>) -> Result<usize, String> {
     let conn = db_pool.get().map_err(|e| format!("Database error: {e}"))?;
 
     let cutoff_date = chrono::Utc::now() - chrono::Duration::days(days as i64);
@@ -347,26 +354,26 @@ pub async fn purge_chat_messages(
     )
     .map_err(|e| format!("Failed to purge item links: {e}"))?;
 
-    let deleted = conn.execute(
-        "DELETE FROM chat_messages WHERE timestamp < ?1",
-        [&cutoff_str],
-    )
-    .map_err(|e| format!("Failed to purge messages: {e}"))?;
+    let deleted = conn
+        .execute(
+            "DELETE FROM chat_messages WHERE timestamp < ?1",
+            [&cutoff_str],
+        )
+        .map_err(|e| format!("Failed to purge messages: {e}"))?;
 
     Ok(deleted)
 }
 
 #[tauri::command]
-pub async fn delete_all_chat_messages(
-    db_pool: State<'_, DbPool>,
-) -> Result<usize, String> {
+pub async fn delete_all_chat_messages(db_pool: State<'_, DbPool>) -> Result<usize, String> {
     let conn = db_pool.get().map_err(|e| format!("Database error: {e}"))?;
 
     // Delete item links first (in case foreign_keys pragma wasn't active for older data)
     conn.execute("DELETE FROM chat_item_links", [])
         .map_err(|e| format!("Failed to delete item links: {e}"))?;
 
-    let deleted = conn.execute("DELETE FROM chat_messages", [])
+    let deleted = conn
+        .execute("DELETE FROM chat_messages", [])
         .map_err(|e| format!("Failed to delete all messages: {e}"))?;
 
     // Clear legacy chat log file tracking

@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use serde::Serialize;
 use serde_json::Value;
+use std::collections::HashMap;
 
 // ── Parsed structs (app shape) ───────────────────────────────────────────────
 
@@ -41,7 +41,11 @@ pub struct ItemInfo {
 
 pub fn parse(json: &str) -> Result<HashMap<u32, ItemInfo>, String> {
     let raw: HashMap<String, Value> = serde_json::from_str(json).map_err(|e| {
-        format!("items.json: parse error at line {}, col {}: {e}", e.line(), e.column())
+        format!(
+            "items.json: parse error at line {}, col {}: {e}",
+            e.line(),
+            e.column()
+        )
     })?;
 
     let mut items = HashMap::with_capacity(raw.len());
@@ -50,17 +54,22 @@ pub fn parse(json: &str) -> Result<HashMap<u32, ItemInfo>, String> {
     for (key, value) in raw {
         let id_str = match key.split('_').last() {
             Some(s) => s.to_string(),
-            None => { skipped += 1; continue; }
+            None => {
+                skipped += 1;
+                continue;
+            }
         };
         let id: u32 = match id_str.parse() {
             Ok(id) => id,
-            Err(_) => { skipped += 1; continue; }
+            Err(_) => {
+                skipped += 1;
+                continue;
+            }
         };
 
         let item = ItemInfo {
             id,
-            name: str_field(&value, "Name")
-                .unwrap_or_else(|| format!("Unknown Item {id}")),
+            name: str_field(&value, "Name").unwrap_or_else(|| format!("Unknown Item {id}")),
             description: str_field(&value, "Description"),
             icon_id: u32_field(&value, "IconId"),
             value: f32_field(&value, "Value"),
@@ -74,12 +83,10 @@ pub fn parse(json: &str) -> Result<HashMap<u32, ItemInfo>, String> {
             equip_slot: str_field(&value, "EquipSlot"),
             num_uses: u32_field(&value, "NumUses"),
             skill_reqs: value.get("SkillReqs").cloned(),
-            behaviors: value.get("Behaviors").and_then(|v| {
-                v.as_array().cloned()
-            }),
-            bestow_recipes: value.get("BestowRecipes").and_then(|v| {
-                v.as_array().cloned()
-            }),
+            behaviors: value.get("Behaviors").and_then(|v| v.as_array().cloned()),
+            bestow_recipes: value
+                .get("BestowRecipes")
+                .and_then(|v| v.as_array().cloned()),
             bestow_ability: str_field(&value, "BestowAbility"),
             bestow_quest: str_field(&value, "BestowQuest"),
             bestow_title: u32_field(&value, "BestowTitle"),
@@ -115,7 +122,8 @@ fn f32_field(value: &Value, key: &str) -> Option<f32> {
 }
 
 fn str_array_field(value: &Value, key: &str) -> Vec<String> {
-    value.get(key)
+    value
+        .get(key)
         .and_then(|v| v.as_array())
         .map(|arr| {
             arr.iter()

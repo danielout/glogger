@@ -1,0 +1,11 @@
+{
+  "productName": "glogger-dev",
+  "identifier": "glogger.Dev",
+  "app": {
+    "windows": [
+      {
+        "title": "glogger DEV"
+      }
+    ]
+  }
+}

@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 use super::parse_string_map;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // ── Raw CDN shapes ────────────────────────────────────────────────────────────
 
@@ -23,14 +23,19 @@ pub struct QuestInfo {
 
 pub fn parse(json: &str) -> Result<HashMap<String, QuestInfo>, String> {
     let raw: HashMap<String, serde_json::Value> = parse_string_map(json, "quests.json")?;
-    Ok(raw.into_iter()
+    Ok(raw
+        .into_iter()
         .map(|(k, v)| {
             // Use InternalName from the raw JSON if available, otherwise fall back to the key
-            let iname = v.get("InternalName")
+            let iname = v
+                .get("InternalName")
                 .and_then(|n| n.as_str())
                 .unwrap_or(&k)
                 .to_string();
-            let info = QuestInfo { internal_name: iname, raw: v };
+            let info = QuestInfo {
+                internal_name: iname,
+                raw: v,
+            };
             (k, info)
         })
         .collect())

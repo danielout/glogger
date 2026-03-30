@@ -1,5 +1,5 @@
 /// Chat log parser for Project Gorgon
-use chrono::{NaiveDateTime, NaiveDate, NaiveTime};
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{BufRead, BufReader, Seek, SeekFrom};
@@ -18,8 +18,8 @@ pub struct ChatMessage {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ItemLink {
-    pub raw_text: String,     // e.g., "[Item: Mentalism: System Shock 7]"
-    pub item_name: String,    // e.g., "Mentalism: System Shock 7" (full name as it appears in game data)
+    pub raw_text: String,  // e.g., "[Item: Mentalism: System Shock 7]"
+    pub item_name: String, // e.g., "Mentalism: System Shock 7" (full name as it appears in game data)
 }
 
 #[derive(Debug)]
@@ -37,9 +37,13 @@ pub fn is_timestamped_line(line: &str) -> bool {
     }
     // Quick check: digits-digits-digits space digits:digits:digits tab
     let bytes = line.as_bytes();
-    bytes[2] == b'-' && bytes[5] == b'-' && bytes[8] == b' '
-        && bytes[11] == b':' && bytes[14] == b':'
-        && bytes.len() > 17 && bytes[17] == b'\t'
+    bytes[2] == b'-'
+        && bytes[5] == b'-'
+        && bytes[8] == b' '
+        && bytes[11] == b':'
+        && bytes[14] == b':'
+        && bytes.len() > 17
+        && bytes[17] == b'\t'
 }
 
 /// Parse a single chat log line into a ChatMessage.
@@ -105,9 +109,10 @@ pub fn parse_chat_line(line: &str) -> Option<ChatMessage> {
             let potential_sender = &remaining[..colon_pos];
 
             // System messages in channels don't have senders
-            if potential_sender.starts_with('-') ||
-               potential_sender.starts_with("You ") ||
-               potential_sender.contains('#') {
+            if potential_sender.starts_with('-')
+                || potential_sender.starts_with("You ")
+                || potential_sender.contains('#')
+            {
                 let msg_text = remaining.to_string();
                 let item_links = extract_item_links(&msg_text);
                 Some(ChatMessage {
@@ -215,7 +220,7 @@ pub fn extract_item_links(message: &str) -> Vec<ItemLink> {
             let link_text = &message[abs_start..=abs_end];
 
             // Extract content between [Item: and ] — keep the full name as-is
-            let item_name = link_text[6..link_text.len()-1].trim().to_string();
+            let item_name = link_text[6..link_text.len() - 1].trim().to_string();
 
             if item_name.is_empty() {
                 start = abs_end + 1;
@@ -350,7 +355,11 @@ pub fn parse_chat_login_line(line: &str) -> Option<ChatLoginInfo> {
     // Parse timezone offset: "Timezone Offset -07:00:00" or "Timezone Offset 05:30:00"
     let timezone_offset_seconds = parse_timezone_offset(line);
 
-    Some(ChatLoginInfo { character_name, server_name, timezone_offset_seconds })
+    Some(ChatLoginInfo {
+        character_name,
+        server_name,
+        timezone_offset_seconds,
+    })
 }
 
 /// Parse a timezone offset string like "-07:00:00" or "05:30:00" into total seconds from UTC.
@@ -522,7 +531,10 @@ mod tests {
 
         assert_eq!(links.len(), 1);
         assert_eq!(links[0].item_name, "Leatherworking: Great Evasion Shirt");
-        assert_eq!(links[0].raw_text, "[Item: Leatherworking: Great Evasion Shirt]");
+        assert_eq!(
+            links[0].raw_text,
+            "[Item: Leatherworking: Great Evasion Shirt]"
+        );
     }
 
     #[test]
@@ -561,7 +573,10 @@ mod tests {
         assert_eq!(msg.channel, Some("Trade".to_string()));
         assert_eq!(msg.sender, Some("PlayerName".to_string()));
         assert_eq!(msg.item_links.len(), 1);
-        assert_eq!(msg.item_links[0].item_name, "Leatherworking: Great Evasion Shirt");
+        assert_eq!(
+            msg.item_links[0].item_name,
+            "Leatherworking: Great Evasion Shirt"
+        );
     }
 
     // ── Multiline / parse_chat_lines tests ──────────────────────────────────
@@ -589,7 +604,10 @@ mod tests {
         assert!(msgs[0].message.contains("[Item: Sword]"));
         assert_eq!(msgs[0].item_links.len(), 2);
         assert_eq!(msgs[0].item_links[0].item_name, "Sword");
-        assert_eq!(msgs[0].item_links[1].item_name, "Blacksmithing: Iron Hammer");
+        assert_eq!(
+            msgs[0].item_links[1].item_name,
+            "Blacksmithing: Iron Hammer"
+        );
     }
 
     #[test]
@@ -648,7 +666,10 @@ Dying together\n\
         assert_eq!(msgs[0].item_links.len(), 0);
 
         // Message 2: text + item on continuation line
-        assert_eq!(msgs[1].message, "this is an item linking test\n[Item: Cheesy Veggie Delight]");
+        assert_eq!(
+            msgs[1].message,
+            "this is an item linking test\n[Item: Cheesy Veggie Delight]"
+        );
         assert_eq!(msgs[1].item_links.len(), 1);
         assert_eq!(msgs[1].item_links[0].item_name, "Cheesy Veggie Delight");
 
@@ -739,7 +760,7 @@ Dying together\n\
         assert_eq!(msgs[0].sender, Some("AnotherPlayer".to_string()));
         assert_eq!(msgs[1].sender, Some("AnotherPlayer".to_string()));
         // But different directions
-        assert_eq!(msgs[0].from_player, Some(true));  // outgoing
+        assert_eq!(msgs[0].from_player, Some(true)); // outgoing
         assert_eq!(msgs[1].from_player, Some(false)); // incoming
     }
 }

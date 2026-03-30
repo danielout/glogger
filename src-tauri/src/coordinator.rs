@@ -1,3 +1,16 @@
+use crate::cdn_commands::GameDataState;
+use crate::chat_status_parser::parse_status_message;
+use crate::db::chat_commands::insert_chat_messages;
+use crate::db::queries::log_positions;
+use crate::db::DbPool;
+use crate::game_state::GameStateManager;
+use crate::log_watchers::{ChatLogWatcher, LogEvent, LogFileWatcher, PlayerLogWatcher};
+use crate::settings::SettingsManager;
+use crate::survey_parser::KnownSurveyType;
+use crate::survey_persistence::SurveySessionTracker;
+use crate::watch_rules::evaluate_rules;
+use chrono::{Datelike, Local};
+use serde::Serialize;
 /// DataIngestCoordinator - Central coordinator for all file watching and database operations
 ///
 /// This coordinator manages:
@@ -6,25 +19,11 @@
 /// - Operation locking to prevent conflicts
 /// - Database write coordination
 /// - Progress event emission to frontend
-
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
 use std::path::PathBuf;
+use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
-use crate::log_watchers::{PlayerLogWatcher, ChatLogWatcher, LogFileWatcher, LogEvent};
-use crate::db::DbPool;
-use crate::db::chat_commands::insert_chat_messages;
-use crate::db::queries::log_positions;
-use crate::settings::SettingsManager;
-use crate::watch_rules::evaluate_rules;
-use crate::chat_status_parser::parse_status_message;
-use crate::survey_persistence::SurveySessionTracker;
-use crate::survey_parser::KnownSurveyType;
-use crate::game_state::GameStateManager;
-use crate::cdn_commands::GameDataState;
-use serde::Serialize;
-use chrono::{Datelike, Local};
 
 /// Timestamped log line for startup diagnostics.
 macro_rules! startup_log {
@@ -48,10 +47,7 @@ pub enum OperationType {
     },
 
     /// Character export import in progress
-    CharacterImport {
-        progress: usize,
-        total: usize,
-    },
+    CharacterImport { progress: usize, total: usize },
 
     /// User-triggered action (takes priority)
     UserAction,
@@ -110,7 +106,8 @@ impl DataIngestCoordinator {
 
         // Seed timezone offset from persisted settings (manual override takes precedence)
         let mut survey_tracker = SurveySessionTracker::new();
-        if let Some(offset) = current_settings.manual_timezone_override
+        if let Some(offset) = current_settings
+            .manual_timezone_override
             .or(current_settings.timezone_offset_seconds)
         {
             game_state.set_timezone_offset(offset);
@@ -140,10 +137,19 @@ impl DataIngestCoordinator {
         };
 
         CoordinatorStatus {
-            player_log_active: self.player_watcher.as_ref().map_or(false, |w| w.is_active()),
+            player_log_active: self
+                .player_watcher
+                .as_ref()
+                .map_or(false, |w| w.is_active()),
             chat_log_active: self.chat_watcher.as_ref().map_or(false, |w| w.is_active()),
-            active_character: self.player_watcher.as_ref().and_then(|w| w.get_active_character().map(String::from)),
-            current_chat_log: self.player_watcher.as_ref().and_then(|w| w.get_chat_log_path().and_then(|p| p.to_str().map(String::from))),
+            active_character: self
+                .player_watcher
+                .as_ref()
+                .and_then(|w| w.get_active_character().map(String::from)),
+            current_chat_log: self.player_watcher.as_ref().and_then(|w| {
+                w.get_chat_log_path()
+                    .and_then(|p| p.to_str().map(String::from))
+            }),
             operation: operation_str.to_string(),
         }
     }
@@ -153,22 +159,35 @@ impl DataIngestCoordinator {
         // Check for blocking operations (full scans, imports, etc.)
         let operation = self.operation_lock.read().unwrap();
         if *operation != OperationType::Idle {
-            return Err(format!("Cannot start player log tailing: {:?} in progress", *operation));
+            return Err(format!(
+                "Cannot start player log tailing: {:?} in progress",
+                *operation
+            ));
         }
         drop(operation);
 
         // Already tailing? No-op.
-        if self.player_watcher.as_ref().map_or(false, |w| w.is_active()) {
+        if self
+            .player_watcher
+            .as_ref()
+            .map_or(false, |w| w.is_active())
+        {
             return Ok(());
         }
 
         // Get player log path from settings
-        let player_log_path = self.settings.get_player_log_path()
+        let player_log_path = self
+            .settings
+            .get_player_log_path()
             .ok_or_else(|| "Game data path not configured".to_string())?;
 
         // Load saved position from database
-        let conn = self.db_pool.get().map_err(|e| format!("Database error: {}", e))?;
-        let mut position = log_positions::get_position(&conn, player_log_path.to_str().unwrap_or("")).unwrap_or(0);
+        let conn = self
+            .db_pool
+            .get()
+            .map_err(|e| format!("Database error: {}", e))?;
+        let mut position =
+            log_positions::get_position(&conn, player_log_path.to_str().unwrap_or("")).unwrap_or(0);
 
         // Detect file rotation: if saved position is past current file size,
         // the game restarted and created a fresh Player.log
@@ -188,7 +207,10 @@ impl DataIngestCoordinator {
 
         // Create watcher
         let mut watcher = if position > 0 {
-            startup_log!("Starting Player.log catch-up from byte position {}", position);
+            startup_log!(
+                "Starting Player.log catch-up from byte position {}",
+                position
+            );
             PlayerLogWatcher::from_position(player_log_path, position, known_surveys)
         } else {
             startup_log!("Starting Player.log from beginning (no saved position)");
@@ -216,7 +238,10 @@ impl DataIngestCoordinator {
             // Save position to database
             let position = watcher.get_position();
             if let Some(path) = self.settings.get_player_log_path() {
-                let conn = self.db_pool.get().map_err(|e| format!("Database error: {}", e))?;
+                let conn = self
+                    .db_pool
+                    .get()
+                    .map_err(|e| format!("Database error: {}", e))?;
                 log_positions::update_position(
                     &conn,
                     path.to_str().unwrap_or(""),
@@ -224,7 +249,8 @@ impl DataIngestCoordinator {
                     position,
                     watcher.get_active_character(),
                     None,
-                ).map_err(|e| format!("Failed to save position: {}", e))?;
+                )
+                .map_err(|e| format!("Failed to save position: {}", e))?;
             }
         }
 
@@ -253,8 +279,12 @@ impl DataIngestCoordinator {
         }
 
         // Load saved position from database
-        let conn = self.db_pool.get().map_err(|e| format!("Database error: {}", e))?;
-        let position = log_positions::get_position(&conn, chat_log_path.to_str().unwrap_or("")).unwrap_or(0);
+        let conn = self
+            .db_pool
+            .get()
+            .map_err(|e| format!("Database error: {}", e))?;
+        let position =
+            log_positions::get_position(&conn, chat_log_path.to_str().unwrap_or("")).unwrap_or(0);
         drop(conn);
 
         // Create watcher — parses all channels; filtering happens at persistence layer
@@ -295,7 +325,10 @@ impl DataIngestCoordinator {
             let file_path_str = watcher.get_file_path().to_string_lossy().to_string();
             let file_name = watcher.get_file_name().to_string();
 
-            let conn = self.db_pool.get().map_err(|e| format!("Database error: {}", e))?;
+            let conn = self
+                .db_pool
+                .get()
+                .map_err(|e| format!("Database error: {}", e))?;
             let metadata = serde_json::json!({ "file_name": file_name }).to_string();
             log_positions::update_position(
                 &conn,
@@ -304,7 +337,8 @@ impl DataIngestCoordinator {
                 position,
                 None,
                 Some(&metadata),
-            ).map_err(|e| format!("Failed to save position: {}", e))?;
+            )
+            .map_err(|e| format!("Failed to save position: {}", e))?;
         }
 
         // Emit status change event
@@ -359,7 +393,8 @@ impl DataIngestCoordinator {
                     watcher.get_position(),
                     watcher.get_active_character(),
                     None,
-                ).ok();
+                )
+                .ok();
             }
         }
 
@@ -374,7 +409,8 @@ impl DataIngestCoordinator {
                 watcher.get_position(),
                 None,
                 Some(&metadata),
-            ).ok();
+            )
+            .ok();
         }
     }
 
@@ -400,7 +436,9 @@ impl DataIngestCoordinator {
                     // Update game state character name only (server stays as-is)
                     self.game_state.set_active_character_name(&character_name);
 
-                    self.app_handle.emit("character-login", &character_name).ok();
+                    self.app_handle
+                        .emit("character-login", &character_name)
+                        .ok();
                     emits_since_yield += 1;
                 }
                 LogEvent::ChatLogPath { path, .. } => {
@@ -419,11 +457,18 @@ impl DataIngestCoordinator {
                 }
                 LogEvent::SurveyParsed(survey_event) => {
                     // Persist to DB synchronously first, then emit to frontend
-                    let result = self.survey_tracker.process_event(&survey_event, &self.db_pool);
+                    let result = self
+                        .survey_tracker
+                        .process_event(&survey_event, &self.db_pool);
                     // Wrap the event with session_id so the frontend can track it
                     let mut payload = serde_json::to_value(&survey_event).unwrap_or_default();
-                    if let (serde_json::Value::Object(ref mut map), Some(sid)) = (&mut payload, result.session_id) {
-                        map.insert("session_id".to_string(), serde_json::Value::Number(sid.into()));
+                    if let (serde_json::Value::Object(ref mut map), Some(sid)) =
+                        (&mut payload, result.session_id)
+                    {
+                        map.insert(
+                            "session_id".to_string(),
+                            serde_json::Value::Number(sid.into()),
+                        );
                     }
                     self.app_handle.emit("survey-event", &payload).ok();
                     emits_since_yield += 1;
@@ -443,7 +488,9 @@ impl DataIngestCoordinator {
 
                     // Notify frontend which domains changed
                     if !result.domains_updated.is_empty() {
-                        self.app_handle.emit("game-state-updated", &result.domains_updated).ok();
+                        self.app_handle
+                            .emit("game-state-updated", &result.domains_updated)
+                            .ok();
                         emits_since_yield += 1;
                     }
 
@@ -484,19 +531,32 @@ impl DataIngestCoordinator {
                         // Cross-reference with survey tracker for loot quantity correction.
                         // No active-session gate — correct_loot_from_chat_status falls back
                         // to last_session_id so corrections work after session auto-end.
-                        if let Some(correction) = self.survey_tracker
+                        if let Some(correction) = self
+                            .survey_tracker
                             .correct_loot_from_chat_status(&status_event, &self.db_pool)
                         {
-                            self.app_handle.emit("survey-loot-correction", &correction).ok();
+                            self.app_handle
+                                .emit("survey-loot-correction", &correction)
+                                .ok();
                             emits_since_yield += 1;
                         }
-                        self.app_handle.emit("chat-status-event", &status_event).ok();
+                        self.app_handle
+                            .emit("chat-status-event", &status_event)
+                            .ok();
                         emits_since_yield += 1;
                     }
                     messages.push(msg);
                 }
-                LogEvent::ServerDetected { server_name, character_name, timezone_offset_seconds } => {
-                    startup_log!("Server detected: {} (character: {})", server_name, character_name);
+                LogEvent::ServerDetected {
+                    server_name,
+                    character_name,
+                    timezone_offset_seconds,
+                } => {
+                    startup_log!(
+                        "Server detected: {} (character: {})",
+                        server_name,
+                        character_name
+                    );
 
                     // Store timezone offset for UTC timestamp conversion
                     if let Some(offset) = timezone_offset_seconds {
@@ -513,7 +573,8 @@ impl DataIngestCoordinator {
                         conn.execute(
                             "INSERT INTO servers (server_name) VALUES (?1) ON CONFLICT DO NOTHING",
                             rusqlite::params![server_name],
-                        ).ok();
+                        )
+                        .ok();
                     }
 
                     // Update active server in settings
@@ -531,7 +592,9 @@ impl DataIngestCoordinator {
                 LogEvent::CharacterLogin { character_name, .. } => {
                     // Chat log also detects character login — update active character
                     // and emit so player_watcher can stay in sync
-                    self.app_handle.emit("character-login", &character_name).ok();
+                    self.app_handle
+                        .emit("character-login", &character_name)
+                        .ok();
                     emits_since_yield += 1;
 
                     // Auto-register character with current server
@@ -552,12 +615,15 @@ impl DataIngestCoordinator {
                     // Update active character in settings
                     let mut settings = self.settings.get();
                     settings.active_character_name = Some(character_name.clone());
-                    let server = settings.active_server_name.clone()
+                    let server = settings
+                        .active_server_name
+                        .clone()
                         .unwrap_or_else(|| "Unknown".to_string());
                     self.settings.update(settings).ok();
 
                     // Update game state active character
-                    self.game_state.set_active_character(&character_name, &server, &self.db_pool);
+                    self.game_state
+                        .set_active_character(&character_name, &server, &self.db_pool);
                 }
                 _ => {}
             }
@@ -575,10 +641,15 @@ impl DataIngestCoordinator {
 
         // Batch insert messages
         if !messages.is_empty() {
-            let conn = self.db_pool.get().map_err(|e| format!("Database error: {}", e))?;
+            let conn = self
+                .db_pool
+                .get()
+                .map_err(|e| format!("Database error: {}", e))?;
 
             // Use the actual file name from the watcher, not the position
-            let log_file = self.chat_watcher.as_ref()
+            let log_file = self
+                .chat_watcher
+                .as_ref()
                 .map(|w| w.get_file_name().to_string())
                 .unwrap_or_else(|| "unknown".to_string());
 
@@ -587,7 +658,9 @@ impl DataIngestCoordinator {
                 .map_err(|e| format!("Failed to insert messages: {}", e))?;
 
             if inserted > 0 {
-                self.app_handle.emit("chat-messages-inserted", inserted).ok();
+                self.app_handle
+                    .emit("chat-messages-inserted", inserted)
+                    .ok();
             }
 
             // Evaluate watch rules against new messages
@@ -608,7 +681,8 @@ impl DataIngestCoordinator {
     /// Emit status change event to frontend
     fn emit_status_change(&self) -> Result<(), String> {
         let status = self.get_status();
-        self.app_handle.emit("coordinator-status", status)
+        self.app_handle
+            .emit("coordinator-status", status)
             .map_err(|e| format!("Failed to emit event: {}", e))
     }
 }
@@ -645,11 +719,13 @@ pub fn start_chat_tailing(
     settings: State<'_, Arc<SettingsManager>>,
 ) -> Result<(), String> {
     // Get today's chat log file
-    let chat_logs_dir = settings.get_chat_logs_dir()
+    let chat_logs_dir = settings
+        .get_chat_logs_dir()
         .ok_or_else(|| "Chat logs directory not configured".to_string())?;
 
     let today = chrono::Local::now();
-    let date_str = format!("{}-{:02}-{:02}",
+    let date_str = format!(
+        "{}-{:02}-{:02}",
         today.year() % 100,
         today.month(),
         today.day()
@@ -695,9 +771,8 @@ pub fn poll_watchers(
 /// Returns a HashMap keyed by internal_name.
 fn load_known_surveys(conn: &rusqlite::Connection) -> HashMap<String, KnownSurveyType> {
     let mut map = HashMap::new();
-    let mut stmt = match conn.prepare(
-        "SELECT internal_name, name, is_motherlode FROM survey_types"
-    ) {
+    let mut stmt = match conn.prepare("SELECT internal_name, name, is_motherlode FROM survey_types")
+    {
         Ok(s) => s,
         Err(e) => {
             eprintln!("[coordinator] Failed to load survey types: {e}");
@@ -716,10 +791,13 @@ fn load_known_surveys(conn: &rusqlite::Connection) -> HashMap<String, KnownSurve
     if let Ok(rows) = rows {
         for row in rows.flatten() {
             let (internal_name, display_name, is_motherlode) = row;
-            map.insert(internal_name, KnownSurveyType {
-                display_name,
-                is_motherlode,
-            });
+            map.insert(
+                internal_name,
+                KnownSurveyType {
+                    display_name,
+                    is_motherlode,
+                },
+            );
         }
     }
 

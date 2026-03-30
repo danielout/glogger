@@ -1,7 +1,7 @@
-use std::path::Path;
-use std::sync::Arc;
 use rusqlite::params;
 use serde::Serialize;
+use std::path::Path;
+use std::sync::Arc;
 use tauri::State;
 
 use super::DbPool;
@@ -38,7 +38,9 @@ pub struct GourmandImportResult {
 /// Get all food items from the pre-parsed foods table
 #[tauri::command]
 pub fn get_all_foods(db: State<'_, DbPool>) -> Result<Vec<FoodItemInfo>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     let mut stmt = conn.prepare(
         "SELECT item_id, name, icon_id, food_category, food_level, gourmand_req, effect_descs, keywords, value
@@ -46,25 +48,27 @@ pub fn get_all_foods(db: State<'_, DbPool>) -> Result<Vec<FoodItemInfo>, String>
          ORDER BY food_level ASC, name ASC"
     ).map_err(|e| format!("Query prepare error: {e}"))?;
 
-    let foods = stmt.query_map([], |row| {
-        let effects_str: String = row.get(6)?;
-        let keywords_str: String = row.get(7)?;
+    let foods = stmt
+        .query_map([], |row| {
+            let effects_str: String = row.get(6)?;
+            let keywords_str: String = row.get(7)?;
 
-        let effect_descs: Vec<String> = serde_json::from_str(&effects_str).unwrap_or_default();
-        let keywords: Vec<String> = serde_json::from_str(&keywords_str).unwrap_or_default();
+            let effect_descs: Vec<String> = serde_json::from_str(&effects_str).unwrap_or_default();
+            let keywords: Vec<String> = serde_json::from_str(&keywords_str).unwrap_or_default();
 
-        Ok(FoodItemInfo {
-            item_id: row.get(0)?,
-            name: row.get(1)?,
-            icon_id: row.get(2)?,
-            food_category: row.get(3)?,
-            food_level: row.get(4)?,
-            gourmand_req: row.get(5)?,
-            effect_descs,
-            keywords,
-            value: row.get(8)?,
+            Ok(FoodItemInfo {
+                item_id: row.get(0)?,
+                name: row.get(1)?,
+                icon_id: row.get(2)?,
+                food_category: row.get(3)?,
+                food_level: row.get(4)?,
+                gourmand_req: row.get(5)?,
+                effect_descs,
+                keywords,
+                value: row.get(8)?,
+            })
         })
-    }).map_err(|e| format!("Query error: {e}"))?;
+        .map_err(|e| format!("Query error: {e}"))?;
 
     let result: Vec<FoodItemInfo> = foods.filter_map(|r| r.ok()).collect();
     Ok(result)
@@ -72,21 +76,26 @@ pub fn get_all_foods(db: State<'_, DbPool>) -> Result<Vec<FoodItemInfo>, String>
 
 /// Import a gourmand report from a text file, persist as "last known" snapshot
 #[tauri::command]
-pub fn import_gourmand_report(db: State<'_, DbPool>, file_path: String) -> Result<GourmandImportResult, String> {
-    let content = std::fs::read_to_string(&file_path)
-        .map_err(|e| format!("Failed to read file: {e}"))?;
+pub fn import_gourmand_report(
+    db: State<'_, DbPool>,
+    file_path: String,
+) -> Result<GourmandImportResult, String> {
+    let content =
+        std::fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {e}"))?;
 
     let entries = parse_gourmand_report(&content)?;
 
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     // Replace all existing data with new import (single snapshot)
     conn.execute("DELETE FROM gourmand_eaten_foods", [])
         .map_err(|e| format!("Failed to clear old data: {e}"))?;
 
-    let mut stmt = conn.prepare(
-        "INSERT INTO gourmand_eaten_foods (food_name, times_eaten) VALUES (?1, ?2)"
-    ).map_err(|e| format!("Prepare error: {e}"))?;
+    let mut stmt = conn
+        .prepare("INSERT INTO gourmand_eaten_foods (food_name, times_eaten) VALUES (?1, ?2)")
+        .map_err(|e| format!("Prepare error: {e}"))?;
 
     for entry in &entries {
         stmt.execute(params![&entry.name, entry.count])
@@ -101,18 +110,22 @@ pub fn import_gourmand_report(db: State<'_, DbPool>, file_path: String) -> Resul
 /// Get the last-imported eaten foods from the database
 #[tauri::command]
 pub fn get_gourmand_eaten_foods(db: State<'_, DbPool>) -> Result<Vec<GourmandFoodEntry>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
-    let mut stmt = conn.prepare(
-        "SELECT food_name, times_eaten FROM gourmand_eaten_foods ORDER BY food_name ASC"
-    ).map_err(|e| format!("Query prepare error: {e}"))?;
+    let mut stmt = conn
+        .prepare("SELECT food_name, times_eaten FROM gourmand_eaten_foods ORDER BY food_name ASC")
+        .map_err(|e| format!("Query prepare error: {e}"))?;
 
-    let entries = stmt.query_map([], |row| {
-        Ok(GourmandFoodEntry {
-            name: row.get(0)?,
-            count: row.get(1)?,
+    let entries = stmt
+        .query_map([], |row| {
+            Ok(GourmandFoodEntry {
+                name: row.get(0)?,
+                count: row.get(1)?,
+            })
         })
-    }).map_err(|e| format!("Query error: {e}"))?;
+        .map_err(|e| format!("Query error: {e}"))?;
 
     let result: Vec<GourmandFoodEntry> = entries.filter_map(|r| r.ok()).collect();
     Ok(result)
@@ -123,12 +136,15 @@ pub fn get_gourmand_eaten_foods(db: State<'_, DbPool>) -> Result<Vec<GourmandFoo
 /// Used by the Cook's Helper to determine what a player has already eaten.
 #[tauri::command]
 pub fn import_cooks_helper_file(file_path: String) -> Result<Vec<String>, String> {
-    let content = std::fs::read_to_string(&file_path)
-        .map_err(|e| format!("Failed to read file: {e}"))?;
+    let content =
+        std::fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {e}"))?;
 
     let entries = parse_gourmand_report(&content)?;
     if entries.is_empty() {
-        return Err("No food entries found in the file. Make sure this is a gourmand skill report.".to_string());
+        return Err(
+            "No food entries found in the file. Make sure this is a gourmand skill report."
+                .to_string(),
+        );
     }
 
     Ok(entries.into_iter().map(|e| e.name).collect())
@@ -137,8 +153,7 @@ pub fn import_cooks_helper_file(file_path: String) -> Result<Vec<String>, String
 /// Write text content to a file (used for uneaten food export)
 #[tauri::command]
 pub fn export_text_file(file_path: String, content: String) -> Result<(), String> {
-    std::fs::write(&file_path, &content)
-        .map_err(|e| format!("Failed to write file: {e}"))
+    std::fs::write(&file_path, &content).map_err(|e| format!("Failed to write file: {e}"))
 }
 
 /// Scan the Books folder for the latest gourmand report and auto-import it.
@@ -165,20 +180,24 @@ pub fn import_latest_gourmand_report(
         None => return Ok(None),
     };
 
-    let content = std::fs::read_to_string(&file_path)
-        .map_err(|e| format!("Failed to read file: {e}"))?;
+    let content =
+        std::fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {e}"))?;
 
     let entries = parse_gourmand_report(&content)?;
     if entries.is_empty() {
         return Ok(None);
     }
 
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     // Check if we already have this exact data (avoid unnecessary re-imports)
-    let existing_count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM gourmand_eaten_foods", [], |row| row.get(0)
-    ).unwrap_or(0);
+    let existing_count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM gourmand_eaten_foods", [], |row| {
+            row.get(0)
+        })
+        .unwrap_or(0);
 
     if existing_count == entries.len() as i64 {
         // Same count — likely the same report. Skip re-import.
@@ -189,9 +208,9 @@ pub fn import_latest_gourmand_report(
     conn.execute("DELETE FROM gourmand_eaten_foods", [])
         .map_err(|e| format!("Failed to clear old data: {e}"))?;
 
-    let mut stmt = conn.prepare(
-        "INSERT INTO gourmand_eaten_foods (food_name, times_eaten) VALUES (?1, ?2)"
-    ).map_err(|e| format!("Prepare error: {e}"))?;
+    let mut stmt = conn
+        .prepare("INSERT INTO gourmand_eaten_foods (food_name, times_eaten) VALUES (?1, ?2)")
+        .map_err(|e| format!("Prepare error: {e}"))?;
 
     for entry in &entries {
         stmt.execute(params![&entry.name, entry.count])
@@ -205,8 +224,8 @@ pub fn import_latest_gourmand_report(
 
 /// Find the latest SkillReport_*.txt file in the Books folder that is a gourmand report
 fn find_latest_gourmand_report(books_dir: &Path) -> Result<Option<std::path::PathBuf>, String> {
-    let entries = std::fs::read_dir(books_dir)
-        .map_err(|e| format!("Failed to read Books directory: {e}"))?;
+    let entries =
+        std::fs::read_dir(books_dir).map_err(|e| format!("Failed to read Books directory: {e}"))?;
 
     let mut best: Option<(String, std::path::PathBuf)> = None;
 
@@ -230,7 +249,10 @@ fn find_latest_gourmand_report(books_dir: &Path) -> Result<Option<std::path::Pat
         }
 
         // Use the filename as the sort key (contains timestamp: SkillReport_YYMMDD_HHMMSS.txt)
-        if best.as_ref().map_or(true, |(existing, _)| file_name > *existing) {
+        if best
+            .as_ref()
+            .map_or(true, |(existing, _)| file_name > *existing)
+        {
             best = Some((file_name, file_path));
         }
     }
@@ -312,9 +334,15 @@ mod tests {
 
     #[test]
     fn test_strip_food_tags() {
-        assert_eq!(strip_food_tags("All-Flavor Chicken (HAS MEAT) (HAS DAIRY)"), "All-Flavor Chicken");
+        assert_eq!(
+            strip_food_tags("All-Flavor Chicken (HAS MEAT) (HAS DAIRY)"),
+            "All-Flavor Chicken"
+        );
         assert_eq!(strip_food_tags("Almonds"), "Almonds");
-        assert_eq!(strip_food_tags("Cottage Pie (HAS MEAT) (HAS DAIRY)"), "Cottage Pie");
+        assert_eq!(
+            strip_food_tags("Cottage Pie (HAS MEAT) (HAS DAIRY)"),
+            "Cottage Pie"
+        );
     }
 
     #[test]

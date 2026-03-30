@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-use serde::Serialize;
 use super::parse_id_map;
+use serde::Serialize;
+use std::collections::HashMap;
 
 // ── Parsed structs (app shape) ───────────────────────────────────────────────
 
@@ -19,7 +19,8 @@ pub struct PlayerTitleInfo {
 
 pub fn parse(json: &str) -> Result<HashMap<u32, PlayerTitleInfo>, String> {
     let raw: HashMap<u32, serde_json::Value> = parse_id_map(json, "playertitles.json")?;
-    Ok(raw.into_iter()
+    Ok(raw
+        .into_iter()
         .map(|(id, value)| {
             let info = PlayerTitleInfo {
                 id,
@@ -48,6 +49,10 @@ fn bool_field(v: &serde_json::Value, key: &str) -> Option<bool> {
 fn str_array_field(v: &serde_json::Value, key: &str) -> Vec<String> {
     v.get(key)
         .and_then(|x| x.as_array())
-        .map(|arr| arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                .collect()
+        })
         .unwrap_or_default()
 }

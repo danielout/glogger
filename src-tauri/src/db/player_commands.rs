@@ -1,8 +1,7 @@
-/// Tauri commands for player data operations (market prices, sales, surveys, etc.)
-
-use tauri::State;
+use super::{queries, DbPool};
 use serde::{Deserialize, Serialize};
-use super::{DbPool, queries};
+/// Tauri commands for player data operations (market prices, sales, surveys, etc.)
+use tauri::State;
 
 // ── Market Price Commands ─────────────────────────────────────────────────────
 
@@ -11,17 +10,16 @@ pub struct MarketPriceInput {
     pub item_id: u32,
     pub price: f64,
     pub quantity: u32,
-    pub vendor_type: String,  // "bazaar", "player_vendor", "work_order"
+    pub vendor_type: String, // "bazaar", "player_vendor", "work_order"
     pub vendor_name: Option<String>,
     pub notes: Option<String>,
 }
 
 #[tauri::command]
-pub fn add_market_price(
-    db: State<'_, DbPool>,
-    input: MarketPriceInput,
-) -> Result<i64, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+pub fn add_market_price(db: State<'_, DbPool>, input: MarketPriceInput) -> Result<i64, String> {
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     queries::player_data::insert_market_price(
         &conn,
@@ -53,7 +51,9 @@ pub fn get_market_prices_for_item(
     item_id: u32,
     limit: Option<usize>,
 ) -> Result<Vec<MarketPriceRecord>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     let mut stmt = conn
         .prepare(
@@ -62,7 +62,7 @@ pub fn get_market_prices_for_item(
              FROM market_prices
              WHERE item_id = ?1
              ORDER BY observed_at DESC
-             LIMIT ?2"
+             LIMIT ?2",
         )
         .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
@@ -97,17 +97,16 @@ pub struct SaleInput {
     pub item_id: u32,
     pub quantity: u32,
     pub sale_price: f64,
-    pub sale_method: String,  // "vendor", "bazaar", "trade", "consignment"
+    pub sale_method: String, // "vendor", "bazaar", "trade", "consignment"
     pub buyer_name: Option<String>,
     pub notes: Option<String>,
 }
 
 #[tauri::command]
-pub fn add_sale(
-    db: State<'_, DbPool>,
-    input: SaleInput,
-) -> Result<i64, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+pub fn add_sale(db: State<'_, DbPool>, input: SaleInput) -> Result<i64, String> {
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     queries::player_data::insert_sale(
         &conn,
@@ -139,7 +138,9 @@ pub fn get_recent_sales(
     days: Option<u32>,
     limit: Option<usize>,
 ) -> Result<Vec<SaleRecord>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     let days = days.unwrap_or(30);
     let limit = limit.unwrap_or(50);
@@ -151,7 +152,7 @@ pub fn get_recent_sales(
              FROM sales_history
              WHERE sold_at > datetime('now', ?1)
              ORDER BY sold_at DESC
-             LIMIT ?2"
+             LIMIT ?2",
         )
         .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
@@ -189,11 +190,10 @@ pub struct LogEventInput {
 }
 
 #[tauri::command]
-pub fn log_event(
-    db: State<'_, DbPool>,
-    input: LogEventInput,
-) -> Result<i64, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+pub fn log_event(db: State<'_, DbPool>, input: LogEventInput) -> Result<i64, String> {
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     let event_data_json = serde_json::to_string(&input.event_data)
         .map_err(|e| format!("Failed to serialize event data: {e}"))?;
@@ -216,7 +216,9 @@ pub fn get_recent_events(
     event_type: Option<String>,
     limit: Option<usize>,
 ) -> Result<Vec<EventLogRecord>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     let limit = limit.unwrap_or(50);
 
@@ -229,15 +231,15 @@ pub fn get_recent_events(
                  FROM event_log
                  WHERE event_type = ?1
                  ORDER BY created_at DESC
-                 LIMIT ?2"
+                 LIMIT ?2",
             )
             .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
         let rows = stmt
             .query_map([evt, limit.to_string()], |row| {
                 let event_data_str: String = row.get(2)?;
-                let event_data: serde_json::Value = serde_json::from_str(&event_data_str)
-                    .unwrap_or(serde_json::Value::Null);
+                let event_data: serde_json::Value =
+                    serde_json::from_str(&event_data_str).unwrap_or(serde_json::Value::Null);
 
                 Ok(EventLogRecord {
                     id: row.get(0)?,
@@ -257,15 +259,15 @@ pub fn get_recent_events(
                 "SELECT id, event_type, event_data, datetime(created_at) as created_at
                  FROM event_log
                  ORDER BY created_at DESC
-                 LIMIT ?1"
+                 LIMIT ?1",
             )
             .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
         let rows = stmt
             .query_map([limit], |row| {
                 let event_data_str: String = row.get(2)?;
-                let event_data: serde_json::Value = serde_json::from_str(&event_data_str)
-                    .unwrap_or(serde_json::Value::Null);
+                let event_data: serde_json::Value =
+                    serde_json::from_str(&event_data_str).unwrap_or(serde_json::Value::Null);
 
                 Ok(EventLogRecord {
                     id: row.get(0)?,
@@ -309,7 +311,9 @@ pub fn save_survey_session_stats(
     db: State<'_, DbPool>,
     input: SaveSessionStatsInput,
 ) -> Result<i64, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     conn.execute(
         "INSERT INTO survey_session_stats (
@@ -359,21 +363,29 @@ pub fn patch_survey_session(
     session_id: i64,
     input: PatchSessionInput,
 ) -> Result<(), String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     // (Re-)run finalization to compute revenue/cost/profit/bonus counts/summaries
     crate::survey_persistence::finalize_session(&conn, session_id);
 
     // Now read the freshly computed profit and recompute profit_per_hour with
     // the frontend's accurate elapsed time (which accounts for pauses)
-    let total_profit: f64 = conn.query_row(
-        "SELECT total_profit FROM survey_session_stats WHERE id = ?1",
-        [session_id],
-        |row| row.get(0),
-    ).map_err(|e| format!("Failed to read session: {e}"))?;
+    let total_profit: f64 = conn
+        .query_row(
+            "SELECT total_profit FROM survey_session_stats WHERE id = ?1",
+            [session_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("Failed to read session: {e}"))?;
 
     let hours = input.elapsed_seconds as f64 / 3600.0;
-    let profit_per_hour = if hours > 0.0 { total_profit / hours } else { 0.0 };
+    let profit_per_hour = if hours > 0.0 {
+        total_profit / hours
+    } else {
+        0.0
+    };
 
     conn.execute(
         "UPDATE survey_session_stats SET
@@ -428,7 +440,9 @@ pub fn get_historical_sessions(
     db: State<'_, DbPool>,
     limit: Option<usize>,
 ) -> Result<Vec<HistoricalSession>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     let limit = limit.unwrap_or(50);
 
@@ -505,7 +519,9 @@ pub fn update_survey_session(
     name: String,
     notes: String,
 ) -> Result<(), String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
     conn.execute(
         "UPDATE survey_session_stats SET name = ?1, notes = ?2 WHERE id = ?3",
         rusqlite::params![name, notes, session_id],
@@ -513,5 +529,3 @@ pub fn update_survey_session(
     .map_err(|e| format!("Failed to update session: {e}"))?;
     Ok(())
 }
-
-

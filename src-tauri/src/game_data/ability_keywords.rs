@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // ── Raw CDN shapes ────────────────────────────────────────────────────────────
 
@@ -21,8 +21,13 @@ pub struct AbilityKeywordInfo {
 
 pub fn parse(json: &str) -> Result<HashMap<String, AbilityKeywordInfo>, String> {
     // abilitykeywords.json is an array, not a map - just store empty for now
-    let _raw: Vec<serde_json::Value> = serde_json::from_str(json)
-        .map_err(|e| format!("abilitykeywords.json: parse error at line {}, col {}: {e}", e.line(), e.column()))?;
+    let _raw: Vec<serde_json::Value> = serde_json::from_str(json).map_err(|e| {
+        format!(
+            "abilitykeywords.json: parse error at line {}, col {}: {e}",
+            e.line(),
+            e.column()
+        )
+    })?;
 
     // Return empty map since we don't need this data yet
     Ok(HashMap::new())

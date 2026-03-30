@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use serde::Serialize;
 use serde_json::Value;
+use std::collections::HashMap;
 
 // ── Parsed structs (app shape) ───────────────────────────────────────────────
 
@@ -34,45 +34,58 @@ pub struct NpcInfo {
 // ── Parse function ───────────────────────────────────────────────────────────
 
 pub fn parse(json: &str) -> Result<HashMap<String, NpcInfo>, String> {
-    let raw: HashMap<String, serde_json::Value> = serde_json::from_str(json)
-        .map_err(|e| format!("npcs.json: parse error at line {}, col {}: {e}", e.line(), e.column()))?;
+    let raw: HashMap<String, serde_json::Value> = serde_json::from_str(json).map_err(|e| {
+        format!(
+            "npcs.json: parse error at line {}, col {}: {e}",
+            e.line(),
+            e.column()
+        )
+    })?;
 
     let mut npcs = HashMap::with_capacity(raw.len());
     for (key, value) in raw {
         // Basic stub: just store the key and name if available
-        let name = value.get("Name")
+        let name = value
+            .get("Name")
             .and_then(|v| v.as_str())
             .unwrap_or(&key)
             .to_string();
 
-        let desc = value.get("Description")
+        let desc = value
+            .get("Description")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        let area_name = value.get("AreaName")
+        let area_name = value
+            .get("AreaName")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        let area_friendly_name = value.get("AreaFriendlyName")
+        let area_friendly_name = value
+            .get("AreaFriendlyName")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
         // Extract skills from Services array where Type == "Training"
-        let trains_skills = value.get("Services")
+        let trains_skills = value
+            .get("Services")
             .and_then(|v| v.as_array())
             .map(|arr| {
                 arr.iter()
                     .filter(|service| {
-                        service.get("Type")
+                        service
+                            .get("Type")
                             .and_then(|t| t.as_str())
                             .map(|t| t == "Training")
                             .unwrap_or(false)
                     })
                     .flat_map(|service| {
-                        service.get("Skills")
+                        service
+                            .get("Skills")
                             .and_then(|s| s.as_array())
                             .map(|skills| {
-                                skills.iter()
+                                skills
+                                    .iter()
                                     .filter_map(|v| v.as_str().map(|s| s.to_string()))
                                     .collect::<Vec<_>>()
                             })
@@ -83,28 +96,33 @@ pub fn parse(json: &str) -> Result<HashMap<String, NpcInfo>, String> {
             .unwrap_or_default();
 
         // Parse preferences
-        let preferences = value.get("Preferences")
+        let preferences = value
+            .get("Preferences")
             .and_then(|v| v.as_array())
             .map(|arr| {
                 arr.iter()
                     .filter_map(|pref_val| {
                         Some(NpcPreference {
-                            name: pref_val.get("Name")
+                            name: pref_val
+                                .get("Name")
                                 .and_then(|v| v.as_str())
                                 .map(|s| s.to_string()),
-                            desire: pref_val.get("Desire")
+                            desire: pref_val
+                                .get("Desire")
                                 .and_then(|v| v.as_str())
                                 .unwrap_or("Unknown")
                                 .to_string(),
-                            keywords: pref_val.get("Keywords")
+                            keywords: pref_val
+                                .get("Keywords")
                                 .and_then(|v| v.as_array())
-                                .map(|arr| arr.iter()
-                                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                                    .collect())
+                                .map(|arr| {
+                                    arr.iter()
+                                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                        .collect()
+                                })
                                 .unwrap_or_default(),
-                            pref: pref_val.get("Pref")
-                                .and_then(|v| v.as_f64())
-                                .unwrap_or(0.0) as f32,
+                            pref: pref_val.get("Pref").and_then(|v| v.as_f64()).unwrap_or(0.0)
+                                as f32,
                         })
                     })
                     .collect()
@@ -112,30 +130,35 @@ pub fn parse(json: &str) -> Result<HashMap<String, NpcInfo>, String> {
             .unwrap_or_default();
 
         // Parse item gifts (favorites)
-        let item_gifts = value.get("ItemGifts")
+        let item_gifts = value
+            .get("ItemGifts")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter()
-                .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                .collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                    .collect()
+            })
             .unwrap_or_default();
 
         let pos = value.get("Pos").cloned();
-        let services = value.get("Services")
-            .and_then(|v| v.as_array().cloned());
+        let services = value.get("Services").and_then(|v| v.as_array().cloned());
 
-        npcs.insert(key.clone(), NpcInfo {
-            key,
-            name,
-            desc,
-            area_name,
-            area_friendly_name,
-            trains_skills,
-            preferences,
-            item_gifts,
-            pos,
-            services,
-            raw_json: value,
-        });
+        npcs.insert(
+            key.clone(),
+            NpcInfo {
+                key,
+                name,
+                desc,
+                area_name,
+                area_friendly_name,
+                trains_skills,
+                preferences,
+                item_gifts,
+                pos,
+                services,
+                raw_json: value,
+            },
+        );
     }
 
     Ok(npcs)

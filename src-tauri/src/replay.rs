@@ -3,7 +3,6 @@
 ///
 /// This enables cross-referencing between the two log streams (e.g., correcting
 /// motherlode loot quantities from Chat.log [Status] messages) using archived logs.
-
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
@@ -12,15 +11,17 @@ use std::time::{Duration, Instant};
 
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::chat_parser::{parse_chat_line, parse_chat_login_line, is_timestamped_line, ChatMessage};
+use crate::cdn_commands::GameDataState;
+use crate::chat_parser::{
+    is_timestamped_line, parse_chat_line, parse_chat_login_line, ChatMessage,
+};
 use crate::chat_status_parser::parse_status_message;
 use crate::db::DbPool;
 use crate::game_state::GameStateManager;
 use crate::parsers::{parse_skill_update, parse_timestamp};
 use crate::player_event_parser::PlayerEventParser;
-use crate::survey_parser::{SurveyParser, KnownSurveyType};
+use crate::survey_parser::{KnownSurveyType, SurveyParser};
 use crate::survey_persistence::SurveySessionTracker;
-use crate::cdn_commands::GameDataState;
 
 /// A timestamped event from either log source, used for interleaving.
 #[derive(Debug)]
@@ -102,8 +103,7 @@ fn parse_player_log_lines(
     base_date: chrono::NaiveDate,
     tz_offset_seconds: i32,
 ) -> Result<Vec<TimedEvent>, String> {
-    let file = File::open(path)
-        .map_err(|e| format!("Failed to open Player.log: {}", e))?;
+    let file = File::open(path).map_err(|e| format!("Failed to open Player.log: {}", e))?;
     let reader = BufReader::new(file);
     let mut events = Vec::new();
 
@@ -124,10 +124,7 @@ fn parse_player_log_lines(
                 let utc_dt = local_dt + chrono::Duration::seconds(tz_offset_seconds as i64);
                 let utc_second = utc_dt.and_utc().timestamp();
 
-                events.push(TimedEvent::PlayerLine {
-                    utc_second,
-                    line,
-                });
+                events.push(TimedEvent::PlayerLine { utc_second, line });
             }
         }
         // Lines without timestamps (login announcements, etc.) get appended
@@ -147,8 +144,7 @@ fn parse_player_log_lines(
 /// Parse Chat.log into timestamped events.
 /// Also extracts login lines for timezone/server detection.
 fn parse_chat_log_events(path: &PathBuf) -> Result<Vec<TimedEvent>, String> {
-    let mut file = File::open(path)
-        .map_err(|e| format!("Failed to open Chat.log: {}", e))?;
+    let mut file = File::open(path).map_err(|e| format!("Failed to open Chat.log: {}", e))?;
     let mut content = String::new();
     file.read_to_string(&mut content)
         .map_err(|e| format!("Failed to read Chat.log: {}", e))?;
@@ -186,10 +182,7 @@ fn parse_chat_log_events(path: &PathBuf) -> Result<Vec<TimedEvent>, String> {
         if is_timestamped_line(line) {
             if let Some(msg) = parse_chat_line(line) {
                 let utc_second = msg.timestamp.and_utc().timestamp();
-                events.push(TimedEvent::ChatMessage {
-                    utc_second,
-                    msg,
-                });
+                events.push(TimedEvent::ChatMessage { utc_second, msg });
             }
         }
     }
@@ -231,19 +224,27 @@ fn run_replay(
     game_data: GameDataState,
 ) -> Result<ReplayResult, String> {
     // --- Phase 1: Pre-scan chat log for timezone offset ---
-    app.emit("replay-progress", ReplayProgress {
-        phase: "scanning".into(),
-        current: 0,
-        total: 2,
-        detail: "Scanning chat log for timezone info...".into(),
-    }).ok();
+    app.emit(
+        "replay-progress",
+        ReplayProgress {
+            phase: "scanning".into(),
+            current: 0,
+            total: 2,
+            detail: "Scanning chat log for timezone info...".into(),
+        },
+    )
+    .ok();
 
     let chat_events = parse_chat_log_events(&chat_log_path)?;
 
     // Find the first timezone offset from login lines
     let mut tz_offset: i32 = 0;
     for event in &chat_events {
-        if let TimedEvent::ChatLogin { timezone_offset_seconds: Some(offset), .. } = event {
+        if let TimedEvent::ChatLogin {
+            timezone_offset_seconds: Some(offset),
+            ..
+        } = event
+        {
             tz_offset = *offset;
             break;
         }
@@ -254,15 +255,22 @@ fn run_replay(
         .or_else(|| date_from_chat_content(&chat_events))
         .unwrap_or_else(|| chrono::Utc::now().date_naive());
 
-    eprintln!("[replay] Base date: {}, timezone offset: {}s", base_date, tz_offset);
+    eprintln!(
+        "[replay] Base date: {}, timezone offset: {}s",
+        base_date, tz_offset
+    );
 
     // --- Phase 2: Parse Player.log with correct timezone ---
-    app.emit("replay-progress", ReplayProgress {
-        phase: "scanning".into(),
-        current: 1,
-        total: 2,
-        detail: "Parsing Player.log...".into(),
-    }).ok();
+    app.emit(
+        "replay-progress",
+        ReplayProgress {
+            phase: "scanning".into(),
+            current: 1,
+            total: 2,
+            detail: "Parsing Player.log...".into(),
+        },
+    )
+    .ok();
 
     let player_events = parse_player_log_lines(&player_log_path, base_date, tz_offset)?;
 
@@ -276,14 +284,36 @@ fn run_replay(
     all_events.sort_by_key(|e| e.sort_key());
 
     // Diagnostic: show first/last timestamps from each source
-    if let Some(first_player) = all_events.iter().find(|e| matches!(e, TimedEvent::PlayerLine { .. })) {
-        if let Some(last_player) = all_events.iter().rev().find(|e| matches!(e, TimedEvent::PlayerLine { .. })) {
-            eprintln!("[replay] Player.log UTC range: {} .. {}", first_player.utc_second(), last_player.utc_second());
+    if let Some(first_player) = all_events
+        .iter()
+        .find(|e| matches!(e, TimedEvent::PlayerLine { .. }))
+    {
+        if let Some(last_player) = all_events
+            .iter()
+            .rev()
+            .find(|e| matches!(e, TimedEvent::PlayerLine { .. }))
+        {
+            eprintln!(
+                "[replay] Player.log UTC range: {} .. {}",
+                first_player.utc_second(),
+                last_player.utc_second()
+            );
         }
     }
-    if let Some(first_chat) = all_events.iter().find(|e| matches!(e, TimedEvent::ChatMessage { .. })) {
-        if let Some(last_chat) = all_events.iter().rev().find(|e| matches!(e, TimedEvent::ChatMessage { .. })) {
-            eprintln!("[replay] Chat.log UTC range: {} .. {}", first_chat.utc_second(), last_chat.utc_second());
+    if let Some(first_chat) = all_events
+        .iter()
+        .find(|e| matches!(e, TimedEvent::ChatMessage { .. }))
+    {
+        if let Some(last_chat) = all_events
+            .iter()
+            .rev()
+            .find(|e| matches!(e, TimedEvent::ChatMessage { .. }))
+        {
+            eprintln!(
+                "[replay] Chat.log UTC range: {} .. {}",
+                first_chat.utc_second(),
+                last_chat.utc_second()
+            );
         }
     }
 
@@ -321,12 +351,16 @@ fn run_replay(
     for (i, event) in all_events.iter().enumerate() {
         // Progress updates
         if i % progress_interval == 0 {
-            app.emit("replay-progress", ReplayProgress {
-                phase: "processing".into(),
-                current: i,
-                total: total_events,
-                detail: format!("Processing event {}/{}", i, total_events),
-            }).ok();
+            app.emit(
+                "replay-progress",
+                ReplayProgress {
+                    phase: "processing".into(),
+                    current: i,
+                    total: total_events,
+                    detail: format!("Processing event {}/{}", i, total_events),
+                },
+            )
+            .ok();
         }
 
         match event {
@@ -382,7 +416,8 @@ fn run_replay(
                 for pe in &p_events {
                     let gs_result = game_state.process_event(pe, db);
                     if !gs_result.domains_updated.is_empty() {
-                        app.emit("game-state-updated", &gs_result.domains_updated).ok();
+                        app.emit("game-state-updated", &gs_result.domains_updated)
+                            .ok();
                         emits_since_yield += 1;
                     }
                     app.emit("player-event", pe).ok();
@@ -398,8 +433,11 @@ fn run_replay(
                 if let Some(status_event) = parse_status_message(msg) {
                     // Diagnostic: log every ItemGained with qty > 1 entering the correction path
                     if let crate::chat_status_parser::ChatStatusEvent::ItemGained {
-                        ref item_name, quantity, ..
-                    } = status_event {
+                        ref item_name,
+                        quantity,
+                        ..
+                    } = status_event
+                    {
                         if quantity > 1 {
                             eprintln!(
                                 "[replay] ItemGained entering correction: {} x{} (current_session={:?}, last_session={:?})",
@@ -412,8 +450,8 @@ fn run_replay(
 
                     // Try loot correction — works for both active and recently-ended sessions
                     // (correct_loot_from_chat_status falls back to last_session_id)
-                    if let Some(correction) = survey_tracker
-                        .correct_loot_from_chat_status(&status_event, db)
+                    if let Some(correction) =
+                        survey_tracker.correct_loot_from_chat_status(&status_event, db)
                     {
                         eprintln!(
                             "[replay] Loot correction: {} qty {} → {}",
@@ -452,17 +490,21 @@ fn run_replay(
     }
 
     // Final progress
-    app.emit("replay-progress", ReplayProgress {
-        phase: "complete".into(),
-        current: total_events,
-        total: total_events,
-        detail: format!(
-            "Done: {} player events, {} chat messages, {} corrections",
-            result.player_events_emitted,
-            result.chat_messages_processed,
-            result.loot_corrections_applied,
-        ),
-    }).ok();
+    app.emit(
+        "replay-progress",
+        ReplayProgress {
+            phase: "complete".into(),
+            current: total_events,
+            total: total_events,
+            detail: format!(
+                "Done: {} player events, {} chat messages, {} corrections",
+                result.player_events_emitted,
+                result.chat_messages_processed,
+                result.loot_corrections_applied,
+            ),
+        },
+    )
+    .ok();
 
     Ok(result)
 }
@@ -470,9 +512,8 @@ fn run_replay(
 /// Load known survey types from DB (same as coordinator helper).
 fn load_known_surveys(conn: &rusqlite::Connection) -> HashMap<String, KnownSurveyType> {
     let mut map = HashMap::new();
-    let mut stmt = match conn.prepare(
-        "SELECT internal_name, name, is_motherlode FROM survey_types"
-    ) {
+    let mut stmt = match conn.prepare("SELECT internal_name, name, is_motherlode FROM survey_types")
+    {
         Ok(s) => s,
         Err(_) => return map,
     };
@@ -488,10 +529,13 @@ fn load_known_surveys(conn: &rusqlite::Connection) -> HashMap<String, KnownSurve
     if let Ok(rows) = rows {
         for row in rows.flatten() {
             let (internal_name, display_name, is_motherlode) = row;
-            map.insert(internal_name, KnownSurveyType {
-                display_name,
-                is_motherlode,
-            });
+            map.insert(
+                internal_name,
+                KnownSurveyType {
+                    display_name,
+                    is_motherlode,
+                },
+            );
         }
     }
 

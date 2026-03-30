@@ -1,8 +1,8 @@
+use super::DbConnection;
 /// Database commands for chat message operations
 use crate::chat_parser::ChatMessage;
-use crate::settings::{ConditionMatch, WatchRule, WatchCondition};
-use rusqlite::{params, Result, OptionalExtension};
-use super::DbConnection;
+use crate::settings::{ConditionMatch, WatchCondition, WatchRule};
+use rusqlite::{params, OptionalExtension, Result};
 
 /// Insert a batch of chat messages into the database.
 /// Messages on excluded channels are silently skipped — they must never be stored.
@@ -48,21 +48,18 @@ pub fn insert_chat_messages(
         // Insert item links if any
         for link in &msg.item_links {
             // Look up the item in the game data by name
-            let item_id: Option<i64> = conn.query_row(
-                "SELECT id FROM items WHERE name = ?1 COLLATE NOCASE",
-                params![&link.item_name],
-                |row| row.get(0),
-            ).optional()?;
+            let item_id: Option<i64> = conn
+                .query_row(
+                    "SELECT id FROM items WHERE name = ?1 COLLATE NOCASE",
+                    params![&link.item_name],
+                    |row| row.get(0),
+                )
+                .optional()?;
 
             conn.execute(
                 "INSERT INTO chat_item_links (message_id, raw_text, item_name, item_id)
                  VALUES (?1, ?2, ?3, ?4)",
-                params![
-                    message_id,
-                    &link.raw_text,
-                    &link.item_name,
-                    item_id
-                ],
+                params![message_id, &link.raw_text, &link.item_name, item_id],
             )?;
         }
 
@@ -173,9 +170,15 @@ pub fn get_chat_messages(
 
     if let Some(has_links) = filter.has_item_links {
         if has_links {
-            conditions.push("EXISTS (SELECT 1 FROM chat_item_links cil WHERE cil.message_id = cm.id)".to_string());
+            conditions.push(
+                "EXISTS (SELECT 1 FROM chat_item_links cil WHERE cil.message_id = cm.id)"
+                    .to_string(),
+            );
         } else {
-            conditions.push("NOT EXISTS (SELECT 1 FROM chat_item_links cil WHERE cil.message_id = cm.id)".to_string());
+            conditions.push(
+                "NOT EXISTS (SELECT 1 FROM chat_item_links cil WHERE cil.message_id = cm.id)"
+                    .to_string(),
+            );
         }
     }
 
@@ -238,12 +241,15 @@ pub fn get_chat_messages(
 }
 
 /// Get item links for a specific message
-fn get_item_links_for_message(conn: &DbConnection, message_id: i64) -> Result<Vec<ChatItemLinkRow>> {
+fn get_item_links_for_message(
+    conn: &DbConnection,
+    message_id: i64,
+) -> Result<Vec<ChatItemLinkRow>> {
     let mut stmt = conn.prepare(
         "SELECT raw_text, item_name, item_id
          FROM chat_item_links
          WHERE message_id = ?1
-         ORDER BY id"
+         ORDER BY id",
     )?;
 
     let rows = stmt.query_map([message_id], |row| {
@@ -267,7 +273,7 @@ pub fn get_channels(conn: &DbConnection) -> Result<Vec<String>> {
     let mut stmt = conn.prepare(
         "SELECT DISTINCT channel FROM chat_messages
          WHERE channel IS NOT NULL
-         ORDER BY channel"
+         ORDER BY channel",
     )?;
 
     let rows = stmt.query_map([], |row| row.get(0))?;
@@ -287,12 +293,10 @@ pub fn get_channel_stats(conn: &DbConnection) -> Result<Vec<(String, i64)>> {
          FROM chat_messages
          WHERE channel IS NOT NULL
          GROUP BY channel
-         ORDER BY count DESC"
+         ORDER BY count DESC",
     )?;
 
-    let rows = stmt.query_map([], |row| {
-        Ok((row.get(0)?, row.get(1)?))
-    })?;
+    let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
 
     let mut stats = Vec::new();
     for row in rows {
@@ -315,48 +319,54 @@ pub struct ChatStats {
 }
 
 pub fn get_chat_stats(conn: &DbConnection) -> Result<ChatStats> {
-    let total_messages: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM chat_messages",
-        [],
-        |row| row.get(0)
-    ).unwrap_or(0);
+    let total_messages: i64 = conn
+        .query_row("SELECT COUNT(*) FROM chat_messages", [], |row| row.get(0))
+        .unwrap_or(0);
 
-    let channel_count: i64 = conn.query_row(
-        "SELECT COUNT(DISTINCT channel) FROM chat_messages WHERE channel IS NOT NULL",
-        [],
-        |row| row.get(0)
-    ).unwrap_or(0);
+    let channel_count: i64 = conn
+        .query_row(
+            "SELECT COUNT(DISTINCT channel) FROM chat_messages WHERE channel IS NOT NULL",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
 
-    let oldest_message: String = conn.query_row(
-        "SELECT timestamp FROM chat_messages ORDER BY timestamp ASC LIMIT 1",
-        [],
-        |row| row.get(0)
-    ).unwrap_or_else(|_| "N/A".to_string());
+    let oldest_message: String = conn
+        .query_row(
+            "SELECT timestamp FROM chat_messages ORDER BY timestamp ASC LIMIT 1",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or_else(|_| "N/A".to_string());
 
-    let newest_message: String = conn.query_row(
-        "SELECT timestamp FROM chat_messages ORDER BY timestamp DESC LIMIT 1",
-        [],
-        |row| row.get(0)
-    ).unwrap_or_else(|_| "N/A".to_string());
+    let newest_message: String = conn
+        .query_row(
+            "SELECT timestamp FROM chat_messages ORDER BY timestamp DESC LIMIT 1",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or_else(|_| "N/A".to_string());
 
-    let item_links_count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM chat_item_links",
-        [],
-        |row| row.get(0)
-    ).unwrap_or(0);
+    let item_links_count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM chat_item_links", [], |row| row.get(0))
+        .unwrap_or(0);
 
     // Sum the size of chat-related tables and indexes only
-    let messages_size_bytes: i64 = conn.query_row(
-        "SELECT COALESCE(SUM(pgsize), 0) FROM dbstat WHERE name LIKE 'chat_%'",
-        [],
-        |row| row.get(0)
-    ).unwrap_or(0);
+    let messages_size_bytes: i64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(pgsize), 0) FROM dbstat WHERE name LIKE 'chat_%'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
 
-    let database_size_bytes: i64 = conn.query_row(
-        "SELECT page_count * page_size FROM pragma_page_count(), pragma_page_size()",
-        [],
-        |row| row.get(0)
-    ).unwrap_or(0);
+    let database_size_bytes: i64 = conn
+        .query_row(
+            "SELECT page_count * page_size FROM pragma_page_count(), pragma_page_size()",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
 
     Ok(ChatStats {
         total_messages,
@@ -376,12 +386,10 @@ pub fn get_tell_conversations(conn: &DbConnection) -> Result<Vec<(String, i64)>>
          FROM chat_messages
          WHERE channel = 'Tell' AND sender IS NOT NULL
          GROUP BY sender
-         ORDER BY MAX(timestamp) DESC"
+         ORDER BY MAX(timestamp) DESC",
     )?;
 
-    let rows = stmt.query_map([], |row| {
-        Ok((row.get(0)?, row.get(1)?))
-    })?;
+    let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
 
     let mut conversations = Vec::new();
     for row in rows {

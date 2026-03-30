@@ -8,6 +8,7 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "tauri:dev": "tauri dev --config src-tauri/tauri.dev.conf.json",
     "version:bump": "bash scripts/bump-version.sh",
     "changelog": "bash scripts/generate-changelog.sh"
   },
@@ -15,6 +16,7 @@
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-dialog": "^2.6.0",
     "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/plugin-window-state": "^2.4.1",
     "pinia": "^3.0.4",
     "vue": "^3.5.13"
   },

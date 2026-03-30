@@ -1,11 +1,10 @@
-/// Tauri commands for character report import and querying
-
-use std::collections::HashMap;
-use tauri::State;
-use serde::{Deserialize, Serialize};
 use super::DbPool;
 use crate::cdn_commands::GameDataState;
 use crate::game_data::GameData;
+use serde::{Deserialize, Serialize};
+/// Tauri commands for character report import and querying
+use std::collections::HashMap;
+use tauri::State;
 
 // ── JSON Deserialization Structs (match game's /outputcharacter format) ───────
 
@@ -151,8 +150,8 @@ pub fn import_character_report_internal(
     game_data: &GameData,
 ) -> Result<ImportResult, String> {
     // 1. Read file
-    let raw_json = std::fs::read_to_string(file_path)
-        .map_err(|e| format!("Failed to read file: {e}"))?;
+    let raw_json =
+        std::fs::read_to_string(file_path).map_err(|e| format!("Failed to read file: {e}"))?;
 
     // 2. Deserialize
     let report: CharacterReport = serde_json::from_str(&raw_json)
@@ -166,7 +165,9 @@ pub fn import_character_report_internal(
         ));
     }
 
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     // 4. Begin transaction
     conn.execute("BEGIN", [])
@@ -213,88 +214,103 @@ pub fn import_character_report_internal(
         ).map_err(|e| format!("Failed to prepare skill insert: {e}"))?;
 
         for (skill_name, skill_data) in &report.skills {
-            skill_stmt.execute(rusqlite::params![
-                snapshot_id,
-                skill_name,
-                skill_data.level,
-                skill_data.bonus_levels,
-                skill_data.xp_toward_next_level,
-                skill_data.xp_needed_for_next_level,
-            ]).map_err(|e| format!("Failed to insert skill {skill_name}: {e}"))?;
+            skill_stmt
+                .execute(rusqlite::params![
+                    snapshot_id,
+                    skill_name,
+                    skill_data.level,
+                    skill_data.bonus_levels,
+                    skill_data.xp_toward_next_level,
+                    skill_data.xp_needed_for_next_level,
+                ])
+                .map_err(|e| format!("Failed to insert skill {skill_name}: {e}"))?;
         }
 
         // 8. Batch insert NPC favor
-        let mut npc_stmt = conn.prepare(
-            "INSERT INTO character_npc_favor (snapshot_id, npc_key, favor_level)
-             VALUES (?1, ?2, ?3)"
-        ).map_err(|e| format!("Failed to prepare NPC insert: {e}"))?;
+        let mut npc_stmt = conn
+            .prepare(
+                "INSERT INTO character_npc_favor (snapshot_id, npc_key, favor_level)
+             VALUES (?1, ?2, ?3)",
+            )
+            .map_err(|e| format!("Failed to prepare NPC insert: {e}"))?;
 
         for (npc_key, npc_data) in &report.npcs {
-            npc_stmt.execute(rusqlite::params![
-                snapshot_id,
-                npc_key,
-                npc_data.favor_level,
-            ]).map_err(|e| format!("Failed to insert NPC {npc_key}: {e}"))?;
+            npc_stmt
+                .execute(rusqlite::params![
+                    snapshot_id,
+                    npc_key,
+                    npc_data.favor_level,
+                ])
+                .map_err(|e| format!("Failed to insert NPC {npc_key}: {e}"))?;
         }
 
         // 9. Batch insert recipe completions
-        let mut recipe_stmt = conn.prepare(
-            "INSERT INTO character_recipe_completions (snapshot_id, recipe_key, completions)
-             VALUES (?1, ?2, ?3)"
-        ).map_err(|e| format!("Failed to prepare recipe insert: {e}"))?;
+        let mut recipe_stmt = conn
+            .prepare(
+                "INSERT INTO character_recipe_completions (snapshot_id, recipe_key, completions)
+             VALUES (?1, ?2, ?3)",
+            )
+            .map_err(|e| format!("Failed to prepare recipe insert: {e}"))?;
 
         for (recipe_key, completions) in &report.recipe_completions {
-            recipe_stmt.execute(rusqlite::params![
-                snapshot_id,
-                recipe_key,
-                completions,
-            ]).map_err(|e| format!("Failed to insert recipe {recipe_key}: {e}"))?;
+            recipe_stmt
+                .execute(rusqlite::params![snapshot_id, recipe_key, completions,])
+                .map_err(|e| format!("Failed to insert recipe {recipe_key}: {e}"))?;
         }
 
         // 10. Batch insert stats
-        let mut stat_stmt = conn.prepare(
-            "INSERT INTO character_stats (snapshot_id, stat_key, value)
-             VALUES (?1, ?2, ?3)"
-        ).map_err(|e| format!("Failed to prepare stat insert: {e}"))?;
+        let mut stat_stmt = conn
+            .prepare(
+                "INSERT INTO character_stats (snapshot_id, stat_key, value)
+             VALUES (?1, ?2, ?3)",
+            )
+            .map_err(|e| format!("Failed to prepare stat insert: {e}"))?;
 
         for (stat_key, value) in &report.current_stats {
-            stat_stmt.execute(rusqlite::params![
-                snapshot_id,
-                stat_key,
-                value,
-            ]).map_err(|e| format!("Failed to insert stat {stat_key}: {e}"))?;
+            stat_stmt
+                .execute(rusqlite::params![snapshot_id, stat_key, value,])
+                .map_err(|e| format!("Failed to insert stat {stat_key}: {e}"))?;
         }
 
         // 11. Batch insert currencies
-        let mut currency_stmt = conn.prepare(
-            "INSERT INTO character_currencies (snapshot_id, currency_key, amount)
-             VALUES (?1, ?2, ?3)"
-        ).map_err(|e| format!("Failed to prepare currency insert: {e}"))?;
+        let mut currency_stmt = conn
+            .prepare(
+                "INSERT INTO character_currencies (snapshot_id, currency_key, amount)
+             VALUES (?1, ?2, ?3)",
+            )
+            .map_err(|e| format!("Failed to prepare currency insert: {e}"))?;
 
         for (currency_key, amount) in &report.currencies {
-            currency_stmt.execute(rusqlite::params![
-                snapshot_id,
-                currency_key,
-                amount,
-            ]).map_err(|e| format!("Failed to insert currency {currency_key}: {e}"))?;
+            currency_stmt
+                .execute(rusqlite::params![snapshot_id, currency_key, amount,])
+                .map_err(|e| format!("Failed to insert currency {currency_key}: {e}"))?;
         }
 
         // 12. Batch insert active quests
-        let mut quest_stmt = conn.prepare(
-            "INSERT INTO character_active_quests (snapshot_id, quest_key, category)
-             VALUES (?1, ?2, ?3)"
-        ).map_err(|e| format!("Failed to prepare quest insert: {e}"))?;
+        let mut quest_stmt = conn
+            .prepare(
+                "INSERT INTO character_active_quests (snapshot_id, quest_key, category)
+             VALUES (?1, ?2, ?3)",
+            )
+            .map_err(|e| format!("Failed to prepare quest insert: {e}"))?;
 
         for quest_key in &report.active_quests {
-            quest_stmt.execute(rusqlite::params![snapshot_id, quest_key, "active"])
+            quest_stmt
+                .execute(rusqlite::params![snapshot_id, quest_key, "active"])
                 .map_err(|e| format!("Failed to insert active quest {quest_key}: {e}"))?;
         }
         for quest_key in &report.active_work_orders {
-            quest_stmt.execute(rusqlite::params![snapshot_id, quest_key, "work_order"])
+            quest_stmt
+                .execute(rusqlite::params![snapshot_id, quest_key, "work_order"])
                 .map_err(|e| format!("Failed to insert work order {quest_key}: {e}"))?;
         }
         for quest_key in &report.completed_work_orders {
-            quest_stmt.execute(rusqlite::params![snapshot_id, quest_key, "completed_work_order"])
+            quest_stmt
+                .execute(rusqlite::params![
+                    snapshot_id,
+                    quest_key,
+                    "completed_work_order"
+                ])
                 .map_err(|e| format!("Failed to insert completed work order {quest_key}: {e}"))?;
         }
         let quests_imported = report.active_quests.len()
@@ -333,28 +349,32 @@ pub fn import_character_report_internal(
 }
 
 #[tauri::command]
-pub fn get_characters(
-    db: State<'_, DbPool>,
-) -> Result<Vec<CharacterInfo>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+pub fn get_characters(db: State<'_, DbPool>) -> Result<Vec<CharacterInfo>, String> {
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
-    let mut stmt = conn.prepare(
-        "SELECT character_name, server_name,
+    let mut stmt = conn
+        .prepare(
+            "SELECT character_name, server_name,
                 MAX(snapshot_timestamp) as latest_snapshot,
                 COUNT(*) as snapshot_count
          FROM character_snapshots
          GROUP BY character_name, server_name
-         ORDER BY latest_snapshot DESC"
-    ).map_err(|e| format!("Failed to prepare query: {e}"))?;
+         ORDER BY latest_snapshot DESC",
+        )
+        .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
-    let rows = stmt.query_map([], |row| {
-        Ok(CharacterInfo {
-            character_name: row.get(0)?,
-            server_name: row.get(1)?,
-            latest_snapshot: row.get(2)?,
-            snapshot_count: row.get::<_, i64>(3)? as usize,
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(CharacterInfo {
+                character_name: row.get(0)?,
+                server_name: row.get(1)?,
+                latest_snapshot: row.get(2)?,
+                snapshot_count: row.get::<_, i64>(3)? as usize,
+            })
         })
-    }).map_err(|e| format!("Query failed: {e}"))?;
+        .map_err(|e| format!("Query failed: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Failed to read results: {e}"))
@@ -366,9 +386,13 @@ pub fn get_character_snapshots(
     character_name: String,
     server_name: Option<String>,
 ) -> Result<Vec<CharacterSnapshotSummary>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
-    let (sql, params): (&str, Vec<Box<dyn rusqlite::types::ToSql>>) = if let Some(ref server) = server_name {
+    let (sql, params): (&str, Vec<Box<dyn rusqlite::types::ToSql>>) = if let Some(ref server) =
+        server_name
+    {
         (
             "SELECT cs.id, cs.character_name, cs.server_name, cs.snapshot_timestamp,
                     cs.race, datetime(cs.import_date) as import_date,
@@ -393,22 +417,25 @@ pub fn get_character_snapshots(
         )
     };
 
-    let mut stmt = conn.prepare(sql)
+    let mut stmt = conn
+        .prepare(sql)
         .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
     let param_refs: Vec<&dyn rusqlite::types::ToSql> = params.iter().map(|p| p.as_ref()).collect();
 
-    let rows = stmt.query_map(param_refs.as_slice(), |row| {
-        Ok(CharacterSnapshotSummary {
-            id: row.get(0)?,
-            character_name: row.get(1)?,
-            server_name: row.get(2)?,
-            snapshot_timestamp: row.get(3)?,
-            race: row.get(4)?,
-            import_date: row.get(5)?,
-            skill_count: row.get::<_, i64>(6)? as usize,
+    let rows = stmt
+        .query_map(param_refs.as_slice(), |row| {
+            Ok(CharacterSnapshotSummary {
+                id: row.get(0)?,
+                character_name: row.get(1)?,
+                server_name: row.get(2)?,
+                snapshot_timestamp: row.get(3)?,
+                race: row.get(4)?,
+                import_date: row.get(5)?,
+                skill_count: row.get::<_, i64>(6)? as usize,
+            })
         })
-    }).map_err(|e| format!("Query failed: {e}"))?;
+        .map_err(|e| format!("Query failed: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Failed to read results: {e}"))
@@ -419,24 +446,30 @@ pub fn get_snapshot_skills(
     db: State<'_, DbPool>,
     snapshot_id: i64,
 ) -> Result<Vec<SnapshotSkillLevel>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
-    let mut stmt = conn.prepare(
-        "SELECT skill_name, level, bonus_levels, xp_toward_next, xp_needed_for_next
+    let mut stmt = conn
+        .prepare(
+            "SELECT skill_name, level, bonus_levels, xp_toward_next, xp_needed_for_next
          FROM character_skill_levels
          WHERE snapshot_id = ?1
-         ORDER BY skill_name"
-    ).map_err(|e| format!("Failed to prepare query: {e}"))?;
+         ORDER BY skill_name",
+        )
+        .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
-    let rows = stmt.query_map([snapshot_id], |row| {
-        Ok(SnapshotSkillLevel {
-            skill_name: row.get(0)?,
-            level: row.get(1)?,
-            bonus_levels: row.get(2)?,
-            xp_toward_next: row.get(3)?,
-            xp_needed_for_next: row.get(4)?,
+    let rows = stmt
+        .query_map([snapshot_id], |row| {
+            Ok(SnapshotSkillLevel {
+                skill_name: row.get(0)?,
+                level: row.get(1)?,
+                bonus_levels: row.get(2)?,
+                xp_toward_next: row.get(3)?,
+                xp_needed_for_next: row.get(4)?,
+            })
         })
-    }).map_err(|e| format!("Query failed: {e}"))?;
+        .map_err(|e| format!("Query failed: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Failed to read results: {e}"))
@@ -447,21 +480,27 @@ pub fn get_snapshot_npc_favor(
     db: State<'_, DbPool>,
     snapshot_id: i64,
 ) -> Result<Vec<SnapshotNpcFavor>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
-    let mut stmt = conn.prepare(
-        "SELECT npc_key, favor_level
+    let mut stmt = conn
+        .prepare(
+            "SELECT npc_key, favor_level
          FROM character_npc_favor
          WHERE snapshot_id = ?1
-         ORDER BY npc_key"
-    ).map_err(|e| format!("Failed to prepare query: {e}"))?;
+         ORDER BY npc_key",
+        )
+        .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
-    let rows = stmt.query_map([snapshot_id], |row| {
-        Ok(SnapshotNpcFavor {
-            npc_key: row.get(0)?,
-            favor_level: row.get(1)?,
+    let rows = stmt
+        .query_map([snapshot_id], |row| {
+            Ok(SnapshotNpcFavor {
+                npc_key: row.get(0)?,
+                favor_level: row.get(1)?,
+            })
         })
-    }).map_err(|e| format!("Query failed: {e}"))?;
+        .map_err(|e| format!("Query failed: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Failed to read results: {e}"))
@@ -472,21 +511,27 @@ pub fn get_snapshot_recipes(
     db: State<'_, DbPool>,
     snapshot_id: i64,
 ) -> Result<Vec<SnapshotRecipeCompletion>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
-    let mut stmt = conn.prepare(
-        "SELECT recipe_key, completions
+    let mut stmt = conn
+        .prepare(
+            "SELECT recipe_key, completions
          FROM character_recipe_completions
          WHERE snapshot_id = ?1
-         ORDER BY recipe_key"
-    ).map_err(|e| format!("Failed to prepare query: {e}"))?;
+         ORDER BY recipe_key",
+        )
+        .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
-    let rows = stmt.query_map([snapshot_id], |row| {
-        Ok(SnapshotRecipeCompletion {
-            recipe_key: row.get(0)?,
-            completions: row.get(1)?,
+    let rows = stmt
+        .query_map([snapshot_id], |row| {
+            Ok(SnapshotRecipeCompletion {
+                recipe_key: row.get(0)?,
+                completions: row.get(1)?,
+            })
         })
-    }).map_err(|e| format!("Query failed: {e}"))?;
+        .map_err(|e| format!("Query failed: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Failed to read results: {e}"))
@@ -497,21 +542,27 @@ pub fn get_snapshot_stats(
     db: State<'_, DbPool>,
     snapshot_id: i64,
 ) -> Result<Vec<SnapshotStat>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
-    let mut stmt = conn.prepare(
-        "SELECT stat_key, value
+    let mut stmt = conn
+        .prepare(
+            "SELECT stat_key, value
          FROM character_stats
          WHERE snapshot_id = ?1
-         ORDER BY stat_key"
-    ).map_err(|e| format!("Failed to prepare query: {e}"))?;
+         ORDER BY stat_key",
+        )
+        .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
-    let rows = stmt.query_map([snapshot_id], |row| {
-        Ok(SnapshotStat {
-            stat_key: row.get(0)?,
-            value: row.get(1)?,
+    let rows = stmt
+        .query_map([snapshot_id], |row| {
+            Ok(SnapshotStat {
+                stat_key: row.get(0)?,
+                value: row.get(1)?,
+            })
         })
-    }).map_err(|e| format!("Query failed: {e}"))?;
+        .map_err(|e| format!("Query failed: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Failed to read results: {e}"))
@@ -522,21 +573,27 @@ pub fn get_snapshot_currencies(
     db: State<'_, DbPool>,
     snapshot_id: i64,
 ) -> Result<Vec<SnapshotCurrency>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
-    let mut stmt = conn.prepare(
-        "SELECT currency_key, amount
+    let mut stmt = conn
+        .prepare(
+            "SELECT currency_key, amount
          FROM character_currencies
          WHERE snapshot_id = ?1
-         ORDER BY currency_key"
-    ).map_err(|e| format!("Failed to prepare query: {e}"))?;
+         ORDER BY currency_key",
+        )
+        .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
-    let rows = stmt.query_map([snapshot_id], |row| {
-        Ok(SnapshotCurrency {
-            currency_key: row.get(0)?,
-            amount: row.get(1)?,
+    let rows = stmt
+        .query_map([snapshot_id], |row| {
+            Ok(SnapshotCurrency {
+                currency_key: row.get(0)?,
+                amount: row.get(1)?,
+            })
         })
-    }).map_err(|e| format!("Query failed: {e}"))?;
+        .map_err(|e| format!("Query failed: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Failed to read results: {e}"))
@@ -547,21 +604,27 @@ pub fn get_snapshot_active_quests(
     db: State<'_, DbPool>,
     snapshot_id: i64,
 ) -> Result<Vec<SnapshotActiveQuest>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
-    let mut stmt = conn.prepare(
-        "SELECT quest_key, category
+    let mut stmt = conn
+        .prepare(
+            "SELECT quest_key, category
          FROM character_active_quests
          WHERE snapshot_id = ?1
-         ORDER BY category, quest_key"
-    ).map_err(|e| format!("Failed to prepare query: {e}"))?;
+         ORDER BY category, quest_key",
+        )
+        .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
-    let rows = stmt.query_map([snapshot_id], |row| {
-        Ok(SnapshotActiveQuest {
-            quest_key: row.get(0)?,
-            category: row.get(1)?,
+    let rows = stmt
+        .query_map([snapshot_id], |row| {
+            Ok(SnapshotActiveQuest {
+                quest_key: row.get(0)?,
+                category: row.get(1)?,
+            })
         })
-    }).map_err(|e| format!("Query failed: {e}"))?;
+        .map_err(|e| format!("Query failed: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Failed to read results: {e}"))
@@ -573,11 +636,14 @@ pub fn compare_snapshots(
     snapshot_id_old: i64,
     snapshot_id_new: i64,
 ) -> Result<Vec<SkillDiff>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     // Get skills from both snapshots and compute diffs using UNION to emulate FULL OUTER JOIN
-    let mut stmt = conn.prepare(
-        "SELECT
+    let mut stmt = conn
+        .prepare(
+            "SELECT
             skill_name,
             MAX(CASE WHEN snapshot_id = ?1 THEN level ELSE 0 END) as old_level,
             MAX(CASE WHEN snapshot_id = ?2 THEN level ELSE 0 END) as new_level,
@@ -588,19 +654,22 @@ pub fn compare_snapshots(
          FROM character_skill_levels
          WHERE snapshot_id IN (?1, ?2)
          GROUP BY skill_name
-         ORDER BY skill_name"
-    ).map_err(|e| format!("Failed to prepare query: {e}"))?;
+         ORDER BY skill_name",
+        )
+        .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
-    let rows = stmt.query_map(rusqlite::params![snapshot_id_old, snapshot_id_new], |row| {
-        Ok(SkillDiff {
-            skill_name: row.get(0)?,
-            old_level: row.get(1)?,
-            new_level: row.get(2)?,
-            level_change: row.get(3)?,
-            old_xp: row.get(4)?,
-            new_xp: row.get(5)?,
+    let rows = stmt
+        .query_map(rusqlite::params![snapshot_id_old, snapshot_id_new], |row| {
+            Ok(SkillDiff {
+                skill_name: row.get(0)?,
+                old_level: row.get(1)?,
+                new_level: row.get(2)?,
+                level_change: row.get(3)?,
+                old_xp: row.get(4)?,
+                new_xp: row.get(5)?,
+            })
         })
-    }).map_err(|e| format!("Query failed: {e}"))?;
+        .map_err(|e| format!("Query failed: {e}"))?;
 
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Failed to read results: {e}"))
@@ -623,7 +692,8 @@ fn seed_game_state_from_snapshot(
     conn.execute(
         "INSERT INTO servers (server_name) VALUES (?1) ON CONFLICT DO NOTHING",
         rusqlite::params![server],
-    ).ok();
+    )
+    .ok();
 
     // Seed skills — resolve internal names to canonical IDs + display names
     let mut skill_stmt = conn.prepare(
@@ -647,18 +717,20 @@ fn seed_game_state_from_snapshot(
             None => (0i64, skill_name.clone()),
         };
         let total_level = skill_data.level + skill_data.bonus_levels;
-        skill_stmt.execute(rusqlite::params![
-            character,
-            server,
-            skill_id,
-            display_name,
-            total_level,              // level (total = base + bonus)
-            skill_data.level,         // base_level (without bonuses)
-            skill_data.bonus_levels,
-            skill_data.xp_toward_next_level,
-            skill_data.xp_needed_for_next_level,
-            ts,
-        ]).ok();
+        skill_stmt
+            .execute(rusqlite::params![
+                character,
+                server,
+                skill_id,
+                display_name,
+                total_level,      // level (total = base + bonus)
+                skill_data.level, // base_level (without bonuses)
+                skill_data.bonus_levels,
+                skill_data.xp_toward_next_level,
+                skill_data.xp_needed_for_next_level,
+                ts,
+            ])
+            .ok();
     }
 
     // Seed recipes — snapshot uses string keys like "Recipe_12345", extract numeric ID
@@ -676,13 +748,15 @@ fn seed_game_state_from_snapshot(
         // Snapshot keys are InternalName strings (e.g., "Butter", "OrcishFlour").
         // Look up the numeric recipe ID from the CDN internal name index.
         if let Some(&recipe_id) = game_data.recipe_internal_name_index.get(recipe_key) {
-            recipe_stmt.execute(rusqlite::params![
-                character,
-                server,
-                recipe_id as i64,
-                completions,
-                ts,
-            ]).ok();
+            recipe_stmt
+                .execute(rusqlite::params![
+                    character,
+                    server,
+                    recipe_id as i64,
+                    completions,
+                    ts,
+                ])
+                .ok();
         }
     }
 
@@ -700,17 +774,21 @@ fn seed_game_state_from_snapshot(
     ).map_err(|e| format!("Failed to prepare game state favor upsert: {e}"))?;
 
     for (npc_key, favor_data) in &report.npcs {
-        let display_name = game_data.npcs.get(npc_key)
+        let display_name = game_data
+            .npcs
+            .get(npc_key)
             .map(|info| info.name.clone())
             .unwrap_or_else(|| npc_key.clone());
-        favor_stmt.execute(rusqlite::params![
-            character,
-            server,
-            npc_key,
-            display_name,
-            favor_data.favor_level,
-            ts,
-        ]).ok();
+        favor_stmt
+            .execute(rusqlite::params![
+                character,
+                server,
+                npc_key,
+                display_name,
+                favor_data.favor_level,
+                ts,
+            ])
+            .ok();
     }
 
     // Seed currencies
@@ -725,13 +803,15 @@ fn seed_game_state_from_snapshot(
     ).map_err(|e| format!("Failed to prepare game state currency upsert: {e}"))?;
 
     for (currency_name, amount) in &report.currencies {
-        currency_stmt.execute(rusqlite::params![
-            character,
-            server,
-            currency_name,
-            *amount as f64,
-            ts,
-        ]).ok();
+        currency_stmt
+            .execute(rusqlite::params![
+                character,
+                server,
+                currency_name,
+                *amount as f64,
+                ts,
+            ])
+            .ok();
     }
 
     // Seed storage vault contents from the latest item snapshot
@@ -739,23 +819,28 @@ fn seed_game_state_from_snapshot(
     conn.execute(
         "DELETE FROM game_state_storage WHERE character_name = ?1 AND server_name = ?2",
         rusqlite::params![character, server],
-    ).ok();
+    )
+    .ok();
 
     // Find the latest item snapshot for this character+server
-    let latest_snapshot_id: Option<i64> = conn.query_row(
-        "SELECT cis.id FROM character_item_snapshots cis
+    let latest_snapshot_id: Option<i64> = conn
+        .query_row(
+            "SELECT cis.id FROM character_item_snapshots cis
          WHERE cis.character_name = ?1 AND cis.server_name = ?2
          ORDER BY cis.snapshot_timestamp DESC LIMIT 1",
-        rusqlite::params![character, server],
-        |row| row.get(0),
-    ).ok();
+            rusqlite::params![character, server],
+            |row| row.get(0),
+        )
+        .ok();
 
     if let Some(snapshot_id) = latest_snapshot_id {
-        let mut storage_query = conn.prepare(
-            "SELECT storage_vault, type_id, item_name, stack_size
+        let mut storage_query = conn
+            .prepare(
+                "SELECT storage_vault, type_id, item_name, stack_size
              FROM character_snapshot_items
-             WHERE item_snapshot_id = ?1 AND storage_vault != '' AND is_in_inventory = 0"
-        ).map_err(|e| format!("Failed to prepare storage query: {e}"))?;
+             WHERE item_snapshot_id = ?1 AND storage_vault != '' AND is_in_inventory = 0",
+            )
+            .map_err(|e| format!("Failed to prepare storage query: {e}"))?;
 
         let mut storage_insert = conn.prepare(
             "INSERT INTO game_state_storage (character_name, server_name, vault_key, instance_id, item_name, item_type_id, stack_size, last_confirmed_at, source)
@@ -763,31 +848,34 @@ fn seed_game_state_from_snapshot(
         ).map_err(|e| format!("Failed to prepare storage insert: {e}"))?;
 
         // Snapshot items don't have real instance IDs, so generate synthetic ones per vault
-        let rows: Vec<(String, i64, String, i64)> = storage_query.query_map(
-            rusqlite::params![snapshot_id],
-            |row| Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, i64>(1)?,
-                row.get::<_, String>(2)?,
-                row.get::<_, i64>(3)?,
-            ))
-        ).map_err(|e| format!("Failed to query storage items: {e}"))?
+        let rows: Vec<(String, i64, String, i64)> = storage_query
+            .query_map(rusqlite::params![snapshot_id], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, i64>(3)?,
+                ))
+            })
+            .map_err(|e| format!("Failed to query storage items: {e}"))?
             .filter_map(|r| r.ok())
             .collect();
 
         for (i, (vault_key, type_id, item_name, stack_size)) in rows.iter().enumerate() {
             // Use negative synthetic instance IDs to avoid collision with real ones
             let synthetic_id = -(i as i64 + 1);
-            storage_insert.execute(rusqlite::params![
-                character,
-                server,
-                vault_key,
-                synthetic_id,
-                item_name,
-                type_id,
-                stack_size,
-                ts,
-            ]).ok();
+            storage_insert
+                .execute(rusqlite::params![
+                    character,
+                    server,
+                    vault_key,
+                    synthetic_id,
+                    item_name,
+                    type_id,
+                    stack_size,
+                    ts,
+                ])
+                .ok();
         }
     }
 

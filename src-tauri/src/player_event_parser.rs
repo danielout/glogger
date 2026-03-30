@@ -1,3 +1,4 @@
+use crate::parsers::parse_timestamp;
 /// Player log event parser — foundational module for parsing all ProcessXxx events
 /// from Player.log into structured, identity-resolved events.
 ///
@@ -6,9 +7,7 @@
 /// - Stack tracking: current stack size per instance
 /// - Interaction context: current NPC interaction for contextualizing events
 /// - Pending delete buffer: 1-line lookahead to disambiguate storage/vendor/consumed
-
 use std::collections::HashMap;
-use crate::parsers::parse_timestamp;
 
 // ============================================================
 // Event Types
@@ -589,10 +588,13 @@ impl PlayerEventParser {
         let is_new = is_new_str == "True";
 
         // Register in instance registry
-        self.instance_registry.insert(instance_id, InstanceInfo {
-            item_name: item_name.clone(),
-            item_type_id: None,
-        });
+        self.instance_registry.insert(
+            instance_id,
+            InstanceInfo {
+                item_name: item_name.clone(),
+                item_type_id: None,
+            },
+        );
 
         Some(PlayerEvent::ItemAdded {
             timestamp: ts,
@@ -629,7 +631,9 @@ impl PlayerEventParser {
             info.item_type_id = Some(item_type_id);
         }
 
-        let item_name = self.instance_registry.get(&instance_id)
+        let item_name = self
+            .instance_registry
+            .get(&instance_id)
             .map(|info| info.item_name.clone());
 
         Some(PlayerEvent::ItemStackChanged {
@@ -660,7 +664,9 @@ impl PlayerEventParser {
             Err(_) => return,
         };
 
-        let item_name = self.instance_registry.get(&instance_id)
+        let item_name = self
+            .instance_registry
+            .get(&instance_id)
             .map(|info| info.item_name.clone());
 
         // Clean up tracking state
@@ -832,7 +838,8 @@ impl PlayerEventParser {
     /// ProcessAddToStorageVault(npcId, -1, slot, InternalName(instanceId))
     fn parse_add_to_storage(&self, line: &str) -> Option<PlayerEvent> {
         let ts = parse_timestamp(line)?;
-        let args_start = line.find("ProcessAddToStorageVault(")? + "ProcessAddToStorageVault(".len();
+        let args_start =
+            line.find("ProcessAddToStorageVault(")? + "ProcessAddToStorageVault(".len();
         let args = &line[args_start..];
 
         let parts: Vec<&str> = args.splitn(4, ',').collect();
@@ -849,7 +856,10 @@ impl PlayerEventParser {
         let id_end = name_part[id_start..].find(')')? + id_start;
         let instance_id: u64 = name_part[id_start..id_end].parse().ok()?;
 
-        let vault_key = self.current_interaction.as_ref().map(|ctx| ctx.npc_name.clone());
+        let vault_key = self
+            .current_interaction
+            .as_ref()
+            .map(|ctx| ctx.npc_name.clone());
 
         Some(PlayerEvent::StorageDeposit {
             timestamp: ts,
@@ -864,7 +874,8 @@ impl PlayerEventParser {
     /// ProcessRemoveFromStorageVault(npcId, -1, instanceId, quantity)
     fn parse_remove_from_storage(&self, line: &str) -> Option<PlayerEvent> {
         let ts = parse_timestamp(line)?;
-        let args_start = line.find("ProcessRemoveFromStorageVault(")? + "ProcessRemoveFromStorageVault(".len();
+        let args_start =
+            line.find("ProcessRemoveFromStorageVault(")? + "ProcessRemoveFromStorageVault(".len();
         let args_end = line[args_start..].find(')')? + args_start;
         let args = &line[args_start..args_end];
 
@@ -874,7 +885,10 @@ impl PlayerEventParser {
         let instance_id: u64 = parts.get(2)?.trim().parse().ok()?;
         let quantity: u32 = parts.get(3)?.trim().parse().ok()?;
 
-        let vault_key = self.current_interaction.as_ref().map(|ctx| ctx.npc_name.clone());
+        let vault_key = self
+            .current_interaction
+            .as_ref()
+            .map(|ctx| ctx.npc_name.clone());
 
         Some(PlayerEvent::StorageWithdrawal {
             timestamp: ts,
@@ -956,7 +970,8 @@ impl PlayerEventParser {
         let title = extract_quoted_string(args, 0)?;
         let after_title = &args[args.find(&format!("\"{}\"", title))? + title.len() + 2..];
         let content = extract_quoted_string(after_title, 0)?;
-        let after_content = &after_title[after_title.find(&format!("\"{}\"", content))? + content.len() + 2..];
+        let after_content =
+            &after_title[after_title.find(&format!("\"{}\"", content))? + content.len() + 2..];
         let book_type = extract_quoted_string(after_content, 0)?;
 
         Some(PlayerEvent::BookOpened {
@@ -1085,7 +1100,8 @@ impl PlayerEventParser {
     /// ProcessVendorUpdateAvailableGold(currentGold, serverId, maxGold)
     fn parse_vendor_update_gold(&self, line: &str) -> Option<PlayerEvent> {
         let ts = parse_timestamp(line)?;
-        let args_start = line.find("ProcessVendorUpdateAvailableGold(")? + "ProcessVendorUpdateAvailableGold(".len();
+        let args_start = line.find("ProcessVendorUpdateAvailableGold(")?
+            + "ProcessVendorUpdateAvailableGold(".len();
         let args_end = line[args_start..].find(')')? + args_start;
         let args = &line[args_start..args_end];
 
@@ -1120,7 +1136,8 @@ impl PlayerEventParser {
         let keys_end = args[keys_start..].find(']')? + keys_start;
         let keys_str = &args[keys_start..keys_end];
 
-        let keys: Vec<String> = keys_str.split(',')
+        let keys: Vec<String> = keys_str
+            .split(',')
             .map(|k| k.trim().to_string())
             .filter(|k| !k.is_empty())
             .collect();
@@ -1132,7 +1149,8 @@ impl PlayerEventParser {
         let vals_end = after_first_array[vals_start..].find(']')? + vals_start;
         let vals_str = &after_first_array[vals_start..vals_end];
 
-        let values: Vec<f32> = vals_str.split(',')
+        let values: Vec<f32> = vals_str
+            .split(',')
             .map(|v| v.trim())
             .filter(|v| !v.is_empty())
             .map(|v| v.parse::<f32>())
@@ -1144,7 +1162,8 @@ impl PlayerEventParser {
             return None;
         }
 
-        let attributes: Vec<AttributeValue> = keys.into_iter()
+        let attributes: Vec<AttributeValue> = keys
+            .into_iter()
             .zip(values.into_iter())
             .map(|(name, value)| AttributeValue { name, value })
             .collect();
@@ -1189,9 +1208,7 @@ impl PlayerEventParser {
         // Verify the line actually contains the event
         line.find("ProcessLoadRecipes(")?;
 
-        Some(PlayerEvent::RecipesLoaded {
-            timestamp: ts,
-        })
+        Some(PlayerEvent::RecipesLoaded { timestamp: ts })
     }
 
     /// ProcessSetEquippedItems(System.Int32[], System.Int32[], System.Int32[], "appearanceString", entityId)
@@ -1208,7 +1225,11 @@ impl PlayerEventParser {
         let quote_end = line[args_start..].rfind('"')? + args_start;
         let after_quote = &line[quote_end + 1..];
         // after_quote looks like: ", 11921435)"
-        let entity_str = after_quote.trim().trim_start_matches(',').trim().trim_end_matches(')');
+        let entity_str = after_quote
+            .trim()
+            .trim_start_matches(',')
+            .trim()
+            .trim_end_matches(')');
         let entity_id: u32 = entity_str.parse().ok()?;
 
         // Parse equipment slots from appearance string
@@ -1312,12 +1333,16 @@ impl PlayerEventParser {
 /// Looks for patterns like `@Chest=...;`, `@MainHand=...;`, `MainHandEquip=...;`
 fn parse_equipment_slots(appearance: &str) -> Vec<EquipmentSlot> {
     let slot_prefixes = [
-        "@Chest=", "@Head=", "@Legs=", "@Feet=", "@Hands=",
-        "@MainHand=", "@OffHandShield=", "@Racial=",
+        "@Chest=",
+        "@Head=",
+        "@Legs=",
+        "@Feet=",
+        "@Hands=",
+        "@MainHand=",
+        "@OffHandShield=",
+        "@Racial=",
     ];
-    let equip_type_prefixes = [
-        "MainHandEquip=", "OffHandEquip=",
-    ];
+    let equip_type_prefixes = ["MainHandEquip=", "OffHandEquip="];
 
     let mut slots = Vec::new();
 
@@ -1328,7 +1353,10 @@ fn parse_equipment_slots(appearance: &str) -> Vec<EquipmentSlot> {
             let value = extract_slot_value(&appearance[value_start..]);
             if !value.is_empty() {
                 slots.push(EquipmentSlot {
-                    slot: prefix.trim_start_matches('@').trim_end_matches('=').to_string(),
+                    slot: prefix
+                        .trim_start_matches('@')
+                        .trim_end_matches('=')
+                        .to_string(),
                     appearance_key: value,
                 });
             }
@@ -1392,7 +1420,14 @@ fn parse_skill_block(block: &str) -> Option<SkillSnapshot> {
     let tnl: i32 = extract_block_field(block, "tnl=")?.parse().ok()?;
     let max: u32 = extract_block_field(block, "max=")?.parse().ok()?;
 
-    Some(SkillSnapshot { skill_type, raw, bonus, xp, tnl, max })
+    Some(SkillSnapshot {
+        skill_type,
+        raw,
+        bonus,
+        xp,
+        tnl,
+        max,
+    })
 }
 
 /// Extract a field value from within a {key=value,...} block
@@ -1438,11 +1473,17 @@ mod tests {
     fn test_parse_add_item() {
         let mut parser = PlayerEventParser::new();
         let events = parser.process_line(
-            r#"[16:17:48] LocalPlayer: ProcessAddItem(Malachite(115244857), -1, True)"#
+            r#"[16:17:48] LocalPlayer: ProcessAddItem(Malachite(115244857), -1, True)"#,
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::ItemAdded { item_name, instance_id, slot_index, is_new, .. } => {
+            PlayerEvent::ItemAdded {
+                item_name,
+                instance_id,
+                slot_index,
+                is_new,
+                ..
+            } => {
                 assert_eq!(item_name, "Malachite");
                 assert_eq!(*instance_id, 115244857);
                 assert_eq!(*slot_index, -1);
@@ -1456,11 +1497,16 @@ mod tests {
     fn test_parse_add_item_login_load() {
         let mut parser = PlayerEventParser::new();
         let events = parser.process_line(
-            r#"[16:00:00] LocalPlayer: ProcessAddItem(MetalSlab2(136937342), 5, False)"#
+            r#"[16:00:00] LocalPlayer: ProcessAddItem(MetalSlab2(136937342), 5, False)"#,
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::ItemAdded { item_name, is_new, slot_index, .. } => {
+            PlayerEvent::ItemAdded {
+                item_name,
+                is_new,
+                slot_index,
+                ..
+            } => {
                 assert_eq!(item_name, "MetalSlab2");
                 assert!(!is_new);
                 assert_eq!(*slot_index, 5);
@@ -1475,25 +1521,31 @@ mod tests {
 
         // First register the item
         parser.process_line(
-            r#"[16:00:00] LocalPlayer: ProcessAddItem(MetalSlab3(136937342), 5, False)"#
+            r#"[16:00:00] LocalPlayer: ProcessAddItem(MetalSlab3(136937342), 5, False)"#,
         );
         // Set initial stack size
         parser.stack_sizes.insert(136937342, 20);
 
         let events = parser.process_line(
-            r#"[16:17:48] LocalPlayer: ProcessUpdateItemCode(136937342, 1642723, True)"#
+            r#"[16:17:48] LocalPlayer: ProcessUpdateItemCode(136937342, 1642723, True)"#,
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
             PlayerEvent::ItemStackChanged {
-                instance_id, item_name, item_type_id,
-                old_stack_size, new_stack_size, delta, from_server, ..
+                instance_id,
+                item_name,
+                item_type_id,
+                old_stack_size,
+                new_stack_size,
+                delta,
+                from_server,
+                ..
             } => {
                 assert_eq!(*instance_id, 136937342);
                 assert_eq!(item_name.as_deref(), Some("MetalSlab3"));
-                assert_eq!(*item_type_id, 4323);  // 1642723 & 0xFFFF
+                assert_eq!(*item_type_id, 4323); // 1642723 & 0xFFFF
                 assert_eq!(*old_stack_size, 20);
-                assert_eq!(*new_stack_size, 25);   // 1642723 >> 16
+                assert_eq!(*new_stack_size, 25); // 1642723 >> 16
                 assert_eq!(*delta, 5);
                 assert!(*from_server);
             }
@@ -1515,13 +1567,11 @@ mod tests {
 
         // Register item first
         parser.process_line(
-            r#"[13:27:07] LocalPlayer: ProcessAddItem(MapleWood(136093889), 10, False)"#
+            r#"[13:27:07] LocalPlayer: ProcessAddItem(MapleWood(136093889), 10, False)"#,
         );
 
         // Delete item — should be buffered
-        let events = parser.process_line(
-            r#"[13:27:07] LocalPlayer: ProcessDeleteItem(136093889)"#
-        );
+        let events = parser.process_line(r#"[13:27:07] LocalPlayer: ProcessDeleteItem(136093889)"#);
         assert!(events.is_empty(), "Delete should be buffered");
 
         // Storage deposit — should resolve the pending delete
@@ -1532,7 +1582,12 @@ mod tests {
         // Should have: ItemDeleted(StorageTransfer) + StorageDeposit
         assert_eq!(events.len(), 2);
         match &events[0] {
-            PlayerEvent::ItemDeleted { instance_id, context, item_name, .. } => {
+            PlayerEvent::ItemDeleted {
+                instance_id,
+                context,
+                item_name,
+                ..
+            } => {
                 assert_eq!(*instance_id, 136093889);
                 assert_eq!(*context, DeleteContext::StorageTransfer);
                 assert_eq!(item_name.as_deref(), Some("MapleWood"));
@@ -1540,7 +1595,11 @@ mod tests {
             _ => panic!("Expected ItemDeleted with StorageTransfer"),
         }
         match &events[1] {
-            PlayerEvent::StorageDeposit { item_name, instance_id, .. } => {
+            PlayerEvent::StorageDeposit {
+                item_name,
+                instance_id,
+                ..
+            } => {
                 assert_eq!(item_name, "MapleWood");
                 assert_eq!(*instance_id, 136093889);
             }
@@ -1556,9 +1615,7 @@ mod tests {
             r#"[16:32:25] LocalPlayer: ProcessAddItem(AmuletOfCrushingMitigation5(115259296), 3, False)"#
         );
 
-        let events = parser.process_line(
-            r#"[16:32:25] LocalPlayer: ProcessDeleteItem(115259296)"#
-        );
+        let events = parser.process_line(r#"[16:32:25] LocalPlayer: ProcessDeleteItem(115259296)"#);
         assert!(events.is_empty());
 
         let events = parser.process_line(
@@ -1572,7 +1629,12 @@ mod tests {
             _ => panic!("Expected ItemDeleted with VendorSale"),
         }
         match &events[1] {
-            PlayerEvent::VendorSold { price, item_name, is_buyback, .. } => {
+            PlayerEvent::VendorSold {
+                price,
+                item_name,
+                is_buyback,
+                ..
+            } => {
                 assert_eq!(*price, 120);
                 assert_eq!(item_name, "AmuletOfCrushingMitigation5");
                 assert!(!is_buyback);
@@ -1586,22 +1648,24 @@ mod tests {
         let mut parser = PlayerEventParser::new();
 
         parser.process_line(
-            r#"[16:33:03] LocalPlayer: ProcessAddItem(SomeItem(114961794), 1, False)"#
+            r#"[16:33:03] LocalPlayer: ProcessAddItem(SomeItem(114961794), 1, False)"#,
         );
 
         // Delete
-        let events = parser.process_line(
-            r#"[16:33:03] LocalPlayer: ProcessDeleteItem(114961794)"#
-        );
+        let events = parser.process_line(r#"[16:33:03] LocalPlayer: ProcessDeleteItem(114961794)"#);
         assert!(events.is_empty());
 
         // Unrelated line flushes pending
-        let events = parser.process_line(
-            r#"[16:33:04] entity_159956: OnAttackHitMe(Fiery Bite). Evaded = False"#
-        );
+        let events = parser
+            .process_line(r#"[16:33:04] entity_159956: OnAttackHitMe(Fiery Bite). Evaded = False"#);
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::ItemDeleted { instance_id, context, item_name, .. } => {
+            PlayerEvent::ItemDeleted {
+                instance_id,
+                context,
+                item_name,
+                ..
+            } => {
                 assert_eq!(*instance_id, 114961794);
                 assert_eq!(*context, DeleteContext::Unknown);
                 assert_eq!(item_name.as_deref(), Some("SomeItem"));
@@ -1653,11 +1717,16 @@ mod tests {
     fn test_parse_start_interaction() {
         let mut parser = PlayerEventParser::new();
         let events = parser.process_line(
-            r#"[13:26:55] LocalPlayer: ProcessStartInteraction(14804, 7, 1200, True, "NPC_Qatik")"#
+            r#"[13:26:55] LocalPlayer: ProcessStartInteraction(14804, 7, 1200, True, "NPC_Qatik")"#,
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::InteractionStarted { entity_id, interaction_type, npc_name, .. } => {
+            PlayerEvent::InteractionStarted {
+                entity_id,
+                interaction_type,
+                npc_name,
+                ..
+            } => {
                 assert_eq!(*entity_id, 14804);
                 assert_eq!(*interaction_type, 7);
                 assert_eq!(npc_name, "NPC_Qatik");
@@ -1670,11 +1739,17 @@ mod tests {
     fn test_parse_delta_favor() {
         let mut parser = PlayerEventParser::new();
         let events = parser.process_line(
-            r#"[16:33:03] LocalPlayer: ProcessDeltaFavor(9618, "NPC_Kalaba", 2.8476, True)"#
+            r#"[16:33:03] LocalPlayer: ProcessDeltaFavor(9618, "NPC_Kalaba", 2.8476, True)"#,
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::FavorChanged { npc_id, npc_name, delta, is_gift, .. } => {
+            PlayerEvent::FavorChanged {
+                npc_id,
+                npc_name,
+                delta,
+                is_gift,
+                ..
+            } => {
                 assert_eq!(*npc_id, 9618);
                 assert_eq!(npc_name, "NPC_Kalaba");
                 assert!((delta - 2.8476).abs() < 0.001);
@@ -1692,7 +1767,9 @@ mod tests {
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::ScreenText { category, message, .. } => {
+            PlayerEvent::ScreenText {
+                category, message, ..
+            } => {
                 assert_eq!(category, "ImportantInfo");
                 assert_eq!(message, "The treasure is 342 meters from here.");
             }
@@ -1704,11 +1781,16 @@ mod tests {
     fn test_parse_remove_from_storage() {
         let mut parser = PlayerEventParser::new();
         let events = parser.process_line(
-            r#"[13:28:48] LocalPlayer: ProcessRemoveFromStorageVault(14804, -1, 132702881, 11)"#
+            r#"[13:28:48] LocalPlayer: ProcessRemoveFromStorageVault(14804, -1, 132702881, 11)"#,
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::StorageWithdrawal { npc_id, instance_id, quantity, .. } => {
+            PlayerEvent::StorageWithdrawal {
+                npc_id,
+                instance_id,
+                quantity,
+                ..
+            } => {
                 assert_eq!(*npc_id, 14804);
                 assert_eq!(*instance_id, 132702881);
                 assert_eq!(*quantity, 11);
@@ -1721,11 +1803,17 @@ mod tests {
     fn test_parse_vendor_update_item() {
         let mut parser = PlayerEventParser::new();
         let events = parser.process_line(
-            r#"[16:32:27] LocalPlayer: ProcessVendorUpdateItem(115249145, 200909, 7)"#
+            r#"[16:32:27] LocalPlayer: ProcessVendorUpdateItem(115249145, 200909, 7)"#,
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::VendorStackUpdated { instance_id, item_type_id, new_stack_size, price, .. } => {
+            PlayerEvent::VendorStackUpdated {
+                instance_id,
+                item_type_id,
+                new_stack_size,
+                price,
+                ..
+            } => {
                 assert_eq!(*instance_id, 115249145);
                 // 200909 >> 16 = 3, 200909 & 0xFFFF = 4301
                 assert_eq!(*new_stack_size, 3);
@@ -1744,7 +1832,12 @@ mod tests {
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::BookOpened { title, content, book_type, .. } => {
+            PlayerEvent::BookOpened {
+                title,
+                content,
+                book_type,
+                ..
+            } => {
                 assert_eq!(title, "Yesterday's Shop Logs");
                 assert_eq!(content, "Toncom bought Guava x5");
                 assert_eq!(book_type, "PlayerShopLog");
@@ -1757,7 +1850,7 @@ mod tests {
     fn test_non_player_line_ignored() {
         let mut parser = PlayerEventParser::new();
         let events = parser.process_line(
-            r#"[00:15:46] entity_192620: OnAttackHitMe(Spider Bite). Evaded = False"#
+            r#"[00:15:46] entity_192620: OnAttackHitMe(Spider Bite). Evaded = False"#,
         );
         assert!(events.is_empty());
     }
@@ -1765,17 +1858,17 @@ mod tests {
     #[test]
     fn test_flush_all_pending() {
         let mut parser = PlayerEventParser::new();
-        parser.process_line(
-            r#"[16:00:00] LocalPlayer: ProcessAddItem(TestItem(12345), 1, False)"#
-        );
-        parser.process_line(
-            r#"[16:33:03] LocalPlayer: ProcessDeleteItem(12345)"#
-        );
+        parser.process_line(r#"[16:00:00] LocalPlayer: ProcessAddItem(TestItem(12345), 1, False)"#);
+        parser.process_line(r#"[16:33:03] LocalPlayer: ProcessDeleteItem(12345)"#);
         // No more lines — flush manually
         let events = parser.flush_all_pending();
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::ItemDeleted { instance_id, context, .. } => {
+            PlayerEvent::ItemDeleted {
+                instance_id,
+                context,
+                ..
+            } => {
                 assert_eq!(*instance_id, 12345);
                 assert_eq!(*context, DeleteContext::Unknown);
             }
@@ -1788,18 +1881,16 @@ mod tests {
         let mut parser = PlayerEventParser::new();
 
         parser.process_line(
-            r#"[16:32:27] LocalPlayer: ProcessAddItem(SomeStackable(115271948), 1, False)"#
+            r#"[16:32:27] LocalPlayer: ProcessAddItem(SomeStackable(115271948), 1, False)"#,
         );
 
         // Delete
-        let events = parser.process_line(
-            r#"[16:32:27] LocalPlayer: ProcessDeleteItem(115271948)"#
-        );
+        let events = parser.process_line(r#"[16:32:27] LocalPlayer: ProcessDeleteItem(115271948)"#);
         assert!(events.is_empty());
 
         // VendorUpdateItem (selling stackable vendor already has)
         let events = parser.process_line(
-            r#"[16:32:27] LocalPlayer: ProcessVendorUpdateItem(115249145, 200909, 7)"#
+            r#"[16:32:27] LocalPlayer: ProcessVendorUpdateItem(115249145, 200909, 7)"#,
         );
         assert_eq!(events.len(), 2);
         match &events[0] {
@@ -1818,7 +1909,14 @@ mod tests {
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::DelayLoopStarted { duration, action_type, label, entity_id, abort_condition, .. } => {
+            PlayerEvent::DelayLoopStarted {
+                duration,
+                action_type,
+                label,
+                entity_id,
+                abort_condition,
+                ..
+            } => {
                 assert!((duration - 5.0).abs() < 0.01);
                 assert_eq!(action_type, "UseTeleportationCircle");
                 assert_eq!(label, "Surveying");
@@ -1837,7 +1935,12 @@ mod tests {
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::DelayLoopStarted { duration, action_type, label, .. } => {
+            PlayerEvent::DelayLoopStarted {
+                duration,
+                action_type,
+                label,
+                ..
+            } => {
                 assert!((duration - 0.5).abs() < 0.01);
                 assert_eq!(action_type, "Unset");
                 assert_eq!(label, "Using Eltibule Green Mineral Survey");
@@ -1854,7 +1957,12 @@ mod tests {
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::DelayLoopStarted { action_type, label, entity_id, .. } => {
+            PlayerEvent::DelayLoopStarted {
+                action_type,
+                label,
+                entity_id,
+                ..
+            } => {
                 assert_eq!(action_type, "Eat");
                 assert_eq!(label, "Using Gobbledygook");
                 assert_eq!(*entity_id, 6223);
@@ -1867,12 +1975,12 @@ mod tests {
     fn test_instance_registry_populated_from_add_item() {
         let mut parser = PlayerEventParser::new();
         parser.process_line(
-            r#"[16:00:00] LocalPlayer: ProcessAddItem(MetalSlab2(136937342), 5, False)"#
+            r#"[16:00:00] LocalPlayer: ProcessAddItem(MetalSlab2(136937342), 5, False)"#,
         );
 
         // UpdateItemCode should resolve item name from registry
         let events = parser.process_line(
-            r#"[16:00:01] LocalPlayer: ProcessUpdateItemCode(136937342, 65536, True)"#
+            r#"[16:00:01] LocalPlayer: ProcessUpdateItemCode(136937342, 65536, True)"#,
         );
         match &events[0] {
             PlayerEvent::ItemStackChanged { item_name, .. } => {
@@ -1889,9 +1997,7 @@ mod tests {
     #[test]
     fn test_parse_end_interaction() {
         let mut parser = PlayerEventParser::new();
-        let events = parser.process_line(
-            r#"[13:27:00] LocalPlayer: ProcessEndInteraction(14804)"#
-        );
+        let events = parser.process_line(r#"[13:27:00] LocalPlayer: ProcessEndInteraction(14804)"#);
         assert_eq!(events.len(), 1);
         match &events[0] {
             PlayerEvent::InteractionEnded { entity_id, .. } => {
@@ -1904,9 +2010,7 @@ mod tests {
     #[test]
     fn test_parse_end_interaction_negative_entity_id() {
         let mut parser = PlayerEventParser::new();
-        let events = parser.process_line(
-            r#"[16:06:27] LocalPlayer: ProcessEndInteraction(-153)"#
-        );
+        let events = parser.process_line(r#"[16:06:27] LocalPlayer: ProcessEndInteraction(-153)"#);
         assert_eq!(events.len(), 1);
         match &events[0] {
             PlayerEvent::InteractionEnded { entity_id, .. } => {
@@ -1921,23 +2025,20 @@ mod tests {
         let mut parser = PlayerEventParser::new();
         // Start an interaction
         parser.process_line(
-            r#"[13:26:55] LocalPlayer: ProcessStartInteraction(14804, 7, 1200, True, "NPC_Qatik")"#
+            r#"[13:26:55] LocalPlayer: ProcessStartInteraction(14804, 7, 1200, True, "NPC_Qatik")"#,
         );
         assert!(parser.current_interaction.is_some());
 
         // End the interaction
-        parser.process_line(
-            r#"[13:27:00] LocalPlayer: ProcessEndInteraction(14804)"#
-        );
+        parser.process_line(r#"[13:27:00] LocalPlayer: ProcessEndInteraction(14804)"#);
         assert!(parser.current_interaction.is_none());
     }
 
     #[test]
     fn test_parse_set_active_skills() {
         let mut parser = PlayerEventParser::new();
-        let events = parser.process_line(
-            r#"[23:33:22] LocalPlayer: ProcessSetActiveSkills(Riding, Mentalism)"#
-        );
+        let events = parser
+            .process_line(r#"[23:33:22] LocalPlayer: ProcessSetActiveSkills(Riding, Mentalism)"#);
         assert_eq!(events.len(), 1);
         match &events[0] {
             PlayerEvent::ActiveSkillsChanged { skill1, skill2, .. } => {
@@ -1951,9 +2052,8 @@ mod tests {
     #[test]
     fn test_parse_set_active_skills_combat() {
         let mut parser = PlayerEventParser::new();
-        let events = parser.process_line(
-            r#"[23:33:31] LocalPlayer: ProcessSetActiveSkills(Hammer, Mentalism)"#
-        );
+        let events = parser
+            .process_line(r#"[23:33:31] LocalPlayer: ProcessSetActiveSkills(Hammer, Mentalism)"#);
         assert_eq!(events.len(), 1);
         match &events[0] {
             PlayerEvent::ActiveSkillsChanged { skill1, skill2, .. } => {
@@ -1967,12 +2067,15 @@ mod tests {
     #[test]
     fn test_parse_player_mount() {
         let mut parser = PlayerEventParser::new();
-        let events = parser.process_line(
-            r#"[23:33:25] LocalPlayer: ProcessPlayerMount(11921978, True)"#
-        );
+        let events =
+            parser.process_line(r#"[23:33:25] LocalPlayer: ProcessPlayerMount(11921978, True)"#);
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::MountStateChanged { entity_id, is_mounting, .. } => {
+            PlayerEvent::MountStateChanged {
+                entity_id,
+                is_mounting,
+                ..
+            } => {
                 assert_eq!(*entity_id, 11921978);
                 assert!(*is_mounting);
             }
@@ -1983,12 +2086,15 @@ mod tests {
     #[test]
     fn test_parse_player_dismount() {
         let mut parser = PlayerEventParser::new();
-        let events = parser.process_line(
-            r#"[23:33:31] LocalPlayer: ProcessPlayerMount(11921978, False)"#
-        );
+        let events =
+            parser.process_line(r#"[23:33:31] LocalPlayer: ProcessPlayerMount(11921978, False)"#);
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::MountStateChanged { entity_id, is_mounting, .. } => {
+            PlayerEvent::MountStateChanged {
+                entity_id,
+                is_mounting,
+                ..
+            } => {
                 assert_eq!(*entity_id, 11921978);
                 assert!(!*is_mounting);
             }
@@ -1999,12 +2105,15 @@ mod tests {
     #[test]
     fn test_parse_set_weather() {
         let mut parser = PlayerEventParser::new();
-        let events = parser.process_line(
-            r#"[23:32:47] LocalPlayer: ProcessSetWeather("Clear Sky", True)"#
-        );
+        let events =
+            parser.process_line(r#"[23:32:47] LocalPlayer: ProcessSetWeather("Clear Sky", True)"#);
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::WeatherChanged { weather_name, is_active, .. } => {
+            PlayerEvent::WeatherChanged {
+                weather_name,
+                is_active,
+                ..
+            } => {
                 assert_eq!(weather_name, "Clear Sky");
                 assert!(*is_active);
             }
@@ -2015,9 +2124,8 @@ mod tests {
     #[test]
     fn test_parse_set_weather_cloudy() {
         let mut parser = PlayerEventParser::new();
-        let events = parser.process_line(
-            r#"[16:06:32] LocalPlayer: ProcessSetWeather("Cloudy 3", True)"#
-        );
+        let events =
+            parser.process_line(r#"[16:06:32] LocalPlayer: ProcessSetWeather("Cloudy 3", True)"#);
         assert_eq!(events.len(), 1);
         match &events[0] {
             PlayerEvent::WeatherChanged { weather_name, .. } => {
@@ -2030,12 +2138,15 @@ mod tests {
     #[test]
     fn test_parse_update_recipe() {
         let mut parser = PlayerEventParser::new();
-        let events = parser.process_line(
-            r#"[16:10:13] LocalPlayer: ProcessUpdateRecipe(21052, 151)"#
-        );
+        let events =
+            parser.process_line(r#"[16:10:13] LocalPlayer: ProcessUpdateRecipe(21052, 151)"#);
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::RecipeUpdated { recipe_id, completion_count, .. } => {
+            PlayerEvent::RecipeUpdated {
+                recipe_id,
+                completion_count,
+                ..
+            } => {
                 assert_eq!(*recipe_id, 21052);
                 assert_eq!(*completion_count, 151);
             }
@@ -2046,12 +2157,14 @@ mod tests {
     #[test]
     fn test_parse_update_recipe_new() {
         let mut parser = PlayerEventParser::new();
-        let events = parser.process_line(
-            r#"[16:10:13] LocalPlayer: ProcessUpdateRecipe(5001, 0)"#
-        );
+        let events = parser.process_line(r#"[16:10:13] LocalPlayer: ProcessUpdateRecipe(5001, 0)"#);
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::RecipeUpdated { recipe_id, completion_count, .. } => {
+            PlayerEvent::RecipeUpdated {
+                recipe_id,
+                completion_count,
+                ..
+            } => {
                 assert_eq!(*recipe_id, 5001);
                 assert_eq!(*completion_count, 0);
             }
@@ -2063,7 +2176,7 @@ mod tests {
     fn test_parse_combat_mode_not_in_combat() {
         let mut parser = PlayerEventParser::new();
         let events = parser.process_line(
-            r#"[23:33:33] LocalPlayer: ProcessCombatModeStatus(NotInCombat, System.Int32[])"#
+            r#"[23:33:33] LocalPlayer: ProcessCombatModeStatus(NotInCombat, System.Int32[])"#,
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
@@ -2078,7 +2191,7 @@ mod tests {
     fn test_parse_combat_mode_in_combat() {
         let mut parser = PlayerEventParser::new();
         let events = parser.process_line(
-            r#"[23:33:33] LocalPlayer: ProcessCombatModeStatus(InCombat, System.Int32[])"#
+            r#"[23:33:33] LocalPlayer: ProcessCombatModeStatus(InCombat, System.Int32[])"#,
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
@@ -2093,11 +2206,16 @@ mod tests {
     fn test_parse_vendor_update_gold() {
         let mut parser = PlayerEventParser::new();
         let events = parser.process_line(
-            r#"[16:32:25] LocalPlayer: ProcessVendorUpdateAvailableGold(14880, 123456789, 15000)"#
+            r#"[16:32:25] LocalPlayer: ProcessVendorUpdateAvailableGold(14880, 123456789, 15000)"#,
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::VendorGoldChanged { current_gold, server_id, max_gold, .. } => {
+            PlayerEvent::VendorGoldChanged {
+                current_gold,
+                server_id,
+                max_gold,
+                ..
+            } => {
                 assert_eq!(*current_gold, 14880);
                 assert_eq!(*server_id, 123456789);
                 assert_eq!(*max_gold, 15000);
@@ -2110,7 +2228,7 @@ mod tests {
     fn test_parse_vendor_update_gold_after_sale() {
         let mut parser = PlayerEventParser::new();
         let events = parser.process_line(
-            r#"[16:32:27] LocalPlayer: ProcessVendorUpdateAvailableGold(14776, 123456789, 15000)"#
+            r#"[16:32:27] LocalPlayer: ProcessVendorUpdateAvailableGold(14776, 123456789, 15000)"#,
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
@@ -2125,11 +2243,15 @@ mod tests {
     fn test_parse_set_attributes_single() {
         let mut parser = PlayerEventParser::new();
         let events = parser.process_line(
-            r#"[23:33:25] LocalPlayer: ProcessSetAttributes(11921978, "[IS_MOUNTED], [1]")"#
+            r#"[23:33:25] LocalPlayer: ProcessSetAttributes(11921978, "[IS_MOUNTED], [1]")"#,
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::AttributesChanged { entity_id, attributes, .. } => {
+            PlayerEvent::AttributesChanged {
+                entity_id,
+                attributes,
+                ..
+            } => {
                 assert_eq!(*entity_id, 11921978);
                 assert_eq!(attributes.len(), 1);
                 assert_eq!(attributes[0].name, "IS_MOUNTED");
@@ -2147,7 +2269,11 @@ mod tests {
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::AttributesChanged { entity_id, attributes, .. } => {
+            PlayerEvent::AttributesChanged {
+                entity_id,
+                attributes,
+                ..
+            } => {
                 assert_eq!(*entity_id, 11921978);
                 assert_eq!(attributes.len(), 4);
                 assert_eq!(attributes[0].name, "CUR_HEALTH");
@@ -2218,7 +2344,7 @@ mod tests {
     fn test_parse_load_recipes() {
         let mut parser = PlayerEventParser::new();
         let events = parser.process_line(
-            r#"[23:46:08] LocalPlayer: ProcessLoadRecipes(System.Int32[], System.Int32[])"#
+            r#"[23:46:08] LocalPlayer: ProcessLoadRecipes(System.Int32[], System.Int32[])"#,
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
@@ -2237,21 +2363,44 @@ mod tests {
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::EquipmentChanged { entity_id, equipment, .. } => {
+            PlayerEvent::EquipmentChanged {
+                entity_id,
+                equipment,
+                ..
+            } => {
                 assert_eq!(*entity_id, 11921435);
                 // Should find Chest, MainHand, Feet, MainHandEquip
                 let slot_names: Vec<&str> = equipment.iter().map(|s| s.slot.as_str()).collect();
-                assert!(slot_names.contains(&"Chest"), "Missing Chest slot: {:?}", slot_names);
-                assert!(slot_names.contains(&"MainHand"), "Missing MainHand slot: {:?}", slot_names);
-                assert!(slot_names.contains(&"Feet"), "Missing Feet slot: {:?}", slot_names);
-                assert!(slot_names.contains(&"MainHandEquip"), "Missing MainHandEquip: {:?}", slot_names);
+                assert!(
+                    slot_names.contains(&"Chest"),
+                    "Missing Chest slot: {:?}",
+                    slot_names
+                );
+                assert!(
+                    slot_names.contains(&"MainHand"),
+                    "Missing MainHand slot: {:?}",
+                    slot_names
+                );
+                assert!(
+                    slot_names.contains(&"Feet"),
+                    "Missing Feet slot: {:?}",
+                    slot_names
+                );
+                assert!(
+                    slot_names.contains(&"MainHandEquip"),
+                    "Missing MainHandEquip: {:?}",
+                    slot_names
+                );
 
                 // Verify MainHand value
                 let main_hand = equipment.iter().find(|s| s.slot == "MainHand").unwrap();
                 assert_eq!(main_hand.appearance_key, "eq-x-hammer1");
 
                 // Verify MainHandEquip value
-                let equip_type = equipment.iter().find(|s| s.slot == "MainHandEquip").unwrap();
+                let equip_type = equipment
+                    .iter()
+                    .find(|s| s.slot == "MainHandEquip")
+                    .unwrap();
                 assert_eq!(equip_type.appearance_key, "Hammer");
             }
             _ => panic!("Expected EquipmentChanged"),
@@ -2266,12 +2415,28 @@ mod tests {
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::EquipmentChanged { entity_id, equipment, .. } => {
+            PlayerEvent::EquipmentChanged {
+                entity_id,
+                equipment,
+                ..
+            } => {
                 assert_eq!(*entity_id, 11921978);
                 let slot_names: Vec<&str> = equipment.iter().map(|s| s.slot.as_str()).collect();
-                assert!(slot_names.contains(&"Head"), "Missing Head: {:?}", slot_names);
-                assert!(slot_names.contains(&"OffHandShield"), "Missing OffHandShield: {:?}", slot_names);
-                assert!(slot_names.contains(&"OffHandEquip"), "Missing OffHandEquip: {:?}", slot_names);
+                assert!(
+                    slot_names.contains(&"Head"),
+                    "Missing Head: {:?}",
+                    slot_names
+                );
+                assert!(
+                    slot_names.contains(&"OffHandShield"),
+                    "Missing OffHandShield: {:?}",
+                    slot_names
+                );
+                assert!(
+                    slot_names.contains(&"OffHandEquip"),
+                    "Missing OffHandEquip: {:?}",
+                    slot_names
+                );
             }
             _ => panic!("Expected EquipmentChanged"),
         }
@@ -2285,9 +2450,15 @@ mod tests {
         );
         assert_eq!(slots.len(), 2);
         assert_eq!(slots[0].slot, "Chest");
-        assert_eq!(slots[0].appearance_key, "@eq-f2-chest-steel-02(^Armor=f2-body-steel-02;Color1=500050;Color2=C0C0C0)");
+        assert_eq!(
+            slots[0].appearance_key,
+            "@eq-f2-chest-steel-02(^Armor=f2-body-steel-02;Color1=500050;Color2=C0C0C0)"
+        );
         assert_eq!(slots[1].slot, "Legs");
-        assert_eq!(slots[1].appearance_key, "@eq-f2-legs-steel-02(^Armor=f2-body-steel-02;Color1=500050)");
+        assert_eq!(
+            slots[1].appearance_key,
+            "@eq-f2-legs-steel-02(^Armor=f2-body-steel-02;Color1=500050)"
+        );
     }
 
     // ── Effect Event Tests ───────────────────────────────────────────────
@@ -2300,7 +2471,13 @@ mod tests {
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::EffectsAdded { entity_id, source_entity_id, effect_ids, is_login_batch, .. } => {
+            PlayerEvent::EffectsAdded {
+                entity_id,
+                source_entity_id,
+                effect_ids,
+                is_login_batch,
+                ..
+            } => {
                 assert_eq!(*entity_id, 11921435);
                 assert_eq!(*source_entity_id, 0);
                 assert_eq!(*effect_ids, vec![302, 303, 13330, 26297]);
@@ -2314,11 +2491,16 @@ mod tests {
     fn test_parse_add_effects_gameplay() {
         let mut parser = PlayerEventParser::new();
         let events = parser.process_line(
-            r#"[23:32:47] LocalPlayer: ProcessAddEffects(11921435, 11921435, "[13304, ]", True)"#
+            r#"[23:32:47] LocalPlayer: ProcessAddEffects(11921435, 11921435, "[13304, ]", True)"#,
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::EffectsAdded { source_entity_id, effect_ids, is_login_batch, .. } => {
+            PlayerEvent::EffectsAdded {
+                source_entity_id,
+                effect_ids,
+                is_login_batch,
+                ..
+            } => {
                 assert_eq!(*source_entity_id, 11921435);
                 assert_eq!(*effect_ids, vec![13304]);
                 assert!(!*is_login_batch);
@@ -2331,7 +2513,7 @@ mod tests {
     fn test_parse_remove_effects() {
         let mut parser = PlayerEventParser::new();
         let events = parser.process_line(
-            r#"[23:35:12] LocalPlayer: ProcessRemoveEffects(11921435, System.Int32[])"#
+            r#"[23:35:12] LocalPlayer: ProcessRemoveEffects(11921435, System.Int32[])"#,
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
@@ -2350,7 +2532,12 @@ mod tests {
         );
         assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::EffectNameUpdated { entity_id, effect_instance_id, display_name, .. } => {
+            PlayerEvent::EffectNameUpdated {
+                entity_id,
+                effect_instance_id,
+                display_name,
+                ..
+            } => {
                 assert_eq!(*entity_id, 11921435);
                 assert_eq!(*effect_instance_id, 123456);
                 assert_eq!(display_name, "Performance Appreciation, Level 0");

@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use serde::Serialize;
 use serde_json::Value;
+use std::collections::HashMap;
 
 // ── Parsed structs (app shape) ───────────────────────────────────────────────
 
@@ -36,7 +36,11 @@ pub fn parse(json: &str) -> Result<HashMap<u32, SkillInfo>, String> {
     // Skills.json uses skill names as keys (e.g., "Alchemy", "Cooking")
     // Each skill has an "Id" field inside
     let raw: HashMap<String, Value> = serde_json::from_str(json).map_err(|e| {
-        format!("skills.json: parse error at line {}, col {}: {e}", e.line(), e.column())
+        format!(
+            "skills.json: parse error at line {}, col {}: {e}",
+            e.line(),
+            e.column()
+        )
     })?;
 
     let mut skills = HashMap::with_capacity(raw.len());
@@ -45,33 +49,40 @@ pub fn parse(json: &str) -> Result<HashMap<u32, SkillInfo>, String> {
     for (skill_name, value) in raw {
         let id = match value.get("Id").and_then(|v| v.as_u64()) {
             Some(id) => id as u32,
-            None => { skipped += 1; continue; }
+            None => {
+                skipped += 1;
+                continue;
+            }
         };
 
-        skills.insert(id, SkillInfo {
+        skills.insert(
             id,
-            name: str_field(&value, "Name").unwrap_or_else(|| skill_name.clone()),
-            internal_name: skill_name,
-            description: str_field(&value, "Description"),
-            icon_id: u32_field(&value, "IconId"),
-            xp_table: str_field(&value, "XpTable"),
-            keywords: str_array_field(&value, "Keywords"),
+            SkillInfo {
+                id,
+                name: str_field(&value, "Name").unwrap_or_else(|| skill_name.clone()),
+                internal_name: skill_name,
+                description: str_field(&value, "Description"),
+                icon_id: u32_field(&value, "IconId"),
+                xp_table: str_field(&value, "XpTable"),
+                keywords: str_array_field(&value, "Keywords"),
 
-            // Phase 2 typed fields
-            combat: bool_field(&value, "Combat"),
-            max_bonus_levels: u32_field(&value, "MaxBonusLevels"),
-            parents: value.get("Parents")
-                .and_then(|v| v.as_array().cloned())
-                .unwrap_or_default(),
-            advancement_table: str_field(&value, "AdvancementTable"),
-            guest_level_cap: u32_field(&value, "GuestLevelCap"),
-            hide_when_zero: bool_field(&value, "HideWhenZero"),
-            advancement_hints: value.get("AdvancementHints").cloned(),
-            rewards: value.get("Rewards").cloned(),
-            reports: value.get("Reports").and_then(|v| v.as_array().cloned()),
+                // Phase 2 typed fields
+                combat: bool_field(&value, "Combat"),
+                max_bonus_levels: u32_field(&value, "MaxBonusLevels"),
+                parents: value
+                    .get("Parents")
+                    .and_then(|v| v.as_array().cloned())
+                    .unwrap_or_default(),
+                advancement_table: str_field(&value, "AdvancementTable"),
+                guest_level_cap: u32_field(&value, "GuestLevelCap"),
+                hide_when_zero: bool_field(&value, "HideWhenZero"),
+                advancement_hints: value.get("AdvancementHints").cloned(),
+                rewards: value.get("Rewards").cloned(),
+                reports: value.get("Reports").and_then(|v| v.as_array().cloned()),
 
-            raw_json: value,
-        });
+                raw_json: value,
+            },
+        );
     }
 
     if skipped > 0 {
@@ -95,7 +106,8 @@ fn bool_field(value: &Value, key: &str) -> Option<bool> {
 }
 
 fn str_array_field(value: &Value, key: &str) -> Vec<String> {
-    value.get(key)
+    value
+        .get(key)
         .and_then(|v| v.as_array())
         .map(|arr| {
             arr.iter()

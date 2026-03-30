@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use serde::Serialize;
 use serde_json::Value;
+use std::collections::HashMap;
 
 // ── Parsed structs (app shape) ───────────────────────────────────────────────
 
@@ -41,7 +41,11 @@ pub struct AbilityInfo {
 
 pub fn parse(json: &str) -> Result<HashMap<u32, AbilityInfo>, String> {
     let raw: HashMap<String, Value> = serde_json::from_str(json).map_err(|e| {
-        format!("abilities.json: parse error at line {}, col {}: {e}", e.line(), e.column())
+        format!(
+            "abilities.json: parse error at line {}, col {}: {e}",
+            e.line(),
+            e.column()
+        )
     })?;
 
     let mut abilities = HashMap::with_capacity(raw.len());
@@ -50,43 +54,51 @@ pub fn parse(json: &str) -> Result<HashMap<u32, AbilityInfo>, String> {
     for (key, value) in raw {
         let id_str = match key.split('_').last() {
             Some(s) => s.to_string(),
-            None => { skipped += 1; continue; }
+            None => {
+                skipped += 1;
+                continue;
+            }
         };
         let id: u32 = match id_str.parse() {
             Ok(id) => id,
-            Err(_) => { skipped += 1; continue; }
+            Err(_) => {
+                skipped += 1;
+                continue;
+            }
         };
 
-        abilities.insert(id, AbilityInfo {
+        abilities.insert(
             id,
-            name: str_field(&value, "Name")
-                .unwrap_or_else(|| format!("Unknown Ability {id}")),
-            description: str_field(&value, "Description"),
-            icon_id: u32_field(&value, "IconID"),
-            skill: str_field(&value, "Skill"),
-            level: f32_field(&value, "Level"),
-            keywords: str_array_field(&value, "Keywords"),
+            AbilityInfo {
+                id,
+                name: str_field(&value, "Name").unwrap_or_else(|| format!("Unknown Ability {id}")),
+                description: str_field(&value, "Description"),
+                icon_id: u32_field(&value, "IconID"),
+                skill: str_field(&value, "Skill"),
+                level: f32_field(&value, "Level"),
+                keywords: str_array_field(&value, "Keywords"),
 
-            // Phase 3 typed fields
-            damage_type: str_field(&value, "DamageType"),
-            reset_time: f32_field(&value, "ResetTime"),
-            target: str_field(&value, "Target"),
-            prerequisite: str_field(&value, "Prerequisite"),
-            is_harmless: bool_field(&value, "IsHarmless"),
-            animation: str_field(&value, "Animation"),
-            special_info: str_field(&value, "SpecialInfo"),
-            works_underwater: bool_field(&value, "WorksUnderwater"),
-            works_while_falling: bool_field(&value, "WorksWhileFalling"),
-            pve: value.get("PvE").cloned(),
-            pvp: value.get("PvP").cloned(),
-            mana_cost: u32_field(&value, "ManaCost"),
-            power_cost: u32_field(&value, "PowerCost"),
-            armor_cost: u32_field(&value, "ArmorCost"),
-            health_cost: u32_field(&value, "HealthCost"),
-            range: f32_field(&value, "Range"),
+                // Phase 3 typed fields
+                damage_type: str_field(&value, "DamageType"),
+                reset_time: f32_field(&value, "ResetTime"),
+                target: str_field(&value, "Target"),
+                prerequisite: str_field(&value, "Prerequisite"),
+                is_harmless: bool_field(&value, "IsHarmless"),
+                animation: str_field(&value, "Animation"),
+                special_info: str_field(&value, "SpecialInfo"),
+                works_underwater: bool_field(&value, "WorksUnderwater"),
+                works_while_falling: bool_field(&value, "WorksWhileFalling"),
+                pve: value.get("PvE").cloned(),
+                pvp: value.get("PvP").cloned(),
+                mana_cost: u32_field(&value, "ManaCost"),
+                power_cost: u32_field(&value, "PowerCost"),
+                armor_cost: u32_field(&value, "ArmorCost"),
+                health_cost: u32_field(&value, "HealthCost"),
+                range: f32_field(&value, "Range"),
 
-            raw_json: value,
-        });
+                raw_json: value,
+            },
+        );
     }
 
     if skipped > 0 {
@@ -115,7 +127,8 @@ fn bool_field(value: &Value, key: &str) -> Option<bool> {
 }
 
 fn str_array_field(value: &Value, key: &str) -> Vec<String> {
-    value.get(key)
+    value
+        .get(key)
         .and_then(|v| v.as_array())
         .map(|arr| {
             arr.iter()

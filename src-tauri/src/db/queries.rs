@@ -1,5 +1,5 @@
-use rusqlite::{params, Result, OptionalExtension};
 use super::DbConnection;
+use rusqlite::{params, OptionalExtension, Result};
 
 /// Player data query functions
 pub mod player_data {
@@ -89,7 +89,7 @@ pub mod cdn_data {
              DELETE FROM items;
              DELETE FROM npc_skills;
              DELETE FROM npcs;
-             DELETE FROM quests;"
+             DELETE FROM quests;",
         )?;
         Ok(())
     }
@@ -136,7 +136,10 @@ pub mod log_positions {
     }
 
     /// Get all positions for a specific file type
-    pub fn get_positions_by_type(conn: &DbConnection, file_type: &str) -> Result<Vec<(String, u64)>> {
+    pub fn get_positions_by_type(
+        conn: &DbConnection,
+        file_type: &str,
+    ) -> Result<Vec<(String, u64)>> {
         let mut stmt = conn.prepare(
             "SELECT file_path, last_position FROM log_file_positions WHERE file_type = ?1 ORDER BY last_processed DESC"
         )?;

@@ -1,13 +1,12 @@
+use chrono::Local;
+use serde::Deserialize;
 /// Deserialization of Project: Gorgon CDN JSON files into typed structs.
 ///
 /// The CDN uses object maps keyed by "Item_1", "Ability_2", etc.
 /// We parse those into HashMaps keyed by integer ID for fast lookup.
-
 use std::collections::HashMap;
 use std::path::Path;
-use serde::Deserialize;
 use tokio::fs;
-use chrono::Local;
 
 /// Timestamped log line for startup diagnostics.
 macro_rules! startup_log {
@@ -17,44 +16,44 @@ macro_rules! startup_log {
 }
 
 // ── Module declarations ──────────────────────────────────────────────────────
-mod items;
-mod skills;
 mod abilities;
-mod recipes;
-mod npcs;
-mod effects;
+mod ability_dynamic;
+mod ability_keywords;
+mod advancement_tables;
+mod ai;
 mod areas;
 mod attributes;
-mod xp_tables;
-mod advancement_tables;
-mod ability_keywords;
-mod ability_dynamic;
-mod ai;
 mod directed_goals;
+mod effects;
 mod item_uses;
+mod items;
 mod landmarks;
 mod lorebooks;
+mod npcs;
 mod player_titles;
 mod quests;
+mod recipes;
+mod skills;
 mod sources;
 mod storage_vaults;
 mod tsys;
+mod xp_tables;
 
 // ── Re-exports so cdn_commands.rs doesn't need updating ──────────────────────
-pub use items::ItemInfo;
-pub use skills::SkillInfo;
 pub use abilities::AbilityInfo;
-pub use recipes::{RecipeInfo, RecipeIngredient, RecipeResultItem};
-pub use quests::QuestInfo;
-pub use npcs::{NpcInfo, NpcPreference};
-pub use xp_tables::XpTableInfo;
-pub use tsys::TsysClientInfo;
-pub use item_uses::ItemUseInfo;
 pub use areas::AreaInfo;
 pub use effects::EffectInfo;
+pub use item_uses::ItemUseInfo;
+pub use items::ItemInfo;
+pub use npcs::{NpcInfo, NpcPreference};
 pub use player_titles::PlayerTitleInfo;
+pub use quests::QuestInfo;
+pub use recipes::{RecipeInfo, RecipeIngredient, RecipeResultItem};
+pub use skills::SkillInfo;
 pub use sources::{SourceEntry, SourceInfo};
 pub use storage_vaults::StorageVaultInfo;
+pub use tsys::TsysClientInfo;
+pub use xp_tables::XpTableInfo;
 
 // ── Shared utilities ─────────────────────────────────────────────────────────
 
@@ -66,7 +65,11 @@ pub fn parse_id_map<T: for<'de> Deserialize<'de>>(
     file_name: &str,
 ) -> Result<HashMap<u32, T>, String> {
     let raw: HashMap<String, T> = serde_json::from_str(json).map_err(|e| {
-        format!("{file_name}: parse error at line {}, col {}: {e}", e.line(), e.column())
+        format!(
+            "{file_name}: parse error at line {}, col {}: {e}",
+            e.line(),
+            e.column()
+        )
     })?;
 
     let mut out = HashMap::with_capacity(raw.len());
@@ -94,7 +97,11 @@ pub fn parse_string_map<T: for<'de> Deserialize<'de>>(
     file_name: &str,
 ) -> Result<HashMap<String, T>, String> {
     serde_json::from_str(json).map_err(|e| {
-        format!("{file_name}: parse error at line {}, col {}: {e}", e.line(), e.column())
+        format!(
+            "{file_name}: parse error at line {}, col {}: {e}",
+            e.line(),
+            e.column()
+        )
     })
 }
 
@@ -112,57 +119,57 @@ pub struct GameData {
     pub version: u32,
 
     // ── Already implemented ────────────────────────────────────────────
-    pub items:     HashMap<u32, items::ItemInfo>,
-    pub skills:    HashMap<u32, skills::SkillInfo>,
+    pub items: HashMap<u32, items::ItemInfo>,
+    pub skills: HashMap<u32, skills::SkillInfo>,
     pub abilities: HashMap<u32, abilities::AbilityInfo>,
-    pub recipes:   HashMap<u32, recipes::RecipeInfo>,
-    pub npcs:      HashMap<String, npcs::NpcInfo>,
+    pub recipes: HashMap<u32, recipes::RecipeInfo>,
+    pub npcs: HashMap<String, npcs::NpcInfo>,
 
     // ── New stub fields (populated by load_from_cache) ─────────────────
-    pub effects:            HashMap<u32,     effects::EffectInfo>,
-    pub areas:              HashMap<String,  areas::AreaInfo>,
-    pub attributes:         HashMap<String,  attributes::AttributeInfo>,
-    pub xp_tables:          HashMap<u32,     xp_tables::XpTableInfo>,
-    pub advancement_tables: HashMap<String,  advancement_tables::AdvancementTableInfo>,
-    pub ability_keywords:   HashMap<String,  ability_keywords::AbilityKeywordInfo>,
-    pub ability_dynamic:    ability_dynamic::AbilityDynamicData,
-    pub ai:                 HashMap<String,  ai::AiInfo>,
-    pub directed_goals:     HashMap<String,  directed_goals::DirectedGoalInfo>,
-    pub item_uses:          HashMap<String,  item_uses::ItemUseInfo>,
-    pub landmarks:          HashMap<String,  landmarks::LandmarkInfo>,
-    pub lorebooks:          lorebooks::LorebookData,
-    pub player_titles:      HashMap<u32,     player_titles::PlayerTitleInfo>,
-    pub quests:             HashMap<String,  quests::QuestInfo>,
-    pub sources:            sources::SourcesData,
-    pub storage_vaults:     HashMap<String,  storage_vaults::StorageVaultInfo>,
-    pub tsys:               tsys::TsysData,
+    pub effects: HashMap<u32, effects::EffectInfo>,
+    pub areas: HashMap<String, areas::AreaInfo>,
+    pub attributes: HashMap<String, attributes::AttributeInfo>,
+    pub xp_tables: HashMap<u32, xp_tables::XpTableInfo>,
+    pub advancement_tables: HashMap<String, advancement_tables::AdvancementTableInfo>,
+    pub ability_keywords: HashMap<String, ability_keywords::AbilityKeywordInfo>,
+    pub ability_dynamic: ability_dynamic::AbilityDynamicData,
+    pub ai: HashMap<String, ai::AiInfo>,
+    pub directed_goals: HashMap<String, directed_goals::DirectedGoalInfo>,
+    pub item_uses: HashMap<String, item_uses::ItemUseInfo>,
+    pub landmarks: HashMap<String, landmarks::LandmarkInfo>,
+    pub lorebooks: lorebooks::LorebookData,
+    pub player_titles: HashMap<u32, player_titles::PlayerTitleInfo>,
+    pub quests: HashMap<String, quests::QuestInfo>,
+    pub sources: sources::SourcesData,
+    pub storage_vaults: HashMap<String, storage_vaults::StorageVaultInfo>,
+    pub tsys: tsys::TsysData,
 
     // ── Cross-type indices ─────────────────────────────────────────────
-    pub item_name_index:       HashMap<String, u32>,
+    pub item_name_index: HashMap<String, u32>,
     pub item_internal_name_index: HashMap<String, u32>,
-    pub skill_name_index:      HashMap<String, u32>,
-    pub recipes_by_skill:      HashMap<String, Vec<u32>>,
+    pub skill_name_index: HashMap<String, u32>,
+    pub recipes_by_skill: HashMap<String, Vec<u32>>,
     pub recipes_producing_item: HashMap<u32, Vec<u32>>,
-    pub recipes_using_item:    HashMap<u32, Vec<u32>>,
-    pub recipe_name_index:     HashMap<String, u32>,
+    pub recipes_using_item: HashMap<u32, Vec<u32>>,
+    pub recipe_name_index: HashMap<String, u32>,
     pub recipe_internal_name_index: HashMap<String, u32>,
-    pub npcs_by_skill:         HashMap<String, Vec<String>>,
+    pub npcs_by_skill: HashMap<String, Vec<String>>,
     pub quest_internal_name_index: HashMap<String, String>,
 
     // ── Entity resolution indices ────────────────────────────────────────
     pub skill_internal_name_index: HashMap<String, u32>,
-    pub npc_name_index:            HashMap<String, String>,
-    pub area_name_index:           HashMap<String, String>,
+    pub npc_name_index: HashMap<String, String>,
+    pub area_name_index: HashMap<String, String>,
 
     // ── Source cross-reference indices ───────────────────────────────────
     /// ability key (e.g. "ability_1002") → item IDs that bestow it
     pub items_bestowing_ability: HashMap<String, Vec<u32>>,
     /// recipe key string from BestowRecipes → item IDs that bestow it
-    pub items_bestowing_recipe:  HashMap<String, Vec<u32>>,
+    pub items_bestowing_recipe: HashMap<String, Vec<u32>>,
     /// quest key → item IDs that bestow it
-    pub items_bestowing_quest:   HashMap<String, Vec<u32>>,
+    pub items_bestowing_quest: HashMap<String, Vec<u32>>,
     /// item key (e.g. "item_12345") → quest keys that reward it
-    pub quests_rewarding_item:   HashMap<String, Vec<String>>,
+    pub quests_rewarding_item: HashMap<String, Vec<String>>,
 }
 
 impl GameData {
@@ -324,52 +331,145 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
     let recipes_json = read_file(&cache_dir.join("recipes.json")).await?;
 
     // Read new stub files with graceful fallback
-    let npcs_json = read_file(&cache_dir.join("npcs.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let effects_json = read_file(&cache_dir.join("effects.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let areas_json = read_file(&cache_dir.join("areas.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let attributes_json = read_file(&cache_dir.join("attributes.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let xp_tables_json = read_file(&cache_dir.join("xptables.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let advancement_tables_json = read_file(&cache_dir.join("advancementtables.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let ability_keywords_json = read_file(&cache_dir.join("abilitykeywords.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let ability_dynamic_dots_json = read_file(&cache_dir.join("abilitydynamicdots.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let ability_dynamic_special_json = read_file(&cache_dir.join("abilitydynamicspecialvalues.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let ai_json = read_file(&cache_dir.join("ai.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let directed_goals_json = read_file(&cache_dir.join("directedgoals.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let item_uses_json = read_file(&cache_dir.join("itemuses.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let landmarks_json = read_file(&cache_dir.join("landmarks.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let lorebooks_json = read_file(&cache_dir.join("lorebooks.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let lorebook_info_json = read_file(&cache_dir.join("lorebookinfo.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let player_titles_json = read_file(&cache_dir.join("playertitles.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let quests_json = read_file(&cache_dir.join("quests.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let sources_abilities_json = read_file(&cache_dir.join("sources_abilities.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let sources_items_json = read_file(&cache_dir.join("sources_items.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let sources_recipes_json = read_file(&cache_dir.join("sources_recipes.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let storage_vaults_json = read_file(&cache_dir.join("storagevaults.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let tsys_client_info_json = read_file(&cache_dir.join("tsysclientinfo.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
-    let tsys_profiles_json = read_file(&cache_dir.join("tsysprofiles.json")).await
-        .unwrap_or_else(|e| { eprintln!("Warning: {e}"); String::from("{}") });
+    let npcs_json = read_file(&cache_dir.join("npcs.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let effects_json = read_file(&cache_dir.join("effects.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let areas_json = read_file(&cache_dir.join("areas.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let attributes_json = read_file(&cache_dir.join("attributes.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let xp_tables_json = read_file(&cache_dir.join("xptables.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let advancement_tables_json = read_file(&cache_dir.join("advancementtables.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let ability_keywords_json = read_file(&cache_dir.join("abilitykeywords.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let ability_dynamic_dots_json = read_file(&cache_dir.join("abilitydynamicdots.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let ability_dynamic_special_json =
+        read_file(&cache_dir.join("abilitydynamicspecialvalues.json"))
+            .await
+            .unwrap_or_else(|e| {
+                eprintln!("Warning: {e}");
+                String::from("{}")
+            });
+    let ai_json = read_file(&cache_dir.join("ai.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let directed_goals_json = read_file(&cache_dir.join("directedgoals.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let item_uses_json = read_file(&cache_dir.join("itemuses.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let landmarks_json = read_file(&cache_dir.join("landmarks.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let lorebooks_json = read_file(&cache_dir.join("lorebooks.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let lorebook_info_json = read_file(&cache_dir.join("lorebookinfo.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let player_titles_json = read_file(&cache_dir.join("playertitles.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let quests_json = read_file(&cache_dir.join("quests.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let sources_abilities_json = read_file(&cache_dir.join("sources_abilities.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let sources_items_json = read_file(&cache_dir.join("sources_items.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let sources_recipes_json = read_file(&cache_dir.join("sources_recipes.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let storage_vaults_json = read_file(&cache_dir.join("storagevaults.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let tsys_client_info_json = read_file(&cache_dir.join("tsysclientinfo.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
+    let tsys_profiles_json = read_file(&cache_dir.join("tsysprofiles.json"))
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Warning: {e}");
+            String::from("{}")
+        });
 
     // Parse all data
     startup_log!("Parsing game data files...");
@@ -409,7 +509,7 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
 
     let ability_dynamic = ability_dynamic::AbilityDynamicData::parse(
         &ability_dynamic_dots_json,
-        &ability_dynamic_special_json
+        &ability_dynamic_special_json,
     )?;
     startup_log!("  ability_dynamic: parsed");
 
@@ -437,7 +537,7 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
     let sources = sources::SourcesData::parse(
         &sources_abilities_json,
         &sources_items_json,
-        &sources_recipes_json
+        &sources_recipes_json,
     )?;
     startup_log!("  sources: parsed");
 
@@ -476,15 +576,26 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
     for (recipe_id, recipe) in &recipes {
         if let Some(skill) = &recipe.skill {
             // Use display name if available, fall back to raw skill name
-            let display_name = skill_internal_to_display.get(skill).cloned()
+            let display_name = skill_internal_to_display
+                .get(skill)
+                .cloned()
                 .unwrap_or_else(|| skill.clone());
-            recipes_by_skill.entry(display_name).or_default().push(*recipe_id);
+            recipes_by_skill
+                .entry(display_name)
+                .or_default()
+                .push(*recipe_id);
         }
         for item_id in &recipe.result_item_ids {
-            recipes_producing_item.entry(*item_id).or_default().push(*recipe_id);
+            recipes_producing_item
+                .entry(*item_id)
+                .or_default()
+                .push(*recipe_id);
         }
         for item_id in &recipe.ingredient_item_ids {
-            recipes_using_item.entry(*item_id).or_default().push(*recipe_id);
+            recipes_using_item
+                .entry(*item_id)
+                .or_default()
+                .push(*recipe_id);
         }
     }
 
@@ -496,14 +607,20 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
     let recipe_internal_name_index: HashMap<String, u32> = recipes
         .iter()
         .filter_map(|(id, recipe)| {
-            recipe.internal_name.as_ref().map(|iname| (iname.clone(), *id))
+            recipe
+                .internal_name
+                .as_ref()
+                .map(|iname| (iname.clone(), *id))
         })
         .collect();
 
     let mut npcs_by_skill: HashMap<String, Vec<String>> = HashMap::new();
     for (npc_key, npc) in &npcs {
         for skill in &npc.trains_skills {
-            npcs_by_skill.entry(skill.clone()).or_default().push(npc_key.clone());
+            npcs_by_skill
+                .entry(skill.clone())
+                .or_default()
+                .push(npc_key.clone());
         }
     }
 
@@ -543,16 +660,25 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
 
     for (item_id, item) in &items {
         if let Some(ref ability_key) = item.bestow_ability {
-            items_bestowing_ability.entry(ability_key.clone()).or_default().push(*item_id);
+            items_bestowing_ability
+                .entry(ability_key.clone())
+                .or_default()
+                .push(*item_id);
         }
         if let Some(ref quest_key) = item.bestow_quest {
-            items_bestowing_quest.entry(quest_key.clone()).or_default().push(*item_id);
+            items_bestowing_quest
+                .entry(quest_key.clone())
+                .or_default()
+                .push(*item_id);
         }
         if let Some(ref bestow_recipes) = item.bestow_recipes {
             for recipe_val in bestow_recipes {
                 // BestowRecipes entries can be strings like "recipe_1234"
                 if let Some(recipe_key) = recipe_val.as_str() {
-                    items_bestowing_recipe.entry(recipe_key.to_string()).or_default().push(*item_id);
+                    items_bestowing_recipe
+                        .entry(recipe_key.to_string())
+                        .or_default()
+                        .push(*item_id);
                 }
             }
         }
@@ -563,7 +689,10 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         if let Some(reward_items) = quest.raw.get("Rewards_Items").and_then(|v| v.as_array()) {
             for reward in reward_items {
                 if let Some(item_key) = reward.get("Item").and_then(|v| v.as_str()) {
-                    quests_rewarding_item.entry(item_key.to_string()).or_default().push(quest_key.clone());
+                    quests_rewarding_item
+                        .entry(item_key.to_string())
+                        .or_default()
+                        .push(quest_key.clone());
                 }
             }
         }

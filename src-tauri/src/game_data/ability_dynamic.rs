@@ -14,10 +14,13 @@ impl AbilityDynamicData {
     }
 
     pub fn parse(dots_json: &str, special_json: &str) -> Result<Self, String> {
-        let dots = serde_json::from_str(dots_json)
-            .map_err(|e| format!("abilitydynamicdots.json: {e}"))?;
+        let dots =
+            serde_json::from_str(dots_json).map_err(|e| format!("abilitydynamicdots.json: {e}"))?;
         let special_values = serde_json::from_str(special_json)
             .map_err(|e| format!("abilitydynamicspecialvalues.json: {e}"))?;
-        Ok(Self { dots, special_values })
+        Ok(Self {
+            dots,
+            special_values,
+        })
     }
 }

@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use serde::Serialize;
 use serde_json::Value;
+use std::collections::HashMap;
 
 // ── Parsed structs (app shape) ───────────────────────────────────────────────
 
@@ -37,11 +37,19 @@ impl SourcesData {
         Self::default()
     }
 
-    pub fn parse(abilities_json: &str, items_json: &str, recipes_json: &str) -> Result<Self, String> {
+    pub fn parse(
+        abilities_json: &str,
+        items_json: &str,
+        recipes_json: &str,
+    ) -> Result<Self, String> {
         let abilities = parse_source_map(abilities_json, "sources_abilities.json")?;
         let items = parse_source_map(items_json, "sources_items.json")?;
         let recipes = parse_source_map(recipes_json, "sources_recipes.json")?;
-        Ok(Self { abilities, items, recipes })
+        Ok(Self {
+            abilities,
+            items,
+            recipes,
+        })
     }
 }
 
@@ -51,7 +59,11 @@ impl SourcesData {
 /// Keys are like "ability_1002", "item_1", "recipe_42".
 fn parse_source_map(json: &str, file_name: &str) -> Result<HashMap<u32, SourceInfo>, String> {
     let raw: HashMap<String, Value> = serde_json::from_str(json).map_err(|e| {
-        format!("{file_name}: parse error at line {}, col {}: {e}", e.line(), e.column())
+        format!(
+            "{file_name}: parse error at line {}, col {}: {e}",
+            e.line(),
+            e.column()
+        )
     })?;
 
     let mut out = HashMap::with_capacity(raw.len());
@@ -61,7 +73,10 @@ fn parse_source_map(json: &str, file_name: &str) -> Result<HashMap<u32, SourceIn
         // Extract numeric ID from keys like "ability_1002"
         let id: u32 = match key.split('_').last().and_then(|s| s.parse().ok()) {
             Some(id) => id,
-            None => { skipped += 1; continue; }
+            None => {
+                skipped += 1;
+                continue;
+            }
         };
 
         let entries = parse_source_entries(&value);
@@ -82,31 +97,76 @@ fn parse_source_entries(value: &Value) -> Vec<SourceEntry> {
         None => return vec![],
     };
 
-    entries_arr.iter().map(|entry| {
-        let source_type = entry.get("type")
-            .and_then(|v| v.as_str())
-            .unwrap_or("Unknown")
-            .to_string();
-        let skill = entry.get("skill").and_then(|v| v.as_str()).map(|s| s.to_string());
-        let npc = entry.get("npc").and_then(|v| v.as_str()).map(|s| s.to_string());
-        let item_type_id = entry.get("itemTypeId").and_then(|v| v.as_u64()).map(|n| n as u32);
-        let quest_id = entry.get("questId").and_then(|v| v.as_u64()).map(|n| n as u32);
-        let recipe_id = entry.get("recipeId").and_then(|v| v.as_u64()).map(|n| n as u32);
-        let hang_out_id = entry.get("hangOutId").and_then(|v| v.as_u64()).map(|n| n as u32);
-        let friendly_name = entry.get("friendlyName").and_then(|v| v.as_str()).map(|s| s.to_string());
+    entries_arr
+        .iter()
+        .map(|entry| {
+            let source_type = entry
+                .get("type")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown")
+                .to_string();
+            let skill = entry
+                .get("skill")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let npc = entry
+                .get("npc")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let item_type_id = entry
+                .get("itemTypeId")
+                .and_then(|v| v.as_u64())
+                .map(|n| n as u32);
+            let quest_id = entry
+                .get("questId")
+                .and_then(|v| v.as_u64())
+                .map(|n| n as u32);
+            let recipe_id = entry
+                .get("recipeId")
+                .and_then(|v| v.as_u64())
+                .map(|n| n as u32);
+            let hang_out_id = entry
+                .get("hangOutId")
+                .and_then(|v| v.as_u64())
+                .map(|n| n as u32);
+            let friendly_name = entry
+                .get("friendlyName")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
 
-        // Build extra map excluding already-extracted fields
-        let extra = if let Some(obj) = entry.as_object() {
-            let known = ["type", "skill", "npc", "itemTypeId", "questId", "recipeId", "hangOutId", "friendlyName"];
-            let filtered: serde_json::Map<String, Value> = obj.iter()
-                .filter(|(k, _)| !known.contains(&k.as_str()))
-                .map(|(k, v)| (k.clone(), v.clone()))
-                .collect();
-            Value::Object(filtered)
-        } else {
-            Value::Null
-        };
+            // Build extra map excluding already-extracted fields
+            let extra = if let Some(obj) = entry.as_object() {
+                let known = [
+                    "type",
+                    "skill",
+                    "npc",
+                    "itemTypeId",
+                    "questId",
+                    "recipeId",
+                    "hangOutId",
+                    "friendlyName",
+                ];
+                let filtered: serde_json::Map<String, Value> = obj
+                    .iter()
+                    .filter(|(k, _)| !known.contains(&k.as_str()))
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect();
+                Value::Object(filtered)
+            } else {
+                Value::Null
+            };
 
-        SourceEntry { source_type, skill, npc, item_type_id, quest_id, recipe_id, hang_out_id, friendly_name, extra }
-    }).collect()
+            SourceEntry {
+                source_type,
+                skill,
+                npc,
+                item_type_id,
+                quest_id,
+                recipe_id,
+                hang_out_id,
+                friendly_name,
+                extra,
+            }
+        })
+        .collect()
 }

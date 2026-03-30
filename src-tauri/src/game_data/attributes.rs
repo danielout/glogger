@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 use super::parse_string_map;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // ── Raw CDN shapes ────────────────────────────────────────────────────────────
 
@@ -22,7 +22,8 @@ pub struct AttributeInfo {
 
 pub fn parse(json: &str) -> Result<HashMap<String, AttributeInfo>, String> {
     let raw: HashMap<String, serde_json::Value> = parse_string_map(json, "attributes.json")?;
-    Ok(raw.into_iter()
+    Ok(raw
+        .into_iter()
         .map(|(k, v)| (k, AttributeInfo { raw: v }))
         .collect())
 }

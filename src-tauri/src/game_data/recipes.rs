@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use serde::Serialize;
 use serde_json::Value;
+use std::collections::HashMap;
 
 // ── Parsed structs (app shape) ───────────────────────────────────────────────
 
@@ -56,7 +56,11 @@ pub struct RecipeInfo {
 
 pub fn parse(json: &str) -> Result<HashMap<u32, RecipeInfo>, String> {
     let raw: HashMap<String, Value> = serde_json::from_str(json).map_err(|e| {
-        format!("recipes.json: parse error at line {}, col {}: {e}", e.line(), e.column())
+        format!(
+            "recipes.json: parse error at line {}, col {}: {e}",
+            e.line(),
+            e.column()
+        )
     })?;
 
     let mut recipes = HashMap::with_capacity(raw.len());
@@ -65,11 +69,17 @@ pub fn parse(json: &str) -> Result<HashMap<u32, RecipeInfo>, String> {
     for (key, value) in raw {
         let id_str = match key.split('_').last() {
             Some(s) => s.to_string(),
-            None => { skipped += 1; continue; }
+            None => {
+                skipped += 1;
+                continue;
+            }
         };
         let id: u32 = match id_str.parse() {
             Ok(id) => id,
-            Err(_) => { skipped += 1; continue; }
+            Err(_) => {
+                skipped += 1;
+                continue;
+            }
         };
 
         let ingredients = parse_ingredients(&value);
@@ -80,35 +90,37 @@ pub fn parse(json: &str) -> Result<HashMap<u32, RecipeInfo>, String> {
         let mut result_item_ids: Vec<u32> = result_items.iter().map(|r| r.item_id).collect();
         result_item_ids.extend(proto_result_items.iter().map(|r| r.item_id));
 
-        recipes.insert(id, RecipeInfo {
+        recipes.insert(
             id,
-            name: str_field(&value, "Name")
-                .unwrap_or_else(|| format!("Unknown Recipe {id}")),
-            description: str_field(&value, "Description"),
-            internal_name: str_field(&value, "InternalName"),
-            icon_id: u32_field(&value, "IconId"),
-            skill: str_field(&value, "Skill"),
-            skill_level_req: f32_field(&value, "SkillLevelReq"),
-            ingredients,
-            result_items,
-            reward_skill: str_field(&value, "RewardSkill"),
-            reward_skill_xp: f32_field(&value, "RewardSkillXp"),
-            reward_skill_xp_first_time: f32_field(&value, "RewardSkillXpFirstTime"),
-            prereq_recipe: str_field(&value, "PrereqRecipe"),
-            keywords: str_array_field(&value, "Keywords"),
-            ingredient_item_ids,
-            result_item_ids,
+            RecipeInfo {
+                id,
+                name: str_field(&value, "Name").unwrap_or_else(|| format!("Unknown Recipe {id}")),
+                description: str_field(&value, "Description"),
+                internal_name: str_field(&value, "InternalName"),
+                icon_id: u32_field(&value, "IconId"),
+                skill: str_field(&value, "Skill"),
+                skill_level_req: f32_field(&value, "SkillLevelReq"),
+                ingredients,
+                result_items,
+                reward_skill: str_field(&value, "RewardSkill"),
+                reward_skill_xp: f32_field(&value, "RewardSkillXp"),
+                reward_skill_xp_first_time: f32_field(&value, "RewardSkillXpFirstTime"),
+                prereq_recipe: str_field(&value, "PrereqRecipe"),
+                keywords: str_array_field(&value, "Keywords"),
+                ingredient_item_ids,
+                result_item_ids,
 
-            // Phase 2 typed fields
-            result_effects: str_array_field(&value, "ResultEffects"),
-            usage_delay: f32_field(&value, "UsageDelay"),
-            reward_skill_xp_drop_off_level: u32_field(&value, "RewardSkillXpDropOffLevel"),
-            sort_skill: str_field(&value, "SortSkill"),
-            action_label: str_field(&value, "ActionLabel"),
-            shares_name_with_item_id: u32_field(&value, "SharesNameWithItemId"),
+                // Phase 2 typed fields
+                result_effects: str_array_field(&value, "ResultEffects"),
+                usage_delay: f32_field(&value, "UsageDelay"),
+                reward_skill_xp_drop_off_level: u32_field(&value, "RewardSkillXpDropOffLevel"),
+                sort_skill: str_field(&value, "SortSkill"),
+                action_label: str_field(&value, "ActionLabel"),
+                shares_name_with_item_id: u32_field(&value, "SharesNameWithItemId"),
 
-            raw_json: value,
-        });
+                raw_json: value,
+            },
+        );
     }
 
     if skipped > 0 {
@@ -121,12 +133,14 @@ pub fn parse(json: &str) -> Result<HashMap<u32, RecipeInfo>, String> {
 // ── Ingredient / result parsing ──────────────────────────────────────────────
 
 fn parse_ingredients(value: &Value) -> Vec<RecipeIngredient> {
-    value.get("Ingredients")
+    value
+        .get("Ingredients")
         .and_then(|v| v.as_array())
         .map(|arr| {
             arr.iter()
                 .filter_map(|item| {
-                    let item_id = item.get("ItemCode")
+                    let item_id = item
+                        .get("ItemCode")
                         .and_then(|v| v.as_u64())
                         .map(|n| n as u32);
                     let item_keys = str_array_field(item, "ItemKeys");
@@ -140,11 +154,13 @@ fn parse_ingredients(value: &Value) -> Vec<RecipeIngredient> {
                         item_id,
                         item_keys,
                         description: str_field(item, "Desc"),
-                        stack_size: item.get("StackSize")
+                        stack_size: item
+                            .get("StackSize")
                             .and_then(|v| v.as_f64())
                             .map(|n| n as f32)
                             .unwrap_or(1.0),
-                        chance_to_consume: item.get("ChanceToConsume")
+                        chance_to_consume: item
+                            .get("ChanceToConsume")
                             .and_then(|v| v.as_f64())
                             .map(|n| n as f32),
                     })
@@ -155,7 +171,8 @@ fn parse_ingredients(value: &Value) -> Vec<RecipeIngredient> {
 }
 
 fn parse_result_items(value: &Value, field: &str) -> Vec<RecipeResultItem> {
-    value.get(field)
+    value
+        .get(field)
         .and_then(|v| v.as_array())
         .map(|arr| {
             arr.iter()
@@ -163,11 +180,13 @@ fn parse_result_items(value: &Value, field: &str) -> Vec<RecipeResultItem> {
                     let item_id = item.get("ItemCode")?.as_u64()? as u32;
                     Some(RecipeResultItem {
                         item_id,
-                        stack_size: item.get("StackSize")
+                        stack_size: item
+                            .get("StackSize")
                             .and_then(|v| v.as_f64())
                             .map(|n| n as f32)
                             .unwrap_or(1.0),
-                        percent_chance: item.get("PercentChance")
+                        percent_chance: item
+                            .get("PercentChance")
                             .and_then(|v| v.as_f64())
                             .map(|n| n as f32),
                     })
@@ -192,7 +211,8 @@ fn f32_field(value: &Value, key: &str) -> Option<f32> {
 }
 
 fn str_array_field(value: &Value, key: &str) -> Vec<String> {
-    value.get(key)
+    value
+        .get(key)
         .and_then(|v| v.as_array())
         .map(|arr| {
             arr.iter()

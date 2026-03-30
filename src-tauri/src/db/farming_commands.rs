@@ -1,8 +1,7 @@
-/// Farming session persistence commands
-
-use tauri::State;
-use serde::{Deserialize, Serialize};
 use super::DbPool;
+use serde::{Deserialize, Serialize};
+/// Farming session persistence commands
+use tauri::State;
 
 // ── Input types ─────────────────────────────────────────────────────────────
 
@@ -87,7 +86,9 @@ pub fn save_farming_session(
     db: State<'_, DbPool>,
     input: SaveFarmingSessionInput,
 ) -> Result<i64, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     // Insert session row
     conn.execute(
@@ -121,7 +122,8 @@ pub fn save_farming_session(
             "INSERT INTO farming_session_items (session_id, item_name, net_quantity)
              VALUES (?1, ?2, ?3)",
             rusqlite::params![session_id, item.item_name, item.net_quantity],
-        ).map_err(|e| format!("Failed to save farming item: {e}"))?;
+        )
+        .map_err(|e| format!("Failed to save farming item: {e}"))?;
     }
 
     // Insert favor records
@@ -130,7 +132,8 @@ pub fn save_farming_session(
             "INSERT INTO farming_session_favors (session_id, npc_key, npc_name, delta)
              VALUES (?1, ?2, ?3, ?4)",
             rusqlite::params![session_id, favor.npc_key, favor.npc_name, favor.delta],
-        ).map_err(|e| format!("Failed to save farming favor: {e}"))?;
+        )
+        .map_err(|e| format!("Failed to save farming favor: {e}"))?;
     }
 
     Ok(session_id)
@@ -141,34 +144,40 @@ pub fn get_farming_sessions(
     db: State<'_, DbPool>,
     limit: Option<usize>,
 ) -> Result<Vec<HistoricalFarmingSession>, String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
     let limit = limit.unwrap_or(50) as i64;
 
     // Fetch session rows
-    let mut stmt = conn.prepare(
-        "SELECT id, name, notes, start_time, end_time, elapsed_seconds,
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, name, notes, start_time, end_time, elapsed_seconds,
                 total_paused_seconds, vendor_gold, datetime(created_at) as created_at
          FROM farming_sessions
          ORDER BY created_at DESC
-         LIMIT ?1"
-    ).map_err(|e| format!("Failed to prepare query: {e}"))?;
+         LIMIT ?1",
+        )
+        .map_err(|e| format!("Failed to prepare query: {e}"))?;
 
-    let session_rows = stmt.query_map([limit], |row| {
-        Ok(HistoricalFarmingSession {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            notes: row.get(2)?,
-            start_time: row.get(3)?,
-            end_time: row.get(4)?,
-            elapsed_seconds: row.get(5)?,
-            total_paused_seconds: row.get(6)?,
-            vendor_gold: row.get(7)?,
-            created_at: row.get(8)?,
-            skills: Vec::new(),
-            items: Vec::new(),
-            favors: Vec::new(),
+    let session_rows = stmt
+        .query_map([limit], |row| {
+            Ok(HistoricalFarmingSession {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                notes: row.get(2)?,
+                start_time: row.get(3)?,
+                end_time: row.get(4)?,
+                elapsed_seconds: row.get(5)?,
+                total_paused_seconds: row.get(6)?,
+                vendor_gold: row.get(7)?,
+                created_at: row.get(8)?,
+                skills: Vec::new(),
+                items: Vec::new(),
+                favors: Vec::new(),
+            })
         })
-    }).map_err(|e| format!("Query failed: {e}"))?;
+        .map_err(|e| format!("Query failed: {e}"))?;
 
     let mut sessions: Vec<HistoricalFarmingSession> = Vec::new();
     for row in session_rows {
@@ -182,17 +191,21 @@ pub fn get_farming_sessions(
             "SELECT skill_id, skill_name, xp_gained, levels_gained FROM farming_session_skills WHERE session_id = ?1"
         ).map_err(|e| format!("Failed to prepare skill query: {e}"))?;
 
-        let skill_rows = skill_stmt.query_map([session.id], |row| {
-            Ok(FarmingSkillRecord {
-                skill_id: row.get(0)?,
-                skill_name: row.get(1)?,
-                xp_gained: row.get(2)?,
-                levels_gained: row.get(3)?,
+        let skill_rows = skill_stmt
+            .query_map([session.id], |row| {
+                Ok(FarmingSkillRecord {
+                    skill_id: row.get(0)?,
+                    skill_name: row.get(1)?,
+                    xp_gained: row.get(2)?,
+                    levels_gained: row.get(3)?,
+                })
             })
-        }).map_err(|e| format!("Skill query failed: {e}"))?;
+            .map_err(|e| format!("Skill query failed: {e}"))?;
 
         for row in skill_rows {
-            session.skills.push(row.map_err(|e| format!("Skill row error: {e}"))?);
+            session
+                .skills
+                .push(row.map_err(|e| format!("Skill row error: {e}"))?);
         }
 
         // Items
@@ -200,32 +213,42 @@ pub fn get_farming_sessions(
             "SELECT item_name, net_quantity FROM farming_session_items WHERE session_id = ?1 ORDER BY net_quantity DESC"
         ).map_err(|e| format!("Failed to prepare item query: {e}"))?;
 
-        let item_rows = item_stmt.query_map([session.id], |row| {
-            Ok(FarmingItemRecord {
-                item_name: row.get(0)?,
-                net_quantity: row.get(1)?,
+        let item_rows = item_stmt
+            .query_map([session.id], |row| {
+                Ok(FarmingItemRecord {
+                    item_name: row.get(0)?,
+                    net_quantity: row.get(1)?,
+                })
             })
-        }).map_err(|e| format!("Item query failed: {e}"))?;
+            .map_err(|e| format!("Item query failed: {e}"))?;
 
         for row in item_rows {
-            session.items.push(row.map_err(|e| format!("Item row error: {e}"))?);
+            session
+                .items
+                .push(row.map_err(|e| format!("Item row error: {e}"))?);
         }
 
         // Favors
-        let mut favor_stmt = conn.prepare(
-            "SELECT npc_key, npc_name, delta FROM farming_session_favors WHERE session_id = ?1"
-        ).map_err(|e| format!("Failed to prepare favor query: {e}"))?;
+        let mut favor_stmt = conn
+            .prepare(
+                "SELECT npc_key, npc_name, delta FROM farming_session_favors WHERE session_id = ?1",
+            )
+            .map_err(|e| format!("Failed to prepare favor query: {e}"))?;
 
-        let favor_rows = favor_stmt.query_map([session.id], |row| {
-            Ok(FarmingFavorRecord {
-                npc_key: row.get(0)?,
-                npc_name: row.get(1)?,
-                delta: row.get(2)?,
+        let favor_rows = favor_stmt
+            .query_map([session.id], |row| {
+                Ok(FarmingFavorRecord {
+                    npc_key: row.get(0)?,
+                    npc_name: row.get(1)?,
+                    delta: row.get(2)?,
+                })
             })
-        }).map_err(|e| format!("Favor query failed: {e}"))?;
+            .map_err(|e| format!("Favor query failed: {e}"))?;
 
         for row in favor_rows {
-            session.favors.push(row.map_err(|e| format!("Favor row error: {e}"))?);
+            session
+                .favors
+                .push(row.map_err(|e| format!("Favor row error: {e}"))?);
         }
     }
 
@@ -239,27 +262,27 @@ pub fn update_farming_session(
     name: String,
     notes: String,
 ) -> Result<(), String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
     conn.execute(
         "UPDATE farming_sessions SET name = ?1, notes = ?2 WHERE id = ?3",
         rusqlite::params![name, notes, session_id],
-    ).map_err(|e| format!("Failed to update farming session: {e}"))?;
+    )
+    .map_err(|e| format!("Failed to update farming session: {e}"))?;
 
     Ok(())
 }
 
 #[tauri::command]
-pub fn delete_farming_session(
-    db: State<'_, DbPool>,
-    session_id: i64,
-) -> Result<(), String> {
-    let conn = db.get().map_err(|e| format!("Database connection error: {e}"))?;
+pub fn delete_farming_session(db: State<'_, DbPool>, session_id: i64) -> Result<(), String> {
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
 
-    conn.execute(
-        "DELETE FROM farming_sessions WHERE id = ?1",
-        [session_id],
-    ).map_err(|e| format!("Failed to delete farming session: {e}"))?;
+    conn.execute("DELETE FROM farming_sessions WHERE id = ?1", [session_id])
+        .map_err(|e| format!("Failed to delete farming session: {e}"))?;
 
     Ok(())
 }

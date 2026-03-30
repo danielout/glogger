@@ -1,14 +1,13 @@
+use crate::cdn_commands::GameDataState;
+use crate::db::DbPool;
+use crate::game_data::GameData;
+use crate::parsers::to_utc_datetime;
 /// Game State Manager — persists derived game state from PlayerEvents to SQLite.
 ///
 /// Follows the SurveySessionTracker pattern: lightweight struct that receives
 /// &DbPool per call, called synchronously from the coordinator's event loop.
 /// Maintains "last known value" tables, not event logs.
-
 use crate::player_event_parser::PlayerEvent;
-use crate::parsers::to_utc_datetime;
-use crate::game_data::GameData;
-use crate::cdn_commands::GameDataState;
-use crate::db::DbPool;
 use chrono::{Local, Utc};
 
 /// Timestamped log line for startup diagnostics.
@@ -96,8 +95,12 @@ impl GameStateManager {
     /// During live mode, clears transient state so the login burst can repopulate.
     /// During replay/catch-up, skips clearing to preserve data built for each character.
     pub fn set_active_character(&mut self, name: &str, server: &str, db: &DbPool) {
-        startup_log!("Active character set: {} on {} (mode: {})",
-            name, server, if self.live_mode { "live" } else { "replay" });
+        startup_log!(
+            "Active character set: {} on {} (mode: {})",
+            name,
+            server,
+            if self.live_mode { "live" } else { "replay" }
+        );
         self.active_character = Some(name.to_string());
         self.active_server = Some(server.to_string());
 
@@ -127,19 +130,32 @@ impl GameStateManager {
         conn.execute(
             "INSERT INTO servers (server_name) VALUES (?1) ON CONFLICT DO NOTHING",
             rusqlite::params![server],
-        ).ok();
+        )
+        .ok();
 
         // Only clear transient state during live tailing — during replay/catch-up
         // we want to accumulate data for all characters, not nuke it on each login.
         if self.live_mode {
-            conn.execute("DELETE FROM game_state_inventory WHERE character_name = ?1 AND server_name = ?2",
-                rusqlite::params![name, server]).ok();
-            conn.execute("DELETE FROM game_state_equipment WHERE character_name = ?1 AND server_name = ?2",
-                rusqlite::params![name, server]).ok();
-            conn.execute("DELETE FROM game_state_combat WHERE character_name = ?1 AND server_name = ?2",
-                rusqlite::params![name, server]).ok();
-            conn.execute("DELETE FROM game_state_mount WHERE character_name = ?1 AND server_name = ?2",
-                rusqlite::params![name, server]).ok();
+            conn.execute(
+                "DELETE FROM game_state_inventory WHERE character_name = ?1 AND server_name = ?2",
+                rusqlite::params![name, server],
+            )
+            .ok();
+            conn.execute(
+                "DELETE FROM game_state_equipment WHERE character_name = ?1 AND server_name = ?2",
+                rusqlite::params![name, server],
+            )
+            .ok();
+            conn.execute(
+                "DELETE FROM game_state_combat WHERE character_name = ?1 AND server_name = ?2",
+                rusqlite::params![name, server],
+            )
+            .ok();
+            conn.execute(
+                "DELETE FROM game_state_mount WHERE character_name = ?1 AND server_name = ?2",
+                rusqlite::params![name, server],
+            )
+            .ok();
 
             // Reset favor deltas — new session starts accumulating from scratch
             conn.execute(
@@ -148,7 +164,10 @@ impl GameStateManager {
             ).ok();
         }
 
-        eprintln!("[game_state] Active character set to {name} on {server}{}", if self.live_mode { "" } else { " (replay)" });
+        eprintln!(
+            "[game_state] Active character set to {name} on {server}{}",
+            if self.live_mode { "" } else { " (replay)" }
+        );
     }
 
     /// Process a PlayerEvent and persist derived state to the database.
@@ -156,19 +175,29 @@ impl GameStateManager {
     pub fn process_event(&self, event: &PlayerEvent, db: &DbPool) -> ProcessResult {
         let character = match &self.active_character {
             Some(c) => c.as_str(),
-            None => return ProcessResult { domains_updated: vec![] },
+            None => {
+                return ProcessResult {
+                    domains_updated: vec![],
+                }
+            }
         };
 
         let server = match &self.active_server {
             Some(s) => s.as_str(),
-            None => return ProcessResult { domains_updated: vec![] },
+            None => {
+                return ProcessResult {
+                    domains_updated: vec![],
+                }
+            }
         };
 
         let conn = match db.get() {
             Ok(c) => c,
             Err(e) => {
                 eprintln!("[game_state] DB error on process_event: {e}");
-                return ProcessResult { domains_updated: vec![] };
+                return ProcessResult {
+                    domains_updated: vec![],
+                };
             }
         };
 
@@ -183,8 +212,11 @@ impl GameStateManager {
             PlayerEvent::SkillsLoaded { timestamp, skills } => {
                 let dt = self.to_utc(timestamp);
                 // Full skill dump on login — replace all skills for this character+server
-                conn.execute("DELETE FROM game_state_skills WHERE character_name = ?1 AND server_name = ?2",
-                    rusqlite::params![character, server]).ok();
+                conn.execute(
+                    "DELETE FROM game_state_skills WHERE character_name = ?1 AND server_name = ?2",
+                    rusqlite::params![character, server],
+                )
+                .ok();
 
                 let mut stmt = conn.prepare(
                     "INSERT INTO game_state_skills (character_name, server_name, skill_id, skill_name, level, base_level, bonus_levels, xp, tnl, max_level, last_confirmed_at, source)
@@ -208,20 +240,25 @@ impl GameStateManager {
                             server,
                             skill_id,
                             display_name,
-                            total_level,     // level (total = base + bonus)
-                            skill.raw,       // base_level (raw, without bonuses)
+                            total_level, // level (total = base + bonus)
+                            skill.raw,   // base_level (raw, without bonuses)
                             skill.bonus,
                             skill.xp,
                             skill.tnl,
                             skill.max,
                             dt,
-                        ]).ok();
+                        ])
+                        .ok();
                     }
                 }
                 domains.push("skills");
             }
 
-            PlayerEvent::ActiveSkillsChanged { timestamp, skill1, skill2 } => {
+            PlayerEvent::ActiveSkillsChanged {
+                timestamp,
+                skill1,
+                skill2,
+            } => {
                 let dt = self.to_utc(timestamp);
                 // Resolve skill internal names → IDs + display names
                 let (skill1_id, skill1_name) = match &game_data_guard {
@@ -253,7 +290,11 @@ impl GameStateManager {
                 domains.push("active_skills");
             }
 
-            PlayerEvent::AttributesChanged { timestamp, attributes, .. } => {
+            PlayerEvent::AttributesChanged {
+                timestamp,
+                attributes,
+                ..
+            } => {
                 let dt = self.to_utc(timestamp);
                 // Batch upsert in a transaction for performance
                 conn.execute("BEGIN", []).ok();
@@ -269,12 +310,9 @@ impl GameStateManager {
                     if let Some(stmt) = stmt.as_mut() {
                         for attr in attributes {
                             stmt.execute(rusqlite::params![
-                                character,
-                                server,
-                                attr.name,
-                                attr.value,
-                                dt,
-                            ]).ok();
+                                character, server, attr.name, attr.value, dt,
+                            ])
+                            .ok();
                         }
                     }
                 }
@@ -282,7 +320,11 @@ impl GameStateManager {
                 domains.push("attributes");
             }
 
-            PlayerEvent::WeatherChanged { timestamp, weather_name, is_active } => {
+            PlayerEvent::WeatherChanged {
+                timestamp,
+                weather_name,
+                is_active,
+            } => {
                 let dt = self.to_utc(timestamp);
                 conn.execute(
                     "INSERT INTO game_state_weather (id, weather_name, is_active, last_confirmed_at)
@@ -296,7 +338,10 @@ impl GameStateManager {
                 domains.push("weather");
             }
 
-            PlayerEvent::CombatStateChanged { timestamp, in_combat } => {
+            PlayerEvent::CombatStateChanged {
+                timestamp,
+                in_combat,
+            } => {
                 let dt = self.to_utc(timestamp);
                 conn.execute(
                     "INSERT INTO game_state_combat (character_name, server_name, in_combat, last_confirmed_at)
@@ -309,7 +354,11 @@ impl GameStateManager {
                 domains.push("combat");
             }
 
-            PlayerEvent::MountStateChanged { timestamp, is_mounting, .. } => {
+            PlayerEvent::MountStateChanged {
+                timestamp,
+                is_mounting,
+                ..
+            } => {
                 let dt = self.to_utc(timestamp);
                 conn.execute(
                     "INSERT INTO game_state_mount (character_name, server_name, is_mounted, last_confirmed_at)
@@ -322,10 +371,17 @@ impl GameStateManager {
                 domains.push("mount");
             }
 
-            PlayerEvent::ItemAdded { timestamp, item_name, instance_id, slot_index, .. } => {
+            PlayerEvent::ItemAdded {
+                timestamp,
+                item_name,
+                instance_id,
+                slot_index,
+                ..
+            } => {
                 let dt = self.to_utc(timestamp);
                 // Resolve item_type_id from CDN game data using internal name
-                let item_type_id: Option<i64> = game_data_guard.as_ref()
+                let item_type_id: Option<i64> = game_data_guard
+                    .as_ref()
                     .and_then(|gd| gd.resolve_item(item_name))
                     .map(|info| info.id as i64);
                 conn.execute(
@@ -341,7 +397,14 @@ impl GameStateManager {
                 domains.push("inventory");
             }
 
-            PlayerEvent::ItemStackChanged { timestamp, instance_id, item_name, item_type_id, new_stack_size, .. } => {
+            PlayerEvent::ItemStackChanged {
+                timestamp,
+                instance_id,
+                item_name,
+                item_type_id,
+                new_stack_size,
+                ..
+            } => {
                 let dt = self.to_utc(timestamp);
                 // Update existing row, or insert if ItemAdded hasn't arrived yet
                 let name = item_name.as_deref().unwrap_or("Unknown Item");
@@ -365,7 +428,11 @@ impl GameStateManager {
                 domains.push("inventory");
             }
 
-            PlayerEvent::RecipeUpdated { timestamp, recipe_id, completion_count } => {
+            PlayerEvent::RecipeUpdated {
+                timestamp,
+                recipe_id,
+                completion_count,
+            } => {
                 let dt = self.to_utc(timestamp);
                 conn.execute(
                     "INSERT INTO game_state_recipes (character_name, server_name, recipe_id, completion_count, last_confirmed_at, source)
@@ -379,7 +446,12 @@ impl GameStateManager {
                 domains.push("recipes");
             }
 
-            PlayerEvent::FavorChanged { timestamp, npc_name, delta, .. } => {
+            PlayerEvent::FavorChanged {
+                timestamp,
+                npc_name,
+                delta,
+                ..
+            } => {
                 let dt = self.to_utc(timestamp);
                 // Resolve NPC display name → CDN key (e.g., "Kalaba" → "NPC_Kalaba")
                 let (npc_key, display_name) = match &game_data_guard {
@@ -403,7 +475,11 @@ impl GameStateManager {
                 domains.push("favor");
             }
 
-            PlayerEvent::EquipmentChanged { timestamp, equipment, .. } => {
+            PlayerEvent::EquipmentChanged {
+                timestamp,
+                equipment,
+                ..
+            } => {
                 let dt = self.to_utc(timestamp);
                 // Full equipment state — replace all slots
                 conn.execute("DELETE FROM game_state_equipment WHERE character_name = ?1 AND server_name = ?2",
@@ -422,13 +498,20 @@ impl GameStateManager {
                             slot.slot,
                             slot.appearance_key,
                             dt,
-                        ]).ok();
+                        ])
+                        .ok();
                     }
                 }
                 domains.push("equipment");
             }
 
-            PlayerEvent::EffectsAdded { timestamp, source_entity_id, effect_ids, is_login_batch, .. } => {
+            PlayerEvent::EffectsAdded {
+                timestamp,
+                source_entity_id,
+                effect_ids,
+                is_login_batch,
+                ..
+            } => {
                 let dt = self.to_utc(timestamp);
 
                 // Login batch = full state dump: clear existing effects first
@@ -455,7 +538,8 @@ impl GameStateManager {
                             *id as i64,
                             *source_entity_id as i64,
                             dt,
-                        ]).ok();
+                        ])
+                        .ok();
                     }
                 }
                 domains.push("effects");
@@ -468,17 +552,36 @@ impl GameStateManager {
                 domains.push("effects");
             }
 
-            PlayerEvent::EffectNameUpdated { timestamp, effect_instance_id, display_name, .. } => {
+            PlayerEvent::EffectNameUpdated {
+                timestamp,
+                effect_instance_id,
+                display_name,
+                ..
+            } => {
                 let dt = self.to_utc(timestamp);
                 conn.execute(
                     "UPDATE game_state_effects SET effect_name = ?1, last_confirmed_at = ?2
                      WHERE character_name = ?3 AND server_name = ?4 AND effect_instance_id = ?5",
-                    rusqlite::params![display_name, dt, character, server, *effect_instance_id as i64],
-                ).ok();
+                    rusqlite::params![
+                        display_name,
+                        dt,
+                        character,
+                        server,
+                        *effect_instance_id as i64
+                    ],
+                )
+                .ok();
                 domains.push("effects");
             }
 
-            PlayerEvent::StorageDeposit { timestamp, vault_key, instance_id, item_name, slot, .. } => {
+            PlayerEvent::StorageDeposit {
+                timestamp,
+                vault_key,
+                instance_id,
+                item_name,
+                slot,
+                ..
+            } => {
                 if let Some(vk) = vault_key {
                     let dt = self.to_utc(timestamp);
                     // Look up item_type_id from the instance registry (via ItemStackChanged if available)
@@ -495,7 +598,11 @@ impl GameStateManager {
                 }
             }
 
-            PlayerEvent::StorageWithdrawal { vault_key, instance_id, .. } => {
+            PlayerEvent::StorageWithdrawal {
+                vault_key,
+                instance_id,
+                ..
+            } => {
                 if let Some(vk) = vault_key {
                     conn.execute(
                         "DELETE FROM game_state_storage WHERE character_name = ?1 AND server_name = ?2 AND vault_key = ?3 AND instance_id = ?4",
@@ -509,6 +616,8 @@ impl GameStateManager {
             _ => {}
         }
 
-        ProcessResult { domains_updated: domains }
+        ProcessResult {
+            domains_updated: domains,
+        }
     }
 }

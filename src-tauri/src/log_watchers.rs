@@ -1,3 +1,8 @@
+use crate::chat_parser::{parse_chat_lines, parse_chat_login_line, ChatMessage};
+use crate::parsers::{parse_skill_update, SkillUpdate};
+use crate::player_event_parser::{PlayerEvent, PlayerEventParser};
+use crate::survey_parser::{KnownSurveyType, SurveyEvent, SurveyParser};
+use chrono::NaiveDateTime;
 /// Log file watching infrastructure
 ///
 /// This module provides the core abstractions for watching and parsing log files.
@@ -5,16 +10,10 @@
 /// - LogFileWatcher trait for unified file watching
 /// - PlayerLogWatcher for monitoring Player.log
 /// - ChatLogWatcher for monitoring chat log files
-
 use std::collections::HashMap;
-use std::path::PathBuf;
-use std::io::{BufRead, BufReader, Seek, SeekFrom};
 use std::fs::File;
-use chrono::NaiveDateTime;
-use crate::chat_parser::{ChatMessage, parse_chat_lines, parse_chat_login_line};
-use crate::parsers::{SkillUpdate, parse_skill_update};
-use crate::survey_parser::{SurveyParser, SurveyEvent, KnownSurveyType};
-use crate::player_event_parser::{PlayerEventParser, PlayerEvent};
+use std::io::{BufRead, BufReader, Seek, SeekFrom};
+use std::path::PathBuf;
 
 /// Type alias for pattern matcher functions
 /// Takes a line and returns an optional LogEvent if the pattern matches
@@ -145,7 +144,11 @@ impl PlayerLogWatcher {
     }
 
     /// Create from existing position (resume from database)
-    pub fn from_position(file_path: PathBuf, position: u64, known_surveys: HashMap<String, KnownSurveyType>) -> Self {
+    pub fn from_position(
+        file_path: PathBuf,
+        position: u64,
+        known_surveys: HashMap<String, KnownSurveyType>,
+    ) -> Self {
         let mut watcher = Self {
             file_path,
             current_position: position,
@@ -286,8 +289,8 @@ impl LogFileWatcher for PlayerLogWatcher {
             }
         }
 
-        let mut file = File::open(&self.file_path)
-            .map_err(|e| format!("Failed to open Player.log: {}", e))?;
+        let mut file =
+            File::open(&self.file_path).map_err(|e| format!("Failed to open Player.log: {}", e))?;
 
         file.seek(SeekFrom::Start(self.current_position))
             .map_err(|e| format!("Failed to seek in Player.log: {}", e))?;
@@ -308,7 +311,9 @@ impl LogFileWatcher for PlayerLogWatcher {
 
                     // Feed player events + raw line into the survey parser
                     // (raw line still needed for ProcessMapFx which is survey-specific)
-                    let survey_events = self.survey_parser.process_events(&player_events, &line_content);
+                    let survey_events = self
+                        .survey_parser
+                        .process_events(&player_events, &line_content);
                     for se in survey_events {
                         events.push(LogEvent::SurveyParsed(se));
                     }
@@ -467,10 +472,11 @@ impl LogFileWatcher for ChatLogWatcher {
             return Ok(Vec::new());
         }
 
-        let mut file = File::open(&self.file_path)
-            .map_err(|e| format!("Failed to open chat log: {}", e))?;
+        let mut file =
+            File::open(&self.file_path).map_err(|e| format!("Failed to open chat log: {}", e))?;
 
-        let file_size = file.metadata()
+        let file_size = file
+            .metadata()
             .map_err(|e| format!("Failed to get file metadata: {}", e))?
             .len();
 
@@ -505,7 +511,9 @@ impl LogFileWatcher for ChatLogWatcher {
             let marker_events = self.check_session_marker(line);
             if !marker_events.is_empty() {
                 // Check if this batch contains a login (ServerDetected + CharacterLogin)
-                let has_login = marker_events.iter().any(|e| matches!(e, LogEvent::CharacterLogin { .. }));
+                let has_login = marker_events
+                    .iter()
+                    .any(|e| matches!(e, LogEvent::CharacterLogin { .. }));
                 if has_login {
                     // Replace any previous login — we only want the last one
                     last_login_events = Some(marker_events);
@@ -598,7 +606,12 @@ mod tests {
         assert_eq!(events.len(), 2);
 
         // First event: ServerDetected
-        if let LogEvent::ServerDetected { server_name, character_name, timezone_offset_seconds } = &events[0] {
+        if let LogEvent::ServerDetected {
+            server_name,
+            character_name,
+            timezone_offset_seconds,
+        } = &events[0]
+        {
             assert_eq!(server_name, "Dreva");
             assert_eq!(character_name, "TestCharacter");
             assert_eq!(*timezone_offset_seconds, Some(-25200)); // -07:00:00
@@ -656,9 +669,7 @@ mod tests {
 
     #[test]
     fn test_chat_watcher_get_file_name() {
-        let watcher = ChatLogWatcher::new(
-            PathBuf::from("/some/path/Chat-26-03-09.log"),
-        );
+        let watcher = ChatLogWatcher::new(PathBuf::from("/some/path/Chat-26-03-09.log"));
         assert_eq!(watcher.get_file_name(), "Chat-26-03-09.log");
     }
 

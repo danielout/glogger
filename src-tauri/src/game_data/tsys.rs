@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use serde::Serialize;
 use serde_json::Value;
+use std::collections::HashMap;
 
 // ── Parsed structs (app shape) ───────────────────────────────────────────────
 
@@ -39,7 +39,8 @@ impl TsysData {
         let raw_client: HashMap<String, Value> = serde_json::from_str(client_info_json)
             .map_err(|e| format!("tsysclientinfo.json: {e}"))?;
 
-        let client_info: HashMap<String, TsysClientInfo> = raw_client.into_iter()
+        let client_info: HashMap<String, TsysClientInfo> = raw_client
+            .into_iter()
             .map(|(key, value)| {
                 let info = TsysClientInfo {
                     internal_name: str_field(&value, "InternalName"),
@@ -56,10 +57,13 @@ impl TsysData {
             })
             .collect();
 
-        let profiles: Value = serde_json::from_str(profiles_json)
-            .map_err(|e| format!("tsysprofiles.json: {e}"))?;
+        let profiles: Value =
+            serde_json::from_str(profiles_json).map_err(|e| format!("tsysprofiles.json: {e}"))?;
 
-        Ok(Self { client_info, profiles })
+        Ok(Self {
+            client_info,
+            profiles,
+        })
     }
 }
 
@@ -74,7 +78,8 @@ fn bool_field(value: &Value, key: &str) -> Option<bool> {
 }
 
 fn str_array_field(value: &Value, key: &str) -> Vec<String> {
-    value.get(key)
+    value
+        .get(key)
         .and_then(|v| v.as_array())
         .map(|arr| {
             arr.iter()

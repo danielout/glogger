@@ -2,7 +2,6 @@
 ///
 /// Stateless parser: each message maps to 0 or 1 events.
 /// Accumulation and cross-stream correlation are left to subscribing features.
-
 use crate::chat_parser::ChatMessage;
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -31,28 +30,16 @@ pub enum ChatStatusEvent {
     },
 
     /// "You searched the corpse and found N coins."
-    CoinsLooted {
-        timestamp: String,
-        amount: u32,
-    },
+    CoinsLooted { timestamp: String, amount: u32 },
 
     /// "You received N Councils." / "You used N councils."
-    CouncilsChanged {
-        timestamp: String,
-        amount: i64,
-    },
+    CouncilsChanged { timestamp: String, amount: i64 },
 
     /// "The treasure is N meters from here."
-    TreasureDistance {
-        timestamp: String,
-        meters: u32,
-    },
+    TreasureDistance { timestamp: String, meters: u32 },
 
     /// "You bury the corpse." / "You botch the autopsy!"
-    AnatomyResult {
-        timestamp: String,
-        success: bool,
-    },
+    AnatomyResult { timestamp: String, success: bool },
 
     /// "Summoned X xN"
     Summoned {
@@ -261,7 +248,12 @@ mod tests {
     fn test_item_gained_no_quantity() {
         let msg = status_msg("Tundra Rye Seeds added to inventory.");
         let event = parse_status_message(&msg).unwrap();
-        if let ChatStatusEvent::ItemGained { item_name, quantity, .. } = event {
+        if let ChatStatusEvent::ItemGained {
+            item_name,
+            quantity,
+            ..
+        } = event
+        {
             assert_eq!(item_name, "Tundra Rye Seeds");
             assert_eq!(quantity, 1);
         } else {
@@ -273,7 +265,12 @@ mod tests {
     fn test_item_gained_with_quantity() {
         let msg = status_msg("Astounding Metal Slab x26 added to inventory.");
         let event = parse_status_message(&msg).unwrap();
-        if let ChatStatusEvent::ItemGained { item_name, quantity, .. } = event {
+        if let ChatStatusEvent::ItemGained {
+            item_name,
+            quantity,
+            ..
+        } = event
+        {
             assert_eq!(item_name, "Astounding Metal Slab");
             assert_eq!(quantity, 26);
         } else {
@@ -285,7 +282,12 @@ mod tests {
     fn test_item_gained_gypsum() {
         let msg = status_msg("Gypsum x9 added to inventory.");
         let event = parse_status_message(&msg).unwrap();
-        if let ChatStatusEvent::ItemGained { item_name, quantity, .. } = event {
+        if let ChatStatusEvent::ItemGained {
+            item_name,
+            quantity,
+            ..
+        } = event
+        {
             assert_eq!(item_name, "Gypsum");
             assert_eq!(quantity, 9);
         } else {
@@ -321,7 +323,10 @@ mod tests {
     fn test_level_up() {
         let msg = status_msg("You earned 192 XP and reached level 87 in Cartography!");
         let event = parse_status_message(&msg).unwrap();
-        if let ChatStatusEvent::LevelUp { skill, level, xp, .. } = event {
+        if let ChatStatusEvent::LevelUp {
+            skill, level, xp, ..
+        } = event
+        {
             assert_eq!(skill, "Cartography");
             assert_eq!(level, 87);
             assert_eq!(xp, 192);
@@ -367,7 +372,12 @@ mod tests {
     fn test_summoned() {
         let msg = status_msg("Summoned Nice Phlogiston x5");
         let event = parse_status_message(&msg).unwrap();
-        if let ChatStatusEvent::Summoned { item_name, quantity, .. } = event {
+        if let ChatStatusEvent::Summoned {
+            item_name,
+            quantity,
+            ..
+        } = event
+        {
             assert_eq!(item_name, "Nice Phlogiston");
             assert_eq!(quantity, 5);
         } else {

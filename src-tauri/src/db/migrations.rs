@@ -47,6 +47,88 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         super::record_migration(conn, 4)?;
     }
 
+    if current_version < 5 {
+        migration_v5_build_planner(conn)?;
+        super::record_migration(conn, 5)?;
+    }
+
+    if current_version < 6 {
+        migration_v6_build_preset_slot_items(conn)?;
+        super::record_migration(conn, 6)?;
+    }
+
+    if current_version < 7 {
+        migration_v7_build_preset_abilities(conn)?;
+        super::record_migration(conn, 7)?;
+    }
+
+    Ok(())
+}
+
+/// Migration V5: Build planner tables for saving gear/mod builds per character.
+fn migration_v5_build_planner(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE build_presets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            character_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            skill_primary TEXT,
+            skill_secondary TEXT,
+            target_level INTEGER DEFAULT 90,
+            target_rarity TEXT DEFAULT 'Epic',
+            notes TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE build_preset_mods (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            preset_id INTEGER NOT NULL REFERENCES build_presets(id) ON DELETE CASCADE,
+            equip_slot TEXT NOT NULL,
+            power_name TEXT NOT NULL,
+            tier INTEGER,
+            is_augment INTEGER DEFAULT 0,
+            sort_order INTEGER DEFAULT 0
+        );
+
+        CREATE INDEX idx_build_presets_character ON build_presets(character_id);
+        CREATE INDEX idx_build_preset_mods_preset ON build_preset_mods(preset_id);",
+    )?;
+    Ok(())
+}
+
+/// Migration V7: Ability bar planning for build presets.
+/// Stores which abilities the user wants in each bar (primary, secondary, sidebar).
+fn migration_v7_build_preset_abilities(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE build_preset_abilities (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            preset_id INTEGER NOT NULL REFERENCES build_presets(id) ON DELETE CASCADE,
+            bar TEXT NOT NULL,
+            slot_position INTEGER NOT NULL,
+            ability_id INTEGER NOT NULL,
+            ability_name TEXT
+        );
+
+        CREATE INDEX idx_build_preset_abilities_preset ON build_preset_abilities(preset_id);",
+    )?;
+    Ok(())
+}
+
+/// Migration V6: Base item selection per equipment slot in build planner.
+/// Stores which item the user wants in each slot of a build preset.
+fn migration_v6_build_preset_slot_items(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE build_preset_slot_items (
+            preset_id INTEGER NOT NULL REFERENCES build_presets(id) ON DELETE CASCADE,
+            equip_slot TEXT NOT NULL,
+            item_id INTEGER NOT NULL,
+            item_name TEXT,
+            PRIMARY KEY (preset_id, equip_slot)
+        );
+
+        CREATE INDEX idx_build_preset_slot_items_preset ON build_preset_slot_items(preset_id);",
+    )?;
     Ok(())
 }
 
@@ -71,7 +153,7 @@ fn migration_v4_fix_crafting_project_cascade(conn: &Connection) -> Result<()> {
             SELECT * FROM crafting_project_entries;
         DROP TABLE crafting_project_entries;
         ALTER TABLE crafting_project_entries_new RENAME TO crafting_project_entries;
-        CREATE INDEX idx_cpe_project ON crafting_project_entries(project_id);"
+        CREATE INDEX idx_cpe_project ON crafting_project_entries(project_id);",
     )?;
     Ok(())
 }
@@ -83,7 +165,7 @@ fn migration_v4_fix_crafting_project_cascade(conn: &Connection) -> Result<()> {
 fn migration_v3_fix_skill_levels(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "UPDATE game_state_skills SET base_level = level;
-         UPDATE game_state_skills SET level = base_level + bonus_levels;"
+         UPDATE game_state_skills SET level = base_level + bonus_levels;",
     )?;
     Ok(())
 }
@@ -97,7 +179,7 @@ fn migration_v2_skill_base_level(conn: &Connection) -> Result<()> {
          -- Existing `level` column stores the base (raw=). Copy it to base_level,
          -- then update level to be the total (base + bonus).
          UPDATE game_state_skills SET base_level = level;
-         UPDATE game_state_skills SET level = level + bonus_levels;"
+         UPDATE game_state_skills SET level = level + bonus_levels;",
     )?;
     Ok(())
 }

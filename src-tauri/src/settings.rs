@@ -2,7 +2,6 @@
 ///
 /// This module provides early initialization of settings before database setup.
 /// Settings determine paths for database, game data, and auto-start behavior.
-
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::path::PathBuf;
