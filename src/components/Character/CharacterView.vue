@@ -90,9 +90,9 @@
       <GourmandView />
     </template>
 
-    <!-- Build Planner (stub) -->
+    <!-- Build Planner -->
     <template v-else-if="activeTab === 'build-planner'">
-      <EmptyState primary="Build Planner" secondary="Coming soon." />
+      <BuildPlannerScreen />
     </template>
   </div>
 </template>
@@ -109,6 +109,7 @@ import QuestsScreen from './QuestsScreen.vue'
 import StatsTable from './StatsTable.vue'
 import CurrencyTable from './CurrencyTable.vue'
 import GourmandView from '../Gourmand/GourmandView.vue'
+import BuildPlannerScreen from './BuildPlanner/BuildPlannerScreen.vue'
 
 defineProps<{
   activeTab: string;
