@@ -30,6 +30,7 @@ export interface AppSettings {
   excludeMaxEnchantedRecipes: boolean;
   marketPriceMode: string;
   itemValuationMode: string;
+  showRawJsonInDataBrowser: boolean;
   viewPreferences: Record<string, Record<string, unknown>>;
 }
 
@@ -61,6 +62,7 @@ interface BackendSettings {
   exclude_max_enchanted_recipes: boolean;
   market_price_mode: string;
   item_valuation_mode: string;
+  show_raw_json_in_data_browser: boolean;
   view_preferences: Record<string, Record<string, unknown>>;
 }
 
@@ -93,6 +95,7 @@ function toBackendSettings(settings: AppSettings): BackendSettings {
     exclude_max_enchanted_recipes: settings.excludeMaxEnchantedRecipes,
     market_price_mode: settings.marketPriceMode,
     item_valuation_mode: settings.itemValuationMode,
+    show_raw_json_in_data_browser: settings.showRawJsonInDataBrowser,
     view_preferences: settings.viewPreferences,
   };
 }
@@ -130,6 +133,7 @@ function fromBackendSettings(settings: BackendSettings): AppSettings {
     excludeMaxEnchantedRecipes: settings.exclude_max_enchanted_recipes ?? true,
     marketPriceMode: settings.market_price_mode ?? 'universal',
     itemValuationMode: settings.item_valuation_mode ?? 'highest_market_vendor',
+    showRawJsonInDataBrowser: settings.show_raw_json_in_data_browser ?? false,
     viewPreferences: settings.view_preferences ?? {},
   };
 }
@@ -163,6 +167,7 @@ function getDefaultSettings(): AppSettings {
     excludeMaxEnchantedRecipes: true,
     marketPriceMode: 'universal',
     itemValuationMode: 'highest_market_vendor',
+    showRawJsonInDataBrowser: false,
     viewPreferences: {},
   };
 }

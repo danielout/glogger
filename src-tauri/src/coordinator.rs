@@ -181,13 +181,16 @@ impl DataIngestCoordinator {
             .get_player_log_path()
             .ok_or_else(|| "Game data path not configured".to_string())?;
 
-        // Load saved position from database
+        // Load saved position (and last-known character) from database
         let conn = self
             .db_pool
             .get()
             .map_err(|e| format!("Database error: {}", e))?;
-        let mut position =
-            log_positions::get_position(&conn, player_log_path.to_str().unwrap_or("")).unwrap_or(0);
+        let (mut position, saved_character) = log_positions::get_position_with_player(
+            &conn,
+            player_log_path.to_str().unwrap_or(""),
+        )
+        .unwrap_or((0, None));
 
         // Detect file rotation: if saved position is past current file size,
         // the game restarted and created a fresh Player.log
@@ -211,7 +214,15 @@ impl DataIngestCoordinator {
                 "Starting Player.log catch-up from byte position {}",
                 position
             );
-            PlayerLogWatcher::from_position(player_log_path, position, known_surveys)
+            let mut w = PlayerLogWatcher::from_position(player_log_path, position, known_surveys);
+
+            // Seed identity from the saved position so we know who's playing
+            // even if no new login line appears in the resumed log content.
+            if let Some(ref name) = saved_character {
+                startup_log!("Restoring active character from saved position: {}", name);
+                w.set_active_character(name.clone());
+            }
+            w
         } else {
             startup_log!("Starting Player.log from beginning (no saved position)");
             PlayerLogWatcher::new(player_log_path, known_surveys)

@@ -114,6 +114,10 @@ pub struct AppSettings {
     #[serde(default = "default_item_valuation_mode")]
     pub item_valuation_mode: String,
 
+    /// Whether to show raw JSON in the Data Browser detail panels
+    #[serde(default)]
+    pub show_raw_json_in_data_browser: bool,
+
     /// Opaque per-screen UI preferences (persisted as JSON, frontend-managed)
     #[serde(default)]
     pub view_preferences: Option<JsonValue>,
@@ -260,6 +264,7 @@ impl Default for AppSettings {
             exclude_max_enchanted_recipes: true,
             market_price_mode: default_market_price_mode(),
             item_valuation_mode: default_item_valuation_mode(),
+            show_raw_json_in_data_browser: false,
             view_preferences: None,
             last_app_version: None,
             timezone_offset_seconds: None,
