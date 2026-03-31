@@ -10,6 +10,7 @@ use tauri::State;
 pub struct CreateProjectInput {
     pub name: String,
     pub notes: Option<String>,
+    pub group_name: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -17,6 +18,7 @@ pub struct UpdateProjectInput {
     pub id: i64,
     pub name: String,
     pub notes: String,
+    pub group_name: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -25,6 +27,7 @@ pub struct AddProjectEntryInput {
     pub recipe_id: i64,
     pub recipe_name: String,
     pub quantity: i32,
+    pub target_stock: Option<i32>,
 }
 
 #[derive(Deserialize)]
@@ -32,6 +35,7 @@ pub struct UpdateProjectEntryInput {
     pub id: i64,
     pub quantity: i32,
     pub expanded_ingredient_ids: Vec<i64>,
+    pub target_stock: Option<i32>,
 }
 
 #[derive(Deserialize)]
@@ -47,6 +51,7 @@ pub struct CraftingProject {
     pub id: i64,
     pub name: String,
     pub notes: String,
+    pub group_name: Option<String>,
     pub created_at: String,
     pub updated_at: String,
     pub entries: Vec<CraftingProjectEntry>,
@@ -61,6 +66,7 @@ pub struct CraftingProjectEntry {
     pub quantity: i32,
     pub sort_order: i32,
     pub expanded_ingredient_ids: Vec<i64>,
+    pub target_stock: Option<i32>,
 }
 
 #[derive(Serialize)]
@@ -68,6 +74,7 @@ pub struct CraftingProjectSummary {
     pub id: i64,
     pub name: String,
     pub notes: String,
+    pub group_name: Option<String>,
     pub created_at: String,
     pub updated_at: String,
     pub entry_count: i64,
@@ -85,8 +92,8 @@ pub fn create_crafting_project(
         .map_err(|e| format!("Database connection error: {e}"))?;
 
     conn.execute(
-        "INSERT INTO crafting_projects (name, notes) VALUES (?1, ?2)",
-        rusqlite::params![input.name, input.notes.unwrap_or_default()],
+        "INSERT INTO crafting_projects (name, notes, group_name) VALUES (?1, ?2, ?3)",
+        rusqlite::params![input.name, input.notes.unwrap_or_default(), input.group_name],
     )
     .map_err(|e| format!("Failed to create crafting project: {e}"))?;
 
@@ -101,7 +108,7 @@ pub fn get_crafting_projects(db: State<'_, DbPool>) -> Result<Vec<CraftingProjec
 
     let mut stmt = conn
         .prepare(
-            "SELECT p.id, p.name, p.notes, datetime(p.created_at), datetime(p.updated_at),
+            "SELECT p.id, p.name, p.notes, p.group_name, datetime(p.created_at), datetime(p.updated_at),
                 (SELECT COUNT(*) FROM crafting_project_entries WHERE project_id = p.id)
          FROM crafting_projects p
          ORDER BY p.updated_at DESC",
@@ -114,9 +121,10 @@ pub fn get_crafting_projects(db: State<'_, DbPool>) -> Result<Vec<CraftingProjec
                 id: row.get(0)?,
                 name: row.get(1)?,
                 notes: row.get(2)?,
-                created_at: row.get(3)?,
-                updated_at: row.get(4)?,
-                entry_count: row.get(5)?,
+                group_name: row.get(3)?,
+                created_at: row.get(4)?,
+                updated_at: row.get(5)?,
+                entry_count: row.get(6)?,
             })
         })
         .map_err(|e| format!("Query failed: {e}"))?;
@@ -140,7 +148,7 @@ pub fn get_crafting_project(
 
     let project = conn
         .query_row(
-            "SELECT id, name, notes, datetime(created_at), datetime(updated_at)
+            "SELECT id, name, notes, group_name, datetime(created_at), datetime(updated_at)
          FROM crafting_projects WHERE id = ?1",
             [project_id],
             |row| {
@@ -148,8 +156,9 @@ pub fn get_crafting_project(
                     id: row.get(0)?,
                     name: row.get(1)?,
                     notes: row.get(2)?,
-                    created_at: row.get(3)?,
-                    updated_at: row.get(4)?,
+                    group_name: row.get(3)?,
+                    created_at: row.get(4)?,
+                    updated_at: row.get(5)?,
                     entries: Vec::new(),
                 })
             },
@@ -157,7 +166,7 @@ pub fn get_crafting_project(
         .map_err(|e| format!("Project not found: {e}"))?;
 
     let mut entry_stmt = conn.prepare(
-        "SELECT id, project_id, recipe_id, recipe_name, quantity, sort_order, expanded_ingredient_ids
+        "SELECT id, project_id, recipe_id, recipe_name, quantity, sort_order, expanded_ingredient_ids, target_stock
          FROM crafting_project_entries
          WHERE project_id = ?1
          ORDER BY sort_order ASC"
@@ -175,6 +184,7 @@ pub fn get_crafting_project(
                 quantity: row.get(4)?,
                 sort_order: row.get(5)?,
                 expanded_ingredient_ids: expanded_ids,
+                target_stock: row.get(7)?,
             })
         })
         .map_err(|e| format!("Entry query failed: {e}"))?;
@@ -199,9 +209,9 @@ pub fn update_crafting_project(
         .map_err(|e| format!("Database connection error: {e}"))?;
 
     conn.execute(
-        "UPDATE crafting_projects SET name = ?1, notes = ?2, updated_at = CURRENT_TIMESTAMP
-         WHERE id = ?3",
-        rusqlite::params![input.name, input.notes, input.id],
+        "UPDATE crafting_projects SET name = ?1, notes = ?2, group_name = ?3, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?4",
+        rusqlite::params![input.name, input.notes, input.group_name, input.id],
     )
     .map_err(|e| format!("Failed to update project: {e}"))?;
 
@@ -237,9 +247,9 @@ pub fn add_project_entry(
     ).map_err(|e| format!("Failed to get sort order: {e}"))?;
 
     conn.execute(
-        "INSERT INTO crafting_project_entries (project_id, recipe_id, recipe_name, quantity, sort_order)
-         VALUES (?1, ?2, ?3, ?4, ?5)",
-        rusqlite::params![input.project_id, input.recipe_id, input.recipe_name, input.quantity, next_order],
+        "INSERT INTO crafting_project_entries (project_id, recipe_id, recipe_name, quantity, sort_order, target_stock)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        rusqlite::params![input.project_id, input.recipe_id, input.recipe_name, input.quantity, next_order, input.target_stock],
     ).map_err(|e| format!("Failed to add entry: {e}"))?;
 
     // Touch the project's updated_at
@@ -264,9 +274,9 @@ pub fn update_project_entry(
     let ids_json = serde_json::to_string(&input.expanded_ingredient_ids)
         .map_err(|e| format!("Failed to serialize expanded_ingredient_ids: {e}"))?;
     conn.execute(
-        "UPDATE crafting_project_entries SET quantity = ?1, expanded_ingredient_ids = ?2
-         WHERE id = ?3",
-        rusqlite::params![input.quantity, ids_json, input.id],
+        "UPDATE crafting_project_entries SET quantity = ?1, expanded_ingredient_ids = ?2, target_stock = ?3
+         WHERE id = ?4",
+        rusqlite::params![input.quantity, ids_json, input.target_stock, input.id],
     )
     .map_err(|e| format!("Failed to update entry: {e}"))?;
 
@@ -338,18 +348,18 @@ pub fn duplicate_crafting_project(db: State<'_, DbPool>, project_id: i64) -> Res
         .map_err(|e| format!("Database connection error: {e}"))?;
 
     // Get original project
-    let (name, notes): (String, String) = conn
+    let (name, notes, group_name): (String, String, Option<String>) = conn
         .query_row(
-            "SELECT name, notes FROM crafting_projects WHERE id = ?1",
+            "SELECT name, notes, group_name FROM crafting_projects WHERE id = ?1",
             [project_id],
-            |row| Ok((row.get(0)?, row.get(1)?)),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )
         .map_err(|e| format!("Project not found: {e}"))?;
 
     // Create copy
     conn.execute(
-        "INSERT INTO crafting_projects (name, notes) VALUES (?1, ?2)",
-        rusqlite::params![format!("{name} (copy)"), notes],
+        "INSERT INTO crafting_projects (name, notes, group_name) VALUES (?1, ?2, ?3)",
+        rusqlite::params![format!("{name} (copy)"), notes, group_name],
     )
     .map_err(|e| format!("Failed to duplicate project: {e}"))?;
 
@@ -357,8 +367,8 @@ pub fn duplicate_crafting_project(db: State<'_, DbPool>, project_id: i64) -> Res
 
     // Copy entries
     conn.execute(
-        "INSERT INTO crafting_project_entries (project_id, recipe_id, recipe_name, quantity, sort_order, expanded_ingredient_ids)
-         SELECT ?1, recipe_id, recipe_name, quantity, sort_order, expanded_ingredient_ids
+        "INSERT INTO crafting_project_entries (project_id, recipe_id, recipe_name, quantity, sort_order, expanded_ingredient_ids, target_stock)
+         SELECT ?1, recipe_id, recipe_name, quantity, sort_order, expanded_ingredient_ids, target_stock
          FROM crafting_project_entries
          WHERE project_id = ?2
          ORDER BY sort_order",

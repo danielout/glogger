@@ -72,6 +72,11 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         super::record_migration(conn, 9)?;
     }
 
+    if current_version < 10 {
+        migration_v10_crafting_groups_and_stock_targets(conn)?;
+        super::record_migration(conn, 10)?;
+    }
+
     Ok(())
 }
 
@@ -143,6 +148,17 @@ fn migration_v9_slot_per_slot_skills(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "ALTER TABLE build_preset_slot_items ADD COLUMN slot_skill_primary TEXT;
          ALTER TABLE build_preset_slot_items ADD COLUMN slot_skill_secondary TEXT;",
+    )?;
+    Ok(())
+}
+
+/// Migration V10: Add project grouping and per-entry stock targets for crafting projects.
+/// group_name allows organizing projects under collapsible group headers.
+/// target_stock enables "restock to X" mode where craft quantity auto-calculates from inventory.
+fn migration_v10_crafting_groups_and_stock_targets(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "ALTER TABLE crafting_projects ADD COLUMN group_name TEXT DEFAULT NULL;
+         ALTER TABLE crafting_project_entries ADD COLUMN target_stock INTEGER DEFAULT NULL;",
     )?;
     Ok(())
 }

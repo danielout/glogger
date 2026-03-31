@@ -5,7 +5,7 @@
       class="text-text-muted text-xs cursor-pointer bg-transparent border border-surface-elevated rounded px-1.5 py-1 hover:text-text-primary hover:border-border-default"
       title="Show project list"
       @click="collapsed = false">
-      ▸
+      &#9656;
     </button>
     <span class="text-text-muted text-[0.6rem] [writing-mode:vertical-lr] select-none">Projects</span>
   </div>
@@ -18,7 +18,7 @@
           class="text-text-muted text-xs cursor-pointer bg-transparent border-none hover:text-text-primary"
           title="Collapse project list"
           @click="collapsed = true">
-          ◂
+          &#9666;
         </button>
         <h3 class="text-text-primary text-sm font-semibold m-0">Projects</h3>
       </div>
@@ -46,15 +46,58 @@
       </button>
     </div>
 
+    <!-- Sort control -->
+    <select
+      v-model="sortMode"
+      class="px-2 py-0.5 bg-surface-base border border-border-default rounded text-[0.65rem] text-text-muted cursor-pointer">
+      <option value="recent">Recent</option>
+      <option value="az">A-Z</option>
+      <option value="za">Z-A</option>
+    </select>
+
     <!-- Empty state -->
     <EmptyState v-if="store.projects.length === 0 && !showNewProject" variant="compact" primary="No projects yet" secondary="Create one to start planning crafts." />
 
-    <!-- Project list -->
+    <!-- Project list (grouped) -->
     <ul class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated rounded">
+      <!-- Grouped projects -->
+      <template v-for="group in groupedProjects.groups" :key="group.name">
+        <li
+          class="px-3 py-1.5 cursor-pointer border-b border-surface-dark text-xs bg-surface-dark/40 sticky top-0 z-10 select-none hover:bg-surface-dark/60"
+          :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': store.activeGroupName === group.name }"
+          @click="store.selectGroup(group.name)">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1.5">
+              <span
+                class="text-text-secondary text-xs w-3 hover:text-text-primary"
+                @click.stop="toggleGroup(group.name)">
+                {{ collapsedGroups.has(group.name) ? '&#9656;' : '&#9662;' }}
+              </span>
+              <span class="text-text-secondary font-semibold">{{ group.name }}</span>
+            </div>
+            <span class="text-text-muted text-[0.6rem]">{{ group.projects.length }}</span>
+          </div>
+        </li>
+        <template v-if="!collapsedGroups.has(group.name)">
+          <li
+            v-for="project in group.projects"
+            :key="project.id"
+            class="px-3 pl-6 py-2 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
+            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': store.activeProject?.id === project.id }"
+            @click="store.loadProject(project.id)">
+            <div class="flex items-center justify-between">
+              <span class="text-text-primary/75 font-medium">{{ project.name }}</span>
+              <span class="text-text-muted text-[0.65rem]">{{ project.entry_count }} recipes</span>
+            </div>
+          </li>
+        </template>
+      </template>
+
+      <!-- Ungrouped projects -->
       <li
-        v-for="project in store.projects"
+        v-for="project in groupedProjects.ungrouped"
         :key="project.id"
-        class="px-3 py-2 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e] group"
+        class="px-3 py-2 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
         :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': store.activeProject?.id === project.id }"
         @click="store.loadProject(project.id)">
         <div class="flex items-center justify-between">
@@ -67,8 +110,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, reactive, computed, onMounted } from "vue";
 import { useCraftingStore } from "../../stores/craftingStore";
+import type { CraftingProjectSummary } from "../../types/crafting";
 import EmptyState from "../Shared/EmptyState.vue";
 
 const store = useCraftingStore();
@@ -77,6 +121,47 @@ const collapsed = ref(false);
 const showNewProject = ref(false);
 const newProjectName = ref("");
 const newProjectInput = ref<HTMLInputElement | null>(null);
+const sortMode = ref<'recent' | 'az' | 'za'>('recent');
+const collapsedGroups = reactive(new Set<string>());
+
+const sortedProjects = computed(() => {
+  const list = [...store.projects];
+  switch (sortMode.value) {
+    case 'az': return list.sort((a, b) => a.name.localeCompare(b.name));
+    case 'za': return list.sort((a, b) => b.name.localeCompare(a.name));
+    default: return list; // backend returns updated_at DESC
+  }
+});
+
+const groupedProjects = computed(() => {
+  const groupMap = new Map<string, CraftingProjectSummary[]>();
+  const ungrouped: CraftingProjectSummary[] = [];
+
+  for (const p of sortedProjects.value) {
+    if (p.group_name) {
+      const key = p.group_name;
+      if (!groupMap.has(key)) groupMap.set(key, []);
+      groupMap.get(key)!.push(p);
+    } else {
+      ungrouped.push(p);
+    }
+  }
+
+  // Sort group names alphabetically
+  const groups = Array.from(groupMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, projects]) => ({ name, projects }));
+
+  return { groups, ungrouped };
+});
+
+function toggleGroup(name: string) {
+  if (collapsedGroups.has(name)) {
+    collapsedGroups.delete(name);
+  } else {
+    collapsedGroups.add(name);
+  }
+}
 
 onMounted(() => {
   store.loadProjects();

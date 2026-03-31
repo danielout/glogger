@@ -4,6 +4,7 @@ export interface CraftingProjectSummary {
   id: number
   name: string
   notes: string
+  group_name: string | null
   created_at: string
   updated_at: string
   entry_count: number
@@ -17,12 +18,14 @@ export interface CraftingProjectEntry {
   quantity: number
   sort_order: number
   expanded_ingredient_ids: number[]
+  target_stock: number | null
 }
 
 export interface CraftingProject {
   id: number
   name: string
   notes: string
+  group_name: string | null
   created_at: string
   updated_at: string
   entries: CraftingProjectEntry[]

@@ -86,6 +86,11 @@ export const useGameStateStore = defineStore('gameState', () => {
   const loading = ref(false)
   const initialized = ref(false)
 
+  // Set to true once the startup sequence is complete.
+  // During startup catch-up, character-login events are handled by the
+  // startup sequence itself — the listener skips heavy work until ready.
+  const startupComplete = ref(false)
+
   // ── Session Skill State (in-memory, not persisted) ────────────────────
   const sessionSkills = ref<Record<string, SkillSessionData>>({})
 
@@ -607,11 +612,24 @@ export const useGameStateStore = defineStore('gameState', () => {
     settingsStore.settings.activeServerName = event.payload
   })
 
-  listen<string>('character-login', (event) => {
+  listen<string>('character-login', async (event) => {
+    // During startup catch-up, the startup sequence handles character
+    // loading explicitly after the catch-up poll completes.  We still
+    // update the reactive setting so the UI reflects the latest name,
+    // but skip the heavy reload work until the app is fully ready.
     settingsStore.settings.activeCharacterName = event.payload
+
+    if (!startupComplete.value) return
+
     resetSessionSkills()
     clearLiveInventory()
-    loadAll()
+    await loadAll()
+
+    // Reload character reports/snapshots for the newly active character
+    // (import inside callback to avoid circular dependency at init time)
+    const { useCharacterStore } = await import('./characterStore')
+    const characterStore = useCharacterStore()
+    characterStore.initForActiveCharacter()
   })
 
   // ── Public API ────────────────────────────────────────────────────────
@@ -680,5 +698,8 @@ export const useGameStateStore = defineStore('gameState', () => {
     loadAll,
     refreshDomain,
     loadStorageVaults,
+
+    // Startup lifecycle
+    startupComplete,
   }
 })

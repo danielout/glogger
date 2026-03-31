@@ -11,6 +11,7 @@ import type {
   CraftDetectionEvent,
   CraftingHistoryRecipe,
   CraftingProject,
+  CraftingProjectEntry,
   CraftingProjectSummary,
   CraftingTracker,
   FlattenedMaterial,
@@ -61,29 +62,47 @@ export const useCraftingStore = defineStore("crafting", () => {
 
   const projects = ref<CraftingProjectSummary[]>([]);
   const activeProject = ref<CraftingProject | null>(null);
+  /** When set, the sidebar is showing a group summary instead of a single project */
+  const activeGroupName = ref<string | null>(null);
 
   async function loadProjects() {
     projects.value = await invoke<CraftingProjectSummary[]>("get_crafting_projects");
   }
 
   async function loadProject(id: number) {
+    activeGroupName.value = null;
     activeProject.value = await invoke<CraftingProject>("get_crafting_project", { projectId: id });
   }
 
-  async function createProject(name: string, notes?: string) {
+  function selectGroup(groupName: string) {
+    activeProject.value = null;
+    activeGroupName.value = groupName;
+  }
+
+  function clearGroupSelection() {
+    activeGroupName.value = null;
+  }
+
+  /** Get all projects belonging to a group */
+  function getProjectsInGroup(groupName: string): CraftingProjectSummary[] {
+    return projects.value.filter((p) => p.group_name === groupName);
+  }
+
+  async function createProject(name: string, notes?: string, groupName?: string) {
     const id = await invoke<number>("create_crafting_project", {
-      input: { name, notes },
+      input: { name, notes, group_name: groupName ?? null },
     });
     await loadProjects();
     return id;
   }
 
-  async function updateProject(id: number, name: string, notes: string) {
-    await invoke("update_crafting_project", { input: { id, name, notes } });
+  async function updateProject(id: number, name: string, notes: string, groupName?: string | null) {
+    await invoke("update_crafting_project", { input: { id, name, notes, group_name: groupName ?? null } });
     await loadProjects();
     if (activeProject.value?.id === id) {
       activeProject.value.name = name;
       activeProject.value.notes = notes;
+      activeProject.value.group_name = groupName ?? null;
     }
   }
 
@@ -99,9 +118,9 @@ export const useCraftingStore = defineStore("crafting", () => {
     return newId;
   }
 
-  async function addEntry(projectId: number, recipeId: number, recipeName: string, quantity: number) {
+  async function addEntry(projectId: number, recipeId: number, recipeName: string, quantity: number, targetStock?: number | null) {
     await invoke("add_project_entry", {
-      input: { project_id: projectId, recipe_id: recipeId, recipe_name: recipeName, quantity },
+      input: { project_id: projectId, recipe_id: recipeId, recipe_name: recipeName, quantity, target_stock: targetStock ?? null },
     });
     if (activeProject.value?.id === projectId) {
       await loadProject(projectId);
@@ -109,9 +128,9 @@ export const useCraftingStore = defineStore("crafting", () => {
     await loadProjects();
   }
 
-  async function updateEntry(entryId: number, quantity: number, expandedIngredientIds: number[] = []) {
+  async function updateEntry(entryId: number, quantity: number, expandedIngredientIds: number[] = [], targetStock?: number | null) {
     await invoke("update_project_entry", {
-      input: { id: entryId, quantity, expanded_ingredient_ids: expandedIngredientIds },
+      input: { id: entryId, quantity, expanded_ingredient_ids: expandedIngredientIds, target_stock: targetStock ?? null },
     });
     if (activeProject.value) {
       await loadProject(activeProject.value.id);
@@ -132,6 +151,8 @@ export const useCraftingStore = defineStore("crafting", () => {
    * Core resolver: given a recipe and craft count, compute ingredient tree.
    * expandItemIds: if provided, only expand intermediates whose item_id is in this set.
    * If not provided, falls back to the boolean expandIntermediates flag.
+   * intermediateStock: if provided, maps item_id → quantity on hand. When expanding
+   * an intermediate, only the shortfall (needed - stock) is resolved into sub-ingredients.
    */
   async function resolveRecipeIngredients(
     recipe: RecipeInfo,
@@ -139,6 +160,7 @@ export const useCraftingStore = defineStore("crafting", () => {
     expandIntermediates: boolean = false,
     visited: Set<number> = new Set(),
     expandItemIds?: Set<number>,
+    intermediateStock?: Map<number, number>,
   ): Promise<ResolvedRecipe> {
     // Calculate how many crafts are needed
     const outputPerCraft = recipe.result_items[0]?.stack_size ?? 1;
@@ -176,17 +198,24 @@ export const useCraftingStore = defineStore("crafting", () => {
           sourceRecipeId = sourceRecipe.id;
           sourceRecipeName = sourceRecipe.name;
 
+          // Subtract stock on hand — only craft the shortfall
+          const onHand = intermediateStock?.get(ing.item_id) ?? 0;
+          const toCraft = Math.max(0, expectedQty - onHand);
+
           // Recursively resolve (with cycle detection)
           visited.add(ing.item_id);
-          const subResolved = await resolveRecipeIngredients(
-            sourceRecipe,
-            expectedQty,
-            true,
-            visited,
-            expandItemIds,
-          );
-          children = subResolved.ingredients;
-          childCraftsNeeded = subResolved.craft_count;
+          if (toCraft > 0) {
+            const subResolved = await resolveRecipeIngredients(
+              sourceRecipe,
+              toCraft,
+              true,
+              visited,
+              expandItemIds,
+              intermediateStock,
+            );
+            children = subResolved.ingredients;
+            childCraftsNeeded = subResolved.craft_count;
+          }
           visited.delete(ing.item_id);
         }
       } else if (ing.item_id) {
@@ -402,6 +431,108 @@ export const useCraftingStore = defineStore("crafting", () => {
     }
 
     return needs.sort((a, b) => a.item_name.localeCompare(b.item_name));
+  }
+
+  /**
+   * Query total available stock (inventory + storage) for a set of item IDs.
+   * Returns a map of itemId → total quantity on hand.
+   */
+  async function queryItemStock(itemIds: number[]): Promise<Map<number, number>> {
+    const settingsStore = useSettingsStore();
+    const result = new Map<number, number>();
+    if (itemIds.length === 0) return result;
+
+    const characterName = settingsStore.settings.activeCharacterName;
+    const serverName = settingsStore.settings.activeServerName;
+    if (!characterName || !serverName) return result;
+
+    try {
+      const data = await invoke<MaterialAvailability[]>("check_material_availability", {
+        characterName,
+        serverName,
+        itemTypeIds: itemIds,
+      });
+      for (const item of data) {
+        result.set(item.item_type_id, item.total_available);
+      }
+    } catch (e) {
+      console.warn("[crafting] Failed to query item stock:", e);
+    }
+    return result;
+  }
+
+  // ── Stock Targets ────────────────────────────────────────────────────────
+
+  interface StockTargetResult {
+    effectiveQty: number
+    currentStock: number
+  }
+
+  /**
+   * For entries with target_stock set, resolve the output item's current
+   * inventory+storage count and compute how many to craft.
+   * Returns a map of entry.id → { effectiveQty, currentStock }.
+   */
+  async function resolveStockTargets(
+    entries: CraftingProjectEntry[],
+  ): Promise<Map<number, StockTargetResult>> {
+    const settingsStore = useSettingsStore();
+    const result = new Map<number, StockTargetResult>();
+
+    const targetEntries = entries.filter((e) => e.target_stock !== null);
+    if (targetEntries.length === 0) return result;
+
+    // Resolve recipes to get output item IDs
+    const recipeOutputs = new Map<number, { itemId: number; outputPerCraft: number; primaryChance: number }>();
+    for (const entry of targetEntries) {
+      const recipe = await gameData.resolveRecipe(entry.recipe_name);
+      if (!recipe || recipe.result_items.length === 0) continue;
+      const primary = recipe.result_items[0];
+      recipeOutputs.set(entry.id, {
+        itemId: primary.item_id,
+        outputPerCraft: primary.stack_size,
+        primaryChance: (primary.percent_chance ?? 100) / 100,
+      });
+    }
+
+    // Batch query availability for all output items
+    const outputItemIds = Array.from(new Set(
+      Array.from(recipeOutputs.values()).map((o) => o.itemId),
+    ));
+
+    const characterName = settingsStore.settings.activeCharacterName;
+    const serverName = settingsStore.settings.activeServerName;
+
+    let availData: MaterialAvailability[] = [];
+    if (characterName && serverName && outputItemIds.length > 0) {
+      try {
+        availData = await invoke<MaterialAvailability[]>("check_material_availability", {
+          characterName,
+          serverName,
+          itemTypeIds: outputItemIds,
+        });
+      } catch (e) {
+        console.warn("[crafting] Failed to check stock targets:", e);
+      }
+    }
+
+    const availMap = new Map<number, number>();
+    for (const item of availData) {
+      availMap.set(item.item_type_id, item.total_available);
+    }
+
+    // Compute effective quantities
+    for (const entry of targetEntries) {
+      const output = recipeOutputs.get(entry.id);
+      if (!output) continue;
+
+      const currentStock = availMap.get(output.itemId) ?? 0;
+      const needed = Math.max(0, entry.target_stock! - currentStock);
+
+      result.set(entry.id, { effectiveQty: needed, currentStock });
+    }
+
+    return result;
   }
 
   // ── Leveling Helper ──────────────────────────────────────────────────────
@@ -898,8 +1029,12 @@ export const useCraftingStore = defineStore("crafting", () => {
     // Project state
     projects,
     activeProject,
+    activeGroupName,
     loadProjects,
     loadProject,
+    selectGroup,
+    clearGroupSelection,
+    getProjectsInGroup,
     createProject,
     updateProject,
     deleteProject,
@@ -914,6 +1049,9 @@ export const useCraftingStore = defineStore("crafting", () => {
     // Material availability
     checkMaterialAvailability,
     exportMaterialList,
+    // Stock targets
+    resolveStockTargets,
+    queryItemStock,
     // Leveling helper
     estimateRecipeCost,
     getSkillLevel,

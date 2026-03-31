@@ -4,7 +4,7 @@
       <!-- Expand indicator for craftable items -->
       <span
         v-if="ingredient.children.length > 0"
-        class="text-text-muted cursor-pointer select-none w-3 text-center"
+        class="text-text-secondary cursor-pointer select-none w-3 text-center text-xs"
         @click="expanded = !expanded">
         {{ expanded ? '▾' : '▸' }}
       </span>
