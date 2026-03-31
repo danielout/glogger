@@ -233,18 +233,15 @@ pub async fn resolve_area(
 }
 
 /// Search items whose name contains the query string (case-insensitive).
-/// Returns up to `limit` results (default 20).
 /// Optional filters: equip_slot (exact match), min/max crafting_target_level.
 #[tauri::command]
 pub async fn search_items(
     query: String,
-    limit: Option<usize>,
     equip_slot: Option<String>,
     level_min: Option<u32>,
     level_max: Option<u32>,
     state: State<'_, GameDataState>,
 ) -> Result<Vec<ItemInfo>, String> {
-    let limit = limit.unwrap_or(20);
     let q = query.to_lowercase();
     let data = state.read().await;
     let mut results: Vec<ItemInfo> = data
@@ -286,7 +283,6 @@ pub async fn search_items(
             }
             true
         })
-        .take(limit)
         .cloned()
         .collect();
     results.sort_by(|a, b| a.name.cmp(&b.name));

@@ -329,7 +329,7 @@ function onItemSearch() {
   }
   searchDebounce = setTimeout(async () => {
     try {
-      itemSuggestions.value = await gameDataStore.searchItems(q, 15)
+      itemSuggestions.value = await gameDataStore.searchItems(q)
     } catch {
       itemSuggestions.value = []
     }

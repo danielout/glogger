@@ -184,15 +184,15 @@ export const useStartupStore = defineStore("startup", () => {
 
   async function runStartupTasks() {
     const TASK_GAME_DATA = 0;
-    const TASK_CHARACTER = 1;
-    const TASK_GAME_STATE = 2;
-    const TASK_LOG_WATCHERS = 3;
+    const TASK_LOG_CATCHUP = 1;
+    const TASK_CHARACTER = 2;
+    const TASK_GAME_STATE = 3;
 
     startupTasks.value = [
       { label: "Loading game data", status: "running" },
+      { label: "Catching up on logs", status: "pending" },
       { label: "Loading character data", status: "pending" },
       { label: "Preparing game state", status: "pending" },
-      { label: "Starting log watchers", status: "pending" },
     ];
 
     const settingsStore = useSettingsStore();
@@ -230,43 +230,13 @@ export const useStartupStore = defineStore("startup", () => {
       return;
     }
 
-    // ── Task 2: Load character data from reports ────────────────────────
-    log("Loading character data from reports");
-    updateTask(TASK_CHARACTER, "running");
-    try {
-      // Auto-import latest character + inventory reports and seed game state
-      await characterStore.initForActiveCharacter();
-      log("Character data loaded");
-      updateTask(TASK_CHARACTER, "done");
-    } catch (e) {
-      // Non-fatal — character data from reports is supplementary
-      log(`Character data partial: ${e}`);
-      console.warn("Character init had errors:", e);
-      updateTask(TASK_CHARACTER, "done", "Partial — no reports found");
-    }
-
-    // ── Task 3: Load full game state from DB ────────────────────────────
-    log("Loading game state from database");
-    updateTask(TASK_GAME_STATE, "running");
-    try {
-      // Load all game state domains (skills, inventory, favor, recipes, etc.)
-      await gameState.loadAll();
-      // Also load storage vault CDN metadata
-      await gameState.loadStorageVaults();
-      // Load market values
-      await marketStore.loadAll();
-      log("Game state ready");
-      updateTask(TASK_GAME_STATE, "done");
-    } catch (e) {
-      log(`Game state load error: ${e}`);
-      console.error("Game state load error:", e);
-      updateTask(TASK_GAME_STATE, "error", String(e));
-      // Continue anyway — some state is better than no state
-    }
-
-    // ── Task 4: Start log watchers and event listeners ──────────────────
-    log("Starting log watchers");
-    updateTask(TASK_LOG_WATCHERS, "running");
+    // ── Task 2: Start log watchers, catch up, then begin live polling ───
+    // We start watchers and run an initial poll BEFORE loading character
+    // data so the catch-up can resolve the real active character and seed
+    // game state from the log history. Only after catch-up do we know
+    // who is actually playing.
+    log("Starting log watchers and catching up");
+    updateTask(TASK_LOG_CATCHUP, "running");
     try {
       // Register event listeners BEFORE starting watchers so no events are missed
       await listen("skill-update", (event: any) => {
@@ -287,9 +257,6 @@ export const useStartupStore = defineStore("startup", () => {
         farmingStore.handlePlayerEvent(event.payload);
       });
 
-      // Start coordinator polling
-      coordinator.startPolling(1500);
-
       // Start log watchers if enabled
       if (settingsStore.settings.autoTailPlayerLog && settingsStore.settings.gameDataPath) {
         await coordinator.startPlayerTailing();
@@ -298,16 +265,66 @@ export const useStartupStore = defineStore("startup", () => {
         await coordinator.startChatTailing();
       }
 
-      // Start report folder watching
-      characterStore.startReportWatching();
+      // Run one synchronous poll to process all historical log content.
+      // This blocks until the catch-up is complete, so after this call
+      // the active character and game state are fully resolved.
+      await invoke('poll_watchers');
 
-      updateTask(TASK_LOG_WATCHERS, "done");
+      // Now start periodic polling for live updates
+      coordinator.startPolling(1500);
+
+      updateTask(TASK_LOG_CATCHUP, "done");
     } catch (e) {
       console.warn("Log watcher startup error:", e);
-      updateTask(TASK_LOG_WATCHERS, "done", "Some watchers failed to start");
+      updateTask(TASK_LOG_CATCHUP, "done", "Some watchers failed to start");
+      // Start polling anyway so live tailing still works
+      coordinator.startPolling(1500);
     }
 
+    // Refresh settings from backend — the catch-up may have updated
+    // the active character/server in the backend settings.
+    await settingsStore.initialize();
+
+    // ── Task 3: Load character data from reports ────────────────────────
+    log("Loading character data from reports");
+    updateTask(TASK_CHARACTER, "running");
+    try {
+      // Auto-import latest character + inventory reports and seed game state
+      await characterStore.initForActiveCharacter();
+      log("Character data loaded");
+      updateTask(TASK_CHARACTER, "done");
+    } catch (e) {
+      // Non-fatal — character data from reports is supplementary
+      log(`Character data partial: ${e}`);
+      console.warn("Character init had errors:", e);
+      updateTask(TASK_CHARACTER, "done", "Partial — no reports found");
+    }
+
+    // ── Task 4: Load full game state from DB ────────────────────────────
+    log("Loading game state from database");
+    updateTask(TASK_GAME_STATE, "running");
+    try {
+      // Load all game state domains (skills, inventory, favor, recipes, etc.)
+      await gameState.loadAll();
+      // Also load storage vault CDN metadata
+      await gameState.loadStorageVaults();
+      // Load market values
+      await marketStore.loadAll();
+      log("Game state ready");
+      updateTask(TASK_GAME_STATE, "done");
+    } catch (e) {
+      log(`Game state load error: ${e}`);
+      console.error("Game state load error:", e);
+      updateTask(TASK_GAME_STATE, "error", String(e));
+      // Continue anyway — some state is better than no state
+    }
+
+    // Start report folder watching (after character is loaded)
+    characterStore.startReportWatching();
+
     // ── All critical tasks complete — app is ready ──────────────────────
+    // Enable live character-login handling now that startup is finished.
+    gameState.startupComplete = true;
     log("App is interactive");
     phase.value = "ready";
   }

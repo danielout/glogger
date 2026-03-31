@@ -38,7 +38,7 @@
           v-if="group.label"
           class="sticky top-0 z-10 bg-surface-base px-2 py-1 text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-elevated cursor-pointer flex items-center gap-1"
           @click="toggleGroup(group.label)">
-          <span class="text-[0.6rem]">{{ collapsedGroups.has(group.label) ? '▶' : '▼' }}</span>
+          <span class="text-text-secondary text-xs">{{ collapsedGroups.has(group.label) ? '▶' : '▼' }}</span>
           {{ group.label }} ({{ group.npcs.length }})
         </div>
 

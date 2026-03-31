@@ -12,7 +12,7 @@
 
     <div v-else class="flex gap-4 h-full overflow-hidden">
       <!-- Left panel: search + results -->
-      <div class="w-75 shrink-0 flex flex-col gap-2 overflow-hidden">
+      <div class="w-90 shrink-0 flex flex-col gap-2 overflow-hidden">
         <div class="flex items-center gap-2 relative">
           <input
             v-model="query"
@@ -29,7 +29,7 @@
         <button
           class="bg-transparent border-none text-text-dim text-[0.7rem] cursor-pointer px-0 py-0 flex items-center gap-1 hover:text-text-secondary"
           @click="showFilters = !showFilters">
-          <span class="text-[0.6rem]">{{ showFilters ? '▾' : '▸' }}</span>
+          <span class="text-xs">{{ showFilters ? '▾' : '▸' }}</span>
           Filters
           <span
             v-if="hasActiveFilters"
@@ -294,7 +294,7 @@
           </div>
 
           <!-- Raw JSON -->
-          <div class="flex flex-col gap-1.5">
+          <div v-if="settingsStore.settings.showRawJsonInDataBrowser" class="flex flex-col gap-1.5">
             <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
             <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
           </div>
@@ -308,6 +308,7 @@
 import { ref, computed, watch, onMounted } from "vue";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { useKeyboard } from "../../composables/useKeyboard";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { ItemInfo, EntitySources } from "../../types/gameData";
@@ -318,6 +319,7 @@ const props = defineProps<{
 }>();
 
 const store = useGameDataStore();
+const settingsStore = useSettingsStore();
 
 const query = ref("");
 const results = ref<ItemInfo[]>([]);
@@ -427,9 +429,9 @@ async function doSearch(q: string) {
       if (filterLevelMax.value != null) {
         items = items.filter(i => i.crafting_target_level != null && i.crafting_target_level <= filterLevelMax.value!);
       }
-      results.value = items.slice(0, 200);
+      results.value = items;
     } else {
-      results.value = await store.searchItems(q, 30, {
+      results.value = await store.searchItems(q, {
         equipSlot: filterSlot.value || undefined,
         levelMin: filterLevelMin.value,
         levelMax: filterLevelMax.value,

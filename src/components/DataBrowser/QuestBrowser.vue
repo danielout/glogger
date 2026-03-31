@@ -12,7 +12,7 @@
 
     <div v-else class="flex gap-4 h-full overflow-hidden">
       <!-- Left panel: search + filters + results -->
-      <div class="w-80 shrink-0 flex flex-col gap-2 overflow-hidden">
+      <div class="w-90 shrink-0 flex flex-col gap-2 overflow-hidden">
         <!-- Search bar -->
         <div class="flex items-center gap-2 relative">
           <input
@@ -39,6 +39,16 @@
           </div>
 
           <div class="flex items-center gap-2">
+            <label class="text-xs text-text-muted min-w-18">NPC:</label>
+            <select v-model="filterNpc" class="input flex-1 text-sm">
+              <option value="all">All NPCs</option>
+              <option v-for="npc in availableNpcs" :key="npc.key" :value="npc.key">
+                {{ npc.displayName }}
+              </option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-2">
             <label class="text-xs text-text-muted min-w-18">Sort:</label>
             <select v-model="sortBy" class="input flex-1 text-sm">
               <option value="name">Name</option>
@@ -58,8 +68,8 @@
         </div>
 
         <!-- Results -->
-        <div v-if="!query && filterArea === 'all'" class="text-text-dim text-xs italic py-1">
-          Start typing to search {{ allQuests.length ? allQuests.length.toLocaleString() : '…' }} quests, or select an area
+        <div v-if="!query && filterArea === 'all' && filterNpc === 'all'" class="text-text-dim text-xs italic py-1">
+          Start typing to search {{ allQuests.length ? allQuests.length.toLocaleString() : '…' }} quests, or select a filter
         </div>
 
         <div v-else-if="filteredQuests.length === 0 && !loading" class="text-text-dim text-xs italic py-1">
@@ -225,6 +235,7 @@ import { useKeyboard } from "../../composables/useKeyboard";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { QuestInfo, QuestReward, QuestRequirement, EntitySources } from "../../types/gameData";
 import SourcesPanel from "../Shared/SourcesPanel.vue";
+import { extractNpcKeyFromFavorPath } from "../../utils/questDisplay";
 
 const props = defineProps<{
   navTarget?: EntityNavigationTarget | null;
@@ -243,6 +254,7 @@ const listRef = ref<HTMLElement | null>(null);
 
 // Filters
 const filterArea = ref<string>("all");
+const filterNpc = ref<string>("all");
 const filterCancellable = ref<string>("all");
 const sortBy = ref<"name" | "level" | "area">("name");
 
@@ -278,10 +290,31 @@ const availableAreas = computed(() => {
   return Array.from(areas).sort();
 });
 
+// Get unique NPCs for filtering (scoped to selected area if one is chosen)
+const availableNpcs = computed(() => {
+  const npcMap = new Map<string, string>(); // key -> displayName
+  let quests = allQuests.value;
+  if (filterArea.value !== "all") {
+    quests = quests.filter(q => q.raw?.DisplayedLocation === filterArea.value);
+  }
+  quests.forEach(q => {
+    const favorNpc = q.raw?.FavorNpc;
+    if (!favorNpc) return;
+    const npcKey = extractNpcKeyFromFavorPath(favorNpc);
+    if (npcMap.has(npcKey)) return;
+    const resolved = store.resolveNpcSync(npcKey);
+    const displayName = resolved?.name || npcKey.replace(/^NPC_/, '').replace(/_/g, ' ');
+    npcMap.set(npcKey, displayName);
+  });
+  return Array.from(npcMap.entries())
+    .map(([key, displayName]) => ({ key, displayName }))
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
+});
+
 // Filtered and sorted quests
 const filteredQuests = computed(() => {
   // Don't show anything until user searches or picks a filter
-  if (!query.value.trim() && filterArea.value === "all") {
+  if (!query.value.trim() && filterArea.value === "all" && filterNpc.value === "all") {
     return [];
   }
 
@@ -302,6 +335,15 @@ const filteredQuests = computed(() => {
   // Area filter
   if (filterArea.value !== "all") {
     filtered = filtered.filter(q => q.raw?.DisplayedLocation === filterArea.value);
+  }
+
+  // NPC filter
+  if (filterNpc.value !== "all") {
+    filtered = filtered.filter(q => {
+      const favorNpc = q.raw?.FavorNpc;
+      if (!favorNpc) return false;
+      return extractNpcKeyFromFavorPath(favorNpc) === filterNpc.value;
+    });
   }
 
   // Cancellable filter
@@ -329,6 +371,11 @@ const filteredQuests = computed(() => {
   });
 
   return filtered;
+});
+
+// Reset NPC filter when area changes (selected NPC may not exist in new area)
+watch(filterArea, () => {
+  filterNpc.value = "all";
 });
 
 watch(filteredQuests, () => {

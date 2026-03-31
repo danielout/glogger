@@ -46,7 +46,7 @@ DataBrowser.vue                     — 9-tab container
 
 All browsers follow a consistent two-panel layout:
 
-**Left Panel (~280px fixed width):**
+**Left Panel (~360px fixed width):**
 - Search input (with optional loading spinner)
 - Results list with keyboard navigation via `useKeyboard` composable
 - Selected item highlighted with gold left border
@@ -55,7 +55,7 @@ All browsers follow a consistent two-panel layout:
 - Detail view of selected entity
 - Icon display (with loading state and fallback)
 - Metadata sections specific to entity type
-- Raw JSON view (expandable) at the bottom of every detail panel
+- Raw JSON view at the bottom of every detail panel (hidden by default; enable via Settings > Advanced > "Show Raw JSON in Data Browser")
 
 **Common behaviors:**
 - Keyboard navigation (arrow keys, Enter to select, scroll sync)
@@ -156,5 +156,5 @@ For CDN parsing details and field schemas, see `docs/architecture/cdn-data-parsi
 
 - **Read-only reference tool** — the data browser is purely for exploring CDN data, not for editing. Player-specific data (known recipes, skill levels) is shown on the Character screen instead.
 - **Inline components for cross-references** — `ItemInline`, `SkillInline`, etc. are used within detail views for clickable cross-references between entities.
-- **Raw JSON always available** — every detail view includes an expandable raw JSON block for power users who want to see the full CDN data.
+- **Raw JSON opt-in** — every detail view includes a raw JSON block, but it is hidden by default. Users can enable it via Settings > Advanced > "Show Raw JSON in Data Browser" (`showRawJsonInDataBrowser` in `settingsStore`).
 - **Sources panel** — Items, Abilities, Recipes, and Quests show a "Sources" panel listing where the entity can be obtained or what references it.

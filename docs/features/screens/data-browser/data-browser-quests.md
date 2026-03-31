@@ -8,6 +8,7 @@ Browse quests with area filtering, sorting, and full requirement/reward breakdow
 
 - **Text search** — across name, description, internal name, and area
 - **Area filter dropdown** — dynamically populated from quest data
+- **NPC filter dropdown** — filter by quest-giver NPC (uses player-facing display names, scoped to selected area when one is chosen)
 - **Cancellable filter** — yes / no / all
 - **Sort options** — by name, level, or area
 

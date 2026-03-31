@@ -182,6 +182,13 @@ impl PlayerLogWatcher {
         self.active_character.as_deref()
     }
 
+    /// Seed the active character from a previously saved session.
+    /// Used when resuming from a saved log position so we know who was
+    /// playing even if no new login line appears.
+    pub fn set_active_character(&mut self, name: String) {
+        self.active_character = Some(name);
+    }
+
     /// Get the current chat log path
     pub fn get_chat_log_path(&self) -> Option<&PathBuf> {
         self.current_chat_log.as_ref()

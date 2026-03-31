@@ -20,6 +20,25 @@
     </div>
 
     <div class="settings-section">
+      <h3>Data Browser</h3>
+
+      <div class="mb-4">
+        <label class="flex items-center gap-2 cursor-pointer text-text-primary">
+          <input
+            type="checkbox"
+            v-model="showRawJson"
+            @change="saveShowRawJson"
+            class="size-5 cursor-pointer" />
+          <span>Show Raw JSON in Data Browser</span>
+        </label>
+        <p class="mt-2 text-text-muted text-xs leading-relaxed">
+          Displays the raw JSON data at the bottom of each entity's detail view in the
+          Data Browser. Useful for debugging or exploring the full data structure.
+        </p>
+      </div>
+    </div>
+
+    <div class="settings-section">
       <h3>Character Report Watching</h3>
 
       <div class="mb-4">
@@ -146,6 +165,13 @@ const characterStore = useCharacterStore();
 
 // Dev mode
 const devMode = ref(settingsStore.settings.devModeEnabled);
+
+// Data Browser raw JSON
+const showRawJson = ref(settingsStore.settings.showRawJsonInDataBrowser);
+
+function saveShowRawJson() {
+  settingsStore.updateSettings({ showRawJsonInDataBrowser: showRawJson.value });
+}
 
 function saveDevMode() {
   settingsStore.updateSettings({ devModeEnabled: devMode.value });

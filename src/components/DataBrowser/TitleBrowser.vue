@@ -12,7 +12,7 @@
 
     <div v-else class="flex gap-4 h-full overflow-hidden">
       <!-- Left panel: search + results -->
-      <div class="w-75 shrink-0 flex flex-col gap-2 overflow-hidden">
+      <div class="w-90 shrink-0 flex flex-col gap-2 overflow-hidden">
         <div class="flex items-center gap-2 relative">
           <input
             v-model="query"
@@ -103,7 +103,7 @@
           </div>
 
           <!-- Raw JSON -->
-          <div class="flex flex-col gap-1.5">
+          <div v-if="settingsStore.settings.showRawJsonInDataBrowser" class="flex flex-col gap-1.5">
             <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
             <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
           </div>
@@ -116,6 +116,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from "vue";
 import { useGameDataStore } from "../../stores/gameDataStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { useKeyboard } from "../../composables/useKeyboard";
 import type { PlayerTitleInfo } from "../../types/gameData";
 
@@ -130,6 +131,7 @@ function parseColorTag(raw: string | null): { text: string; color: string | null
 }
 
 const store = useGameDataStore();
+const settingsStore = useSettingsStore();
 
 const query = ref("");
 const allTitles = ref<PlayerTitleInfo[]>([]);

@@ -112,6 +112,24 @@ pub mod log_positions {
         Ok(position as u64)
     }
 
+    /// Get the last processed position and player name for a log file.
+    /// Returns (position, player_name) so we can restore identity on resume.
+    pub fn get_position_with_player(
+        conn: &DbConnection,
+        file_path: &str,
+    ) -> Result<(u64, Option<String>)> {
+        let result = conn.query_row(
+            "SELECT last_position, player_name FROM log_file_positions WHERE file_path = ?1",
+            params![file_path],
+            |row| Ok((row.get::<_, i64>(0)?, row.get::<_, Option<String>>(1)?)),
+        );
+
+        match result {
+            Ok((pos, name)) => Ok((pos as u64, name)),
+            Err(_) => Ok((0, None)),
+        }
+    }
+
     /// Update the last processed position for a log file
     pub fn update_position(
         conn: &DbConnection,

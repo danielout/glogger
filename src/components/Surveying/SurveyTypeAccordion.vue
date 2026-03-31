@@ -20,7 +20,7 @@
         class="w-full grid grid-cols-[1fr_60px_80px_70px_80px_90px] gap-2 px-3 py-2 rounded text-xs items-center bg-black/20 border border-border-default cursor-pointer transition-all hover:bg-black/30 hover:border-border-light"
       >
         <div class="text-left min-w-0 flex items-center gap-1.5">
-          <span class="text-text-dim text-[0.6rem]">{{ expanded[entry.type] ? '▼' : '▶' }}</span>
+          <span class="text-text-secondary text-xs">{{ expanded[entry.type] ? '▼' : '▶' }}</span>
           <span class="font-mono text-text-primary font-medium truncate">{{ entry.type }}</span>
         </div>
         <div class="text-right min-w-0 font-mono">{{ entry.completed }}</div>

@@ -198,7 +198,7 @@ async function loadItems() {
   if (!store.selectedSlot) return
   loading.value = true
   try {
-    let items = await gameData.searchItems(query.value, 100, {
+    let items = await gameData.searchItems(query.value, {
       equipSlot: store.selectedSlot,
       levelMin: filterLevelMin.value,
       levelMax: filterLevelMax.value,
