@@ -105,8 +105,8 @@ The full mod planning system is implemented and functional:
 | `SlotGrid.vue` | Done | Vertical equipment slot list with per-slot level/rarity/crafted/masterwork controls |
 | `SlotModPicker.vue` | Done | 3-column layout (Primary Skill, Secondary Skill, Craft Points) with per-slot skill pickers |
 | `ModColumn.vue` | Done | Reusable mod column with skill dropdown, assigned mods pinned to top, available mods below |
-| `ModOption.vue` | Done | Available mod with icon, skill badge, effects, +/+A buttons |
-| `ModAssignment.vue` | Done | Assigned mod with icon, resolved display name and effects |
+| `ModOption.vue` | Done | Available mod with icon, skill badge, effects, tier selector for multi-tier powers, +/+A buttons |
+| `ModAssignment.vue` | Done | Assigned mod with icon, resolved display name, effects, and tier selector for multi-tier powers |
 | `BuildSummary.vue` | Done | Slide-out panel with armor sets, CP overview, slot breakdown, and tabbed effect views (By Skill, Effect Totals, By Ability) |
 
 **Working features:**
@@ -117,10 +117,13 @@ The full mod planning system is implemented and functional:
 - Per-slot mod browsing filtered by slot's skills + slot + level tier
 - Mod assignment with duplicate prevention and slot capacity enforcement
 - Augment support (1 per slot, from any skill, costs 100 CP from slot budget)
+- Tier selection: multi-tier mods show level-range buttons to pick the desired tier (both when adding and on assigned mods)
 - Mod/augment icons displayed from CDN attribute data
 - Crafting points tracking: crafted items = 120 CP, dropped = 100 CP, mastercrafted/foretold = 160 CP flat
 - Armor type detection from item keywords (Cloth, Leather, Metal, Organic) with 3-piece set bonus tracking
-- Build summary with armor type breakdown, CP budget overview, and collapsible all-effects view grouped by skill
+- Build summary with armor type breakdown, CP budget overview, base item attribute totals (armor, combat refresh, etc.), and tabbed effect views
+- Item tooltips on equipment slot list via ItemInline component
+- Belt slot (mapped to CDN's "Waist" equip slot) and Off Hand slot (includes shields) now find items correctly
 - Text filter/search across mod names and effect descriptions
 - 3-column mod layout: Primary Skill, Secondary Skill, and Craft Points columns with per-column skill dropdowns
 - Column skill defaults based on slot's assigned skills, can be freely changed for browsing

@@ -66,8 +66,9 @@
 
         <span
           v-if="store.getSlotItem(slot.id) && store.getSlotItem(slot.id)!.item_id !== 0"
-          class="text-[11px] text-entity-item truncate">
-          {{ store.getSlotItem(slot.id)?.item_name ?? 'Unknown Item' }}
+          class="text-[11px] truncate"
+          @click.stop>
+          <ItemInline :reference="String(store.getSlotItem(slot.id)!.item_id)" />
         </span>
         <span v-else class="text-[11px] text-text-muted italic">No item selected</span>
 
@@ -105,6 +106,7 @@
 <script setup lang="ts">
 import { useBuildPlannerStore } from '../../../stores/buildPlannerStore'
 import { EQUIPMENT_SLOTS, RARITY_DEFS, AUGMENT_CP_COST, getSlotCraftingPoints } from '../../../types/buildPlanner'
+import ItemInline from '../../Shared/Item/ItemInline.vue'
 
 const store = useBuildPlannerStore()
 

@@ -17,12 +17,23 @@
           Generic
         </span>
         <span class="font-medium text-text-primary truncate">{{ displayName }}</span>
+        <!-- Compact tier dropdown inline with name -->
+        <select
+          v-if="hasTiers && !isAssigned && !isAssignedAsAugment"
+          :value="selectedTierId"
+          class="tier-select bg-surface-hover border border-border-default rounded px-1.5 py-0.5 text-xs text-text-muted cursor-pointer shrink-0 ml-auto"
+          @click.stop
+          @change="onTierChange">
+          <option v-for="tier in power.available_tiers" :key="tier.tier_id" :value="tier.tier_id">
+            Lv{{ tier.min_level }}–{{ tier.max_level }}
+          </option>
+        </select>
       </div>
-      <div v-if="power.effects.length > 0" class="text-xs text-text-secondary mt-0.5">
-        <div v-for="(effect, i) in power.effects" :key="i">{{ effect }}</div>
+      <div v-if="activeEffects.length > 0" class="text-xs text-text-secondary mt-0.5">
+        <div v-for="(effect, i) in activeEffects" :key="i">{{ effect }}</div>
       </div>
-      <div v-if="power.skill_level_prereq" class="text-[10px] text-text-dim mt-0.5">
-        Requires {{ power.skill ?? 'skill' }} level {{ power.skill_level_prereq }}
+      <div v-if="activePrereq" class="text-[10px] text-text-dim mt-0.5">
+        Requires {{ power.skill ?? 'skill' }} level {{ activePrereq }}
       </div>
       <!-- Blocked reason shown inline -->
       <div v-if="disabledReason" class="text-[10px] text-amber-400/80 mt-0.5">
@@ -35,7 +46,7 @@
         v-if="!hasAugment && !isAssignedAsAugment && !isAssigned"
         class="text-purple-400/70 hover:text-purple-400 text-xs shrink-0 mt-0.5 cursor-pointer"
         title="Add as augment"
-        @click.stop="emit('add', true)">
+        @click.stop="emitAdd(true)">
         +A
       </button>
       <span v-else-if="isAssignedAsAugment" class="text-[10px] text-purple-400/50 shrink-0 mt-0.5">
@@ -50,7 +61,7 @@
         v-if="!isAssigned && !props.disabled"
         class="text-accent-gold/70 hover:text-accent-gold text-xs shrink-0 mt-0.5 cursor-pointer"
         title="Add mod"
-        @click.stop="emit('add', false)">
+        @click.stop="emitAdd(false)">
         +
       </button>
     </template>
@@ -58,7 +69,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useBuildPlannerStore } from '../../../stores/buildPlannerStore'
 import type { SlotTsysPower } from '../../../types/buildPlanner'
 import { getPowerDisplayName } from '../../../types/buildPlanner'
@@ -72,12 +83,45 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  add: [isAugment: boolean]
+  add: [isAugment: boolean, tierId?: string]
 }>()
 
 const store = useBuildPlannerStore()
 
 const displayName = computed(() => getPowerDisplayName(props.power))
+
+const hasTiers = computed(() => props.power.available_tiers.length > 1)
+
+// Default to the auto-selected best tier for this slot's level
+const selectedTierId = ref(props.power.tier_id ?? '')
+
+// Reset selected tier when power changes
+watch(() => props.power.tier_id, (newTier) => {
+  selectedTierId.value = newTier ?? ''
+})
+
+/** Effects for the currently selected tier */
+const activeEffects = computed(() => {
+  if (!hasTiers.value) return props.power.effects
+  const tier = props.power.available_tiers.find(t => t.tier_id === selectedTierId.value)
+  return tier?.effects ?? props.power.effects
+})
+
+/** Skill level prereq for the currently selected tier */
+const activePrereq = computed(() => {
+  if (!hasTiers.value) return props.power.skill_level_prereq
+  const tier = props.power.available_tiers.find(t => t.tier_id === selectedTierId.value)
+  return tier?.skill_level_prereq ?? props.power.skill_level_prereq
+})
+
+function onTierChange(e: Event) {
+  selectedTierId.value = (e.target as HTMLSelectElement).value
+}
+
+function emitAdd(isAugment: boolean) {
+  const tierId = hasTiers.value ? selectedTierId.value : undefined
+  emit('add', isAugment, tierId)
+}
 
 const isAssigned = computed(() => {
   const powerName = props.power.internal_name ?? props.power.key
@@ -119,9 +163,20 @@ const skillBadgeClass = computed(() => {
 function handleClick() {
   if (props.disabled) return
   if (props.augmentOnly) {
-    if (!hasAugment.value && !isAssignedAsAugment.value && !isAssigned.value) emit('add', true)
+    if (!hasAugment.value && !isAssignedAsAugment.value && !isAssigned.value) emitAdd(true)
   } else if (!isAssigned.value) {
-    emit('add', false)
+    emitAdd(false)
   }
 }
 </script>
+
+<style scoped>
+.tier-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='%23888' d='M0 2l4 4 4-4z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  padding-right: 14px;
+  max-width: 110px;
+}
+</style>

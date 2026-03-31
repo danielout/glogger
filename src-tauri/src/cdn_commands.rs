@@ -255,10 +255,19 @@ pub async fn search_items(
             if !q.is_empty() && !item.name.to_lowercase().contains(&q) {
                 return false;
             }
-            // Equip slot filter
+            // Equip slot filter (maps build planner slot IDs to CDN equip_slot values)
             if let Some(ref slot) = equip_slot {
                 match &item.equip_slot {
-                    Some(s) if s == slot => {}
+                    Some(s) => {
+                        let matches = match slot.as_str() {
+                            "OffHand" => s == "OffHand" || s == "OffHandShield",
+                            "Belt" => s == "Waist",
+                            _ => s == slot,
+                        };
+                        if !matches {
+                            return false;
+                        }
+                    }
                     _ => return false,
                 }
             }
@@ -1242,6 +1251,18 @@ pub async fn get_combat_skills(state: State<'_, GameDataState>) -> Result<Vec<Sk
     Ok(skills)
 }
 
+/// Summary of a single tier within a TSys power.
+#[derive(serde::Serialize, Clone)]
+pub struct TsysTierSummary {
+    pub tier_id: String,
+    pub min_level: i64,
+    pub max_level: i64,
+    pub min_rarity: Option<String>,
+    pub skill_level_prereq: Option<i64>,
+    pub effects: Vec<String>,
+    pub icon_id: Option<u32>,
+}
+
 /// A single TSys power eligible for a specific equipment slot, with resolved effect text.
 #[derive(serde::Serialize)]
 pub struct SlotTsysPower {
@@ -1267,6 +1288,8 @@ pub struct SlotTsysPower {
     pub skill_level_prereq: Option<i64>,
     /// Icon ID from the first effect's attribute definition
     pub icon_id: Option<u32>,
+    /// All available tiers for this power (for tier selection UI)
+    pub available_tiers: Vec<TsysTierSummary>,
 }
 
 /// Get all eligible TSys powers for a given equipment slot, filtered by skills and target level.
@@ -1288,8 +1311,15 @@ pub async fn get_tsys_powers_for_slot(
             continue;
         }
 
-        // Must include this equipment slot
-        if !info.slots.iter().any(|s| s == &equip_slot) {
+        // Must include this equipment slot (map build planner IDs to CDN slot names)
+        let slot_matches = info.slots.iter().any(|s| {
+            match equip_slot.as_str() {
+                "OffHand" => s == "OffHand" || s == "OffHandShield",
+                "Belt" => s == "Waist",
+                _ => s == &equip_slot,
+            }
+        });
+        if !slot_matches {
             continue;
         }
 
@@ -1301,6 +1331,48 @@ pub async fn get_tsys_powers_for_slot(
             Some(Value::Object(map)) => map,
             _ => continue,
         };
+
+        // Collect all available tiers for this power
+        let mut available_tiers: Vec<TsysTierSummary> = Vec::new();
+        for (tier_key, tier_val) in tiers {
+            let min_level = tier_val.get("MinLevel").and_then(|v| v.as_i64()).unwrap_or(0);
+            let max_level = tier_val.get("MaxLevel").and_then(|v| v.as_i64()).unwrap_or(999);
+            let min_rarity = tier_val.get("MinRarity").and_then(|v| v.as_str()).map(String::from);
+            let skill_level_prereq = tier_val.get("SkillLevelPrereq").and_then(|v| v.as_i64());
+
+            let raw_descs: Vec<String> = tier_val
+                .get("EffectDescs")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .unwrap_or_default();
+
+            let mut tier_icon_id: Option<u32> = None;
+            let effects: Vec<String> = raw_descs
+                .iter()
+                .map(|desc| {
+                    if let Some(resolved) = resolve_single_effect(desc, &data) {
+                        if tier_icon_id.is_none() {
+                            tier_icon_id = resolved.icon_id;
+                        }
+                        resolved.formatted
+                    } else {
+                        desc.clone()
+                    }
+                })
+                .collect();
+
+            available_tiers.push(TsysTierSummary {
+                tier_id: tier_key.clone(),
+                min_level,
+                max_level,
+                min_rarity,
+                skill_level_prereq,
+                effects,
+                icon_id: tier_icon_id,
+            });
+        }
+        // Sort tiers by min_level ascending
+        available_tiers.sort_by_key(|t| t.min_level);
 
         let mut best_tier_id: Option<String> = None;
         let mut best_effects: Vec<String> = Vec::new();
@@ -1467,6 +1539,7 @@ pub async fn get_tsys_powers_for_slot(
                 min_rarity: best_min_rarity,
                 skill_level_prereq: best_skill_prereq,
                 icon_id: best_icon_id,
+                available_tiers: if available_tiers.len() > 1 { available_tiers } else { vec![] },
             });
         }
     }

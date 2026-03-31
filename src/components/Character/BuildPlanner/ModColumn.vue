@@ -52,7 +52,7 @@
           :power="power"
           :disabled="isModBlocked(power)"
           :disabled-reason="getModBlockedReason(power)"
-          @add="() => emit('add', power)" />
+          @add="(_isAugment: boolean, tierId?: string) => emit('add', power, tierId)" />
       </template>
       <!-- When full, show remaining mods dimmed -->
       <template v-else>
@@ -91,7 +91,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:columnSkill': [skill: string]
-  add: [power: SlotTsysPower]
+  add: [power: SlotTsysPower, tierId?: string]
   remove: [mod: BuildPresetMod]
 }>()
 

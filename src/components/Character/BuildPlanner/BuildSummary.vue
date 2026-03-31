@@ -97,6 +97,23 @@
               </div>
             </div>
 
+            <!-- Base item attributes (armor, combat refresh, etc.) -->
+            <div v-if="itemAttributes.length > 0">
+              <h3 class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Item Attributes</h3>
+              <div class="space-y-1">
+                <div
+                  v-for="attr in itemAttributes"
+                  :key="attr.label"
+                  class="flex items-center gap-3 text-sm py-0.5 px-2">
+                  <GameIcon v-if="attr.iconId" :icon-id="attr.iconId" size="xs" class="shrink-0" />
+                  <span class="flex-1 text-text-primary">{{ attr.label }}</span>
+                  <span class="font-semibold" :class="attr.value > 0 ? 'text-green-400' : attr.value < 0 ? 'text-red-400' : 'text-text-secondary'">
+                    {{ attr.formattedValue }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <!-- Effects section with view tabs -->
             <div v-if="store.presetMods.length > 0">
               <!-- Tab bar -->
@@ -410,15 +427,31 @@ interface AbilityEffectGroup {
   effects: AbilityEffectEntry[]
 }
 
+/** Strip trailing rank number from ability name (e.g. "Pound To Slag 9" -> "Pound To Slag") */
+function baseAbilityName(name: string): string {
+  return name.replace(/\s+\d+$/, '')
+}
+
 const abilityEffectGroups = computed((): AbilityEffectGroup[] => {
   const abilities = store.presetAbilities
   if (abilities.length === 0) return []
 
-  const abilityNames = new Set(abilities.map(a => a.ability_name).filter(Boolean) as string[])
+  // Deduplicate by base name (e.g. "First Aid 5" and "First Aid 3" both match "First Aid")
+  const baseNames = new Map<string, string>()
+  for (const a of abilities) {
+    if (!a.ability_name) continue
+    const base = baseAbilityName(a.ability_name)
+    // Keep the full name for display (prefer the highest rank)
+    if (!baseNames.has(base) || a.ability_name > baseNames.get(base)!) {
+      baseNames.set(base, a.ability_name)
+    }
+  }
+
   const groups: AbilityEffectGroup[] = []
 
-  for (const abilityName of abilityNames) {
+  for (const [baseName, displayName] of baseNames) {
     const effects: AbilityEffectEntry[] = []
+    const baseNameLower = baseName.toLowerCase()
 
     for (const mod of store.presetMods) {
       const key = modKey(mod)
@@ -426,8 +459,7 @@ const abilityEffectGroups = computed((): AbilityEffectGroup[] => {
       if (!modEffects) continue
 
       for (const effect of modEffects) {
-        // Check if the effect label references this ability
-        if (effectReferencesAbility(effect.label, abilityName)) {
+        if (effect.label.toLowerCase().includes(baseNameLower)) {
           effects.push({
             label: effect.label,
             numericValue: parseFloat(effect.value) || 0,
@@ -440,7 +472,7 @@ const abilityEffectGroups = computed((): AbilityEffectGroup[] => {
     }
 
     if (effects.length > 0) {
-      groups.push({ abilityName, effects })
+      groups.push({ abilityName: displayName, effects })
     }
   }
 
@@ -449,10 +481,70 @@ const abilityEffectGroups = computed((): AbilityEffectGroup[] => {
   return groups
 })
 
-function effectReferencesAbility(label: string, abilityName: string): boolean {
-  const labelLower = label.toLowerCase()
-  const abilityLower = abilityName.toLowerCase()
-  return labelLower.includes(abilityLower)
+// ── Item Attributes (base item effects: armor, combat refresh, etc.) ─────────
+
+interface ItemAttribute {
+  label: string
+  value: number
+  formattedValue: string
+  iconId: number | null
+}
+
+const itemAttributes = ref<ItemAttribute[]>([])
+
+async function resolveItemAttributes() {
+  const totals = new Map<string, { value: number; displayType: string; iconId: number | null }>()
+
+  for (const slot of EQUIPMENT_SLOTS) {
+    const slotItem = store.getSlotItem(slot.id)
+    if (!slotItem || slotItem.item_id === 0) continue
+
+    try {
+      const item = await invoke<{
+        effect_descs: string[]
+      } | null>('resolve_item', { reference: String(slotItem.item_id) })
+      if (!item?.effect_descs?.length) continue
+
+      const resolved = await invoke<Array<{
+        label: string
+        value: string
+        display_type: string
+        formatted: string
+        icon_id: number | null
+      }>>('resolve_effect_descs', { descs: item.effect_descs })
+
+      for (const eff of resolved) {
+        const numVal = parseFloat(eff.value) || 0
+        if (numVal === 0 && eff.display_type !== 'AsBool') continue
+
+        const existing = totals.get(eff.label)
+        if (existing) {
+          existing.value += numVal
+        } else {
+          totals.set(eff.label, {
+            value: numVal,
+            displayType: eff.display_type,
+            iconId: eff.icon_id,
+          })
+        }
+      }
+    } catch {
+      // Item might not resolve
+    }
+  }
+
+  const results: ItemAttribute[] = []
+  for (const [label, data] of totals) {
+    results.push({
+      label,
+      value: data.value,
+      formattedValue: formatValue(data.value, data.displayType),
+      iconId: data.iconId,
+    })
+  }
+  // Sort by absolute value descending
+  results.sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+  itemAttributes.value = results
 }
 
 // ── Armor badge styling ──────────────────────────────────────────────────────
@@ -526,10 +618,11 @@ async function resolveAllEffects() {
   }
 }
 
-// Load effects when panel opens
+// Load effects and item attributes when panel opens
 watch(showPanel, (open) => {
-  if (open && store.presetMods.length > 0) {
-    resolveAllEffects()
+  if (open) {
+    if (store.presetMods.length > 0) resolveAllEffects()
+    resolveItemAttributes()
   }
 })
 

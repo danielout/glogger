@@ -83,7 +83,7 @@
         label-class="text-blue-400"
         :slot-count="rarityDef.primarySlots"
         column-label="Primary Skill"
-        @add="(power) => store.addMod(power, false)"
+        @add="(power, tierId) => store.addMod(power, false, tierId)"
         @remove="(mod) => store.removeMod(mod)" />
 
       <!-- Secondary Skill Column -->
@@ -95,7 +95,7 @@
         label-class="text-emerald-400"
         :slot-count="rarityDef.secondarySlots"
         column-label="Secondary Skill"
-        @add="(power) => store.addMod(power, false)"
+        @add="(power, tierId) => store.addMod(power, false, tierId)"
         @remove="(mod) => store.removeMod(mod)" />
 
       <!-- Craft Points Column -->
@@ -139,7 +139,7 @@
             :key="power.key"
             :power="power"
             :augment-only="true"
-            @add="() => store.addMod(power, true)" />
+            @add="(_isAugment: boolean, tierId?: string) => store.addMod(power, true, tierId)" />
         </div>
       </div>
     </div>

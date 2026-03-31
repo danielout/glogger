@@ -67,6 +67,16 @@ export interface BuildPresetModInput {
 }
 
 /** A TSys power eligible for a slot, returned from the backend query */
+export interface TsysTierSummary {
+  tier_id: string
+  min_level: number
+  max_level: number
+  min_rarity: string | null
+  skill_level_prereq: number | null
+  effects: string[]
+  icon_id: number | null
+}
+
 export interface SlotTsysPower {
   key: string
   internal_name: string | null
@@ -79,6 +89,7 @@ export interface SlotTsysPower {
   min_rarity: string | null
   skill_level_prereq: number | null
   icon_id: number | null
+  available_tiers: TsysTierSummary[]
 }
 
 /** Equipment slot definition for the build planner */

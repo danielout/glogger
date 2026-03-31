@@ -288,7 +288,7 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
   }
 
   /** Add a mod to the currently selected slot */
-  async function addMod(power: SlotTsysPower, isAugment: boolean = false) {
+  async function addMod(power: SlotTsysPower, isAugment: boolean = false, tierId?: string) {
     if (!activePreset.value || !selectedSlot.value) return
 
     // Check if this power is already assigned to this slot
@@ -308,17 +308,27 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
       .filter(m => m.equip_slot === selectedSlot.value)
       .map(m => m.sort_order)) + 1
 
+    const effectiveTierId = tierId ?? power.tier_id
+
     // Add to local state immediately
     presetMods.value.push({
       id: -Date.now(), // temp id
       preset_id: activePreset.value.id,
       equip_slot: selectedSlot.value,
       power_name: power.internal_name ?? power.key,
-      tier: power.tier_id ? parseInt(power.tier_id.replace("id_", "")) : null,
+      tier: effectiveTierId ? parseInt(effectiveTierId.replace("id_", "")) : null,
       is_augment: isAugment,
       sort_order: nextOrder,
     })
 
+    await saveMods()
+  }
+
+  /** Change the tier of an existing mod */
+  async function changeModTier(mod: BuildPresetMod, tierId: string) {
+    const target = presetMods.value.find(m => m === mod)
+    if (!target) return
+    target.tier = parseInt(tierId.replace("id_", ""))
     await saveMods()
   }
 
@@ -591,6 +601,7 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
     loadSlotPowers,
     addMod,
     removeMod,
+    changeModTier,
     saveMods,
     onBuildParamsChanged,
     getSlotItem,
