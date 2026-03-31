@@ -16,6 +16,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TAURI_CONF="$ROOT/src-tauri/tauri.conf.json"
+TAURI_RELEASE_CONF="$ROOT/src-tauri/tauri.release.conf.json"
 PACKAGE_JSON="$ROOT/package.json"
 CARGO_TOML="$ROOT/src-tauri/Cargo.toml"
 
@@ -68,16 +69,19 @@ echo "Bumping to:      $NEW_VERSION"
 # 1. Update tauri.conf.json — version field
 sed -i "s/\"version\": \"$CURRENT\"/\"version\": \"$NEW_VERSION\"/" "$TAURI_CONF"
 
-# 2. Update tauri.conf.json — window title
-sed -i "s/\"title\": \"glogger prototype v$CURRENT\"/\"title\": \"glogger prototype v$NEW_VERSION\"/" "$TAURI_CONF"
+# 2. Update tauri.conf.json — dev window title
+sed -i "s/\"title\": \"glogger v$CURRENT DEV\"/\"title\": \"glogger v$NEW_VERSION DEV\"/" "$TAURI_CONF"
 
-# 3. Update package.json
+# 3. Update tauri.release.conf.json — release window title
+sed -i "s/\"title\": \"glogger alpha v$CURRENT\"/\"title\": \"glogger alpha v$NEW_VERSION\"/" "$TAURI_RELEASE_CONF"
+
+# 4. Update package.json
 sed -i "s/\"version\": \"[0-9]*\.[0-9]*\.[0-9]*\"/\"version\": \"$NEW_VERSION\"/" "$PACKAGE_JSON"
 
-# 4. Update Cargo.toml (only the package version, not dependency versions)
+# 5. Update Cargo.toml (only the package version, not dependency versions)
 sed -i "0,/^version = \"[0-9]*\.[0-9]*\.[0-9]*\"/s//version = \"$NEW_VERSION\"/" "$CARGO_TOML"
 
-# 5. Update Cargo.lock (by running cargo check, or sed as fallback)
+# 6. Update Cargo.lock (by running cargo check, or sed as fallback)
 if command -v cargo &> /dev/null; then
   echo "Updating Cargo.lock..."
   (cd "$ROOT/src-tauri" && cargo update -p glogger --precise "$NEW_VERSION" 2>/dev/null || true)
@@ -86,6 +90,7 @@ fi
 echo ""
 echo "Version bumped to $NEW_VERSION in:"
 echo "  - src-tauri/tauri.conf.json"
+echo "  - src-tauri/tauri.release.conf.json"
 echo "  - package.json"
 echo "  - src-tauri/Cargo.toml"
 echo ""

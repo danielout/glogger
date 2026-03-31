@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "glogger DEV v0.2.2",
+        "title": "glogger v0.3.1 DEV",
         "width": 1280,
         "height": 800
       }
