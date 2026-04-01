@@ -124,6 +124,7 @@ const viewTabs: Partial<Record<AppView, SubTab[]>> = {
     { id: "history", label: "History" },
     { id: "work-orders", label: "Work Orders" },
     { id: "cooks-helper", label: "Cook's Helper" },
+    { id: "skills", label: "Skills" },
   ],
   economics: [
     { id: "market", label: "Market Prices" },

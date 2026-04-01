@@ -11,7 +11,7 @@
       <slot name="left" />
     </SidePane>
 
-    <div class="flex-1 min-w-0 overflow-y-auto min-h-0">
+    <div class="flex-1 min-w-0 overflow-hidden min-h-0">
       <slot />
     </div>
 

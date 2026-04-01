@@ -40,7 +40,7 @@
       </div>
 
       <!-- Scrollable content -->
-      <div class="flex-1 overflow-y-auto min-h-0">
+      <div class="flex-1 overflow-y-auto min-h-0 pr-0.5">
         <slot />
       </div>
     </div>

@@ -28,7 +28,7 @@ Both cascade on delete from `crafting_projects`.
 ### Component Hierarchy
 
 ```
-CraftingView.vue                    — 6-tab container
+CraftingView.vue                    — 7-tab container
 ├── QuickCalcTab.vue                — single-recipe calculator
 │   └── IngredientTreeNode.vue      — recursive ingredient display
 ├── ProjectsTab.vue                 — project list + active project detail
@@ -41,8 +41,9 @@ CraftingView.vue                    — 6-tab container
 ├── HistoryTab.vue                  — crafting stats from character exports
 │   └── SkillCraftingProgress.vue   — per-skill completion bars
 ├── WorkOrdersTab.vue               — work order harvester + project builder
-└── CooksHelperTab.vue              — gourmand-aware uneaten food recipe finder
-    └── CooksHelperRecipeRow.vue    — per-recipe row with material status
+├── CooksHelperTab.vue              — gourmand-aware uneaten food recipe finder
+│   └── CooksHelperRecipeRow.vue    — per-recipe row with material status
+└── SkillsTab.vue                   — per-skill crafting summary with recipe list
 ```
 
 ### Ingredient Resolution
@@ -62,6 +63,7 @@ The core resolver (`resolveRecipeIngredients` in the store) handles:
 - [crafting-history.md](crafting/crafting-history.md) — Crafting History
 - [crafting-workorders.md](crafting/crafting-workorders.md) — Work Orders
 - [crafting-cookshelper.md](crafting/crafting-cookshelper.md) — Cook's Helper
+- [crafting-skills.md](crafting/crafting-skills.md) — Skills
 
 ## Tauri Commands
 

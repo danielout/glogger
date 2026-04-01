@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex flex-col">
+  <div class="h-screen flex flex-col overflow-hidden">
     <!-- Startup phases -->
     <StartupSplash v-if="startup.phase === 'splash'" />
 
@@ -15,7 +15,7 @@
 
     <!-- Main app -->
     <template v-else-if="startup.phase === 'ready'">
-      <div class="flex-1 flex flex-col">
+      <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
         <MenuBar
           ref="menuBarRef"
           :currentView="currentView"
@@ -60,6 +60,11 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Bottom bar -->
+      <div class="shrink-0 h-6 bg-surface-base border-t border-border-default flex items-center px-3">
+        <span class="text-text-dim text-[0.6rem]">glogger v0.1 DEV</span>
       </div>
 
       <ToastContainer />

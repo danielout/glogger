@@ -32,6 +32,35 @@
     cursor: default;
   }
 
+  /* Custom scrollbars — thin, dark, matching the UI theme */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #3a3a3a #1a1a1a;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: #1a1a1a;
+    border-radius: 3px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: #3a3a3a;
+    border-radius: 3px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: #555555;
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: #1a1a1a;
+  }
+
   @keyframes spin {
     to {
       transform: rotate(360deg);
