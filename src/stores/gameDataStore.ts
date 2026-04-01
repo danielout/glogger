@@ -14,6 +14,7 @@ import type {
   TsysBrowserEntry,
   CacheStatus,
   EntitySources,
+  NpcFavorEntry,
 } from "../types/gameData";
 
 export type DataStatus = "loading" | "ready" | "error" | "empty";
@@ -255,6 +256,28 @@ export const useGameDataStore = defineStore("gameData", () => {
     return invoke<EntitySources>("get_quest_sources", { key });
   }
 
+  // ── Cross-reference queries ────────────────────────────────────────────────
+
+  async function getNpcsWantingItem(itemId: number): Promise<NpcFavorEntry[]> {
+    return invoke<NpcFavorEntry[]>("get_npcs_wanting_item", { itemId });
+  }
+
+  async function getNpcsTrainingSkill(skill: string): Promise<NpcInfo[]> {
+    return invoke<NpcInfo[]>("get_npcs_training_skill", { skill });
+  }
+
+  async function getQuestsForNpc(npcKey: string): Promise<QuestInfo[]> {
+    return invoke<QuestInfo[]>("get_quests_for_npc", { npcKey });
+  }
+
+  async function getQuestsForSkill(skill: string): Promise<QuestInfo[]> {
+    return invoke<QuestInfo[]>("get_quests_for_skill", { skill });
+  }
+
+  async function getRecipesForKeyword(keyword: string): Promise<RecipeInfo[]> {
+    return invoke<RecipeInfo[]>("get_recipes_for_keyword", { keyword });
+  }
+
   // ── Storage vault queries ──────────────────────────────────────────────────
 
   interface StorageVaultZoneInfo {
@@ -341,5 +364,11 @@ export const useGameDataStore = defineStore("gameData", () => {
     getStorageVaultZones,
     storageVaultZones,
     getIconPath,
+    // Cross-reference queries
+    getNpcsWantingItem,
+    getNpcsTrainingSkill,
+    getQuestsForNpc,
+    getQuestsForSkill,
+    getRecipesForKeyword,
   };
 });

@@ -125,7 +125,7 @@ Gift preferences sorted by preference value (highest first). Each row shows:
 - Item name or keyword description
 - Numeric preference value (+/-)
 
-Also shows which favor tiers unlock gifting (from `item_gifts` array).
+Also shows which favor tiers unlock gifting (from `gift_favor_tiers` array).
 
 ## Shared Utilities
 

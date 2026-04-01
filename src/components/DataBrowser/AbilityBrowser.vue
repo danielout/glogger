@@ -97,7 +97,7 @@
                 ID: <span class="text-text-secondary font-mono">{{ selected.id }}</span>
                 <template v-if="selected.skill">
                   · Skill:
-                  <span class="text-text-secondary font-mono">{{ selected.skill }}</span></template
+                  <SkillInline :reference="selected.skill" /></template
                 >
                 <template v-if="selected.level !== null">
                   · Level:
@@ -238,6 +238,7 @@ import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useKeyboard } from "../../composables/useKeyboard";
 import type { SkillInfo, AbilityInfo, EntitySources } from "../../types/gameData";
+import SkillInline from "../Shared/Skill/SkillInline.vue";
 import SourcesPanel from "../Shared/SourcesPanel.vue";
 
 const store = useGameDataStore();

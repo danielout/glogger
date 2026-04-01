@@ -194,12 +194,10 @@
                 <span class="text-text-muted min-w-20">Slot:</span>
                 <span class="text-text-secondary">{{ selected.equip_slot }}</span>
               </div>
-              <div v-if="selected.skill_reqs" class="text-xs flex gap-2">
+              <div v-if="selected.skill_reqs" class="text-xs flex gap-2 items-center flex-wrap">
                 <span class="text-text-muted min-w-20">Requires:</span>
-                <span class="text-text-secondary">
-                  <template v-for="(level, skill) in selected.skill_reqs" :key="skill">
-                    {{ skill }} {{ level }}
-                  </template>
+                <span v-for="(level, skill) in selected.skill_reqs" :key="skill" class="flex items-center gap-1">
+                  <SkillInline :reference="String(skill)" /> <span class="text-text-secondary">{{ level }}</span>
                 </span>
               </div>
             </div>
@@ -236,17 +234,21 @@
           <div v-if="selected.bestow_ability || selected.bestow_quest || selected.bestow_recipes?.length || selected.bestow_title" class="flex flex-col gap-1.5">
             <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Bestows</div>
             <div class="flex flex-col gap-1">
-              <div v-if="selected.bestow_ability" class="text-xs flex gap-2 px-2 py-0.5">
+              <div v-if="selected.bestow_ability" class="text-xs flex gap-2 items-center px-2 py-0.5">
                 <span class="text-text-muted min-w-16">Ability:</span>
-                <span class="text-text-secondary">{{ selected.bestow_ability }}</span>
+                <button
+                  class="bg-transparent border-none text-[#e08060] cursor-pointer p-0 text-xs hover:underline"
+                  @click="navigateToEntity({ type: 'ability', id: selected.bestow_ability })">
+                  {{ selected.bestow_ability }}
+                </button>
               </div>
-              <div v-if="selected.bestow_quest" class="text-xs flex gap-2 px-2 py-0.5">
+              <div v-if="selected.bestow_quest" class="text-xs flex gap-2 items-center px-2 py-0.5">
                 <span class="text-text-muted min-w-16">Quest:</span>
-                <span class="text-text-secondary">{{ selected.bestow_quest }}</span>
+                <QuestInline :reference="selected.bestow_quest" />
               </div>
-              <div v-if="selected.bestow_recipes?.length" class="text-xs flex gap-2 px-2 py-0.5">
+              <div v-if="selected.bestow_recipes?.length" class="text-xs flex gap-2 items-center px-2 py-0.5 flex-wrap">
                 <span class="text-text-muted min-w-16">Recipes:</span>
-                <span class="text-text-secondary">{{ selected.bestow_recipes.join(', ') }}</span>
+                <RecipeInline v-for="recipe in selected.bestow_recipes" :key="String(recipe)" :reference="String(recipe)" />
               </div>
               <div v-if="selected.bestow_title" class="text-xs flex gap-2 px-2 py-0.5">
                 <span class="text-text-muted min-w-16">Title ID:</span>
@@ -265,6 +267,82 @@
 
           <!-- Sources -->
           <SourcesPanel :sources="sources" :loading="sourcesLoading" />
+
+          <!-- Recipes Producing This Item -->
+          <div v-if="recipesProducing.length" class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Produced By ({{ recipesProducing.length }})</div>
+            <div class="flex flex-col gap-1">
+              <div
+                v-for="recipe in recipesProducing"
+                :key="recipe.id"
+                class="flex gap-2 items-center text-xs px-2 py-0.5 bg-[#151515] border-l-2 border-l-[#2a4a2a]">
+                <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
+                <RecipeInline :reference="recipe.name" />
+                <span v-if="recipe.skill" class="text-text-dim text-[0.65rem] ml-auto">{{ recipe.skill }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recipes Using This Item -->
+          <div v-if="recipesUsing.length" class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Used In ({{ recipesUsing.length }})</div>
+            <div class="flex flex-col gap-1">
+              <div
+                v-for="recipe in recipesUsing"
+                :key="recipe.id"
+                class="flex gap-2 items-center text-xs px-2 py-0.5 bg-[#151515] border-l-2 border-l-[#4a3a1a]">
+                <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
+                <RecipeInline :reference="recipe.name" />
+                <span v-if="recipe.skill" class="text-text-dim text-[0.65rem] ml-auto">{{ recipe.skill }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- NPCs Who Want This Item -->
+          <div v-if="npcsWantingItem.length" class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">NPC Favor ({{ npcsWantingItem.length }})</div>
+            <div class="flex flex-col gap-1 max-h-60 overflow-y-auto">
+              <div
+                v-for="entry in npcsWantingItem"
+                :key="entry.npc_key"
+                class="flex gap-2 items-center text-xs px-2 py-0.5 bg-[#151515] border-l-2"
+                :class="{
+                  'border-l-[#ff69b4]': entry.desire.toLowerCase() === 'love',
+                  'border-l-[#7ec8e3]': entry.desire.toLowerCase() === 'like',
+                  'border-l-accent-red': entry.desire.toLowerCase() === 'dislike',
+                  'border-l-[#aa4444]': entry.desire.toLowerCase() === 'hate',
+                }">
+                <span
+                  class="text-[0.65rem] uppercase font-bold px-1 py-0.5 min-w-12 text-center shrink-0"
+                  :class="{
+                    'bg-[#4a1a3a] text-[#ff69b4] border border-[#6a2a5a]': entry.desire.toLowerCase() === 'love',
+                    'bg-[#1a3a1a] text-[#7ec8e3] border border-[#2a5a2a]': entry.desire.toLowerCase() === 'like',
+                    'bg-[#3a2a1a] text-accent-red border border-[#5a3a2a]': entry.desire.toLowerCase() === 'dislike',
+                    'bg-[#3a1a1a] text-[#aa4444] border border-[#5a2a2a]': entry.desire.toLowerCase() === 'hate',
+                  }">
+                  {{ entry.desire }}
+                </span>
+                <NpcInline :reference="entry.npc_key" />
+                <span class="text-[#7ec8e3] font-bold ml-auto shrink-0">+{{ entry.pref.toFixed(0) }}</span>
+                <span v-if="entry.match_type !== 'name'" class="text-text-dim text-[0.6rem] italic shrink-0">({{ entry.match_type }})</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Keyword Recipe Uses -->
+          <div v-if="keywordRecipes.length" class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Could Fill Keyword Slots In ({{ keywordRecipes.length }})</div>
+            <div class="flex flex-col gap-1">
+              <div
+                v-for="recipe in keywordRecipes"
+                :key="recipe.id"
+                class="flex gap-2 items-center text-xs px-2 py-0.5 bg-[#151515] border-l-2 border-l-[#4a4a1a]">
+                <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
+                <RecipeInline :reference="recipe.name" />
+                <span v-if="recipe.skill" class="text-text-dim text-[0.65rem] ml-auto">{{ recipe.skill }}</span>
+              </div>
+            </div>
+          </div>
 
           <!-- Keywords -->
           <div v-if="selected.keywords.length" class="flex flex-col gap-1.5">
@@ -310,9 +388,14 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useKeyboard } from "../../composables/useKeyboard";
+import { useEntityNavigation } from "../../composables/useEntityNavigation";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
-import type { ItemInfo, EntitySources } from "../../types/gameData";
+import type { ItemInfo, RecipeInfo, EntitySources, NpcFavorEntry } from "../../types/gameData";
 import SourcesPanel from "../Shared/SourcesPanel.vue";
+import RecipeInline from "../Shared/Recipe/RecipeInline.vue";
+import QuestInline from "../Shared/Quest/QuestInline.vue";
+import SkillInline from "../Shared/Skill/SkillInline.vue";
+import NpcInline from "../Shared/NPC/NpcInline.vue";
 
 const props = defineProps<{
   navTarget?: EntityNavigationTarget | null;
@@ -320,6 +403,7 @@ const props = defineProps<{
 
 const store = useGameDataStore();
 const settingsStore = useSettingsStore();
+const { navigateToEntity } = useEntityNavigation();
 
 const query = ref("");
 const results = ref<ItemInfo[]>([]);
@@ -330,6 +414,10 @@ const iconSrc = ref<string | null>(null);
 const iconLoading = ref(false);
 const searching = ref(false);
 const selectedIndex = ref(0);
+const recipesProducing = ref<RecipeInfo[]>([]);
+const recipesUsing = ref<RecipeInfo[]>([]);
+const npcsWantingItem = ref<NpcFavorEntry[]>([]);
+const keywordRecipes = ref<RecipeInfo[]>([]);
 const listRef = ref<HTMLElement | null>(null);
 
 // Advanced filters
@@ -446,6 +534,10 @@ async function selectItem(item: ItemInfo) {
   selected.value = item;
   iconSrc.value = null;
   sources.value = null;
+  recipesProducing.value = [];
+  recipesUsing.value = [];
+  npcsWantingItem.value = [];
+  keywordRecipes.value = [];
 
   // Load sources
   sourcesLoading.value = true;
@@ -453,6 +545,41 @@ async function selectItem(item: ItemInfo) {
     .then(s => { sources.value = s; })
     .catch(e => { console.warn("Sources fetch failed:", e); })
     .finally(() => { sourcesLoading.value = false; });
+
+  // Load related recipes
+  Promise.all([
+    store.getRecipesForItem(item.id),
+    store.getRecipesUsingItem(item.id),
+  ]).then(([producing, using]) => {
+    recipesProducing.value = producing;
+    recipesUsing.value = using;
+  }).catch(e => { console.warn("Recipe cross-ref fetch failed:", e); });
+
+  // Load NPCs wanting this item
+  store.getNpcsWantingItem(item.id)
+    .then(entries => { npcsWantingItem.value = entries; })
+    .catch(e => { console.warn("NPC favor fetch failed:", e); });
+
+  // Load keyword-based recipe matches
+  const nonLintKeywords = item.keywords.filter(kw => !kw.startsWith('Lint_'));
+  if (nonLintKeywords.length) {
+    Promise.all(nonLintKeywords.map(kw => store.getRecipesForKeyword(kw)))
+      .then(results => {
+        // Deduplicate by recipe ID
+        const seen = new Set<number>();
+        const merged: RecipeInfo[] = [];
+        for (const list of results) {
+          for (const recipe of list) {
+            if (!seen.has(recipe.id)) {
+              seen.add(recipe.id);
+              merged.push(recipe);
+            }
+          }
+        }
+        keywordRecipes.value = merged;
+      })
+      .catch(e => { console.warn("Keyword recipe fetch failed:", e); });
+  }
 
   if (item.icon_id) {
     iconLoading.value = true;
@@ -471,6 +598,10 @@ function clearSelection() {
   selected.value = null;
   iconSrc.value = null;
   sources.value = null;
+  recipesProducing.value = [];
+  recipesUsing.value = [];
+  npcsWantingItem.value = [];
+  keywordRecipes.value = [];
 }
 
 // Navigate to a specific item when navTarget changes

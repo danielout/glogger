@@ -97,7 +97,7 @@
                 ID: <span class="text-text-secondary font-mono">{{ selected.id }}</span>
                 <template v-if="selected.skill">
                   · Skill:
-                  <span class="text-text-secondary font-mono">{{ selected.skill }}</span></template
+                  <SkillInline :reference="selected.skill" /></template
                 >
                 <template v-if="selected.skill_level_req !== null">
                   · Level:
@@ -223,8 +223,8 @@
           <!-- Prerequisites -->
           <div v-if="selected.prereq_recipe" class="flex flex-col gap-1.5">
             <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Prerequisites</div>
-            <div class="text-sm px-2 py-1 bg-[#151515] border-l-2 border-l-[#4a2a2a] text-text-secondary">
-              Requires: <span class="text-[#c88] font-mono">{{ selected.prereq_recipe }}</span>
+            <div class="text-sm px-2 py-1 bg-[#151515] border-l-2 border-l-[#4a2a2a] text-text-secondary flex items-center gap-1">
+              Requires: <RecipeInline :reference="selected.prereq_recipe" />
             </div>
           </div>
 
@@ -265,6 +265,8 @@ import { useKeyboard } from "../../composables/useKeyboard";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { SkillInfo, RecipeInfo, ItemInfo, EntitySources } from "../../types/gameData";
 import ItemInline from "../Shared/Item/ItemInline.vue";
+import SkillInline from "../Shared/Skill/SkillInline.vue";
+import RecipeInline from "../Shared/Recipe/RecipeInline.vue";
 import SourcesPanel from "../Shared/SourcesPanel.vue";
 
 const props = defineProps<{

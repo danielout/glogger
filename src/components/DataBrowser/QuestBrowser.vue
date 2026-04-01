@@ -148,13 +148,13 @@
                 <span class="text-text-muted min-w-24">Reuse Time:</span>
                 <span class="text-text-secondary">{{ formatReuseTime(selected) }}</span>
               </div>
-              <div v-if="selected.raw?.FavorNpc" class="text-sm flex gap-2">
+              <div v-if="selected.raw?.FavorNpc" class="text-sm flex gap-2 items-center">
                 <span class="text-text-muted min-w-24">Favor NPC:</span>
-                <span class="text-text-secondary">{{ selected.raw.FavorNpc.split('/').pop() }}</span>
+                <NpcInline :reference="extractNpcKeyFromFavorPath(selected.raw.FavorNpc)" />
               </div>
-              <div v-if="selected.raw?.WorkOrderSkill" class="text-sm flex gap-2">
+              <div v-if="selected.raw?.WorkOrderSkill" class="text-sm flex gap-2 items-center">
                 <span class="text-text-muted min-w-24">Work Order:</span>
-                <span class="text-text-secondary">{{ selected.raw.WorkOrderSkill }}</span>
+                <SkillInline :reference="selected.raw.WorkOrderSkill" />
               </div>
             </div>
           </div>
@@ -163,8 +163,24 @@
           <div v-if="selected.raw?.Requirements?.length" class="flex flex-col gap-2">
             <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Requirements</div>
             <ul class="list-none m-0 p-0 flex flex-col gap-1">
-              <li v-for="(req, idx) in selected.raw.Requirements" :key="idx" class="text-[0.82rem] text-[#e08060] pl-4 relative before:content-['◆'] before:absolute before:left-0 before:text-[#e08060]">
-                {{ getRequirementDisplay(req) }}
+              <li v-for="(req, idx) in selected.raw.Requirements" :key="idx" class="text-[0.82rem] text-[#e08060] pl-4 relative before:content-['◆'] before:absolute before:left-0 before:text-[#e08060] flex items-center gap-1 flex-wrap">
+                <template v-if="req.T === 'QuestCompleted' && req.Quest">
+                  Quest: <QuestInline :reference="req.Quest" />
+                </template>
+                <template v-else-if="req.T === 'MinFavorLevel' && req.Npc">
+                  <NpcInline :reference="extractNpcKeyFromFavorPath(req.Npc)" />
+                  <span>: {{ req.Level }} favor</span>
+                </template>
+                <template v-else-if="req.T === 'MinSkillLevel' && req.Skill">
+                  <SkillInline :reference="req.Skill" />
+                  <span>level {{ req.MinSkillLevel }}</span>
+                </template>
+                <template v-else-if="req.T === 'ActiveCombatSkill' && req.Skill">
+                  Active skill: <SkillInline :reference="req.Skill" />
+                </template>
+                <template v-else>
+                  {{ getRequirementDisplay(req) }}
+                </template>
               </li>
             </ul>
           </div>
@@ -190,14 +206,21 @@
             </div>
 
             <ul v-if="selected.raw?.Rewards?.length" class="list-none m-0 p-0 flex flex-col gap-1 mb-1">
-              <li v-for="(reward, idx) in selected.raw.Rewards" :key="idx" class="text-[0.82rem] text-[#60e090] pl-4 relative before:content-['✦'] before:absolute before:left-0 before:text-[#60e090]">
-                {{ getRewardTypeDisplay(reward) }}
+              <li v-for="(reward, idx) in selected.raw.Rewards" :key="idx" class="text-[0.82rem] text-[#60e090] pl-4 relative before:content-['✦'] before:absolute before:left-0 before:text-[#60e090] flex items-center gap-1">
+                <template v-if="reward.T === 'SkillXp' && reward.Skill">
+                  <SkillInline :reference="reward.Skill" />
+                  <span>: {{ reward.Xp }} XP</span>
+                </template>
+                <template v-else>
+                  {{ getRewardTypeDisplay(reward) }}
+                </template>
               </li>
             </ul>
 
             <ul v-if="selected.raw?.Rewards_Items?.length" class="list-none m-0 p-0 flex flex-col gap-1">
-              <li v-for="(item, idx) in selected.raw.Rewards_Items" :key="idx" class="text-[0.82rem] text-[#60e090] pl-4 relative before:content-['✦'] before:absolute before:left-0 before:text-[#60e090]">
-                {{ item.Item }} × {{ item.StackSize }}
+              <li v-for="(item, idx) in selected.raw.Rewards_Items" :key="idx" class="text-[0.82rem] text-[#60e090] pl-4 relative before:content-['✦'] before:absolute before:left-0 before:text-[#60e090] flex items-center gap-1">
+                <ItemInline :reference="item.Item" />
+                <span v-if="item.StackSize > 1">x {{ item.StackSize }}</span>
               </li>
             </ul>
 
@@ -235,6 +258,10 @@ import { useKeyboard } from "../../composables/useKeyboard";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { QuestInfo, QuestReward, QuestRequirement, EntitySources } from "../../types/gameData";
 import SourcesPanel from "../Shared/SourcesPanel.vue";
+import NpcInline from "../Shared/NPC/NpcInline.vue";
+import SkillInline from "../Shared/Skill/SkillInline.vue";
+import QuestInline from "../Shared/Quest/QuestInline.vue";
+import ItemInline from "../Shared/Item/ItemInline.vue";
 import { extractNpcKeyFromFavorPath } from "../../utils/questDisplay";
 
 const props = defineProps<{

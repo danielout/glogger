@@ -110,6 +110,11 @@ The `GameData` struct maintains prebuilt indices for efficient lookups:
 | `recipes_using_item` | Item ID → recipes that consume it |
 | `recipe_name_index` | Recipe name → ID |
 | `npcs_by_skill` | Skill → NPC keys that train it |
+| `npc_favor_by_item_name` | Item name (lowercase) → NPCs with favor preference |
+| `npc_favor_by_keyword` | Item keyword → NPCs with favor preference |
+| `quests_by_npc` | NPC key → quest keys (via FavorNpc) |
+| `quests_by_work_order_skill` | Skill → work order quest keys |
+| `recipes_by_ingredient_keyword` | Item keyword → recipe IDs accepting that keyword |
 
 ### Cross-Entity Navigation
 
@@ -138,6 +143,13 @@ The `provideEntityNavigation` composable enables other parts of the app to navig
 ### Treasure (TSys)
 - `get_all_tsys()` / `search_tsys(query, limit?)` / `get_tsys_profiles()`
 
+### Cross-References
+- `get_npcs_wanting_item(item_id)` — NPCs with favor preference for item (by name and keyword match)
+- `get_npcs_training_skill(skill)` — NPCs that train a given skill
+- `get_quests_for_npc(npc_key)` — quests associated with an NPC (via FavorNpc)
+- `get_quests_for_skill(skill)` — work order quests for a skill
+- `get_recipes_for_keyword(keyword)` — recipes accepting keyword-based ingredients
+
 ### Icons
 - `get_icon_path(icon_id)` — filesystem path; fetches from CDN if not cached
 
@@ -155,6 +167,7 @@ For CDN parsing details and field schemas, see `docs/architecture/cdn-data-parsi
 ## Key Design Decisions
 
 - **Read-only reference tool** — the data browser is purely for exploring CDN data, not for editing. Player-specific data (known recipes, skill levels) is shown on the Character screen instead.
-- **Inline components for cross-references** — `ItemInline`, `SkillInline`, etc. are used within detail views for clickable cross-references between entities.
+- **Inline components for cross-references** — `ItemInline`, `SkillInline`, `RecipeInline`, `QuestInline`, `NpcInline`, `AreaInline` are used within detail views for clickable cross-references between entities. Each supports tooltips on hover and click-to-navigate.
+- **Bidirectional cross-references** — browsers show both forward and reverse relationships. For example, Items show "Produced By" (recipes → item), "Used In" (item → recipes), "NPC Favor" (item → NPCs who want it), and "Could Fill Keyword Slots In" (item keywords → keyword-based recipe ingredients). Skills show "Trained By" (NPCs), "Recipes", and "Work Order Quests".
 - **Raw JSON opt-in** — every detail view includes a raw JSON block, but it is hidden by default. Users can enable it via Settings > Advanced > "Show Raw JSON in Data Browser" (`showRawJsonInDataBrowser` in `settingsStore`).
 - **Sources panel** — Items, Abilities, Recipes, and Quests show a "Sources" panel listing where the entity can be obtained or what references it.

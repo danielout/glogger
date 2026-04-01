@@ -13,7 +13,7 @@ export interface NpcInfo {
   area_friendly_name: string | null
   trains_skills: string[]
   preferences: NpcPreference[]
-  item_gifts: string[]
+  gift_favor_tiers: string[]
 
   // Phase 4 typed fields
   pos: unknown | null

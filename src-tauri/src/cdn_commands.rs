@@ -1694,3 +1694,129 @@ pub async fn get_tsys_profiles(
     let data = state.read().await;
     Ok(data.tsys.profiles.clone())
 }
+
+// ── Cross-reference commands for data browser linking ──────────────────────
+
+/// NPC favor entry returned to the frontend.
+#[derive(serde::Serialize, Clone)]
+pub struct NpcFavorEntry {
+    pub npc_key: String,
+    pub npc_name: String,
+    pub desire: String,
+    pub pref: f32,
+    pub match_type: String,
+}
+
+/// Get all NPCs that want a given item (by name match or keyword match).
+#[tauri::command]
+pub async fn get_npcs_wanting_item(
+    item_id: u32,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<NpcFavorEntry>, String> {
+    let data = state.read().await;
+    let item = data.items.get(&item_id).ok_or("Item not found")?;
+
+    let mut results: Vec<NpcFavorEntry> = Vec::new();
+    let mut seen_npc_keys = std::collections::HashSet::new();
+
+    // Check name-based matches
+    let name_lower = item.name.to_lowercase();
+    if let Some(entries) = data.npc_favor_by_item_name.get(&name_lower) {
+        for (npc_key, desire, pref) in entries {
+            if seen_npc_keys.insert(npc_key.clone()) {
+                let npc_name = data.npcs.get(npc_key).map(|n| n.name.clone()).unwrap_or_default();
+                results.push(NpcFavorEntry {
+                    npc_key: npc_key.clone(),
+                    npc_name,
+                    desire: desire.clone(),
+                    pref: *pref,
+                    match_type: "name".to_string(),
+                });
+            }
+        }
+    }
+
+    // Check keyword-based matches
+    for keyword in &item.keywords {
+        if let Some(entries) = data.npc_favor_by_keyword.get(keyword) {
+            for (npc_key, desire, pref) in entries {
+                if seen_npc_keys.insert(npc_key.clone()) {
+                    let npc_name = data.npcs.get(npc_key).map(|n| n.name.clone()).unwrap_or_default();
+                    results.push(NpcFavorEntry {
+                        npc_key: npc_key.clone(),
+                        npc_name,
+                        desire: desire.clone(),
+                        pref: *pref,
+                        match_type: format!("keyword:{}", keyword),
+                    });
+                }
+            }
+        }
+    }
+
+    // Sort by pref value descending
+    results.sort_by(|a, b| b.pref.partial_cmp(&a.pref).unwrap_or(std::cmp::Ordering::Equal));
+    Ok(results)
+}
+
+/// Get all NPCs that train a given skill.
+#[tauri::command]
+pub async fn get_npcs_training_skill(
+    skill: String,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<NpcInfo>, String> {
+    let data = state.read().await;
+
+    // npcs_by_skill is keyed by skill internal name from training data
+    let npc_keys = data.npcs_by_skill.get(&skill).cloned().unwrap_or_default();
+    let results: Vec<NpcInfo> = npc_keys
+        .iter()
+        .filter_map(|key| data.npcs.get(key).cloned())
+        .collect();
+    Ok(results)
+}
+
+/// Get all quests associated with a given NPC (via FavorNpc field).
+#[tauri::command]
+pub async fn get_quests_for_npc(
+    npc_key: String,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<QuestInfo>, String> {
+    let data = state.read().await;
+    let quest_keys = data.quests_by_npc.get(&npc_key).cloned().unwrap_or_default();
+    let results: Vec<QuestInfo> = quest_keys
+        .iter()
+        .filter_map(|key| data.quests.get(key).cloned())
+        .collect();
+    Ok(results)
+}
+
+/// Get all work order quests for a given skill.
+#[tauri::command]
+pub async fn get_quests_for_skill(
+    skill: String,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<QuestInfo>, String> {
+    let data = state.read().await;
+    let quest_keys = data.quests_by_work_order_skill.get(&skill).cloned().unwrap_or_default();
+    let results: Vec<QuestInfo> = quest_keys
+        .iter()
+        .filter_map(|key| data.quests.get(key).cloned())
+        .collect();
+    Ok(results)
+}
+
+/// Get all recipes that accept a given keyword as an ingredient.
+#[tauri::command]
+pub async fn get_recipes_for_keyword(
+    keyword: String,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<RecipeInfo>, String> {
+    let data = state.read().await;
+    let recipe_ids = data.recipes_by_ingredient_keyword.get(&keyword).cloned().unwrap_or_default();
+    let results: Vec<RecipeInfo> = recipe_ids
+        .iter()
+        .filter_map(|id| data.recipes.get(id).cloned())
+        .collect();
+    Ok(results)
+}

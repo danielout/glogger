@@ -21,7 +21,7 @@ pub struct NpcInfo {
     pub area_friendly_name: Option<String>,
     pub trains_skills: Vec<String>,
     pub preferences: Vec<NpcPreference>,
-    pub item_gifts: Vec<String>,
+    pub gift_favor_tiers: Vec<String>,
 
     // Phase 4 typed fields
     pub pos: Option<Value>,
@@ -129,8 +129,8 @@ pub fn parse(json: &str) -> Result<HashMap<String, NpcInfo>, String> {
             })
             .unwrap_or_default();
 
-        // Parse item gifts (favorites)
-        let item_gifts = value
+        // Parse gift favor tiers (favor levels at which this NPC accepts gifts)
+        let gift_favor_tiers = value
             .get("ItemGifts")
             .and_then(|v| v.as_array())
             .map(|arr| {
@@ -153,7 +153,7 @@ pub fn parse(json: &str) -> Result<HashMap<String, NpcInfo>, String> {
                 area_friendly_name,
                 trains_skills,
                 preferences,
-                item_gifts,
+                gift_favor_tiers,
                 pos,
                 services,
                 raw_json: value,

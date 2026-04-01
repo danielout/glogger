@@ -17,6 +17,15 @@ export type { PlayerTitleInfo } from './playerTitles'
 export type { TsysBrowserEntry } from './tsys'
 export type { SourceEntry, QuestSummary, EntitySources } from './sources'
 
+// Cross-reference types
+export interface NpcFavorEntry {
+  npc_key: string
+  npc_name: string
+  desire: string
+  pref: number
+  match_type: string
+}
+
 // CacheStatus lives here since it's not really a game data type
 export interface CacheStatus {
   cached_version: number | null

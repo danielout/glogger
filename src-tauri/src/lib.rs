@@ -71,6 +71,12 @@ use cdn_commands::{
     search_player_titles,
     search_quests,
     search_recipes,
+    // Cross-reference commands
+    get_npcs_wanting_item,
+    get_npcs_training_skill,
+    get_quests_for_npc,
+    get_quests_for_skill,
+    get_recipes_for_keyword,
     GameDataState,
 };
 use chat_commands::{
@@ -326,6 +332,12 @@ pub fn run() {
             get_item_sources,
             get_recipe_sources,
             get_quest_sources,
+            // Cross-reference queries
+            get_npcs_wanting_item,
+            get_npcs_training_skill,
+            get_quests_for_npc,
+            get_quests_for_skill,
+            get_recipes_for_keyword,
             // Player data - Market prices
             add_market_price,
             get_market_prices_for_item,

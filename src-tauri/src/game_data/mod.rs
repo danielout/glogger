@@ -170,6 +170,18 @@ pub struct GameData {
     pub items_bestowing_quest: HashMap<String, Vec<u32>>,
     /// item key (e.g. "item_12345") → quest keys that reward it
     pub quests_rewarding_item: HashMap<String, Vec<String>>,
+
+    // ── Cross-reference indices for data browser linking ──────────────
+    /// item name (lowercase) → Vec<(npc_key, desire, pref_value)>
+    pub npc_favor_by_item_name: HashMap<String, Vec<(String, String, f32)>>,
+    /// item keyword → Vec<(npc_key, desire, pref_value)>
+    pub npc_favor_by_keyword: HashMap<String, Vec<(String, String, f32)>>,
+    /// npc key → quest keys (via FavorNpc field)
+    pub quests_by_npc: HashMap<String, Vec<String>>,
+    /// skill internal name → quest keys (work order quests)
+    pub quests_by_work_order_skill: HashMap<String, Vec<String>>,
+    /// item keyword → recipe IDs that accept this keyword as ingredient
+    pub recipes_by_ingredient_keyword: HashMap<String, Vec<u32>>,
 }
 
 impl GameData {
@@ -215,6 +227,11 @@ impl GameData {
             items_bestowing_recipe: HashMap::new(),
             items_bestowing_quest: HashMap::new(),
             quests_rewarding_item: HashMap::new(),
+            npc_favor_by_item_name: HashMap::new(),
+            npc_favor_by_keyword: HashMap::new(),
+            quests_by_npc: HashMap::new(),
+            quests_by_work_order_skill: HashMap::new(),
+            recipes_by_ingredient_keyword: HashMap::new(),
         }
     }
 
@@ -698,6 +715,63 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         }
     }
 
+    // Build NPC favor reverse indices: item name → NPCs, keyword → NPCs
+    let mut npc_favor_by_item_name: HashMap<String, Vec<(String, String, f32)>> = HashMap::new();
+    let mut npc_favor_by_keyword: HashMap<String, Vec<(String, String, f32)>> = HashMap::new();
+    for (npc_key, npc) in &npcs {
+        for pref in &npc.preferences {
+            let entry = (npc_key.clone(), pref.desire.clone(), pref.pref);
+            if let Some(ref name) = pref.name {
+                npc_favor_by_item_name
+                    .entry(name.to_lowercase())
+                    .or_default()
+                    .push(entry.clone());
+            }
+            for keyword in &pref.keywords {
+                npc_favor_by_keyword
+                    .entry(keyword.clone())
+                    .or_default()
+                    .push(entry.clone());
+            }
+        }
+    }
+
+    // Build quest reverse indices: NPC → quests, skill → work order quests
+    let mut quests_by_npc: HashMap<String, Vec<String>> = HashMap::new();
+    let mut quests_by_work_order_skill: HashMap<String, Vec<String>> = HashMap::new();
+    for (quest_key, quest) in &quests {
+        if let Some(favor_npc) = quest.raw.get("FavorNpc").and_then(|v| v.as_str()) {
+            // FavorNpc is a path like "AreaName/NPC_Foo" — extract the NPC key
+            if let Some(npc_key) = favor_npc.split('/').last() {
+                quests_by_npc
+                    .entry(npc_key.to_string())
+                    .or_default()
+                    .push(quest_key.clone());
+            }
+        }
+        if let Some(skill) = quest.raw.get("WorkOrderSkill").and_then(|v| v.as_str()) {
+            quests_by_work_order_skill
+                .entry(skill.to_string())
+                .or_default()
+                .push(quest_key.clone());
+        }
+    }
+
+    // Build recipe keyword ingredient index: keyword → recipe IDs
+    let mut recipes_by_ingredient_keyword: HashMap<String, Vec<u32>> = HashMap::new();
+    for (recipe_id, recipe) in &recipes {
+        for ingredient in &recipe.ingredients {
+            if ingredient.item_id.is_none() {
+                for keyword in &ingredient.item_keys {
+                    recipes_by_ingredient_keyword
+                        .entry(keyword.clone())
+                        .or_default()
+                        .push(*recipe_id);
+                }
+            }
+        }
+    }
+
     startup_log!("Game data indices built");
 
     Ok(GameData {
@@ -741,5 +815,10 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         items_bestowing_recipe,
         items_bestowing_quest,
         quests_rewarding_item,
+        npc_favor_by_item_name,
+        npc_favor_by_keyword,
+        quests_by_npc,
+        quests_by_work_order_skill,
+        recipes_by_ingredient_keyword,
     })
 }

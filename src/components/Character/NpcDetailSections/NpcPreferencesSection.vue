@@ -5,10 +5,10 @@
     </div>
 
     <!-- Gift tier unlocks -->
-    <div v-if="npc.item_gifts?.length" class="text-[0.6rem] text-text-dim px-2 mb-1">
+    <div v-if="npc.gift_favor_tiers?.length" class="text-[0.6rem] text-text-dim px-2 mb-1">
       Gifting unlocked at:
-      <span v-for="(tier, i) in npc.item_gifts" :key="tier">
-        <span :class="favorColor(tier)">{{ tierDisplayName(tier) }}</span><span v-if="i < npc.item_gifts.length - 1">, </span>
+      <span v-for="(tier, i) in npc.gift_favor_tiers" :key="tier">
+        <span :class="favorColor(tier)">{{ tierDisplayName(tier) }}</span><span v-if="i < npc.gift_favor_tiers.length - 1">, </span>
       </span>
     </div>
 

@@ -78,7 +78,7 @@
                 Key: <span class="text-text-secondary font-mono">{{ selected.key }}</span>
                 <template v-if="selected.area_name">
                   · Area:
-                  <span class="text-text-secondary font-mono">{{ selected.area_name }}</span></template
+                  <AreaInline :reference="selected.area_name" /></template
                 >
               </div>
               <div v-if="selected.area_friendly_name" class="text-sm text-text-secondary mb-1">
@@ -95,13 +95,8 @@
           <!-- Training Section -->
           <div v-if="selected.trains_skills.length" class="flex flex-col gap-1.5">
             <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Trains Skills ({{ selected.trains_skills.length }})</div>
-            <div class="flex flex-wrap gap-1">
-              <span
-                v-for="skill in selected.trains_skills"
-                :key="skill"
-                class="text-[0.72rem] px-1.5 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-[#7ec8e3]">
-                {{ skill }}
-              </span>
+            <div class="flex flex-wrap gap-1.5">
+              <SkillInline v-for="skill in selected.trains_skills" :key="skill" :reference="skill" />
             </div>
           </div>
 
@@ -123,7 +118,9 @@
                   }">
                   {{ pref.desire }}
                 </span>
-                <span v-if="pref.name" class="text-text-secondary flex-1">{{ pref.name }}</span>
+                <span v-if="pref.name" class="flex-1">
+                  <ItemInline :reference="pref.name" />
+                </span>
                 <span v-else-if="pref.keywords.length" class="text-text-secondary flex-1">
                   {{ pref.keywords.join(', ') }}
                 </span>
@@ -132,17 +129,31 @@
             </div>
           </div>
 
-          <!-- Gift Items -->
-          <div v-if="selected.item_gifts.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Favorite Gift Items ({{ selected.item_gifts.length }})</div>
-            <div class="flex flex-wrap gap-1">
+          <!-- Gift Favor Tiers -->
+          <div v-if="selected.gift_favor_tiers.length" class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Accepts Gifts At</div>
+            <div class="flex flex-wrap gap-1.5">
               <span
-                v-for="gift in selected.item_gifts"
-                :key="gift"
-                class="text-[0.72rem] px-1.5 py-0.5 bg-[#1e1a2e] border border-[#3a2a4e] text-[#b8a8c8]">
-                {{ gift }}
+                v-for="tier in selected.gift_favor_tiers"
+                :key="tier"
+                class="text-[0.72rem] px-1.5 py-0.5 rounded-sm border"
+                :class="favorBadgeClasses(tier)">
+                {{ tierDisplayName(tier) }}
               </span>
             </div>
+          </div>
+
+          <!-- Associated Quests -->
+          <div v-if="associatedQuests.length" class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Associated Quests ({{ associatedQuests.length }})</div>
+            <ul class="m-0 p-0 list-none max-h-60 overflow-y-auto border border-surface-dark">
+              <li
+                v-for="quest in associatedQuests"
+                :key="quest.internal_name"
+                class="text-xs px-2 py-0.5 flex gap-2 items-center border-b border-[#151515] hover:bg-surface-base">
+                <QuestInline :reference="quest.internal_name" />
+              </li>
+            </ul>
           </div>
 
           <!-- Raw JSON -->
@@ -162,7 +173,12 @@ import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useKeyboard } from "../../composables/useKeyboard";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
-import type { NpcInfo } from "../../types/gameData";
+import type { NpcInfo, QuestInfo } from "../../types/gameData";
+import QuestInline from "../Shared/Quest/QuestInline.vue";
+import SkillInline from "../Shared/Skill/SkillInline.vue";
+import AreaInline from "../Shared/Area/AreaInline.vue";
+import ItemInline from "../Shared/Item/ItemInline.vue";
+import { tierDisplayName, favorBadgeClasses } from "../../composables/useFavorTiers";
 
 const props = defineProps<{
   navTarget?: EntityNavigationTarget | null;
@@ -174,6 +190,7 @@ const settingsStore = useSettingsStore();
 const query = ref("");
 const selectedArea = ref<string>("All Areas");
 const selected = ref<NpcInfo | null>(null);
+const associatedQuests = ref<QuestInfo[]>([]);
 const selectedIndex = ref(0);
 const listRef = ref<HTMLElement | null>(null);
 
@@ -218,10 +235,16 @@ watch([query, selectedArea, allNpcs], () => {
 
 async function selectNpc(npc: NpcInfo) {
   selected.value = npc;
+  associatedQuests.value = [];
+
+  store.getQuestsForNpc(npc.key)
+    .then(quests => { associatedQuests.value = quests; })
+    .catch(e => { console.warn("Quest cross-ref fetch failed:", e); });
 }
 
 function clearSelection() {
   selected.value = null;
+  associatedQuests.value = [];
 }
 
 useKeyboard({

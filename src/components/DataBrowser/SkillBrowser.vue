@@ -155,6 +155,41 @@
             </ul>
           </div>
 
+          <!-- Related Recipes -->
+          <div v-if="relatedRecipes.length" class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Recipes ({{ relatedRecipes.length }})</div>
+            <ul class="m-0 p-0 list-none max-h-75 overflow-y-auto border border-surface-dark">
+              <li
+                v-for="recipe in relatedRecipes"
+                :key="recipe.id"
+                class="text-xs px-2 py-0.5 flex gap-2 items-center border-b border-[#151515] hover:bg-surface-base">
+                <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
+                <RecipeInline :reference="recipe.name" />
+              </li>
+            </ul>
+          </div>
+
+          <!-- NPCs Training This Skill -->
+          <div v-if="npcsTraining.length" class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Trained By ({{ npcsTraining.length }})</div>
+            <div class="flex flex-wrap gap-1.5">
+              <NpcInline v-for="npc in npcsTraining" :key="npc.key" :reference="npc.key" />
+            </div>
+          </div>
+
+          <!-- Work Order Quests -->
+          <div v-if="workOrderQuests.length" class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Work Order Quests ({{ workOrderQuests.length }})</div>
+            <ul class="m-0 p-0 list-none max-h-50 overflow-y-auto border border-surface-dark">
+              <li
+                v-for="quest in workOrderQuests"
+                :key="quest.internal_name"
+                class="text-xs px-2 py-0.5 flex gap-2 items-center border-b border-[#151515] hover:bg-surface-base">
+                <QuestInline :reference="quest.internal_name" />
+              </li>
+            </ul>
+          </div>
+
           <!-- Keywords -->
           <div v-if="selected.keywords.length" class="flex flex-col gap-1.5">
             <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
@@ -187,7 +222,10 @@ import { useKeyboard } from "../../composables/useKeyboard";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
-import type { SkillInfo, AbilityInfo } from "../../types/gameData";
+import type { SkillInfo, AbilityInfo, RecipeInfo, NpcInfo, QuestInfo } from "../../types/gameData";
+import RecipeInline from "../Shared/Recipe/RecipeInline.vue";
+import NpcInline from "../Shared/NPC/NpcInline.vue";
+import QuestInline from "../Shared/Quest/QuestInline.vue";
 
 const props = defineProps<{
   navTarget?: EntityNavigationTarget | null;
@@ -203,6 +241,9 @@ const selected = ref<SkillInfo | null>(null);
 const selectedIndex = ref(0);
 const listRef = ref<HTMLElement | null>(null);
 const relatedAbilities = ref<AbilityInfo[]>([]);
+const relatedRecipes = ref<RecipeInfo[]>([]);
+const npcsTraining = ref<NpcInfo[]>([]);
+const workOrderQuests = ref<QuestInfo[]>([]);
 const iconSrc = ref<string | null>(null);
 const iconLoading = ref(false);
 const loading = ref(false);
@@ -259,6 +300,9 @@ async function selectSkill(skill: SkillInfo) {
   selected.value = skill;
   iconSrc.value = null;
   relatedAbilities.value = [];
+  relatedRecipes.value = [];
+  npcsTraining.value = [];
+  workOrderQuests.value = [];
 
   // Load icon if present
   if (skill.icon_id) {
@@ -273,19 +317,27 @@ async function selectSkill(skill: SkillInfo) {
     }
   }
 
-  // Load related abilities
-  try {
-    relatedAbilities.value = await store.getAbilitiesForSkill(skill.name);
-    relatedAbilities.value.sort((a, b) => (a.level || 0) - (b.level || 0));
-  } catch (e) {
-    console.warn("Failed to load abilities:", e);
-  }
+  // Load related abilities, recipes, NPCs, and quests in parallel
+  Promise.all([
+    store.getAbilitiesForSkill(skill.name),
+    store.getRecipesForSkill(skill.name),
+    store.getNpcsTrainingSkill(skill.name),
+    store.getQuestsForSkill(skill.name),
+  ]).then(([abilities, recipes, npcs, quests]) => {
+    relatedAbilities.value = abilities.sort((a, b) => (a.level || 0) - (b.level || 0));
+    relatedRecipes.value = recipes.sort((a, b) => (a.skill_level_req || 0) - (b.skill_level_req || 0));
+    npcsTraining.value = npcs;
+    workOrderQuests.value = quests;
+  }).catch(e => { console.warn("Failed to load related data:", e); });
 }
 
 function clearSelection() {
   selected.value = null;
   iconSrc.value = null;
   relatedAbilities.value = [];
+  relatedRecipes.value = [];
+  npcsTraining.value = [];
+  workOrderQuests.value = [];
 }
 
 // Navigate to a specific skill when navTarget changes
