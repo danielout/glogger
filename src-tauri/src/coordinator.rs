@@ -5,6 +5,7 @@ use crate::db::queries::log_positions;
 use crate::db::DbPool;
 use crate::game_state::GameStateManager;
 use crate::log_watchers::{ChatLogWatcher, LogEvent, LogFileWatcher, PlayerLogWatcher};
+use crate::player_event_parser::PlayerEvent;
 use crate::settings::SettingsManager;
 use crate::survey_parser::KnownSurveyType;
 use crate::survey_persistence::SurveySessionTracker;
@@ -425,16 +426,52 @@ impl DataIngestCoordinator {
         }
     }
 
-    /// Process events from player log
+    /// Process events from player log.
+    ///
+    /// High-volume event types (PlayerEventParsed, game-state-updated) are
+    /// batched to reduce the number of Windows PostMessage calls through the
+    /// webview IPC layer.  Batches flush when they reach `BATCH_MAX_SIZE`
+    /// events **or** when `BATCH_MAX_AGE` elapses — whichever comes first.
+    /// Low-volume events (character-login, area-transition, skill-update,
+    /// survey-*) are emitted immediately.
     fn process_player_events(&mut self, events: Vec<LogEvent>) -> Result<(), String> {
-        // Throttle: on catch-up after startup, this can receive thousands of events.
-        // Yield periodically so the Windows message queue doesn't overflow.
-        let mut last_yield = Instant::now();
-        let mut emits_since_yield: u32 = 0;
+        const BATCH_MAX_SIZE: usize = 50;
+        const BATCH_MAX_AGE: Duration = Duration::from_millis(20);
+
+        let mut player_event_batch: Vec<PlayerEvent> = Vec::new();
+        let mut domains_batch: Vec<&'static str> = Vec::new();
+        let mut batch_start = Instant::now();
+
+        /// Flush helper — emits accumulated batches and resets state.
+        macro_rules! flush_batches {
+            ($self:expr, $pe:expr, $dom:expr, $start:expr) => {
+                if !$pe.is_empty() {
+                    $self
+                        .app_handle
+                        .emit("player-events-batch", &$pe)
+                        .ok();
+                    $pe.clear();
+                }
+                if !$dom.is_empty() {
+                    // Deduplicate domains across the batch
+                    $dom.sort_unstable();
+                    $dom.dedup();
+                    $self
+                        .app_handle
+                        .emit("game-state-updated", &$dom)
+                        .ok();
+                    $dom.clear();
+                }
+                $start = Instant::now();
+            };
+        }
 
         for event in events {
             match event {
                 LogEvent::CharacterLogin { character_name, .. } => {
+                    // Flush pending batches before identity change
+                    flush_batches!(self, player_event_batch, domains_batch, batch_start);
+
                     startup_log!("Character detected from Player.log: {}", character_name);
                     // Player.log knows the character name but NOT the server.
                     // Update the character name in settings; the chat log's
@@ -450,7 +487,6 @@ impl DataIngestCoordinator {
                     self.app_handle
                         .emit("character-login", &character_name)
                         .ok();
-                    emits_since_yield += 1;
                 }
                 LogEvent::ChatLogPath { path, .. } => {
                     startup_log!("Chat log path detected: {}", path);
@@ -460,11 +496,9 @@ impl DataIngestCoordinator {
                 }
                 LogEvent::AreaTransition { area, .. } => {
                     self.app_handle.emit("area-transition", &area).ok();
-                    emits_since_yield += 1;
                 }
                 LogEvent::SkillUpdated(update) => {
                     self.app_handle.emit("skill-update", &update).ok();
-                    emits_since_yield += 1;
                 }
                 LogEvent::SurveyParsed(survey_event) => {
                     // Persist to DB synchronously first, then emit to frontend
@@ -482,14 +516,12 @@ impl DataIngestCoordinator {
                         );
                     }
                     self.app_handle.emit("survey-event", &payload).ok();
-                    emits_since_yield += 1;
 
                     // If the session auto-ended, notify frontend so it can patch in
                     // elapsed/XP data that only the frontend knows about
                     if result.session_ended {
                         if let Some(sid) = result.session_id {
                             self.app_handle.emit("survey-session-ended", sid).ok();
-                            emits_since_yield += 1;
                         }
                     }
                 }
@@ -497,42 +529,38 @@ impl DataIngestCoordinator {
                     // Persist to game state tables
                     let result = self.game_state.process_event(&player_event, &self.db_pool);
 
-                    // Notify frontend which domains changed
+                    // Accumulate domains and player events into batches
                     if !result.domains_updated.is_empty() {
-                        self.app_handle
-                            .emit("game-state-updated", &result.domains_updated)
-                            .ok();
-                        emits_since_yield += 1;
+                        domains_batch.extend(result.domains_updated);
                     }
+                    player_event_batch.push(player_event);
 
-                    // Still emit raw events for stores that haven't migrated yet
-                    self.app_handle.emit("player-event", &player_event).ok();
-                    emits_since_yield += 1;
+                    // Flush if batch is full or old enough
+                    if player_event_batch.len() >= BATCH_MAX_SIZE
+                        || batch_start.elapsed() >= BATCH_MAX_AGE
+                    {
+                        flush_batches!(self, player_event_batch, domains_batch, batch_start);
+                    }
                 }
                 _ => {
                     // Other events not yet implemented
                 }
             }
-
-            // Yield periodically to let the Windows message queue drain
-            if emits_since_yield >= 100 && last_yield.elapsed() < Duration::from_millis(50) {
-                std::thread::sleep(Duration::from_millis(5));
-                last_yield = Instant::now();
-                emits_since_yield = 0;
-            } else if last_yield.elapsed() >= Duration::from_millis(50) {
-                last_yield = Instant::now();
-                emits_since_yield = 0;
-            }
         }
+
+        // Flush any remaining events
+        flush_batches!(self, player_event_batch, domains_batch, batch_start);
 
         Ok(())
     }
 
-    /// Process events from chat log
+    /// Process events from chat log.
+    ///
+    /// Chat messages are already batched (bulk DB insert + single count emit).
+    /// The per-event emits here (chat-status-event, server-detected, etc.) are
+    /// low-volume and don't need the same batching treatment as player events.
     fn process_chat_events(&mut self, events: Vec<LogEvent>) -> Result<(), String> {
         let mut messages = Vec::new();
-        let mut last_yield = Instant::now();
-        let mut emits_since_yield: u32 = 0;
 
         for event in events {
             match event {
@@ -549,12 +577,10 @@ impl DataIngestCoordinator {
                             self.app_handle
                                 .emit("survey-loot-correction", &correction)
                                 .ok();
-                            emits_since_yield += 1;
                         }
                         self.app_handle
                             .emit("chat-status-event", &status_event)
                             .ok();
-                        emits_since_yield += 1;
                     }
                     messages.push(msg);
                 }
@@ -598,7 +624,6 @@ impl DataIngestCoordinator {
 
                     // Emit to frontend
                     self.app_handle.emit("server-detected", &server_name).ok();
-                    emits_since_yield += 1;
                 }
                 LogEvent::CharacterLogin { character_name, .. } => {
                     // Chat log also detects character login — update active character
@@ -606,7 +631,6 @@ impl DataIngestCoordinator {
                     self.app_handle
                         .emit("character-login", &character_name)
                         .ok();
-                    emits_since_yield += 1;
 
                     // Auto-register character with current server
                     if let Ok(conn) = self.db_pool.get() {
@@ -637,16 +661,6 @@ impl DataIngestCoordinator {
                         .set_active_character(&character_name, &server, &self.db_pool);
                 }
                 _ => {}
-            }
-
-            // Yield periodically to let the Windows message queue drain
-            if emits_since_yield >= 100 && last_yield.elapsed() < Duration::from_millis(50) {
-                std::thread::sleep(Duration::from_millis(5));
-                last_yield = Instant::now();
-                emits_since_yield = 0;
-            } else if last_yield.elapsed() >= Duration::from_millis(50) {
-                last_yield = Instant::now();
-                emits_since_yield = 0;
             }
         }
 

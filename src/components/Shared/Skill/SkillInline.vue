@@ -3,16 +3,14 @@
     border-class="border-entity-skill/50"
     @hover="loadData"
   >
-    <component
-      :is="plain ? 'span' : 'button'"
-      :class="plain
-        ? 'hover:underline cursor-pointer text-inherit'
-        : 'inline-flex items-center gap-1 cursor-pointer hover:underline'"
+    <span
+      class="inline-flex items-center gap-0.5 cursor-pointer hover:underline text-entity-skill font-medium"
+      :class="bordered ? 'bg-entity-skill/5 border border-entity-skill/20 rounded px-1 py-0.5' : ''"
       @click="handleClick"
     >
-      <GameIcon v-if="!plain && showIcon && skillData?.icon_id" :icon-id="skillData.icon_id" :alt="reference" size="xs" />
-      <span :class="plain ? '' : 'text-entity-skill text-xs font-medium'">{{ skillData?.name ?? reference }}</span>
-    </component>
+      <GameIcon v-if="showIcon && skillData?.icon_id" :icon-id="skillData.icon_id" :alt="reference" size="inline" />
+      <span>{{ skillData?.name ?? reference }}</span>
+    </span>
     <template #tooltip>
       <SkillTooltip v-if="skillData" :skill="skillData" :icon-src="iconSrc" />
     </template>
@@ -20,7 +18,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../../stores/gameDataStore";
 import { useEntityNavigation } from "../../../composables/useEntityNavigation";
@@ -32,10 +30,10 @@ import SkillTooltip from "./SkillTooltip.vue";
 const props = withDefaults(defineProps<{
   reference: string;
   showIcon?: boolean;
-  plain?: boolean;
+  bordered?: boolean;
 }>(), {
   showIcon: true,
-  plain: false,
+  bordered: false,
 });
 
 const store = useGameDataStore();
@@ -58,6 +56,14 @@ async function loadData() {
     console.warn(`Failed to resolve skill: ${props.reference}`, e);
   }
 }
+
+onMounted(loadData);
+
+watch(() => props.reference, () => {
+  skillData.value = null;
+  iconSrc.value = null;
+  loadData();
+});
 
 function handleClick() {
   navigateToEntity({ type: "skill", id: skillData.value?.name ?? props.reference });

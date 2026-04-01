@@ -4,15 +4,13 @@
     :disabled="!resolvedNpc"
     @hover="() => {}"
   >
-    <component
-      :is="plain ? 'span' : 'button'"
-      :class="plain
-        ? 'hover:underline cursor-pointer text-inherit'
-        : 'inline-flex items-center gap-1 cursor-pointer hover:underline'"
+    <span
+      class="inline-flex items-center gap-0.5 cursor-pointer hover:underline text-entity-npc font-medium"
+      :class="bordered ? 'bg-entity-npc/5 border border-entity-npc/20 rounded px-1 py-0.5' : ''"
       @click="handleClick"
     >
-      <span :class="plain ? '' : 'text-entity-npc text-xs font-medium'">{{ resolvedNpc?.name ?? reference }}</span>
-    </component>
+      <span>{{ resolvedNpc?.name ?? reference }}</span>
+    </span>
     <template #tooltip>
       <NpcTooltip v-if="resolvedNpc" :npc="resolvedNpc" />
     </template>
@@ -30,9 +28,9 @@ import NpcTooltip from "./NpcTooltip.vue";
 const props = withDefaults(defineProps<{
   reference: string;
   npc?: NpcInfo;
-  plain?: boolean;
+  bordered?: boolean;
 }>(), {
-  plain: false,
+  bordered: false,
 });
 
 const gameData = useGameDataStore();

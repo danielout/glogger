@@ -42,30 +42,42 @@ Consistent component for displaying empty/no-data states.
 - Be specific ("No skill updates yet") not generic ("Nothing to show")
 - Panel variant for main content areas, compact variant for widgets and side panes
 
-## CollapsiblePane
+## PaneLayout + SidePane
 
-**File:** [src/components/Shared/CollapsiblePane.vue](../../src/components/Shared/CollapsiblePane.vue)
+**Files:**
+- [src/components/Shared/PaneLayout.vue](../../src/components/Shared/PaneLayout.vue)
+- [src/components/Shared/SidePane.vue](../../src/components/Shared/SidePane.vue)
+- [src/composables/usePaneResize.ts](../../src/composables/usePaneResize.ts)
 
-Wrapper for side panes that can be collapsed to a narrow toggle strip.
+Standardized multi-pane layout system. Screens use `PaneLayout` with optional `#left` and `#right` slots for side panes, and a default slot for the center content.
 
-**Props:**
-- `side: "left" | "right"` — which side the pane is on (determines toggle button position and arrow direction)
-- `width?: string` — Tailwind width class when expanded (default: `"w-80"`)
-- `screenKey: string` — unique key for persisting collapsed state via `useViewPrefs`
+**PaneLayout Props:**
+- `screenKey: string` — unique prefix for persisting pane preferences
+- `leftPane?: { title, defaultWidth?, minWidth?, maxWidth? }` — left side pane config (enables `#left` slot)
+- `rightPane?: { title, defaultWidth?, minWidth?, maxWidth? }` — right side pane config (enables `#right` slot)
 
-Collapsed state persists across app restarts. Content is hidden with `v-show` (not unmounted) so state is preserved.
+**SidePane features:**
+- **Collapsible** — collapses to a 28px vertical strip showing the pane title rotated 90° (`writing-mode: vertical-lr`). Click the strip to expand.
+- **Resizable** — drag the interior-edge handle to resize. Double-click to reset to default width.
+- **Persistent** — collapsed state and width are saved per-screen via `useViewPrefs`.
+- **Smooth transitions** — uses `v-show` + CSS `transition-[width]` for animated collapse/expand.
 
-## Pane Layout
+**Usage example:**
+```vue
+<PaneLayout screen-key="npcs" :left-pane="{ title: 'NPC List', defaultWidth: 320 }">
+  <template #left>
+    <NpcListPanel ... />
+  </template>
+  <NpcDetailPanel ... />
+</PaneLayout>
+```
 
-Screens use a 1-, 2-, or 3-pane layout:
-
-- **Center pane** is always `flex-1` (main content)
-- **Left pane** is for navigation/selection (search, filters, lists). Prefer left + center for two-pane layouts.
-- **Right pane** is for contextual detail or secondary info
-
-Each pane manages its own scroll (`overflow-y-auto`). No page-level scrollbar.
-
-Content area fills remaining viewport: `h-[calc(100vh-<offset>px)]` where offset accounts for menu bar + tabs.
+**Layout rules:**
+- Center pane is always `flex-1` (main content, fills remaining space)
+- Left pane is for navigation/selection (search, filters, lists). Prefer left + center for two-pane layouts.
+- Right pane is for contextual detail or secondary info
+- Each pane scrolls independently (`overflow-y-auto`). No page-level scrollbar.
+- Panes fill the full available height.
 
 ## ToastContainer
 

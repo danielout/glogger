@@ -29,22 +29,25 @@
       secondary="Log in to a character or import a character report to see NPC relationships." />
 
     <!-- Two-panel layout -->
-    <div v-else class="flex gap-3 flex-1 min-h-0">
-      <div class="w-80 shrink-0 flex flex-col min-h-0">
+    <PaneLayout
+      v-else
+      screen-key="npcs"
+      :left-pane="{ title: 'NPC List', defaultWidth: 320, minWidth: 240, maxWidth: 500 }">
+      <template #left>
         <NpcListPanel
           :snapshot-favor="characterStore.npcFavor"
           :favor-by-npc="gameState.favorByNpc"
           :npcs-by-key="gameData.npcsByKey"
           :selected-npc-key="selectedNpcKey"
           @select="selectNpc" />
-      </div>
+      </template>
 
       <NpcDetailPanel
         :npc-key="selectedNpcKey"
         :snapshot-tier="selectedSnapshotTier"
         :gamestate-favor="selectedGamestateFavor"
         :cdn-data="selectedCdnData" />
-    </div>
+    </PaneLayout>
   </div>
 </template>
 
@@ -55,6 +58,7 @@ import { useGameStateStore } from '../../stores/gameStateStore'
 import { useGameDataStore } from '../../stores/gameDataStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import EmptyState from '../Shared/EmptyState.vue'
+import PaneLayout from '../Shared/PaneLayout.vue'
 import NpcListPanel from './NpcListPanel.vue'
 import NpcDetailPanel from './NpcDetailPanel.vue'
 

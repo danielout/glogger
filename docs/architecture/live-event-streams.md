@@ -38,7 +38,7 @@ DataIngestCoordinator                       DataIngestCoordinator
     +-- GameStateManager                         +-- parse_status_message()
     |     .process_event()                       |       |
     |       |                                    |       v
-    |       +-- emit "game-state-updated"        |   Option<ChatStatusEvent>
+    |       +-- accumulate domains               |   Option<ChatStatusEvent>
     |                                            |       |
     +-- SurveySessionTracker                     |       +-- emit "chat-status-event"
     |     .process_event()                       |
@@ -46,9 +46,12 @@ DataIngestCoordinator                       DataIngestCoordinator
     |       +-- emit "survey-event"              |     (excluded_channels applied here)
     |       +-- emit "survey-session-ended"      |
     |                                            +-- evaluate_rules()
-    +-- emit "player-event"                            |
-    +-- emit "skill-update"                            +-- emit "watch-rule-triggered"
-    +-- emit "character-login"                         +-- emit "chat-messages-inserted"
+    +-- accumulate PlayerEvents                        |
+    +-- flush batches ──┐                              +-- emit "watch-rule-triggered"
+    |                   +-- emit "player-events-batch" +-- emit "chat-messages-inserted"
+    |                   +-- emit "game-state-updated"
+    +-- emit "skill-update"
+    +-- emit "character-login"
     +-- emit "area-transition"
 ```
 
@@ -63,13 +66,36 @@ Both watchers are polled on the same coordinator tick (every ~1.5s). Within a si
 
 This ordering means a `PlayerEvent::ItemAdded` always arrives before the corresponding `ChatStatusEvent::ItemGained` for the same game action. Features that correlate across streams can rely on this.
 
+### Batching strategy
+
+Tauri's `emit()` sends events through the Windows webview via `PostMessage`. Each call is one message in the OS message queue, which has a finite capacity (~10,000). During startup catch-up, the coordinator can process thousands of `PlayerEvent`s in a single poll tick — emitting each one individually would overflow the queue and produce `PostMessage failed; Error code 0x80070718` errors.
+
+To prevent this, high-volume event types are **batched** before emission:
+
+| Constant | Value | Purpose |
+|---|---|---|
+| `BATCH_MAX_SIZE` | 50 | Flush when the batch reaches this many events |
+| `BATCH_MAX_AGE` | 20ms | Flush when this much time has passed since the batch started |
+
+The coordinator accumulates `PlayerEvent`s and domain update strings as it processes `LogEvent::PlayerEventParsed` variants. When either threshold is hit, it flushes:
+- `"player-events-batch"` — `Vec<PlayerEvent>` (1–50 events per emission)
+- `"game-state-updated"` — deduplicated `Vec<&str>` of domain names
+
+Low-volume events (`character-login`, `area-transition`, `skill-update`, `survey-*`) are still emitted individually since they don't contribute meaningfully to queue pressure.
+
+A `character-login` event forces an immediate flush of any pending batch, ensuring the frontend processes all events for the previous character before the identity changes.
+
+Chat events don't need this treatment — `ChatMessage`s are already bulk-inserted into the DB with a single `chat-messages-inserted` count emit, and the per-message `chat-status-event` / `survey-loot-correction` emits are low-volume (only Status channel messages generate them).
+
 ## Event Streams Reference
 
-### Stream: `"player-event"`
+### Stream: `"player-events-batch"`
 
 **Source:** Player.log via [`PlayerEventParser`](../../src-tauri/src/player_event_parser.rs)
 
-Raw structured events from the game engine. Every `ProcessXxx(...)` line becomes a typed `PlayerEvent`. The parser is **stateful** — it tracks item instances, stack sizes, and interaction context to resolve identities and compute deltas.
+Raw structured events from the game engine, **emitted in batches**. Every `ProcessXxx(...)` line becomes a typed `PlayerEvent`. The parser is **stateful** — it tracks item instances, stack sizes, and interaction context to resolve identities and compute deltas.
+
+The backend accumulates `PlayerEvent`s and flushes them as a `Vec<PlayerEvent>` array when the batch reaches **50 events** or **20ms** has elapsed — whichever comes first. This reduces the number of IPC messages through the Windows webview PostMessage layer, preventing message queue overflow during large catch-up replays. See [Batching Strategy](#batching-strategy) for details.
 
 Full event catalog: [`player-event-parser.md`](player-event-parser.md)
 
@@ -106,7 +132,7 @@ Structured events parsed from `[Status]` channel messages. The parser is **state
 
 **Source:** Player.log via [`GameStateManager`](../../src-tauri/src/game_state.rs)
 
-Not a raw event stream — this is a **domain notification**. When `GameStateManager` processes a `PlayerEvent` and persists changes to the database, it emits a list of which domains were updated (e.g., `["skills", "inventory"]`). Frontend stores use this to know when to refresh their data from the DB.
+Not a raw event stream — this is a **domain notification**. When `GameStateManager` processes a `PlayerEvent` and persists changes to the database, it accumulates which domains were updated. At batch flush time, the coordinator deduplicates the domain list and emits it as a single array (e.g., `["skills", "inventory"]`). Frontend stores use this to know when to refresh their data from the DB.
 
 Full details: [`game-state.md`](game-state.md)
 
@@ -138,16 +164,17 @@ All events use Tauri's event system. Both `PlayerEvent` and `ChatStatusEvent` us
 import { listen } from '@tauri-apps/api/event'
 import type { UnlistenFn } from '@tauri-apps/api/event'
 
-// Listen to player events
-const unlistenPlayer: UnlistenFn = await listen<PlayerEvent>('player-event', (event) => {
-  const e = event.payload
-  switch (e.kind) {
-    case 'ItemAdded':
-      console.log(`Item: ${e.item_name} (new: ${e.is_new})`)
-      break
-    case 'FavorChanged':
-      console.log(`Favor: ${e.npc_name} ${e.delta > 0 ? '+' : ''}${e.delta}`)
-      break
+// Listen to player events (arrives as batches of 1-50 events)
+const unlistenPlayer: UnlistenFn = await listen<PlayerEvent[]>('player-events-batch', (event) => {
+  for (const e of event.payload) {
+    switch (e.kind) {
+      case 'ItemAdded':
+        console.log(`Item: ${e.item_name} (new: ${e.is_new})`)
+        break
+      case 'FavorChanged':
+        console.log(`Favor: ${e.npc_name} ${e.delta > 0 ? '+' : ''}${e.delta}`)
+        break
+    }
   }
 })
 
@@ -178,14 +205,14 @@ const unlistenState: UnlistenFn = await listen<string[]>('game-state-updated', (
 
 | You need... | Subscribe to... | Why |
 |---|---|---|
-| Item identity, instance IDs, slot positions | `"player-event"` (`ItemAdded`, `ItemDeleted`) | Player.log has the game engine data |
+| Item identity, instance IDs, slot positions | `"player-events-batch"` (`ItemAdded`, `ItemDeleted`) | Player.log has the game engine data |
 | Item quantities for new stacks | `"chat-status-event"` (`ItemGained`) | Chat Status has the actual stack size |
-| Cumulative skill XP/level | `"player-event"` (`SkillsLoaded`) or `"game-state-updated"` | Player.log has the full snapshot |
+| Cumulative skill XP/level | `"player-events-batch"` (`SkillsLoaded`) or `"game-state-updated"` | Player.log has the full snapshot |
 | Per-action XP deltas | `"chat-status-event"` (`XpGained`) | Only available in Status channel |
-| Vendor transactions | `"player-event"` (`VendorSold`, `VendorGoldChanged`) | Only in Player.log |
+| Vendor transactions | `"player-events-batch"` (`VendorSold`, `VendorGoldChanged`) | Only in Player.log |
 | Coin/council economy | `"chat-status-event"` (`CoinsLooted`, `CouncilsChanged`) | Only in Status channel |
-| Storage vault changes | `"player-event"` (`StorageDeposit`, `StorageWithdrawal`) | Player.log has vault keys |
-| NPC favor changes | `"player-event"` (`FavorChanged`) | Player.log has numeric delta |
+| Storage vault changes | `"player-events-batch"` (`StorageDeposit`, `StorageWithdrawal`) | Player.log has vault keys |
+| NPC favor changes | `"player-events-batch"` (`FavorChanged`) | Player.log has numeric delta |
 | Survey triangulation | `"chat-status-event"` (`TreasureDistance`) | Only in Status channel |
 | Level-up notifications | `"chat-status-event"` (`LevelUp`) | Only in Status channel |
 | Refreshing a view after DB changes | `"game-state-updated"` | Signals which domains changed |
@@ -196,10 +223,12 @@ Some data appears in both streams with different levels of detail. The pattern i
 
 ```typescript
 // Example: track items with correct quantities
-listen<PlayerEvent>('player-event', (event) => {
-  if (event.payload.kind === 'ItemAdded' && event.payload.is_new) {
-    // Record the item with instance ID — quantity starts at 1
-    addItem(event.payload.instance_id, event.payload.item_name, 1)
+listen<PlayerEvent[]>('player-events-batch', (event) => {
+  for (const e of event.payload) {
+    if (e.kind === 'ItemAdded' && e.is_new) {
+      // Record the item with instance ID — quantity starts at 1
+      addItem(e.instance_id, e.item_name, 1)
+    }
   }
 })
 
@@ -227,7 +256,7 @@ Follow the `GameStateManager` or `SurveySessionTracker` pattern:
 // In coordinator.rs, inside the PlayerEventParsed match arm:
 LogEvent::PlayerEventParsed(player_event) => {
     self.my_tracker.process_event(&player_event, &self.db_pool);
-    // ...existing game_state and emit calls...
+    // ...existing game_state processing, batch accumulation...
 }
 ```
 

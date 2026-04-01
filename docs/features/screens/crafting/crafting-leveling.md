@@ -28,6 +28,23 @@ Given a skill and target level, computes a crafting plan considering XP rewards,
 - **Cost-Efficient** — minimize gold spent per XP gained
 - **Combined** — first-time bonuses first, then cost-efficient grinding
 
+## Recipe Color Coding
+
+Recipes in the list are color-coded by status relative to the current planning level:
+
+**Full XP range** (at or above recipe level, below drop-off):
+- **White** — known and previously crafted (standard XP only)
+- **Green** — known but never crafted (eligible for first-time bonus XP)
+- **Red** — unknown/unlearned recipe
+
+**Reduced XP range** (at or above `reward_skill_xp_drop_off_level`):
+- **Dark grey** — known and crafted (minimal value)
+- **Dark green** — known but uncrafted (first-time bonus still available)
+- **Dark red** — unknown recipe in drop-off range
+
+**Above current level:**
+- **Blue** — recipe level requirement exceeds current planning level
+
 ## Output
 
 Results are displayed grouped by level transition (e.g., "Lv 33 → 34", "Lv 34 → 35"):

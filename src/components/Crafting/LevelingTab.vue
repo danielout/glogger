@@ -149,7 +149,7 @@
             </div>
             <!-- Recipe name -->
             <span class="truncate min-w-0">
-              <RecipeInline :reference="r.recipe.name" :plain="true" />
+              <RecipeInline :reference="r.recipe.name" inherit-color />
             </span>
             <!-- XP info -->
             <span v-if="showXp" class="text-text-muted text-[0.6rem] shrink-0 ml-auto">

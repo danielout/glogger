@@ -253,8 +253,10 @@ export const useStartupStore = defineStore("startup", () => {
       await listen("survey-loot-correction", (event: any) => {
         surveyStore.handleLootCorrection(event.payload);
       });
-      await listen<PlayerEvent>("player-event", (event) => {
-        farmingStore.handlePlayerEvent(event.payload);
+      await listen<PlayerEvent[]>("player-events-batch", (event) => {
+        for (const pe of event.payload) {
+          farmingStore.handlePlayerEvent(pe);
+        }
       });
 
       // Start log watchers if enabled

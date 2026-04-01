@@ -118,6 +118,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useBuildPlannerStore } from '../../../stores/buildPlannerStore'
 import { useGameDataStore } from '../../../stores/gameDataStore'
+import { useSettingsStore } from '../../../stores/settingsStore'
 import { getArmorTypeFromKeywords } from '../../../types/buildPlanner'
 import type { ArmorType } from '../../../types/buildPlanner'
 import type { ItemInfo } from '../../../types/gameData'
@@ -126,6 +127,7 @@ import GameIcon from '../../Shared/GameIcon.vue'
 
 const store = useBuildPlannerStore()
 const gameData = useGameDataStore()
+const settingsStore = useSettingsStore()
 
 const query = ref('')
 const results = ref<ItemInfo[]>([])
@@ -210,6 +212,10 @@ async function loadItems() {
         if (!item.skill_reqs) return false
         return item.skill_reqs[filterSkill.value] != null
       })
+    }
+
+    if (!settingsStore.settings.showUnobtainableItems) {
+      items = items.filter(i => !i.keywords.includes('Lint_NotObtainable'))
     }
 
     results.value = items

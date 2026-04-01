@@ -88,10 +88,11 @@ Player.log → LogWatcher → PlayerEventParser (adds vault_key)
                                     ↓
                           DataIngestCoordinator
                                ↓              ↓
-                    GameStateManager     emit("player-event")
+                    GameStateManager     accumulate into batch
                     (UPSERT/DELETE)
                            ↓
-               emit("game-state-updated", ["storage"])
+               flush → emit("player-events-batch")
+                      + emit("game-state-updated", ["storage"])
                            ↓
                     gameStateStore.refreshDomain("storage")
                            ↓

@@ -329,7 +329,11 @@ function onItemSearch() {
   }
   searchDebounce = setTimeout(async () => {
     try {
-      itemSuggestions.value = await gameDataStore.searchItems(q)
+      let items = await gameDataStore.searchItems(q)
+      if (!settingsStore.settings.showUnobtainableItems) {
+        items = items.filter(i => !i.keywords.includes('Lint_NotObtainable'))
+      }
+      itemSuggestions.value = items
     } catch {
       itemSuggestions.value = []
     }

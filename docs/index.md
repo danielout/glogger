@@ -23,7 +23,7 @@ Core structure, patterns, and standards used across the app.
 - [implementation-checklist.md](architecture/implementation-checklist.md) — Step-by-step checklists for common dev tasks (new parsers, DB tables, CDN fields, commands).
 - [startup-sequence.md](architecture/startup-sequence.md) — Full startup sequence: backend init, frontend phases, game data loading, and readiness audit.
 - [styling.md](architecture/styling.md) — CSS architecture using Tailwind v4, theme tokens, and component classes.
-- [layout-patterns.md](architecture/layout-patterns.md) — Layout system: v-show navigation, TabBar, EmptyState, CollapsiblePane, pane layout patterns.
+- [layout-patterns.md](architecture/layout-patterns.md) — Layout system: v-show navigation, TabBar, EmptyState, PaneLayout/SidePane, pane layout patterns.
 - [ux-standards.md](architecture/ux-standards.md) — UX/UI standards: keyboard navigation, layout rules, state persistence, empty states, toasts, visual consistency.
 - [ux-composables.md](architecture/ux-composables.md) — UX composables: useKeyboard (nav/hotkeys), useToast (notifications), useViewPrefs (persistent screen preferences).
 - [toast-system.md](architecture/toast-system.md) — Toast notification system: store, composable, container component, types, and usage guidelines.

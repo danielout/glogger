@@ -3,16 +3,17 @@
     border-class="border-entity-recipe/50"
     @hover="loadData"
   >
-    <component
-      :is="plain ? 'span' : 'button'"
-      :class="plain
-        ? 'hover:underline cursor-pointer text-inherit'
-        : 'inline-flex items-center gap-1 cursor-pointer hover:underline'"
+    <span
+      class="inline-flex items-center gap-0.5 cursor-pointer hover:underline font-medium"
+      :class="[
+        inheritColor ? 'text-inherit' : 'text-entity-recipe',
+        bordered ? 'bg-entity-recipe/5 border border-entity-recipe/20 rounded px-1 py-0.5' : '',
+      ]"
       @click="handleClick"
     >
-      <GameIcon v-if="!plain && showIcon && recipeData?.icon_id" :icon-id="recipeData.icon_id" :alt="reference" size="xs" />
-      <span :class="plain ? '' : 'text-entity-recipe text-xs font-medium'">{{ recipeData?.name ?? reference }}</span>
-    </component>
+      <GameIcon v-if="showIcon && recipeData?.icon_id" :icon-id="recipeData.icon_id" :alt="reference" size="inline" />
+      <span>{{ recipeData?.name ?? reference }}</span>
+    </span>
     <template #tooltip>
       <RecipeTooltip v-if="recipeData" :recipe="recipeData" :icon-src="iconSrc" />
     </template>
@@ -20,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../../stores/gameDataStore";
 import { useEntityNavigation } from "../../../composables/useEntityNavigation";
@@ -32,10 +33,12 @@ import RecipeTooltip from "./RecipeTooltip.vue";
 const props = withDefaults(defineProps<{
   reference: string;
   showIcon?: boolean;
-  plain?: boolean;
+  bordered?: boolean;
+  inheritColor?: boolean;
 }>(), {
   showIcon: true,
-  plain: false,
+  bordered: false,
+  inheritColor: false,
 });
 
 const store = useGameDataStore();
@@ -58,6 +61,14 @@ async function loadData() {
     console.warn(`Failed to resolve recipe: ${props.reference}`, e);
   }
 }
+
+onMounted(loadData);
+
+watch(() => props.reference, () => {
+  recipeData.value = null;
+  iconSrc.value = null;
+  loadData();
+});
 
 function handleClick() {
   navigateToEntity({ type: "recipe", id: recipeData.value?.name ?? props.reference });

@@ -29,10 +29,11 @@ Player.log → LogWatcher → PlayerEventParser → LogEvent::PlayerEventParsed
                                                         ↓
                                               DataIngestCoordinator
                                                    ↓              ↓
-                                        GameStateManager     emit("player-event")
-                                         (writes to DB)       (for live tracking)
+                                        GameStateManager     accumulate player events
+                                         (writes to DB)       + domain names into batch
                                                 ↓
-                                    emit("game-state-updated", [domain names])
+                                    flush → emit("player-events-batch")
+                                          + emit("game-state-updated", [domain names])
                                                 ↓
                                           gameStateStore
                                        (refreshDomain per domain)

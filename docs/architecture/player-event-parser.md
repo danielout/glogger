@@ -26,8 +26,9 @@ Player.log line
              ▼
       DataIngestCoordinator::process_player_events()
              │
-             ├── app_handle.emit("player-event", &event)  ← frontend
-             └── (future: per-feature persistence)
+             ├── accumulate into batch
+             ├── flush → emit("player-events-batch", &batch)  ← frontend
+             └── flush → emit("game-state-updated", &domains)
 ```
 
 Every line from Player.log is fed through `process_line()`. The parser maintains internal state (instance registry, stack sizes, interaction context) so it can resolve item identities and compute deltas. It returns zero or more `PlayerEvent`s per line.
@@ -180,7 +181,7 @@ Example: `1642723` → stack size `25`, item type ID `4323`.
 
 ## Listening to Events on the Frontend
 
-Events are emitted via Tauri's event system as `"player-event"`. Each event payload includes a `kind` field for discriminating variants.
+Events are emitted via Tauri's event system as `"player-events-batch"` — an array of 1–50 `PlayerEvent` objects per emission. Each event includes a `kind` field for discriminating variants. See [live-event-streams.md](live-event-streams.md#batching-strategy) for batching details.
 
 ```typescript
 import { listen } from '@tauri-apps/api/event'
@@ -225,20 +226,21 @@ type PlayerEvent =
   | { kind: 'ScreenText'; category: string; message: string }
   | { kind: 'BookOpened'; title: string; content: string; book_type: string }
 
-// Listen to all player events
-const unlisten: UnlistenFn = await listen<PlayerEvent>('player-event', (event) => {
-  const e = event.payload
-  switch (e.kind) {
-    case 'ItemAdded':
-      console.log(`Item added: ${e.item_name} (new: ${e.is_new})`)
-      break
-    case 'ItemStackChanged':
-      console.log(`Stack changed: ${e.item_name} delta=${e.delta}`)
-      break
-    case 'FavorChanged':
-      console.log(`Favor with ${e.npc_name}: +${e.delta}`)
-      break
-    // ... handle other events
+// Listen to all player events (batched — array of 1-50 events per emission)
+const unlisten: UnlistenFn = await listen<PlayerEvent[]>('player-events-batch', (event) => {
+  for (const e of event.payload) {
+    switch (e.kind) {
+      case 'ItemAdded':
+        console.log(`Item added: ${e.item_name} (new: ${e.is_new})`)
+        break
+      case 'ItemStackChanged':
+        console.log(`Stack changed: ${e.item_name} delta=${e.delta}`)
+        break
+      case 'FavorChanged':
+        console.log(`Favor with ${e.npc_name}: +${e.delta}`)
+        break
+      // ... handle other events
+    }
   }
 })
 ```
@@ -260,7 +262,8 @@ LogEvent::PlayerEventParsed(player_event) => {
         }
         _ => {}
     }
-    self.app_handle.emit("player-event", &player_event).ok();
+    // player_event is accumulated into a batch and flushed periodically
+    player_event_batch.push(player_event);
 }
 ```
 

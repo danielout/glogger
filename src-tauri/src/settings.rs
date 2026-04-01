@@ -118,6 +118,10 @@ pub struct AppSettings {
     #[serde(default)]
     pub show_raw_json_in_data_browser: bool,
 
+    /// Show items/abilities tagged Lint_NotObtainable in searches and browsers
+    #[serde(default)]
+    pub show_unobtainable_items: bool,
+
     /// Opaque per-screen UI preferences (persisted as JSON, frontend-managed)
     #[serde(default)]
     pub view_preferences: Option<JsonValue>,
@@ -265,6 +269,7 @@ impl Default for AppSettings {
             market_price_mode: default_market_price_mode(),
             item_valuation_mode: default_item_valuation_mode(),
             show_raw_json_in_data_browser: false,
+            show_unobtainable_items: false,
             view_preferences: None,
             last_app_version: None,
             timezone_offset_seconds: None,

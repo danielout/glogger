@@ -1,5 +1,5 @@
 <template>
-  <span class="inline-flex items-center text-entity-area text-xs font-medium border-b border-dotted border-entity-area/30">
+  <span class="inline-flex items-center text-entity-area font-medium border-b border-dotted border-entity-area/30">
     {{ reference }}
   </span>
 </template>

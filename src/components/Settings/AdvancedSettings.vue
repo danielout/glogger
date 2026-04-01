@@ -36,6 +36,22 @@
           Data Browser. Useful for debugging or exploring the full data structure.
         </p>
       </div>
+
+      <div class="mb-4">
+        <label class="flex items-center gap-2 cursor-pointer text-text-primary">
+          <input
+            type="checkbox"
+            v-model="showUnobtainable"
+            @change="saveShowUnobtainable"
+            class="size-5 cursor-pointer" />
+          <span>Show Unobtainable Items</span>
+        </label>
+        <p class="mt-2 text-text-muted text-xs leading-relaxed">
+          Include items and abilities tagged as unobtainable (Lint_NotObtainable) in
+          search results and data browsers. These are typically developer/test entries
+          that cannot be acquired in-game.
+        </p>
+      </div>
     </div>
 
     <div class="settings-section">
@@ -171,6 +187,13 @@ const showRawJson = ref(settingsStore.settings.showRawJsonInDataBrowser);
 
 function saveShowRawJson() {
   settingsStore.updateSettings({ showRawJsonInDataBrowser: showRawJson.value });
+}
+
+// Unobtainable items visibility
+const showUnobtainable = ref(settingsStore.settings.showUnobtainableItems);
+
+function saveShowUnobtainable() {
+  settingsStore.updateSettings({ showUnobtainableItems: showUnobtainable.value });
 }
 
 function saveDevMode() {

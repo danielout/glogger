@@ -498,6 +498,11 @@ useKeyboard({
   },
 });
 
+function filterUnobtainable(items: ItemInfo[]): ItemInfo[] {
+  if (settingsStore.settings.showUnobtainableItems) return items;
+  return items.filter(i => !i.keywords.includes('Lint_NotObtainable'));
+}
+
 async function doSearch(q: string) {
   searching.value = true;
   try {
@@ -517,13 +522,13 @@ async function doSearch(q: string) {
       if (filterLevelMax.value != null) {
         items = items.filter(i => i.crafting_target_level != null && i.crafting_target_level <= filterLevelMax.value!);
       }
-      results.value = items;
+      results.value = filterUnobtainable(items);
     } else {
-      results.value = await store.searchItems(q, {
+      results.value = filterUnobtainable(await store.searchItems(q, {
         equipSlot: filterSlot.value || undefined,
         levelMin: filterLevelMin.value,
         levelMax: filterLevelMax.value,
-      });
+      }));
     }
   } finally {
     searching.value = false;

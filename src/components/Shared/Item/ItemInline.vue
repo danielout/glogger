@@ -4,16 +4,14 @@
     :interactive="true"
     @hover="loadData"
   >
-    <component
-      :is="plain ? 'span' : 'button'"
-      :class="plain
-        ? 'hover:underline cursor-pointer text-inherit'
-        : 'inline-flex items-center gap-1 cursor-pointer hover:underline'"
+    <span
+      class="inline-flex items-center gap-0.5 cursor-pointer hover:underline text-entity-item font-medium"
+      :class="bordered ? 'bg-entity-item/5 border border-entity-item/20 rounded px-1 py-0.5' : ''"
       @click="handleClick"
     >
-      <GameIcon v-if="!plain && showIcon" :icon-id="itemData?.icon_id" :alt="reference" size="xs" />
-      <span :class="plain ? '' : 'text-entity-item text-xs font-medium'">{{ itemData?.name ?? reference }}</span>
-    </component>
+      <GameIcon v-if="showIcon" :icon-id="itemData?.icon_id" :alt="reference" size="inline" />
+      <span>{{ itemData?.name ?? reference }}</span>
+    </span>
     <template #tooltip>
       <ItemTooltip v-if="itemData" :item="itemData" :icon-src="iconSrc" />
     </template>
@@ -33,10 +31,10 @@ import ItemTooltip from "./ItemTooltip.vue";
 const props = withDefaults(defineProps<{
   reference: string;
   showIcon?: boolean;
-  plain?: boolean;
+  bordered?: boolean;
 }>(), {
   showIcon: true,
-  plain: false,
+  bordered: false,
 });
 
 const store = useGameDataStore();

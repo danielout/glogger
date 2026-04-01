@@ -3,15 +3,13 @@
     border-class="border-entity-quest/50"
     @hover="loadData"
   >
-    <component
-      :is="plain ? 'span' : 'button'"
-      :class="plain
-        ? 'hover:underline cursor-pointer text-inherit'
-        : 'inline-flex items-center gap-1 cursor-pointer hover:underline'"
+    <span
+      class="inline-flex items-center gap-0.5 cursor-pointer hover:underline text-entity-quest font-medium"
+      :class="bordered ? 'bg-entity-quest/5 border border-entity-quest/20 rounded px-1 py-0.5' : ''"
       @click="handleClick"
     >
-      <span :class="plain ? '' : 'text-entity-quest text-xs font-medium'">{{ displayName }}</span>
-    </component>
+      <span>{{ displayName }}</span>
+    </span>
     <template #tooltip>
       <QuestTooltip v-if="questData" :quest="questData" />
     </template>
@@ -19,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useGameDataStore } from "../../../stores/gameDataStore";
 import { useEntityNavigation } from "../../../composables/useEntityNavigation";
 import type { QuestInfo } from "../../../types/gameData";
@@ -28,9 +26,9 @@ import QuestTooltip from "./QuestTooltip.vue";
 
 const props = withDefaults(defineProps<{
   reference: string;
-  plain?: boolean;
+  bordered?: boolean;
 }>(), {
-  plain: false,
+  bordered: false,
 });
 
 const store = useGameDataStore();
@@ -50,6 +48,13 @@ async function loadData() {
     console.warn(`Failed to resolve quest: ${props.reference}`, e);
   }
 }
+
+onMounted(loadData);
+
+watch(() => props.reference, () => {
+  questData.value = null;
+  loadData();
+});
 
 function handleClick() {
   navigateToEntity({ type: "quest", id: questData.value?.internal_name ?? props.reference });

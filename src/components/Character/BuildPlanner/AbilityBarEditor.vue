@@ -91,12 +91,19 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useBuildPlannerStore } from '../../../stores/buildPlannerStore'
 import { useGameDataStore } from '../../../stores/gameDataStore'
+import { useSettingsStore } from '../../../stores/settingsStore'
 import type { AbilityInfo } from '../../../types/gameData'
 import AbilityInline from '../../Shared/Ability/AbilityInline.vue'
 import AbilityOption from './AbilityOption.vue'
 
 const store = useBuildPlannerStore()
 const gameData = useGameDataStore()
+const settingsStore = useSettingsStore()
+
+function filterObtainable(abilities: AbilityInfo[]): AbilityInfo[] {
+  if (settingsStore.settings.showUnobtainableItems) return abilities
+  return abilities.filter(a => !a.keywords.includes('Lint_NotObtainable'))
+}
 
 const skillAbilities = ref<AbilityInfo[]>([])
 const sidebarAbilities = ref<AbilityInfo[]>([])
@@ -162,7 +169,7 @@ async function loadAbilities() {
         : null
 
     if (skill) {
-      skillAbilities.value = await gameData.getAbilitiesForSkill(skill)
+      skillAbilities.value = filterObtainable(await gameData.getAbilitiesForSkill(skill))
     } else {
       skillAbilities.value = []
     }
@@ -180,7 +187,7 @@ async function loadAbilities() {
           // Skill might not exist
         }
       }
-      sidebarAbilities.value = sidebarResults
+      sidebarAbilities.value = filterObtainable(sidebarResults)
     } else {
       sidebarAbilities.value = []
     }

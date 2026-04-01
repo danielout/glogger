@@ -343,18 +343,20 @@ async function searchAbilities(q: string) {
   }
 }
 
+function isObtainable(ability: AbilityInfo): boolean {
+  return settingsStore.settings.showUnobtainableItems || !ability.keywords.includes('Lint_NotObtainable');
+}
+
 const filteredAbilities = computed(() => {
-  if (selectedSkillFilter.value === "All") {
-    return allAbilities.value; // already filtered by search
+  let list = allAbilities.value;
+  if (selectedSkillFilter.value !== "All" && query.value.trim()) {
+    const q = query.value.toLowerCase();
+    list = list.filter(ability =>
+      ability.name.toLowerCase().includes(q) ||
+      ability.description?.toLowerCase().includes(q)
+    );
   }
-  if (!query.value.trim()) {
-    return allAbilities.value;
-  }
-  const q = query.value.toLowerCase();
-  return allAbilities.value.filter(ability =>
-    ability.name.toLowerCase().includes(q) ||
-    ability.description?.toLowerCase().includes(q)
-  );
+  return list.filter(isObtainable);
 });
 
 async function selectAbility(ability: AbilityInfo) {

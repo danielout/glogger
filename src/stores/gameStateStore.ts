@@ -604,8 +604,10 @@ export const useGameStateStore = defineStore('gameState', () => {
     }
   })
 
-  listen<PlayerEvent>('player-event', (event) => {
-    handleInventoryEvent(event.payload)
+  listen<PlayerEvent[]>('player-events-batch', (event) => {
+    for (const pe of event.payload) {
+      handleInventoryEvent(pe)
+    }
   })
 
   listen<string>('server-detected', (event) => {

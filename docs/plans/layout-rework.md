@@ -2,6 +2,24 @@
 
 Reorganizing the app to flow better and look better. Also move to a philosophy of the user doesn't care where the data comes from or how we got it, just always try to display the most complete, up to date, and accurate info we can across the app. Sometimes "the most" will be somewhat stale, but it is the best we can do.
 
+## Standardized Pane Layout System
+
+A unified `PaneLayout` + `SidePane` component system replaces the ad-hoc per-screen flex layouts. See [layout-patterns.md](../architecture/layout-patterns.md) for full documentation.
+
+**Components:** `PaneLayout.vue`, `SidePane.vue`, `usePaneResize.ts`
+
+**Capabilities:**
+- Full-height panes with independent scrolling
+- Collapsible side panes with vertical title strip when collapsed
+- Drag-to-resize side panes (double-click to reset)
+- Per-screen width and collapse state persistence via `useViewPrefs`
+
+**Migration status:**
+- [x] NpcsScreen — migrated to PaneLayout
+- [ ] Data Browser screens (ItemSearch, NpcBrowser, etc.)
+- [ ] Crafting ProjectsTab (3-pane with existing resize logic to replace)
+- [ ] Other screens as needed
+
 ## Top Menu Layout
 
 Need to consolidate, remove, add, and change some of our menu items to have a better feel.

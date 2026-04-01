@@ -859,9 +859,11 @@ export const useCraftingStore = defineStore("crafting", () => {
     }
   }
 
-  // Listen for player events
-  listen<PlayerEvent>("player-event", (event) => {
-    handleCraftDetection(event.payload);
+  // Listen for player events (batched from backend)
+  listen<PlayerEvent[]>("player-events-batch", (event) => {
+    for (const pe of event.payload) {
+      handleCraftDetection(pe);
+    }
   });
 
   // ── Work Orders ──────────────────────────────────────────────────────────
