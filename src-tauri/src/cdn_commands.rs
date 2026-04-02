@@ -223,6 +223,15 @@ pub async fn resolve_npc(
     Ok(state.read().await.resolve_npc(&reference).cloned())
 }
 
+/// Resolve any reference to an ability (numeric ID or display name).
+#[tauri::command]
+pub async fn resolve_ability(
+    reference: String,
+    state: State<'_, GameDataState>,
+) -> Result<Option<AbilityInfo>, String> {
+    Ok(state.read().await.resolve_ability(&reference).cloned())
+}
+
 /// Resolve any reference to an area.
 #[tauri::command]
 pub async fn resolve_area(

@@ -1,38 +1,41 @@
 <template>
-  <div class="flex flex-col h-full">
-    <div class="flex-1 min-h-0">
-      <template v-if="activeTab === 'items'">
-        <ItemSearch :nav-target="props.navTarget" />
-      </template>
-      <template v-else-if="activeTab === 'skills'">
-        <SkillBrowser :nav-target="props.navTarget" />
-      </template>
-      <template v-else-if="activeTab === 'abilities'">
-        <AbilityBrowser />
-      </template>
-      <template v-else-if="activeTab === 'recipes'">
-        <RecipeBrowser :nav-target="props.navTarget" />
-      </template>
-      <template v-else-if="activeTab === 'quests'">
-        <QuestBrowser :nav-target="props.navTarget" />
-      </template>
-      <template v-else-if="activeTab === 'npcs'">
-        <NpcBrowser :nav-target="props.navTarget" />
-      </template>
-      <template v-else-if="activeTab === 'effects'">
-        <EffectBrowser />
-      </template>
-      <template v-else-if="activeTab === 'titles'">
-        <TitleBrowser />
-      </template>
-      <template v-else-if="activeTab === 'treasure'">
-        <TsysBrowser />
-      </template>
+  <PaneLayout screen-key="data-browser">
+    <div class="flex flex-col h-full">
+      <div class="flex-1 min-h-0">
+        <template v-if="activeTab === 'items'">
+          <ItemSearch :nav-target="props.navTarget" />
+        </template>
+        <template v-else-if="activeTab === 'skills'">
+          <SkillBrowser :nav-target="props.navTarget" />
+        </template>
+        <template v-else-if="activeTab === 'abilities'">
+          <AbilityBrowser />
+        </template>
+        <template v-else-if="activeTab === 'recipes'">
+          <RecipeBrowser :nav-target="props.navTarget" />
+        </template>
+        <template v-else-if="activeTab === 'quests'">
+          <QuestBrowser :nav-target="props.navTarget" />
+        </template>
+        <template v-else-if="activeTab === 'npcs'">
+          <NpcBrowser :nav-target="props.navTarget" />
+        </template>
+        <template v-else-if="activeTab === 'effects'">
+          <EffectBrowser />
+        </template>
+        <template v-else-if="activeTab === 'titles'">
+          <TitleBrowser />
+        </template>
+        <template v-else-if="activeTab === 'treasure'">
+          <TsysBrowser />
+        </template>
+      </div>
     </div>
-  </div>
+  </PaneLayout>
 </template>
 
 <script setup lang="ts">
+import PaneLayout from "../Shared/PaneLayout.vue";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import ItemSearch from "./ItemSearch.vue";
 import SkillBrowser from "./SkillBrowser.vue";

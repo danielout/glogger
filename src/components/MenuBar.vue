@@ -47,11 +47,12 @@
       <!-- Right: Search, Settings, Help -->
       <div class="flex items-center justify-end gap-1">
         <button
-          class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer text-sm rounded transition-all leading-none hover:bg-surface-elevated hover:text-text-primary font-mono"
+          class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer text-sm rounded transition-all leading-none hover:bg-surface-elevated hover:text-text-primary font-mono flex items-center gap-1.5"
           :class="{ 'bg-surface-elevated! text-accent-gold!': currentView === 'search' }"
           @click="emit('navigate', 'search')"
-          title="Search">
+          title="Search (Ctrl+F for quick search)">
           Search
+          <kbd class="text-[0.55rem] text-text-muted bg-surface-elevated border border-border-default rounded px-1 py-0.5 leading-none">Ctrl+F</kbd>
         </button>
         <button
           class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer text-xl rounded transition-all leading-none hover:bg-surface-elevated hover:text-text-primary"
@@ -109,6 +110,7 @@ const viewTabs: Partial<Record<AppView, SubTab[]>> = {
     { id: "stats", label: "Stats" },
     { id: "npcs", label: "NPCs" },
     { id: "quests", label: "Quests" },
+    { id: "deaths", label: "Deaths" },
     { id: "gourmand", label: "Gourmand" },
     { id: "build-planner", label: "Build Planner" },
   ],

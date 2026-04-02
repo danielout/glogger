@@ -160,6 +160,8 @@ pub struct GameData {
     pub skill_internal_name_index: HashMap<String, u32>,
     pub npc_name_index: HashMap<String, String>,
     pub area_name_index: HashMap<String, String>,
+    /// Ability display name → ability ID (for combat log resolution)
+    pub ability_name_index: HashMap<String, u32>,
 
     // ── Source cross-reference indices ───────────────────────────────────
     /// ability key (e.g. "ability_1002") → item IDs that bestow it
@@ -223,6 +225,7 @@ impl GameData {
             skill_internal_name_index: HashMap::new(),
             npc_name_index: HashMap::new(),
             area_name_index: HashMap::new(),
+            ability_name_index: HashMap::new(),
             items_bestowing_ability: HashMap::new(),
             items_bestowing_recipe: HashMap::new(),
             items_bestowing_quest: HashMap::new(),
@@ -334,6 +337,18 @@ impl GameData {
         }
         let key = self.area_name_index.get(reference)?;
         self.areas.get(key)
+    }
+
+    /// Resolve any string reference to an AbilityInfo.
+    /// Tries: numeric ID → display name.
+    pub fn resolve_ability(&self, reference: &str) -> Option<&abilities::AbilityInfo> {
+        if let Ok(id) = reference.parse::<u32>() {
+            if let Some(ability) = self.abilities.get(&id) {
+                return Some(ability);
+            }
+        }
+        let id = self.ability_name_index.get(reference)?;
+        self.abilities.get(id)
     }
 }
 
@@ -772,6 +787,11 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         }
     }
 
+    let ability_name_index: HashMap<String, u32> = abilities
+        .iter()
+        .map(|(id, ability)| (ability.name.clone(), *id))
+        .collect();
+
     startup_log!("Game data indices built");
 
     Ok(GameData {
@@ -820,5 +840,6 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         quests_by_npc,
         quests_by_work_order_skill,
         recipes_by_ingredient_keyword,
+        ability_name_index,
     })
 }

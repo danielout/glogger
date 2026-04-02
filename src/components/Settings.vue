@@ -1,5 +1,6 @@
 <template>
-  <div class="max-w-225 p-4">
+  <PaneLayout screen-key="settings">
+  <div class="max-w-225 p-4 h-full overflow-y-auto">
     <h2 class="text-accent-gold mt-0 mb-6 text-2xl">Settings</h2>
 
     <div class="flex gap-6 min-h-125">
@@ -53,11 +54,13 @@
       <p class="m-0">Settings are automatically saved to: <code class="text-accent-gold bg-surface-dark px-1.5 py-0.5 rounded-sm text-xs break-all">{{ settingsStore.settingsFilePath || 'Loading...' }}</code></p>
     </div>
   </div>
+  </PaneLayout>
 </template>
 
 <script setup lang="ts">
 import { ref } from "vue";
 import { useSettingsStore } from "../stores/settingsStore";
+import PaneLayout from "./Shared/PaneLayout.vue";
 import GeneralSettings from "./Settings/GeneralSettings.vue";
 import AppSettingsTab from "./Settings/AppSettingsTab.vue";
 import ChatLogsSettings from "./Settings/ChatLogsSettings.vue";

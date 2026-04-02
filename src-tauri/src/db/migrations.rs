@@ -77,6 +77,26 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         super::record_migration(conn, 10)?;
     }
 
+    if current_version < 11 {
+        migration_v11_character_deaths(conn)?;
+        super::record_migration(conn, 11)?;
+    }
+
+    if current_version < 12 {
+        migration_v12_game_state_area(conn)?;
+        super::record_migration(conn, 12)?;
+    }
+
+    if current_version < 13 {
+        migration_v13_death_damage_type(conn)?;
+        super::record_migration(conn, 13)?;
+    }
+
+    if current_version < 14 {
+        migration_v14_death_damage_sources(conn)?;
+        super::record_migration(conn, 14)?;
+    }
+
     Ok(())
 }
 
@@ -159,6 +179,70 @@ fn migration_v10_crafting_groups_and_stock_targets(conn: &Connection) -> Result<
     conn.execute_batch(
         "ALTER TABLE crafting_projects ADD COLUMN group_name TEXT DEFAULT NULL;
          ALTER TABLE crafting_project_entries ADD COLUMN target_stock INTEGER DEFAULT NULL;",
+    )?;
+    Ok(())
+}
+
+/// Migration V11: Character deaths tracking table.
+/// Records each player death with the killer, ability, damage, and area context.
+fn migration_v11_character_deaths(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE character_deaths (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            died_at TEXT NOT NULL,
+            killer_name TEXT NOT NULL,
+            killer_entity_id TEXT,
+            killing_ability TEXT NOT NULL,
+            health_damage INTEGER NOT NULL,
+            armor_damage INTEGER NOT NULL DEFAULT 0,
+            area TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX idx_deaths_char ON character_deaths(character_name, server_name);",
+    )?;
+    Ok(())
+}
+
+/// Migration V12: Track current area per character in game state.
+fn migration_v12_game_state_area(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE game_state_area (
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            area_name TEXT NOT NULL,
+            last_confirmed_at TEXT NOT NULL,
+            PRIMARY KEY (character_name, server_name)
+        );",
+    )?;
+    Ok(())
+}
+
+/// Migration V13: Add damage_type column to character_deaths for CDN ability enrichment.
+fn migration_v13_death_damage_type(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "ALTER TABLE character_deaths ADD COLUMN damage_type TEXT DEFAULT NULL;",
+    )?;
+    Ok(())
+}
+
+/// Migration V14: Damage sources leading up to each death.
+fn migration_v14_death_damage_sources(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE death_damage_sources (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            death_id INTEGER NOT NULL REFERENCES character_deaths(id) ON DELETE CASCADE,
+            event_order INTEGER NOT NULL,
+            timestamp TEXT NOT NULL,
+            attacker_name TEXT NOT NULL,
+            attacker_entity_id TEXT,
+            ability_name TEXT NOT NULL,
+            health_damage INTEGER NOT NULL DEFAULT 0,
+            armor_damage INTEGER NOT NULL DEFAULT 0,
+            is_crit INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX idx_damage_sources_death ON death_damage_sources(death_id);",
     )?;
     Ok(())
 }

@@ -10,6 +10,7 @@ import { useCoordinatorStore } from "./coordinatorStore";
 import { useMarketStore } from "./marketStore";
 import { useSurveyStore } from "./surveyStore";
 import { useFarmingStore } from "./farmingStore";
+import { useDeathStore } from "./deathStore";
 import type { PlayerEvent } from "../types/playerEvents";
 
 export type StartupPhase =
@@ -203,6 +204,7 @@ export const useStartupStore = defineStore("startup", () => {
     const marketStore = useMarketStore();
     const surveyStore = useSurveyStore();
     const farmingStore = useFarmingStore();
+    const deathStore = useDeathStore();
 
     // ── Task 1: Wait for game data (CDN) ────────────────────────────────
     // The Rust backend is already loading this in a background task spawned
@@ -257,6 +259,9 @@ export const useStartupStore = defineStore("startup", () => {
         for (const pe of event.payload) {
           farmingStore.handlePlayerEvent(pe);
         }
+      });
+      await listen("character-death", (event: any) => {
+        deathStore.handleDeathEvent(event.payload);
       });
 
       // Start log watchers if enabled

@@ -71,7 +71,7 @@ export const useGameStateStore = defineStore('gameState', () => {
   const skills = ref<GameStateSkill[]>([])
   const attributes = ref<GameStateAttribute[]>([])
   const activeSkills = ref<GameStateActiveSkills | null>(null)
-  const world = ref<GameStateWorld>({ weather: null, combat: null, mount: null })
+  const world = ref<GameStateWorld>({ weather: null, combat: null, mount: null, area: null })
   const inventory = ref<GameStateInventoryItem[]>([])
   const recipes = ref<GameStateRecipe[]>([])
   const equipment = ref<GameStateEquipmentSlot[]>([])

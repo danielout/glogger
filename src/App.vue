@@ -25,7 +25,7 @@
 
         <div class="flex-1 flex flex-col p-4 min-h-0 transition-[padding] duration-250 ease-out" :class="hasSubTabs ? 'pt-28' : 'pt-20'">
           <div class="flex-1 min-h-0">
-            <div v-if="visited.has('dashboard')" v-show="currentView === 'dashboard'" class="h-full overflow-y-auto">
+            <div v-if="visited.has('dashboard')" v-show="currentView === 'dashboard'" class="h-full">
               <DashboardView />
             </div>
             <div v-if="visited.has('character')" v-show="currentView === 'character'" class="h-full">
@@ -40,16 +40,16 @@
             <div v-if="visited.has('economics')" v-show="currentView === 'economics'" class="h-full">
               <EconomicsView :active-tab="activeSubTab" />
             </div>
-            <div v-if="visited.has('chat')" v-show="currentView === 'chat'" class="h-full overflow-y-auto">
+            <div v-if="visited.has('chat')" v-show="currentView === 'chat'" class="h-full">
               <ChatView :active-tab="activeSubTab" />
             </div>
             <div v-if="visited.has('data-browser')" v-show="currentView === 'data-browser'" class="h-full">
               <DataBrowser :nav-target="entityNavTarget" :active-tab="activeSubTab" />
             </div>
-            <div v-if="visited.has('search')" v-show="currentView === 'search'" class="h-full overflow-y-auto">
-              <EmptyState primary="Search" secondary="Coming soon." />
+            <div v-if="visited.has('search')" v-show="currentView === 'search'" class="h-full">
+              <SearchView @navigate="handleSearchNavigate" />
             </div>
-            <div v-if="visited.has('settings')" v-show="currentView === 'settings'" class="h-full overflow-y-auto">
+            <div v-if="visited.has('settings')" v-show="currentView === 'settings'" class="h-full">
               <Settings
                 :parsing="parsing"
                 :error="error"
@@ -68,12 +68,17 @@
       </div>
 
       <ToastContainer />
+      <QuickSearchOverlay
+        :show="showQuickSearch"
+        @update:show="showQuickSearch = $event"
+        @navigate="handleSearchNavigate"
+      />
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from "vue";
+import { ref, reactive, computed, onMounted, onBeforeUnmount } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useSettingsStore } from "./stores/settingsStore";
 import { useStartupStore } from "./stores/startupStore";
@@ -88,6 +93,7 @@ import CraftingView from "./components/Crafting/CraftingView.vue";
 import EconomicsView from "./components/Economics/EconomicsView.vue";
 import ChatView from "./components/Chat/ChatView.vue";
 import DataBrowser from "./components/DataBrowser/DataBrowser.vue";
+import SearchView from "./components/Search/SearchView.vue";
 import EmptyState from "./components/Shared/EmptyState.vue";
 import Settings from "./components/Settings.vue";
 import StartupSplash from "./components/Startup/StartupSplash.vue";
@@ -98,6 +104,8 @@ import SetupWatchersStep from "./components/Startup/SetupWatchersStep.vue";
 import SetupCharacterStep from "./components/Startup/SetupCharacterStep.vue";
 import CharacterSelect from "./components/Startup/CharacterSelect.vue";
 import ToastContainer from "./components/Shared/ToastContainer.vue";
+import QuickSearchOverlay from "./components/Search/QuickSearchOverlay.vue";
+import type { SearchResult } from "./composables/useQuickSearch";
 
 const settingsStore = useSettingsStore();
 const startup = useStartupStore();
@@ -110,10 +118,55 @@ const visited = reactive(new Set<AppView>(["dashboard"]));
 const menuBarRef = ref<InstanceType<typeof MenuBar> | null>(null);
 const activeSubTab = ref("");
 
+const showQuickSearch = ref(false);
+
 const hasSubTabs = computed(() => menuBarRef.value?.hasTabs ?? false);
 
 function onSubTabChange(tab: string) {
   activeSubTab.value = tab;
+}
+
+// Global Ctrl+F to open quick search
+function handleGlobalKeydown(event: KeyboardEvent) {
+  if ((event.ctrlKey || event.metaKey) && event.key === "f") {
+    event.preventDefault();
+    showQuickSearch.value = true;
+  }
+}
+onMounted(() => {
+  window.addEventListener("keydown", handleGlobalKeydown);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", handleGlobalKeydown);
+});
+
+function handleSearchNavigate(result: SearchResult) {
+  // If the result has an entity type, use the entity navigation system
+  if (result.navigation.entityType && result.navigation.entityId) {
+    visited.add("data-browser");
+    currentView.value = "data-browser";
+    entityNavTarget.value = {
+      type: result.navigation.entityType as any,
+      id: result.navigation.entityId,
+    };
+    const entityTypeToTab: Record<string, string> = {
+      item: "items", skill: "skills", ability: "abilities", recipe: "recipes",
+      quest: "quests", npc: "npcs", effect: "effects", title: "titles",
+    };
+    const tab = entityTypeToTab[result.navigation.entityType];
+    if (tab && menuBarRef.value) {
+      menuBarRef.value.activeSubTabs["data-browser"] = tab;
+      activeSubTab.value = tab;
+    }
+    return;
+  }
+
+  // Otherwise navigate to the view + sub-tab
+  navigateToView(result.navigation.view);
+  if (result.navigation.subTab && menuBarRef.value) {
+    menuBarRef.value.activeSubTabs[result.navigation.view] = result.navigation.subTab;
+    activeSubTab.value = result.navigation.subTab;
+  }
 }
 
 provideEntityNavigation((target) => {

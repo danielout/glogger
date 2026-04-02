@@ -40,6 +40,13 @@ pub struct GameStateWorld {
     pub weather: Option<GameStateWeather>,
     pub combat: Option<GameStateCombat>,
     pub mount: Option<GameStateMount>,
+    pub area: Option<GameStateArea>,
+}
+
+#[derive(Serialize)]
+pub struct GameStateArea {
+    pub area_name: String,
+    pub last_confirmed_at: String,
 }
 
 #[derive(Serialize)]
@@ -264,10 +271,23 @@ pub fn get_game_state_world(
         },
     ).ok();
 
+    // Area
+    let area = conn.query_row(
+        "SELECT area_name, last_confirmed_at FROM game_state_area WHERE character_name = ?1 AND server_name = ?2",
+        rusqlite::params![character_name, server_name],
+        |row| {
+            Ok(GameStateArea {
+                area_name: row.get(0)?,
+                last_confirmed_at: row.get(1)?,
+            })
+        },
+    ).ok();
+
     Ok(GameStateWorld {
         weather,
         combat,
         mount,
+        area,
     })
 }
 

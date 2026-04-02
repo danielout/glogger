@@ -1,20 +1,23 @@
 <template>
-  <div class="flex flex-col h-full bg-surface-base rounded-lg overflow-hidden">
-    <!-- Tab Content -->
-    <div class="flex-1 overflow-hidden flex flex-col">
-      <ChannelView v-if="activeTab === 'channels'" />
-      <TellsView v-else-if="activeTab === 'tells'" />
-      <PartyView v-else-if="activeTab === 'party'" />
-      <NearbyView v-else-if="activeTab === 'nearby'" />
-      <GuildView v-else-if="activeTab === 'guild'" />
-      <SystemView v-else-if="activeTab === 'system'" />
-      <AllMessagesView v-else-if="activeTab === 'all'" />
-      <WatchwordsView v-else-if="activeTab === 'watchwords'" />
+  <PaneLayout screen-key="chat">
+    <div class="flex flex-col h-full bg-surface-base rounded-lg overflow-hidden">
+      <!-- Tab Content -->
+      <div class="flex-1 overflow-hidden flex flex-col">
+        <ChannelView v-if="activeTab === 'channels'" />
+        <TellsView v-else-if="activeTab === 'tells'" />
+        <PartyView v-else-if="activeTab === 'party'" />
+        <NearbyView v-else-if="activeTab === 'nearby'" />
+        <GuildView v-else-if="activeTab === 'guild'" />
+        <SystemView v-else-if="activeTab === 'system'" />
+        <AllMessagesView v-else-if="activeTab === 'all'" />
+        <WatchwordsView v-else-if="activeTab === 'watchwords'" />
+      </div>
     </div>
-  </div>
+  </PaneLayout>
 </template>
 
 <script setup lang="ts">
+import PaneLayout from '../Shared/PaneLayout.vue'
 import ChannelView from './ChannelView.vue'
 import TellsView from './TellsView.vue'
 import PartyView from './PartyView.vue'

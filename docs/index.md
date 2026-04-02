@@ -68,6 +68,7 @@ Per-screen documentation organized by view.
   - [crafting-history.md](features/screens/crafting/crafting-history.md) — Crafting History tab.
   - [crafting-workorders.md](features/screens/crafting/crafting-workorders.md) — Work Orders tab.
   - [crafting-cookshelper.md](features/screens/crafting/crafting-cookshelper.md) — Cook's Helper tab.
+  - [crafting-skills.md](features/screens/crafting/crafting-skills.md) — Skills tab: per-skill summaries with charts and recipe lists.
 
 ### Economics
 - [economics.md](features/screens/economics.md) — Economics screen: architecture, component hierarchy, market/farming/surveying.
@@ -94,6 +95,9 @@ Per-screen documentation organized by view.
   - [data-browser-npcs.md](features/screens/data-browser/data-browser-npcs.md) — NPCs tab.
   - [data-browser-effects.md](features/screens/data-browser/data-browser-effects.md) — Effects tab.
   - [data-browser-titles.md](features/screens/data-browser/data-browser-titles.md) — Titles tab.
+
+### Search
+- [search.md](features/screens/search.md) — Search screen: quick search overlay (Ctrl+F), dedicated search page, cross-category search composable.
 
 ## Plans
 

@@ -347,13 +347,7 @@ impl SurveySessionTracker {
 
         let session_id = match self.current_session_id.or(self.last_session_id) {
             Some(id) => id,
-            None => {
-                eprintln!(
-                    "[survey-persist] Correction skipped for {} x{}: no current or last session",
-                    item_name, quantity
-                );
-                return None;
-            }
+            None => return None,
         };
 
         let conn = db.get().ok()?;

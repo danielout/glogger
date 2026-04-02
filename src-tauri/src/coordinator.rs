@@ -1,4 +1,5 @@
 use crate::cdn_commands::GameDataState;
+use crate::chat_combat_parser::parse_combat_message;
 use crate::chat_status_parser::parse_status_message;
 use crate::db::chat_commands::insert_chat_messages;
 use crate::db::queries::log_positions;
@@ -83,6 +84,13 @@ pub struct DataIngestCoordinator {
     app_handle: AppHandle,
     survey_tracker: SurveySessionTracker,
     game_state: GameStateManager,
+    game_data: GameDataState,
+    /// Current area name, updated from AreaTransition events.
+    /// Used to attach area context to combat death records.
+    current_area: Option<String>,
+    /// Rolling buffer of recent damage-on-player events (max 10).
+    /// Snapshotted into DB when a death occurs for "what killed me" context.
+    recent_damage: Vec<crate::chat_combat_parser::ChatCombatEvent>,
 }
 
 impl DataIngestCoordinator {
@@ -96,6 +104,7 @@ impl DataIngestCoordinator {
         // Seed game state manager with persisted character+server so that
         // Player.log events during the initial replay have a valid server key.
         let current_settings = settings.get();
+        let game_data_clone = game_data.clone();
         let mut game_state = GameStateManager::new(game_data);
         if let (Some(char_name), Some(server_name)) = (
             &current_settings.active_character_name,
@@ -124,6 +133,9 @@ impl DataIngestCoordinator {
             app_handle,
             survey_tracker,
             game_state,
+            game_data: game_data_clone,
+            current_area: None,
+            recent_damage: Vec::new(),
         })
     }
 
@@ -495,6 +507,23 @@ impl DataIngestCoordinator {
                     self.start_chat_log_tailing(PathBuf::from(&path))?;
                 }
                 LogEvent::AreaTransition { area, .. } => {
+                    self.current_area = Some(area.clone());
+                    // Persist area to game state
+                    if let (Some(character), Some(server)) = (
+                        self.game_state.get_active_character(),
+                        self.game_state.get_active_server(),
+                    ) {
+                        if let Ok(conn) = self.db_pool.get() {
+                            conn.execute(
+                                "INSERT INTO game_state_area (character_name, server_name, area_name, last_confirmed_at)
+                                 VALUES (?1, ?2, ?3, datetime('now'))
+                                 ON CONFLICT(character_name, server_name) DO UPDATE SET
+                                    area_name = excluded.area_name,
+                                    last_confirmed_at = excluded.last_confirmed_at",
+                                rusqlite::params![character, server, area],
+                            ).ok();
+                        }
+                    }
                     self.app_handle.emit("area-transition", &area).ok();
                 }
                 LogEvent::SkillUpdated(update) => {
@@ -582,6 +611,34 @@ impl DataIngestCoordinator {
                             .emit("chat-status-event", &status_event)
                             .ok();
                     }
+
+                    // Check Combat channel for player combat events
+                    if let Some(character_name) = self.game_state.get_active_character() {
+                        if let Some(combat_event) =
+                            parse_combat_message(&msg, character_name)
+                        {
+                            match &combat_event {
+                                crate::chat_combat_parser::ChatCombatEvent::PlayerDeath { .. } => {
+                                    if let Err(e) = self.persist_death_event(&combat_event) {
+                                        eprintln!("Failed to persist death event: {}", e);
+                                    }
+                                    self.app_handle
+                                        .emit("character-death", &combat_event)
+                                        .ok();
+                                    // Clear buffer after death
+                                    self.recent_damage.clear();
+                                }
+                                crate::chat_combat_parser::ChatCombatEvent::DamageOnPlayer { .. } => {
+                                    // Keep rolling buffer of last 10 damage events
+                                    if self.recent_damage.len() >= 10 {
+                                        self.recent_damage.remove(0);
+                                    }
+                                    self.recent_damage.push(combat_event);
+                                }
+                            }
+                        }
+                    }
+
                     messages.push(msg);
                 }
                 LogEvent::ServerDetected {
@@ -709,6 +766,106 @@ impl DataIngestCoordinator {
         self.app_handle
             .emit("coordinator-status", status)
             .map_err(|e| format!("Failed to emit event: {}", e))
+    }
+
+    /// Persist a player death event to the character_deaths table,
+    /// along with the recent damage sources leading up to the death.
+    fn persist_death_event(
+        &self,
+        event: &crate::chat_combat_parser::ChatCombatEvent,
+    ) -> Result<(), String> {
+        let crate::chat_combat_parser::ChatCombatEvent::PlayerDeath {
+            timestamp,
+            killer_name,
+            killer_entity_id,
+            killing_ability,
+            health_damage,
+            armor_damage,
+        } = event
+        else {
+            return Ok(());
+        };
+
+        let character_name = self
+            .game_state
+            .get_active_character()
+            .unwrap_or("Unknown");
+        let server_name = self
+            .game_state
+            .get_active_server()
+            .unwrap_or("Unknown");
+        let area = self.current_area.as_deref();
+
+        // Resolve ability from CDN to get damage type
+        let damage_type: Option<String> = self
+            .game_data
+            .try_read()
+            .ok()
+            .and_then(|gd| {
+                let ability = gd.resolve_ability(killing_ability)?;
+                ability.damage_type.clone()
+            });
+
+        let conn = self
+            .db_pool
+            .get()
+            .map_err(|e| format!("Database connection error: {e}"))?;
+        conn.execute(
+            "INSERT INTO character_deaths
+                (character_name, server_name, died_at, killer_name, killer_entity_id,
+                 killing_ability, health_damage, armor_damage, area, damage_type)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            rusqlite::params![
+                character_name,
+                server_name,
+                timestamp,
+                killer_name,
+                killer_entity_id,
+                killing_ability,
+                health_damage,
+                armor_damage,
+                area,
+                damage_type,
+            ],
+        )
+        .map_err(|e| format!("Failed to insert death: {}", e))?;
+
+        let death_id = conn.last_insert_rowid();
+
+        // Persist recent damage sources leading up to the death
+        for (order, dmg_event) in self.recent_damage.iter().enumerate() {
+            if let crate::chat_combat_parser::ChatCombatEvent::DamageOnPlayer {
+                timestamp: dmg_ts,
+                attacker_name,
+                attacker_entity_id,
+                ability_name,
+                health_damage: hp,
+                armor_damage: ap,
+                is_crit,
+            } = dmg_event
+            {
+                conn.execute(
+                    "INSERT INTO death_damage_sources
+                        (death_id, event_order, timestamp, attacker_name, attacker_entity_id,
+                         ability_name, health_damage, armor_damage, is_crit)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                    rusqlite::params![
+                        death_id,
+                        order as i64,
+                        dmg_ts,
+                        attacker_name,
+                        attacker_entity_id,
+                        ability_name,
+                        hp,
+                        ap,
+                        *is_crit,
+                    ],
+                )
+                .map_err(|e| format!("Failed to insert damage source: {}", e))?;
+            }
+        }
+
+        Ok(())
     }
 }
 

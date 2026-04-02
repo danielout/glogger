@@ -2,6 +2,7 @@ mod cdn;
 mod cdn_commands;
 mod chat_commands;
 mod chat_parser;
+mod chat_combat_parser;
 mod chat_status_parser;
 mod commands;
 mod coordinator;
@@ -55,6 +56,7 @@ use cdn_commands::{
     search_tsys,
     get_xp_table_for_skill,
     init_game_data,
+    resolve_ability,
     resolve_area,
     resolve_effect_descs,
     // Unified entity resolvers
@@ -102,6 +104,7 @@ use db::character_commands::{
     get_snapshot_currencies, get_snapshot_npc_favor, get_snapshot_recipes, get_snapshot_skills,
     get_snapshot_stats, import_character_report,
 };
+use db::death_commands::{get_character_deaths, get_death_damage_sources};
 use db::crafting_commands::{
     add_project_entry, check_material_availability, create_crafting_project,
     delete_crafting_project, duplicate_crafting_project, get_crafting_project,
@@ -288,6 +291,7 @@ pub fn run() {
             resolve_recipe,
             resolve_quest,
             resolve_npc,
+            resolve_ability,
             resolve_area,
             // Item queries
             search_items,
@@ -412,6 +416,9 @@ pub fn run() {
             get_snapshot_currencies,
             get_snapshot_active_quests,
             compare_snapshots,
+            // Character deaths
+            get_character_deaths,
+            get_death_damage_sources,
             // Inventory import
             import_inventory_report,
             get_inventory_snapshots,

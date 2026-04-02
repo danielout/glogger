@@ -128,6 +128,11 @@ export const useGameDataStore = defineStore("gameData", () => {
     return invoke<NpcInfo | null>("resolve_npc", { reference });
   }
 
+  /** Resolve an ability by numeric ID or display name. */
+  async function resolveAbility(reference: string | number): Promise<AbilityInfo | null> {
+    return invoke<AbilityInfo | null>("resolve_ability", { reference: String(reference) });
+  }
+
   // ── Query/filter commands (not replaced by resolvers) ───────────────────
 
   async function searchItems(
@@ -330,6 +335,7 @@ export const useGameDataStore = defineStore("gameData", () => {
     resolveQuest,
     resolveNpcSync,
     resolveNpc,
+    resolveAbility,
     // Query/filter actions
     refreshCacheStatus,
     forceRefreshCdn,

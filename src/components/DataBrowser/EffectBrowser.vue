@@ -1,18 +1,18 @@
 <template>
-  <div class="h-full flex flex-col">
-    <!-- Status banner if data not ready -->
-    <div v-if="store.status !== 'ready'" class="p-4 text-sm">
-      <span v-if="store.status === 'loading'" class="text-accent-gold"
-        >⟳ Loading game data…</span
-      >
-      <span v-else-if="store.status === 'error'" class="text-accent-red"
-        >✕ {{ store.errorMessage }}</span
-      >
-    </div>
+  <PaneLayout screen-key="db-effects" :left-pane="{ title: 'Effects', defaultWidth: 360, minWidth: 280, maxWidth: 500 }">
+    <template #left>
+      <!-- Status banner if data not ready -->
+      <div v-if="store.status !== 'ready'" class="p-4 text-sm">
+        <span v-if="store.status === 'loading'" class="text-accent-gold"
+          >⟳ Loading game data…</span
+        >
+        <span v-else-if="store.status === 'error'" class="text-accent-red"
+          >✕ {{ store.errorMessage }}</span
+        >
+      </div>
 
-    <div v-else class="flex gap-4 h-full overflow-hidden">
-      <!-- Left panel: search + results -->
-      <div class="w-90 shrink-0 flex flex-col gap-2 overflow-hidden">
+      <template v-else>
+      <div class="flex flex-col gap-2 h-full overflow-hidden">
         <div class="flex items-center gap-2 relative">
           <input
             v-model="query"
@@ -46,11 +46,13 @@
           </li>
         </ul>
       </div>
+      </template>
+    </template>
 
-      <!-- Right panel: effect detail -->
-      <div
-        class="flex-1 overflow-y-auto border border-surface-elevated p-4 flex flex-col gap-4"
-        :class="{ 'items-center justify-center': !selected }">
+    <!-- Right panel: effect detail -->
+    <div
+      class="h-full overflow-y-auto border-l border-surface-elevated p-4 flex flex-col gap-4"
+      :class="{ 'items-center justify-center': !selected }">
         <div v-if="!selected" class="text-border-default italic">
           Select an effect to inspect
         </div>
@@ -149,12 +151,12 @@
             <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
           </div>
         </template>
-      </div>
     </div>
-  </div>
+  </PaneLayout>
 </template>
 
 <script setup lang="ts">
+import PaneLayout from "../Shared/PaneLayout.vue";
 import { ref, watch } from "vue";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";

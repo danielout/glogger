@@ -1,4 +1,5 @@
 <template>
+  <PaneLayout screen-key="character">
   <div class="flex flex-col gap-4 h-full min-h-0">
     <!-- Skills: unified skill view (manages its own scroll) -->
     <template v-if="activeTab === 'skills'">
@@ -85,6 +86,11 @@
       <QuestsScreen />
     </template>
 
+    <!-- Deaths -->
+    <template v-else-if="activeTab === 'deaths'">
+      <DeathsView />
+    </template>
+
     <!-- Gourmand -->
     <template v-else-if="activeTab === 'gourmand'">
       <GourmandView />
@@ -95,12 +101,14 @@
       <BuildPlannerScreen />
     </template>
   </div>
+  </PaneLayout>
 </template>
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useCharacterStore } from '../../stores/characterStore'
 import { formatDateTimeFull } from '../../composables/useTimestamp'
+import PaneLayout from '../Shared/PaneLayout.vue'
 import EmptyState from '../Shared/EmptyState.vue'
 import SkillsScreen from './SkillsScreen.vue'
 import SkillTable from './SkillTable.vue'
@@ -110,6 +118,7 @@ import StatsTable from './StatsTable.vue'
 import CurrencyTable from './CurrencyTable.vue'
 import GourmandView from '../Gourmand/GourmandView.vue'
 import BuildPlannerScreen from './BuildPlanner/BuildPlannerScreen.vue'
+import DeathsView from './DeathsView.vue'
 
 defineProps<{
   activeTab: string;

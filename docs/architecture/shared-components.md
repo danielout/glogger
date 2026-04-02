@@ -443,6 +443,54 @@ Wraps any content with tooltip-on-hover behavior. Handles delay, positioning, an
 
 **Events:** `hover` — emitted once on first mouseenter, use for lazy data loading.
 
+## Charting — vue-data-ui
+
+The app uses [`vue-data-ui`](https://vue-data-ui.graphixy.net/) for chart visualizations. Its CSS is imported globally in `main.ts`. Currently used by the Crafting Skills tab (`VueUiDonut`), but available for any screen.
+
+**Available components:** `VueUiDonut`, `VueUiBar`, `VueUiLine`, `VueUiSparkline`, `VueUiRadar`, and many more — see the library docs for the full catalog. All components accept a `dataset` array and a `config` object.
+
+**Usage pattern:**
+
+```vue
+<script setup lang="ts">
+import { VueUiDonut } from "vue-data-ui";
+import type { VueUiDonutConfig, VueUiDonutDatasetItem } from "vue-data-ui";
+
+const dataset: VueUiDonutDatasetItem[] = [
+  { name: "Iron Ore", color: "#6366f1", values: [150] },
+  { name: "Wood",     color: "#f59e0b", values: [90] },
+];
+
+const config: VueUiDonutConfig = {
+  responsive: true,
+  style: {
+    chart: {
+      backgroundColor: "transparent",
+      color: "#a1a1aa",
+      legend: { show: false },
+      tooltip: {
+        backgroundColor: "#27272a",
+        color: "#d4d4d8",
+        borderColor: "#3f3f46",
+      },
+    },
+  },
+  userOptions: { show: false },
+  table: { show: false },
+};
+</script>
+
+<template>
+  <VueUiDonut :dataset="dataset" :config="config" />
+</template>
+```
+
+**Tips:**
+- Set `responsive: true` so charts fill their container
+- Use `userOptions: { show: false }` and `table: { show: false }` to hide the built-in toolbar/table
+- Match tooltip colors to the app theme tokens (`surface-card`, `text-primary`, `border-default`)
+- Use a muted chart palette that works on dark backgrounds (see `SkillsTab.vue` for a tested palette)
+
 ## Navigation
 
 Inline components call `navigateToEntity({ type, id })` on click, which is provided via Vue's provide/inject from [`App.vue`](../../src/App.vue). This switches the app to the Data Browser view and activates the correct tab.

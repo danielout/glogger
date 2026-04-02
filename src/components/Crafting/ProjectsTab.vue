@@ -1,5 +1,6 @@
 <template>
-  <div class="flex h-[calc(100vh-200px)]">
+  <PaneLayout screen-key="crafting-projects">
+  <div class="flex h-full">
     <!-- Left: project sidebar (collapsible) -->
     <ProjectSidebar />
 
@@ -44,10 +45,12 @@
         @update-target-stock="updateEntryTargetStock" />
     </template>
   </div>
+  </PaneLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onBeforeUnmount } from "vue";
+import PaneLayout from "../Shared/PaneLayout.vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useCraftingStore } from "../../stores/craftingStore";

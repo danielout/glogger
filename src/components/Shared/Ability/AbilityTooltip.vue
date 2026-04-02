@@ -18,6 +18,22 @@
     {{ ability.description }}
   </div>
 
+  <!-- Combat details -->
+  <div v-if="hasCombatDetails" class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs mb-2">
+    <span v-if="ability.damage_type" class="text-red-400">{{ ability.damage_type }}</span>
+    <span v-if="ability.target" class="text-text-muted">{{ ability.target }}</span>
+    <span v-if="ability.range" class="text-text-muted">Range: {{ ability.range }}m</span>
+    <span v-if="ability.reset_time" class="text-text-muted">CD: {{ ability.reset_time }}s</span>
+  </div>
+
+  <!-- Costs -->
+  <div v-if="hasCosts" class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs mb-2">
+    <span v-if="ability.mana_cost" class="text-blue-400">{{ ability.mana_cost }} mana</span>
+    <span v-if="ability.power_cost" class="text-yellow-400">{{ ability.power_cost }} power</span>
+    <span v-if="ability.armor_cost" class="text-text-muted">{{ ability.armor_cost }} armor</span>
+    <span v-if="ability.health_cost" class="text-red-400">{{ ability.health_cost }} health</span>
+  </div>
+
   <div v-if="ability.keywords?.length" class="flex flex-wrap gap-1">
     <span
       v-for="keyword in ability.keywords"
@@ -30,10 +46,19 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import type { AbilityInfo } from "../../../types/gameData";
 
-defineProps<{
+const props = defineProps<{
   ability: AbilityInfo;
   iconSrc: string | null;
 }>();
+
+const hasCombatDetails = computed(() =>
+  props.ability.damage_type || props.ability.target || props.ability.range || props.ability.reset_time
+);
+
+const hasCosts = computed(() =>
+  props.ability.mana_cost || props.ability.power_cost || props.ability.armor_cost || props.ability.health_cost
+);
 </script>

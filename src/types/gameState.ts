@@ -53,10 +53,16 @@ export interface GameStateMount {
   last_confirmed_at: string
 }
 
+export interface GameStateArea {
+  area_name: string
+  last_confirmed_at: string
+}
+
 export interface GameStateWorld {
   weather: GameStateWeather | null
   combat: GameStateCombat | null
   mount: GameStateMount | null
+  area: GameStateArea | null
 }
 
 export interface GameStateInventoryItem {

@@ -1,5 +1,6 @@
 <template>
-  <div class="pt-4 flex flex-col gap-4">
+  <PaneLayout screen-key="dashboard">
+  <div class="pt-4 flex flex-col gap-4 h-full overflow-y-auto">
     <!-- View toggle -->
     <div class="flex items-center gap-2">
       <button
@@ -48,11 +49,13 @@
     <!-- Aggregate view -->
     <AggregateView v-else />
   </div>
+  </PaneLayout>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useGameStateStore } from '../../stores/gameStateStore'
+import PaneLayout from '../Shared/PaneLayout.vue'
 import EmptyState from '../Shared/EmptyState.vue'
 import SkillCard from '../Shared/SkillCard.vue'
 import ContextBar from './ContextBar.vue'
