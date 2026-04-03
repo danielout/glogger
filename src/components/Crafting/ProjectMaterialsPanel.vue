@@ -243,7 +243,6 @@ const recipeEntries = computed(() => {
   return props.activeProject?.entries ?? [];
 });
 
-const hasEntries = computed(() => recipeEntries.value.length > 0);
 const hasContent = computed(() => props.materials.size > 0 || props.materialNeeds.length > 0 || props.intermediates.length > 0);
 
 // Shorthands for template readability
