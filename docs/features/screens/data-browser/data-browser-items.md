@@ -25,3 +25,13 @@ Browse and search all game items with advanced filtering by keywords, equipment 
 - **Keywords** — color-coded badges (Lint_* in bronze, others in blue)
 - **Effect descriptions** — green text list
 - **Raw JSON**
+
+## Item Tooltip
+
+The shared `ItemTooltip` component (used everywhere items are referenced via `ItemInline`) shows:
+
+- Icon, name, vendor price, buy-used price (2×), market price (if set), effective value
+- Description, keywords, effect descriptions
+- **Sold by** — comma-separated list of NPC vendors (via `NpcInline`) that sell or barter this item. Loaded on hover via `get_vendors_for_item` using the `vendors_for_item` reverse index. Only appears for items with Vendor/Barter entries in CDN sources data.
+- Max stack size, owned count
+- Market value editor (set/edit/remove)

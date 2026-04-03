@@ -21,11 +21,19 @@ A gourmand-aware recipe finder that cross-references uneaten foods with known fo
 4. Results can be filtered by skill (dynamically derived from loaded recipes), material availability, and search text
 5. Optional "Check Materials" runs ingredient resolution + inventory availability for each recipe
 
+## Vendor-Purchasable Awareness
+
+When materials are checked, recipes where the only missing ingredients are vendor-purchasable (confirmed via CDN `sources_items.json` Vendor/Barter entries) are treated as craftable:
+
+- **Filter behavior** — recipes with only vendor-purchasable shortfalls appear under "Can Craft", not "Missing Materials"
+- **Status indicator** — gold dot (●) distinguishes "need to buy from vendor" from green checkmark (✓, all materials on hand) and yellow dot (●, truly missing materials)
+- **Vendor price** — uses NPC vendor buy price (`value × 1.5`) only; player-set market prices do not affect vendor-purchasable classification
+
 ## UI
 
 - **Import bar** — import gourmand report or start fresh; shows eaten/uneaten/craftable counts
 - **Filter pills** — skill filter (All + one pill per skill found in results) with counts
-- **Availability filter** — All / Can Craft / Missing Materials (requires material check)
+- **Availability filter** — All / Can Craft / Missing Materials (requires material check). "Can Craft" includes recipes where missing items are vendor-purchasable.
 - **Sort modes** — by name, skill level requirement, or food level
 - **Search** — text filter on recipe and food names
 - **Multi-select** — checkbox per recipe with select-all toggle

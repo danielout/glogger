@@ -17,9 +17,11 @@ Browse NPCs with area filtering, descriptions, training info, and favor gift pre
 - **Favor Preferences** — sorted by preference amount (descending), color-coded by desire:
   - Love (pink), Like (cyan), Dislike (red), Hate (dark red)
   - Shows item name or keywords with preference value (+X)
-- **Favorite Gift Items** — badge list
+- **Gift Favor Tiers** — badges showing at which favor levels the NPC accepts gifts
+- **Associated Quests** — quests linked to this NPC (loaded async via `getQuestsForNpc`)
+- **Vendor Inventory** — items sold by this NPC, loaded async via `get_npc_vendor_items`. Shows item name (via `ItemInline`) and estimated vendor buy price (`value × 1.5`). Data sourced from CDN `sources_items.json` Vendor/Barter entries, indexed at CDN load time in `vendor_items_by_npc`.
 - **Raw JSON**
 
 ## Data Loading
 
-NPCs are preloaded on startup into `npcsByKey` and `npcsByDisplayName` maps in `gameDataStore`, using synchronous resolution rather than async queries.
+NPCs are preloaded on startup into `npcsByKey` and `npcsByDisplayName` maps in `gameDataStore`, using synchronous resolution rather than async queries. Vendor inventory and associated quests are loaded on-demand when an NPC is selected.

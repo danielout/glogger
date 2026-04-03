@@ -55,7 +55,8 @@ Two-column layout for efficient use of horizontal space:
 - **Craft or Buy** — centralized list of all craftable ingredients. Toggle each between "craft this" (expand into sub-ingredients) and "buy this" (keep as a leaf material). Toggling applies project-wide across all recipe entries that share that ingredient. Replaces needing to dig into individual recipe entries.
 
 **Right column:**
-- **Shopping / Gathering** — items to buy from vendors or source elsewhere, with estimated costs
+- **Shopping / Gathering** — items confirmed vendor-purchasable (via CDN sources data) with estimated NPC buy costs. Only items with Vendor/Barter entries in `sources_items.json` appear here — player-set market prices do not affect this list.
+- **Source Elsewhere** — items not sold by NPC vendors; need to be found, farmed, crafted, or bought from player shops. Craftable items are tagged.
 - **Pickup List** — vault-organized list of items to retrieve from storage
 
 **Full width (top):**
