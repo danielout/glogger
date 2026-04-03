@@ -355,6 +355,7 @@ pub struct LootBreakdownEntry {
     pub primary_quantity: i64,
     pub bonus_quantity: i64,
     pub times_received: i64,
+    pub vendor_value: f64,
 }
 
 #[tauri::command]
@@ -379,9 +380,11 @@ pub fn get_loot_breakdown(
                     SUM(sli.quantity) as total_qty,
                     SUM(CASE WHEN sli.is_primary = 1 THEN sli.quantity ELSE 0 END) as primary_qty,
                     SUM(CASE WHEN sli.is_speed_bonus = 1 THEN sli.quantity ELSE 0 END) as bonus_qty,
-                    COUNT(*) as times_received
+                    COUNT(*) as times_received,
+                    COALESCE(CAST(i.value AS REAL), 0.0) as vendor_value
                  FROM survey_loot_items sli
                  JOIN survey_events se ON sli.event_id = se.id
+                 LEFT JOIN items i ON sli.item_name = i.name COLLATE NOCASE
                  WHERE se.session_id = ?1
                  GROUP BY sli.item_name, sli.item_id
                  ORDER BY total_qty DESC
@@ -398,6 +401,7 @@ pub fn get_loot_breakdown(
                     primary_quantity: row.get(3)?,
                     bonus_quantity: row.get(4)?,
                     times_received: row.get(5)?,
+                    vendor_value: row.get(6)?,
                 })
             })
             .map_err(|e| format!("Loot breakdown query failed: {e}"))?;
@@ -414,8 +418,10 @@ pub fn get_loot_breakdown(
                     SUM(sli.quantity) as total_qty,
                     SUM(CASE WHEN sli.is_primary = 1 THEN sli.quantity ELSE 0 END) as primary_qty,
                     SUM(CASE WHEN sli.is_speed_bonus = 1 THEN sli.quantity ELSE 0 END) as bonus_qty,
-                    COUNT(*) as times_received
+                    COUNT(*) as times_received,
+                    COALESCE(CAST(i.value AS REAL), 0.0) as vendor_value
                  FROM survey_loot_items sli
+                 LEFT JOIN items i ON sli.item_name = i.name COLLATE NOCASE
                  GROUP BY sli.item_name, sli.item_id
                  ORDER BY total_qty DESC
                  LIMIT ?1",
@@ -431,6 +437,7 @@ pub fn get_loot_breakdown(
                     primary_quantity: row.get(3)?,
                     bonus_quantity: row.get(4)?,
                     times_received: row.get(5)?,
+                    vendor_value: row.get(6)?,
                 })
             })
             .map_err(|e| format!("Loot breakdown query failed: {e}"))?;

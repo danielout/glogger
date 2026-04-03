@@ -57,9 +57,16 @@ Two-column layout:
 ## Data Loading
 
 - Sessions load on mount via `get_historical_sessions` (limit 50, ordered by most recent)
-- Loot data loads lazily on expand via `get_loot_breakdown` for the specific session ID
-- Loot is cached client-side in a `Record<number, LootBreakdownEntry[]>` — expanding the same session twice doesn't re-fetch
-- Manual refresh button re-fetches the session list
+- Loot data for **all** sessions loads eagerly alongside session summaries via `get_loot_breakdown` — this enables reactive economics recomputation with current market prices
+- Loot is cached client-side in a `Record<number, LootBreakdownEntry[]>`
+- Manual refresh button re-fetches the session list and all loot data
+
+## Reactive Economics
+
+Historical session economics (revenue, profit, profit/hour) are **recomputed on the frontend** using loot data + current market prices from `marketStore`, matching the active session's behavior. Each loot entry includes `vendor_value` from the items table as a fallback when no market price is set. This means:
+- Changing a market price immediately updates all historical session economics
+- Aggregate stats (Total Profit, Avg Profit/Survey, Best Session) also reflect current market prices
+- The database still stores snapshot economics from `finalize_session` (vendor-price-based) as a fallback before loot loads
 
 ## Editing
 

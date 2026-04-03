@@ -71,11 +71,11 @@
           <div class="flex gap-6 items-center">
             <span v-if="sess.survey_types_used" class="text-xs text-text-dim max-w-64 truncate">{{ sess.survey_types_used }}</span>
             <span class="text-xs text-text-secondary">{{ sess.total_completions }} surveys</span>
-            <span :class="['text-xs font-semibold', sess.total_profit >= 0 ? 'text-[#7ec87e]' : 'text-[#c87e7e]']">
-              {{ formatGold(sess.total_profit) }}
+            <span :class="['text-xs font-semibold', sessionEconomics(sess).profit >= 0 ? 'text-[#7ec87e]' : 'text-[#c87e7e]']">
+              {{ formatGold(sessionEconomics(sess).profit) }}
             </span>
             <span class="text-xs text-text-dim">
-              {{ formatGold(sess.profit_per_hour) }}/hr
+              {{ formatGold(sessionEconomics(sess).profitPerHour) }}/hr
             </span>
           </div>
         </div>
@@ -129,22 +129,22 @@
                 <div class="flex flex-col gap-1.5">
                   <div class="flex justify-between text-xs">
                     <span class="text-text-muted">Revenue</span>
-                    <span class="font-bold text-[#d4af37]">{{ formatGold(sess.total_revenue) }}</span>
+                    <span class="font-bold text-[#d4af37]">{{ formatGold(sessionEconomics(sess).revenue) }}</span>
                   </div>
                   <div class="flex justify-between text-xs">
                     <span class="text-text-muted">Cost</span>
-                    <span class="font-bold text-[#d4af37]">{{ formatGold(sess.total_cost) }}</span>
+                    <span class="font-bold text-[#d4af37]">{{ formatGold(sessionEconomics(sess).cost) }}</span>
                   </div>
                   <div class="flex justify-between text-xs border-t border-[#2a2a3e] pt-1.5">
                     <span class="text-text-muted">Profit</span>
-                    <span :class="['font-bold', sess.total_profit >= 0 ? 'text-[#7ec87e]' : 'text-[#c87e7e]']">
-                      {{ sess.total_profit >= 0 ? '+' : '' }}{{ formatGold(sess.total_profit) }}
+                    <span :class="['font-bold', sessionEconomics(sess).profit >= 0 ? 'text-[#7ec87e]' : 'text-[#c87e7e]']">
+                      {{ sessionEconomics(sess).profit >= 0 ? '+' : '' }}{{ formatGold(sessionEconomics(sess).profit) }}
                     </span>
                   </div>
                   <div class="flex justify-between text-xs">
                     <span class="text-text-muted">Per Hour</span>
-                    <span :class="['font-bold', sess.profit_per_hour >= 0 ? 'text-[#d4af37]' : 'text-[#c87e7e]']">
-                      {{ formatGold(sess.profit_per_hour) }}/hr
+                    <span :class="['font-bold', sessionEconomics(sess).profitPerHour >= 0 ? 'text-[#d4af37]' : 'text-[#c87e7e]']">
+                      {{ formatGold(sessionEconomics(sess).profitPerHour) }}/hr
                     </span>
                   </div>
                 </div>
@@ -251,7 +251,10 @@ import { invoke } from "@tauri-apps/api/core";
 import type { HistoricalSession } from "../../types/database";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 import PaneLayout from "../Shared/PaneLayout.vue";
+import { useMarketStore } from "../../stores/marketStore";
 import { formatDateTimeShort, formatDuration } from "../../composables/useTimestamp";
+
+const marketStore = useMarketStore();
 
 interface LootBreakdownEntry {
   item_name: string;
@@ -260,6 +263,7 @@ interface LootBreakdownEntry {
   primary_quantity: number;
   bonus_quantity: number;
   times_received: number;
+  vendor_value: number;
 }
 
 const sessions = ref<HistoricalSession[]>([]);
@@ -268,12 +272,44 @@ const error = ref("");
 const expandedId = ref<number | null>(null);
 const sessionLoot = ref<Record<number, LootBreakdownEntry[]>>({});
 
+/** Get effective price for a loot entry: market price if set, otherwise vendor value */
+function getEffectivePrice(entry: LootBreakdownEntry): number {
+  const market = marketStore.valuesByName[entry.item_name];
+  if (market) return market.market_value;
+  return entry.vendor_value;
+}
+
+/** Recompute revenue for a session from its loot data + current market prices */
+function sessionRevenue(sessionId: number): number | null {
+  const loot = sessionLoot.value[sessionId];
+  if (!loot) return null;
+  return loot.reduce((sum, entry) => sum + getEffectivePrice(entry) * entry.total_quantity, 0);
+}
+
+/** Get economics for a session: recomputed from loot if available, else stored values */
+function sessionEconomics(sess: HistoricalSession) {
+  const revenue = sessionRevenue(sess.id);
+  if (revenue === null) {
+    return {
+      revenue: sess.total_revenue,
+      cost: sess.total_cost,
+      profit: sess.total_profit,
+      profitPerHour: sess.profit_per_hour,
+    };
+  }
+  const cost = sess.total_cost;
+  const profit = revenue - cost;
+  const hours = sess.elapsed_seconds / 3600;
+  const profitPerHour = hours > 0 ? Math.round(profit / hours) : 0;
+  return { revenue, cost, profit, profitPerHour };
+}
+
 const aggTotalSurveys = computed(() =>
   sessions.value.reduce((sum, s) => sum + s.total_completions, 0)
 );
 
 const aggTotalProfit = computed(() =>
-  sessions.value.reduce((sum, s) => sum + s.total_profit, 0)
+  sessions.value.reduce((sum, s) => sum + sessionEconomics(s).profit, 0)
 );
 
 const aggAvgProfitPerSurvey = computed(() => {
@@ -284,7 +320,7 @@ const aggAvgProfitPerSurvey = computed(() => {
 
 const bestSessionProfitPerHour = computed(() => {
   if (sessions.value.length === 0) return null;
-  return Math.max(...sessions.value.map(s => s.profit_per_hour));
+  return Math.max(...sessions.value.map(s => sessionEconomics(s).profitPerHour));
 });
 
 onMounted(() => {
@@ -296,6 +332,21 @@ async function loadSessions() {
   error.value = "";
   try {
     sessions.value = await invoke<HistoricalSession[]>("get_historical_sessions", { limit: 50 });
+    // Load loot for all sessions so we can recompute economics with market prices
+    await Promise.all(
+      sessions.value.map(async (sess) => {
+        if (!sessionLoot.value[sess.id]) {
+          try {
+            sessionLoot.value[sess.id] = await invoke<LootBreakdownEntry[]>("get_loot_breakdown", {
+              sessionId: sess.id,
+              limit: 200,
+            });
+          } catch {
+            sessionLoot.value[sess.id] = [];
+          }
+        }
+      })
+    );
   } catch (e) {
     error.value = `Failed to load sessions: ${e}`;
   } finally {
