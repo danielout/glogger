@@ -1,10 +1,8 @@
-## What's Changed since v0.4.0
+## What's Changed since v0.4.1
 
 ### Other
-- Updating workflow from v4 to v5 (`8bcdc62`)
-- Tackling assorted TODO list items (`5726f1a`)
-- surveying analytics improvements (`ddd00bb`)
-- timestamp standardization (`5fdfb9d`)
+- fixing silly build error (`a2060fe`)
+- more workflow updates. i'm dumb and can't read (`a543909`)
 
 ---
-*5 commits since v0.4.0*
+*2 commits since v0.4.1*
