@@ -40,9 +40,16 @@ export const useCraftingStore = defineStore("crafting", () => {
    * Get the best known price for an item: market price if set, otherwise vendor price * 1.5.
    * Returns null if no price is known.
    */
+  /** Estimated item price for recipe cost calculations (market → vendor fallback) */
   function getItemPrice(itemId: number, vendorValue: number | null | undefined): number | null {
     const market = marketStore.valuesByItemId[itemId];
     if (market) return market.market_value;
+    if (vendorValue) return vendorValue * 1.5;
+    return null;
+  }
+
+  /** Vendor buy price only — for determining if an item is NPC-purchasable */
+  function getVendorBuyPrice(vendorValue: number | null | undefined): number | null {
     if (vendorValue) return vendorValue * 1.5;
     return null;
   }
@@ -421,7 +428,7 @@ export const useCraftingStore = defineStore("crafting", () => {
       const item = itemData[String(itemId)];
       // Only apply vendor price fallback for items confirmed as vendor-sold via sources data
       const vendorValue = vendorSet.has(itemId) ? (item?.value ?? null) : null;
-      const price = getItemPrice(itemId, vendorValue);
+      const price = getVendorBuyPrice(vendorValue);
 
       needs.push({
         item_id: itemId,
