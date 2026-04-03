@@ -101,6 +101,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useGameStateStore } from "../../../stores/gameStateStore";
 import { useMarketStore } from "../../../stores/marketStore";
 import { useSettingsStore } from "../../../stores/settingsStore";
+import { formatStaleness } from "../../../composables/useTimestamp";
 import type { ItemInfo } from "../../../types/gameData";
 
 interface ResolvedEffect {
@@ -126,15 +127,7 @@ const marketEntry = computed(() => marketStore.valuesByItemId[props.item.id] ?? 
 const marketValue = computed(() => marketEntry.value?.market_value ?? null);
 const marketStaleness = computed(() => {
   if (!marketEntry.value) return ''
-  const updated = new Date(marketEntry.value.updated_at)
-  const now = new Date()
-  const diffMs = now.getTime() - updated.getTime()
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-  if (diffDays === 0) return 'today'
-  if (diffDays === 1) return '1 day ago'
-  if (diffDays < 30) return `${diffDays} days ago`
-  const diffMonths = Math.floor(diffDays / 30)
-  return diffMonths === 1 ? '1 month ago' : `${diffMonths} months ago`
+  return formatStaleness(marketEntry.value.updated_at)
 })
 
 // Effective value based on valuation mode

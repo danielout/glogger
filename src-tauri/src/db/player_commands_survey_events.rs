@@ -939,3 +939,250 @@ pub fn get_zone_analytics(db: State<'_, DbPool>) -> Result<Vec<ZoneAnalytics>, S
 
     Ok(results)
 }
+
+// ── Item Cost Analysis (for calculator + efficiency comparison) ──────────────
+
+#[derive(Serialize)]
+pub struct ItemSourceAnalysis {
+    pub item_name: String,
+    pub survey_type: String,
+    pub zone: String,
+    pub category: String,
+    pub crafting_cost: f64,
+    pub total_completions: i64,
+    pub primary_total_qty: i64,
+    pub primary_times_seen: i64,
+    pub primary_avg_per_completion: f64,
+    pub bonus_total_qty: i64,
+    pub bonus_times_seen: i64,
+    pub bonus_avg_per_proc: f64,
+    pub speed_bonus_rate: f64,
+    pub avg_seconds_per_survey: f64,
+}
+
+#[tauri::command]
+pub fn get_item_cost_analysis(db: State<'_, DbPool>) -> Result<Vec<ItemSourceAnalysis>, String> {
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
+
+    // ── 1. Per-survey-type completion + speed bonus counts ───────────────────
+    let mut type_counts: std::collections::HashMap<String, (i64, i64, String, String, f64)> =
+        std::collections::HashMap::new();
+    {
+        let mut stmt = conn
+            .prepare(
+                "SELECT se.survey_type,
+                        COUNT(*) as total_completed,
+                        SUM(CASE WHEN se.speed_bonus_earned = 1 THEN 1 ELSE 0 END) as bonus_count,
+                        st.zone,
+                        st.survey_category,
+                        COALESCE(st.crafting_cost, 0) as crafting_cost
+                 FROM survey_events se
+                 JOIN survey_types st ON se.survey_type = st.name COLLATE NOCASE
+                 WHERE se.event_type IN ('completed', 'motherlode_completed')
+                   AND st.zone IS NOT NULL
+                 GROUP BY se.survey_type",
+            )
+            .map_err(|e| format!("Failed to prepare type counts query: {e}"))?;
+
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, i64>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
+                    row.get::<_, f64>(5)?,
+                ))
+            })
+            .map_err(|e| format!("Type counts query failed: {e}"))?;
+
+        for r in rows {
+            if let Ok((survey_type, total, bonus, zone, cat, cost)) = r {
+                type_counts.insert(survey_type, (total, bonus, zone, cat, cost));
+            }
+        }
+    }
+
+    // ── 2. Per-survey-type, per-item primary loot stats ─────────────────────
+    let mut primary_loot: std::collections::HashMap<(String, String), (i64, i64, f64)> =
+        std::collections::HashMap::new();
+    {
+        let mut stmt = conn
+            .prepare(
+                "WITH per_completion AS (
+                    SELECT se.survey_type, sli.item_name,
+                           SUM(sli.quantity) as qty
+                    FROM survey_loot_items sli
+                    JOIN survey_events se ON sli.event_id = se.id
+                    JOIN survey_types st ON se.survey_type = st.name COLLATE NOCASE
+                    WHERE se.event_type IN ('completed', 'motherlode_completed')
+                      AND sli.is_primary = 1
+                      AND st.zone IS NOT NULL
+                    GROUP BY se.id, se.survey_type, sli.item_name
+                )
+                SELECT survey_type, item_name,
+                       SUM(qty) as total_qty,
+                       COUNT(*) as times_seen,
+                       AVG(qty) as avg_qty
+                FROM per_completion
+                GROUP BY survey_type, item_name",
+            )
+            .map_err(|e| format!("Failed to prepare primary loot query: {e}"))?;
+
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, i64>(2)?,
+                    row.get::<_, i64>(3)?,
+                    row.get::<_, f64>(4)?,
+                ))
+            })
+            .map_err(|e| format!("Primary loot query failed: {e}"))?;
+
+        for r in rows {
+            if let Ok((survey_type, item_name, total_qty, times_seen, avg_qty)) = r {
+                primary_loot.insert((survey_type, item_name), (total_qty, times_seen, avg_qty));
+            }
+        }
+    }
+
+    // ── 3. Per-survey-type, per-item speed bonus loot stats ─────────────────
+    let mut bonus_loot: std::collections::HashMap<(String, String), (i64, i64, f64)> =
+        std::collections::HashMap::new();
+    {
+        let mut stmt = conn
+            .prepare(
+                "WITH per_proc AS (
+                    SELECT se.survey_type, sli.item_name,
+                           SUM(sli.quantity) as qty
+                    FROM survey_loot_items sli
+                    JOIN survey_events se ON sli.event_id = se.id
+                    JOIN survey_types st ON se.survey_type = st.name COLLATE NOCASE
+                    WHERE se.event_type IN ('completed', 'motherlode_completed')
+                      AND sli.is_speed_bonus = 1
+                      AND st.zone IS NOT NULL
+                    GROUP BY se.id, se.survey_type, sli.item_name
+                )
+                SELECT survey_type, item_name,
+                       SUM(qty) as total_qty,
+                       COUNT(*) as times_seen,
+                       AVG(qty) as avg_qty
+                FROM per_proc
+                GROUP BY survey_type, item_name",
+            )
+            .map_err(|e| format!("Failed to prepare bonus loot query: {e}"))?;
+
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, i64>(2)?,
+                    row.get::<_, i64>(3)?,
+                    row.get::<_, f64>(4)?,
+                ))
+            })
+            .map_err(|e| format!("Bonus loot query failed: {e}"))?;
+
+        for r in rows {
+            if let Ok((survey_type, item_name, total_qty, times_seen, avg_qty)) = r {
+                bonus_loot.insert((survey_type, item_name), (total_qty, times_seen, avg_qty));
+            }
+        }
+    }
+
+    // ── 4. Average time per survey from session stats ────────────────────────
+    let mut avg_time: std::collections::HashMap<String, f64> =
+        std::collections::HashMap::new();
+    {
+        let mut stmt = conn
+            .prepare(
+                "SELECT se.survey_type,
+                        CAST(SUM(sss.elapsed_seconds) AS REAL) / NULLIF(SUM(sss.surveys_completed), 0) as avg_secs
+                 FROM survey_session_stats sss
+                 JOIN survey_events se ON se.session_id = sss.id
+                 WHERE se.event_type IN ('completed', 'motherlode_completed')
+                   AND sss.elapsed_seconds > 0 AND sss.surveys_completed > 0
+                 GROUP BY se.survey_type",
+            )
+            .map_err(|e| format!("Failed to prepare avg time query: {e}"))?;
+
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, f64>(1).unwrap_or(0.0),
+                ))
+            })
+            .map_err(|e| format!("Avg time query failed: {e}"))?;
+
+        for r in rows {
+            if let Ok((survey_type, secs)) = r {
+                avg_time.insert(survey_type, secs);
+            }
+        }
+    }
+
+    // ── 5. Collect all unique (survey_type, item_name) pairs ────────────────
+    let mut all_pairs: std::collections::BTreeSet<(String, String)> =
+        std::collections::BTreeSet::new();
+    for (key, _) in &primary_loot {
+        all_pairs.insert(key.clone());
+    }
+    for (key, _) in &bonus_loot {
+        all_pairs.insert(key.clone());
+    }
+
+    // ── 6. Assemble results ─────────────────────────────────────────────────
+    let mut results: Vec<ItemSourceAnalysis> = Vec::new();
+
+    for (survey_type, item_name) in all_pairs {
+        let Some(&(total_completions, bonus_count, ref zone, ref category, crafting_cost)) =
+            type_counts.get(&survey_type)
+        else {
+            continue;
+        };
+
+        let (primary_total_qty, primary_times_seen, primary_avg) = primary_loot
+            .get(&(survey_type.clone(), item_name.clone()))
+            .copied()
+            .unwrap_or((0, 0, 0.0));
+
+        let (bonus_total_qty, bonus_times_seen, bonus_avg) = bonus_loot
+            .get(&(survey_type.clone(), item_name.clone()))
+            .copied()
+            .unwrap_or((0, 0, 0.0));
+
+        let speed_bonus_rate = if total_completions > 0 {
+            (bonus_count as f64 / total_completions as f64) * 100.0
+        } else {
+            0.0
+        };
+
+        let avg_seconds = avg_time.get(&survey_type).copied().unwrap_or(0.0);
+
+        results.push(ItemSourceAnalysis {
+            item_name,
+            survey_type,
+            zone: zone.clone(),
+            category: category.clone(),
+            crafting_cost,
+            total_completions,
+            primary_total_qty,
+            primary_times_seen,
+            primary_avg_per_completion: primary_avg,
+            bonus_total_qty,
+            bonus_times_seen,
+            bonus_avg_per_proc: bonus_avg,
+            speed_bonus_rate,
+            avg_seconds_per_survey: avg_seconds,
+        });
+    }
+
+    Ok(results)
+}

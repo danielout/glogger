@@ -134,11 +134,12 @@ use db::market_commands::{
 use db::player_commands::{
     add_market_price, add_sale, get_historical_sessions, get_market_prices_for_item,
     get_recent_events, get_recent_sales, log_event, patch_survey_session,
-    save_survey_session_stats, update_survey_session,
+    save_survey_session_stats, update_survey_session, delete_survey_session,
 };
 use db::player_commands_survey_events::{
     get_loot_breakdown, get_speed_bonus_stats, get_survey_events, get_survey_loot_items,
-    get_survey_type_metrics, get_zone_analytics, log_survey_event, log_survey_loot_item,
+    get_item_cost_analysis, get_survey_type_metrics, get_zone_analytics, log_survey_event,
+    log_survey_loot_item,
 };
 use db::survey_commands::get_all_survey_types;
 use replay::replay_dual_logs;
@@ -353,6 +354,7 @@ pub fn run() {
             patch_survey_session,
             get_historical_sessions,
             update_survey_session,
+            delete_survey_session,
             // Player data - Survey events
             log_survey_event,
             get_survey_events,
@@ -363,6 +365,7 @@ pub fn run() {
             get_loot_breakdown,
             get_survey_type_metrics,
             get_zone_analytics,
+            get_item_cost_analysis,
             // Player data - Event log
             log_event,
             get_recent_events,

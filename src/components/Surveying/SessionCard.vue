@@ -187,8 +187,13 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useSurveyStore } from "../../stores/surveyStore";
-import { formatAnyTimestamp as formatTs } from "../../composables/useTimestamp";
+import { formatTimeFull } from "../../composables/useTimestamp";
 import SurveyLootGrid from "./SurveyLootGrid.vue";
+
+function formatTs(ms: number | null): string {
+  if (!ms) return '';
+  return formatTimeFull(new Date(ms).toISOString());
+}
 
 const store = useSurveyStore();
 const s = computed(() => store.session);

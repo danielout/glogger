@@ -230,6 +230,62 @@ export function formatAnyTimestamp(timestamp: string): string {
   return timestamp
 }
 
+// ─── Duration Formatting ─────────────────────────────────────────
+
+/**
+ * Format a duration in seconds as a human-readable string.
+ *
+ * By default shows seconds for short durations (< 1 hour) and omits them
+ * for longer durations:
+ *   - 45       → "45s"
+ *   - 125      → "2m 5s"
+ *   - 3725     → "1h 2m"
+ *
+ * Pass `alwaysShowSeconds: true` to always include seconds:
+ *   - 3725     → "1h 2m 5s"
+ *
+ * Returns "—" for zero/negative/falsy values.
+ */
+export function formatDuration(
+  seconds: number,
+  opts?: { alwaysShowSeconds?: boolean },
+): string {
+  if (!seconds || seconds <= 0) return '—'
+
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+
+  if (h > 0) {
+    return opts?.alwaysShowSeconds ? `${h}h ${m}m ${s}s` : `${h}h ${m}m`
+  }
+  if (m > 0) return `${m}m ${s}s`
+  return `${s}s`
+}
+
+/**
+ * Format a UTC timestamp (or ISO string) as a relative staleness label.
+ * Designed for "last updated" displays — always shows full units:
+ *   - same day   → "today"
+ *   - 1 day ago  → "1 day ago"
+ *   - < 30 days  → "X days ago"
+ *   - ≥ 30 days  → "X months ago"
+ */
+export function formatStaleness(timestamp: string): string {
+  const d = parseUtc(timestamp)
+  if (isNaN(d.getTime())) return ''
+
+  const now = new Date()
+  const diffMs = now.getTime() - d.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+  if (diffDays <= 0) return 'today'
+  if (diffDays === 1) return '1 day ago'
+  if (diffDays < 30) return `${diffDays} days ago`
+  const diffMonths = Math.floor(diffDays / 30)
+  return diffMonths === 1 ? '1 month ago' : `${diffMonths} months ago`
+}
+
 // ─── Raw Utilities (for non-component use) ───────────────────────
 
 /** Parse a UTC timestamp string to a Date. Exported for edge cases. */

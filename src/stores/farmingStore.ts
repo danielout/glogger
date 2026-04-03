@@ -9,6 +9,7 @@ import type {
 } from "../types/farming";
 import type { PlayerEvent } from "../types/playerEvents";
 import { useGameDataStore } from "./gameDataStore";
+import { formatTimeFull, formatDuration } from "../composables/useTimestamp";
 
 export const useFarmingStore = defineStore("farming", () => {
   const sessionActive = ref(false);
@@ -286,12 +287,7 @@ export const useFarmingStore = defineStore("farming", () => {
     // Depend on timerTick so this recomputes every second
     void timerTick.value;
     if (!session.value) return "—";
-    const seconds = getActiveSeconds();
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    if (h > 0) return `${h}h ${m}m ${s}s`;
-    return `${m}m ${s}s`;
+    return formatDuration(getActiveSeconds(), { alwaysShowSeconds: true });
   });
 
   const totalXpGained = computed(() => {
@@ -430,9 +426,5 @@ function tsToSeconds(ts: string): number {
 }
 
 function getCurrentTimestamp(): string {
-  const now = new Date();
-  const h = String(now.getHours()).padStart(2, "0");
-  const m = String(now.getMinutes()).padStart(2, "0");
-  const s = String(now.getSeconds()).padStart(2, "0");
-  return `${h}:${m}:${s}`;
+  return formatTimeFull(new Date().toISOString());
 }

@@ -529,3 +529,18 @@ pub fn update_survey_session(
     .map_err(|e| format!("Failed to update session: {e}"))?;
     Ok(())
 }
+
+#[tauri::command]
+pub fn delete_survey_session(db: State<'_, DbPool>, session_id: i64) -> Result<(), String> {
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
+
+    conn.execute(
+        "DELETE FROM survey_session_stats WHERE id = ?1",
+        [session_id],
+    )
+    .map_err(|e| format!("Failed to delete survey session: {e}"))?;
+
+    Ok(())
+}

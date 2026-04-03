@@ -157,7 +157,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { HistoricalFarmingSession } from "../../types/farming";
 import EmptyState from "../Shared/EmptyState.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
-import { formatDateTimeShort } from "../../composables/useTimestamp";
+import { formatDateTimeShort, formatDuration } from "../../composables/useTimestamp";
 import SkillInline from "../Shared/Skill/SkillInline.vue";
 import NpcInline from "../Shared/NPC/NpcInline.vue";
 
@@ -248,14 +248,6 @@ const totalXp = computed(() =>
 const totalGold = computed(() =>
   sessions.value.reduce((sum, s) => sum + s.vendor_gold, 0)
 );
-
-function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m ${s}s`;
-}
 
 function formatDate(isoStr: string): string {
   return formatDateTimeShort(isoStr)

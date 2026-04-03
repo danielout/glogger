@@ -3,6 +3,7 @@ import { ref, computed, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useGameDataStore } from "./gameDataStore";
 import { useMarketStore } from "./marketStore";
+import { formatTimeFull, formatDuration } from "../composables/useTimestamp";
 
 export interface SurveyLogEntry {
   kind: "map-crafted" | "survey-used" | "completed";
@@ -38,8 +39,8 @@ export interface ConsumedIngredient {
 }
 
 export interface SessionStats {
-  startTime: string;
-  endTime: string | null;
+  startTime: number;
+  endTime: number | null;
   mapsStarted: number;
   surveysCompleted: number;
   surveyingXpGained: number;
@@ -48,7 +49,7 @@ export interface SessionStats {
   _surveyingXpBaseline: number;
   _miningXpBaseline: number;
   _geologyXpBaseline: number;
-  completionTimestamps: string[];
+  completionTimestamps: number[];
   primaryLootTotals: Record<string, number>;
   speedBonusLootTotals: Record<string, number>;
   itemValues: Record<string, number>;
@@ -56,7 +57,7 @@ export interface SessionStats {
   surveyMapCosts: Record<string, number>;
   craftingMaterials: Record<string, number>;
   isPaused: boolean;
-  pauseStartTime: string | null;
+  pauseStartTime: number | null;
   totalPausedSeconds: number;
   manualMode: boolean;
   name: string;
@@ -135,9 +136,9 @@ export const useSurveyStore = defineStore("survey", () => {
   }
 
 
-  function createSession(timestamp: string, manual: boolean): SessionStats {
+  function createSession(_timestamp: string, manual: boolean): SessionStats {
     return {
-      startTime: timestamp,
+      startTime: Date.now(),
       endTime: null,
       mapsStarted: 0,
       surveysCompleted: 0,
@@ -257,7 +258,7 @@ export const useSurveyStore = defineStore("survey", () => {
 
     if (payload.kind === "Completed" && session.value) {
       session.value.surveysCompleted++;
-      session.value.completionTimestamps.push(payload.timestamp);
+      session.value.completionTimestamps.push(Date.now());
 
       const surveyType = extractSurveyType(payload.survey_name);
       if (!session.value.surveyTypeStats[surveyType]) {
@@ -435,36 +436,33 @@ export const useSurveyStore = defineStore("survey", () => {
 
     if (session.value.isPaused) {
       if (session.value.pauseStartTime) {
-        const pauseStart = tsToSeconds(session.value.pauseStartTime);
-        const now = tsToSeconds(getCurrentTimestamp());
-        const pauseDuration = now - pauseStart;
+        const pauseDuration = Math.round((Date.now() - session.value.pauseStartTime) / 1000);
         session.value.totalPausedSeconds += pauseDuration;
         session.value.pauseStartTime = null;
       }
       session.value.isPaused = false;
     } else {
       session.value.isPaused = true;
-      session.value.pauseStartTime = getCurrentTimestamp();
+      session.value.pauseStartTime = Date.now();
     }
   }
 
   function manualStart() {
     if (sessionActive.value) return;
 
-    const ts = getCurrentTimestamp();
     sessionActive.value = true;
-    session.value = createSession(ts, true);
+    session.value = createSession("", true);
 
     log.value.unshift({
       kind: "map-crafted",
-      timestamp: ts,
+      timestamp: formatTimeFull(new Date().toISOString()),
       label: "Survey session started (manual)",
     });
   }
 
   function manualEnd() {
     if (!session.value) return;
-    session.value.endTime = getCurrentTimestamp();
+    session.value.endTime = Date.now();
     session.value.manualMode = true;
     if (backendSessionId.value) {
       patchSessionToBackend(backendSessionId.value);
@@ -475,7 +473,7 @@ export const useSurveyStore = defineStore("survey", () => {
   /// The backend already finalized revenue/cost/profit — we patch in elapsed/XP.
   function handleSessionEnded(sessionId: number) {
     if (session.value && !session.value.endTime) {
-      session.value.endTime = getCurrentTimestamp();
+      session.value.endTime = Date.now();
     }
     patchSessionToBackend(sessionId);
   }
@@ -485,11 +483,8 @@ export const useSurveyStore = defineStore("survey", () => {
     if (!session.value) return;
 
     const s = session.value;
-    const start = tsToSeconds(s.startTime);
-    const end = s.endTime
-      ? tsToSeconds(s.endTime)
-      : tsToSeconds(getCurrentTimestamp());
-    const totalSeconds = Math.max(0, end - start);
+    const end = s.endTime ?? Date.now();
+    const totalSeconds = Math.max(0, Math.round((end - s.startTime) / 1000));
     const elapsedSeconds = Math.max(1, totalSeconds - s.totalPausedSeconds);
 
     try {
@@ -550,18 +545,17 @@ export const useSurveyStore = defineStore("survey", () => {
     void _tick.value;
 
     if (!session.value) return 0;
-    const start = tsToSeconds(session.value.startTime);
 
-    let endSeconds: number;
+    let endMs: number;
     if (session.value.endTime) {
-      endSeconds = tsToSeconds(session.value.endTime);
+      endMs = session.value.endTime;
     } else if (session.value.isPaused && session.value.pauseStartTime) {
-      endSeconds = tsToSeconds(session.value.pauseStartTime);
+      endMs = session.value.pauseStartTime;
     } else {
-      endSeconds = tsToSeconds(getCurrentTimestamp());
+      endMs = Date.now();
     }
 
-    const totalSeconds = Math.max(0, endSeconds - start);
+    const totalSeconds = Math.max(0, Math.round((endMs - session.value.startTime) / 1000));
     return Math.max(1, totalSeconds - session.value.totalPausedSeconds);
   });
 
@@ -569,24 +563,20 @@ export const useSurveyStore = defineStore("survey", () => {
 
   const elapsed = computed(() => {
     if (!session.value) return "—";
-    const s = activeSeconds.value;
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${m}m ${sec}s`;
+    return formatDuration(activeSeconds.value, { alwaysShowSeconds: true });
   });
 
   const avgSurveySeconds = computed(() => {
     const ts = session.value?.completionTimestamps;
     if (!ts || ts.length < 2) return null;
-    const total = tsToSeconds(ts[ts.length - 1]) - tsToSeconds(ts[0]);
-    return Math.round(total / (ts.length - 1));
+    const totalMs = ts[ts.length - 1] - ts[0];
+    return Math.round(totalMs / 1000 / (ts.length - 1));
   });
 
   const avgSurveyTime = computed(() => {
     const s = avgSurveySeconds.value;
     if (s === null) return "—";
-    if (s < 60) return `${s}s`;
-    return `${Math.floor(s / 60)}m ${s % 60}s`;
+    return formatDuration(s, { alwaysShowSeconds: true });
   });
 
   // --- Computed: loot summaries ---
@@ -802,11 +792,6 @@ function updateSessionNameNotes(sessionId: number, name: string, notes: string) 
 
 // --- helpers ---
 
-function tsToSeconds(ts: string): number {
-  const [h, m, s] = ts.split(":").map(Number);
-  return h * 3600 + m * 60 + s;
-}
-
 function extractSurveyType(surveyName: string | undefined): string {
   if (!surveyName) return "Unknown";
   const match = surveyName.match(/^(.+)\s+(?:Survey|Map)$/i);
@@ -814,14 +799,6 @@ function extractSurveyType(surveyName: string | undefined): string {
     return match[1];
   }
   return "Unknown";
-}
-
-function getCurrentTimestamp(): string {
-  const now = new Date();
-  const h = String(now.getHours()).padStart(2, "0");
-  const m = String(now.getMinutes()).padStart(2, "0");
-  const s = String(now.getSeconds()).padStart(2, "0");
-  return `${h}:${m}:${s}`;
 }
 
 function xpDelta(newXp: number, baseline: number): number {

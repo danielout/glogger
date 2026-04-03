@@ -1,8 +1,14 @@
-# Economics — Surveying Sessions
+# Economics — Surveying
 
 ## Overview
 
 Real-time session tracker for the Surveying skill. Detects survey crafting and completion from Player.log via the player-event-parser pipeline, tracks loot/XP/costs per session, and provides historical analytics with pre-computed session summaries. Supports cross-referencing with Chat.log to correct motherlode loot quantities.
+
+The surveying feature has three sub-tabs, each documented separately:
+
+- [Session](economics-surveying-session.md) — active session tracking with live loot/XP/profit
+- [Historical](economics-surveying-historical.md) — browse and review past sessions
+- [Analytics](economics-surveying-analytics.md) — all-time aggregate stats organized by zone
 
 ## Architecture
 
@@ -14,16 +20,17 @@ Real-time session tracker for the Surveying skill. Detects survey crafting and c
 - `src-tauri/src/chat_status_parser.rs` — Status channel event parsing for loot corrections
 - `src-tauri/src/replay.rs` — dual-log replay engine
 - `src-tauri/src/db/survey_commands.rs` — survey type data
-- `src-tauri/src/db/player_commands_survey_events.rs` — survey event logging
+- `src-tauri/src/db/player_commands_survey_events.rs` — survey event logging, historical queries, analytics aggregation
 
 **Frontend (Vue/TS):**
 - `src/stores/surveyStore.ts` — session lifecycle, loot/profit tracking, XP baselines
+- `src/components/Economics/EconomicsSurveyView.vue` — tab container (Session / Historical / Analytics)
 - `src/components/Surveying/SessionTab.vue` — active session view
-- `src/components/Surveying/SessionSidebar.vue` — stats, XP, economics
-- `src/components/Surveying/SurveyTypeAccordion.vue` — per-survey-type breakdown
+- `src/components/Surveying/SessionSidebar.vue` — stats, XP, economics sidebar
+- `src/components/Surveying/SurveyTypeAccordion.vue` — per-survey-type breakdown table
 - `src/components/Surveying/SurveyLootGrid.vue` — loot display with counts/percentages
 - `src/components/Surveying/SurveyLog.vue` — activity log
-- `src/components/Surveying/HistoricalTab.vue` — past sessions
+- `src/components/Surveying/HistoricalTab.vue` — past sessions browser
 - `src/components/Surveying/AnalyticsTab.vue` — aggregated analytics
 
 ## Event Pipeline
@@ -63,44 +70,6 @@ Chat.log -> ChatLogWatcher -> ChatStatusParser -> SurveySessionTracker.correct_l
 - They don't produce `Completed` events (spawn a mineable node instead)
 - Excluded from auto-end count (`completable_maps` only counts non-motherlode)
 - Speed bonuses never apply to motherlode surveys
-
-## How It Works
-
-### Active Session
-
-- **Manual or auto-start** — sessions can be started manually or triggered by backend survey events
-- **Pause/Resume/End** controls with name and notes editing
-- **Auto-end** triggered by backend when all completable maps are used
-
-### Session Sidebar (Stats)
-
-- Maps crafted and completed counts
-- Average time per survey
-- XP gained by skill (Surveying, Mining, Geology)
-- Estimated surveys to next level (based on running XP averages)
-- Economics: total value, total cost, total profit, per-survey profit, per-hour profit
-
-### Per-Survey-Type Breakdown (Accordion)
-
-Each survey type gets its own expandable section showing:
-- Maps started vs. completed
-- Revenue (dynamically from current market/vendor prices)
-- Cost (from crafting materials)
-- Profit and per-survey profit
-- Primary loot summary with counts, drop percentages, per-hour rates
-- Speed bonus loot (separate section)
-
-### Loot Tracking
-
-- **Primary loot** — standard drops from surveys
-- **Speed bonus loot** — extra drops from fast completions
-- Item values reactively update when market prices change
-
-### Sub-Tabs
-
-- **Session** — active session view with sidebar, type breakdown, and activity log
-- **Historical** — browse and review past sessions with pre-computed summaries
-- **Analytics** — all-time speed bonus stats, per-type metrics, loot breakdown
 
 ## Loot Quantity Correction
 
@@ -172,16 +141,32 @@ Columns: id, event_id (FK), item_id, item_name, quantity, is_speed_bonus, is_pri
 | `patch_survey_session` | Patch frontend-known fields (elapsed, XP, manual) onto finalized session |
 | `update_survey_session` | Update user-provided name and notes |
 | `get_historical_sessions` | Query pre-computed session stats |
-| `get_speed_bonus_stats` | Aggregate speed bonus metrics |
-| `get_loot_breakdown` | Aggregate loot by item |
+| `get_speed_bonus_stats` | Aggregate speed bonus metrics (optional session filter) |
+| `get_loot_breakdown` | Aggregate loot by item for a session |
 | `get_survey_type_metrics` | Per-survey-type stats |
+| `get_zone_analytics` | Zone-grouped analytics with per-category speed bonus and per-survey-type loot stats |
 | `replay_dual_logs` | Dual-log replay for offline analysis |
 
-## Known Issues & Improvement Plans
+## Time Handling
 
-### Bugs
-- Elapsed time calculation broken — shows "0m 1s" for long sessions (likely timezone mismatch in elapsed computation)
-- No "New Session" button after a session ends
+Surveying follows the app-wide time standards defined in [time.md](../../../architecture/time.md).
+
+### Backend
+
+- All `survey_events.timestamp` and `survey_session_stats.start_time`/`end_time` values are stored as UTC strings (`YYYY-MM-DD HH:MM:SS`).
+- Player.log timestamps are converted to UTC via `SurveySessionTracker::to_utc()`, which delegates to `to_utc_datetime()` in `parsers.rs`.
+- Replay timestamps use the dual-log interleaving strategy (Chat.log UTC timestamps are authoritative; Player.log times are converted using the chat login timezone offset).
+
+### Frontend
+
+- **Active session timing** uses epoch milliseconds (`Date.now()`) for `startTime`, `endTime`, `pauseStartTime`, and `completionTimestamps`. This is internal-only state for live timer math — not persisted directly.
+- **Elapsed display** uses `formatDuration()` from `useTimestamp.ts` with `alwaysShowSeconds: true` for the live timer.
+- **Average survey time** also uses `formatDuration()` with `alwaysShowSeconds: true`.
+- **Start/end timestamps** displayed in the sidebar and session card use `formatTimeFull()` (converts epoch ms → ISO → timezone-aware `HH:MM:SS`).
+- **Historical sessions** display timestamps via `formatDateTimeShort()` and durations via `formatDuration()` (without seconds, since precision isn't needed for completed sessions).
+- **Activity log** timestamps pass through `formatAnyTimestamp()` which handles both full UTC datetime strings (from DB events) and bare `HH:MM:SS` strings (from live Player.log events).
+
+## Known Issues & Improvement Plans
 
 ### Planned Improvements
 - Per-zone speed bonus analytics (min/max/avg per item type, value tracking, split by mineral/metal)

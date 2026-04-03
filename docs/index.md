@@ -27,6 +27,7 @@ Core structure, patterns, and standards used across the app.
 - [ux-standards.md](architecture/ux-standards.md) — UX/UI standards: keyboard navigation, layout rules, state persistence, empty states, toasts, visual consistency.
 - [ux-composables.md](architecture/ux-composables.md) — UX composables: useKeyboard (nav/hotkeys), useToast (notifications), useViewPrefs (persistent screen preferences).
 - [toast-system.md](architecture/toast-system.md) — Toast notification system: store, composable, container component, types, and usage guidelines.
+- [time.md](architecture/time.md) — Time & timestamp standards: UTC storage, timezone offset detection, display modes, formatting API, and rules.
 
 ## Features
 
@@ -74,7 +75,10 @@ Per-screen documentation organized by view.
 - [economics.md](features/screens/economics.md) — Economics screen: architecture, component hierarchy, market/farming/surveying.
   - [economics-market.md](features/screens/economics/economics-market.md) — Market Prices tab: player-maintained price database.
   - [economics-farming.md](features/screens/economics/economics-farming.md) — Farming tab: session-based profitability tracking.
-  - [economics-surveying.md](features/screens/economics/economics-surveying.md) — Surveying tab: session tracking with loot/profit analytics.
+  - [economics-surveying.md](features/screens/economics/economics-surveying.md) — Surveying tab: architecture, event pipeline, database schema, shared infrastructure.
+    - [economics-surveying-session.md](features/screens/economics/economics-surveying-session.md) — Session sub-tab: active session tracking with live loot/XP/profit.
+    - [economics-surveying-historical.md](features/screens/economics/economics-surveying-historical.md) — Historical sub-tab: past session browser with loot breakdowns.
+    - [economics-surveying-analytics.md](features/screens/economics/economics-surveying-analytics.md) — Analytics sub-tab: zone-grouped all-time speed bonus and loot stats.
   - Stall Tracker — not yet implemented.
 
 ### Chat Logs

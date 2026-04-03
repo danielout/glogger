@@ -37,6 +37,9 @@
       </div>
     </div>
 
+    <!-- Item Cost Calculator -->
+    <ItemCostCalculator v-if="speedStats" />
+
     <!-- Zone Accordions -->
     <AccordionSection
       v-for="zone in zones"
@@ -135,6 +138,24 @@
       </div>
     </AccordionSection>
 
+    <!-- Speed Bonus Rates by Zone -->
+    <AccordionSection v-if="zones.length > 1" :default-open="false">
+      <template #title>Speed Bonus Rates by Zone</template>
+      <template #badge>
+        <span class="text-[0.6rem] text-text-dim font-mono">{{ zones.length }} zones</span>
+      </template>
+      <SpeedBonusChart :zones="zones" />
+    </AccordionSection>
+
+    <!-- Cross-Zone Comparison -->
+    <AccordionSection v-if="zones.length > 1" :default-open="false">
+      <template #title>Cross-Zone Comparison</template>
+      <template #badge>
+        <span class="text-[0.6rem] text-text-dim font-mono">{{ zones.length }} zones</span>
+      </template>
+      <CrossZoneComparison :zones="zones" />
+    </AccordionSection>
+
     <!-- Empty state -->
     <EmptyState
       v-if="!loading && zones.length === 0 && !speedStats"
@@ -150,6 +171,9 @@ import { invoke } from "@tauri-apps/api/core";
 import EmptyState from "../Shared/EmptyState.vue";
 import AccordionSection from "../Shared/AccordionSection.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
+import ItemCostCalculator from "./Analytics/ItemCostCalculator.vue";
+import SpeedBonusChart from "./Analytics/SpeedBonusChart.vue";
+import CrossZoneComparison from "./Analytics/CrossZoneComparison.vue";
 
 interface SpeedBonusStats {
   total_surveys: number;

@@ -1,5 +1,6 @@
 <template>
-  <div class="flex flex-col gap-4">
+  <PaneLayout screenKey="surveying-historical">
+    <div class="flex flex-col gap-4 p-4 overflow-y-auto h-full">
     <div class="flex justify-between items-center">
       <h3 class="text-lg text-[#7ec8e3] m-0">Historical Survey Sessions</h3>
       <button @click="loadSessions" :disabled="loading"
@@ -228,10 +229,20 @@
               </div>
             </div>
           </div>
+
+          <!-- Delete button -->
+          <div class="flex justify-end pt-2 border-t border-border-default">
+            <button
+              @click.stop="deleteSession(sess.id)"
+              class="px-3 py-1 text-xs bg-[#3a2a2a]! border border-[#5a3a3a]! rounded text-[#c87e7e]! cursor-pointer transition-all font-medium hover:bg-[#4a3a3a] hover:border-[#6a4a4a]">
+              Delete Session
+            </button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
+    </div>
+  </PaneLayout>
 </template>
 
 <script setup lang="ts">
@@ -239,7 +250,8 @@ import { ref, computed, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import type { HistoricalSession } from "../../types/database";
 import ItemInline from "../Shared/Item/ItemInline.vue";
-import { formatDateTimeShort } from "../../composables/useTimestamp";
+import PaneLayout from "../Shared/PaneLayout.vue";
+import { formatDateTimeShort, formatDuration } from "../../composables/useTimestamp";
 
 interface LootBreakdownEntry {
   item_name: string;
@@ -349,15 +361,20 @@ function formatGold(amount: number): string {
   return "-" + Math.abs(rounded).toLocaleString() + "g";
 }
 
+async function deleteSession(id: number) {
+  try {
+    await invoke("delete_survey_session", { sessionId: id });
+    sessions.value = sessions.value.filter((s) => s.id !== id);
+    if (expandedId.value === id) expandedId.value = null;
+    delete sessionLoot.value[id];
+  } catch (e) {
+    console.error("[surveying] Failed to delete session:", e);
+  }
+}
+
 function formatDate(dateStr: string): string {
   return formatDateTimeShort(dateStr)
 }
 
-function formatDuration(seconds: number): string {
-  if (!seconds || seconds <= 0) return "\u2014";
-  const hours = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  if (hours > 0) return `${hours}h ${mins}m`;
-  return `${mins}m`;
-}
+
 </script>

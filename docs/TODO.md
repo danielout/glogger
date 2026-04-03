@@ -65,3 +65,12 @@ Small tasks and notes that don't belong in a dedicated plan.
 - [x] Cook's helper shows owned food count — each recipe row shows "have X" if the dish is already in inventory/storage
 - [x] Entity nav deep-linking — clicking inline entities (items, skills, quests, recipes, NPCs) navigates to DataBrowser AND auto-selects the entity in the detail pane
 - [x] Scoped CSS fully converted to Tailwind — `ToastContainer.vue` uses TransitionGroup class props, `InventoryItemPanel.vue` uses arbitrary variant selectors. Zero scoped CSS remaining.
+
+
+
+## TO BE SORTED
+
+- Death screen: we've got the health/armor split on abilities, and we color health red (good) but we should color armor yellow to align with the game colors
+- cook's helper: are we checking sushi and mycology recipes too? cheesemaking? should make sure we're checking all the craftable items that could grant gourmand
+- suggestion from rey: when calculating the materials needed for a crafting project, segregate or distinguish between materials you can buy unlimited from a vendor and stuff you have to farm/find
+  - the databrowser work has started to build cross references of stuff like this, so we should be able to find this list. we don't have vendor _prices_ anywhere i know of, but we at least know what is/isn't sold
