@@ -674,6 +674,7 @@ fn parse_survey_zone(internal_name: &str) -> Option<String> {
 }
 
 /// Load CDN data from database (for initialization)
+#[allow(dead_code)]
 pub fn load_cdn_data(conn: &Connection) -> Result<(u32, bool)> {
     // Check if we have CDN data loaded
     let version: Option<u32> = conn

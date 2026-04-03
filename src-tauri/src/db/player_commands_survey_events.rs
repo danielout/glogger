@@ -272,10 +272,13 @@ pub struct SpeedBonusStats {
 pub fn get_speed_bonus_stats(
     db: State<'_, DbPool>,
     session_id: Option<i64>,
+    include_imports: Option<bool>,
 ) -> Result<SpeedBonusStats, String> {
     let conn = db
         .get()
         .map_err(|e| format!("Database connection error: {e}"))?;
+
+    let include = include_imports.unwrap_or(false);
 
     let (total_surveys, speed_bonus_count): (i64, i64) = if let Some(sid) = session_id {
         conn.query_row(
@@ -291,10 +294,12 @@ pub fn get_speed_bonus_stats(
         conn.query_row(
             "SELECT
                 COUNT(*) as total,
-                SUM(CASE WHEN speed_bonus_earned = 1 THEN 1 ELSE 0 END) as bonus_count
-             FROM survey_events
-             WHERE event_type IN ('completed', 'motherlode_completed')",
-            [],
+                SUM(CASE WHEN se.speed_bonus_earned = 1 THEN 1 ELSE 0 END) as bonus_count
+             FROM survey_events se
+             JOIN survey_session_stats sss ON se.session_id = sss.id
+             WHERE se.event_type IN ('completed', 'motherlode_completed')
+               AND (?1 = 1 OR sss.import_id IS NULL)",
+            [include as i64],
             |row| Ok((row.get(0)?, row.get(1)?)),
         )
     }
@@ -317,8 +322,11 @@ pub fn get_speed_bonus_stats(
                 SUM(sli.quantity) as total_items,
                 COUNT(DISTINCT sli.item_name) as unique_items
              FROM survey_loot_items sli
-             WHERE sli.is_speed_bonus = 1",
-            [],
+             JOIN survey_events se ON sli.event_id = se.id
+             JOIN survey_session_stats sss ON se.session_id = sss.id
+             WHERE sli.is_speed_bonus = 1
+               AND (?1 = 1 OR sss.import_id IS NULL)",
+            [include as i64],
             |row| Ok((row.get(0).unwrap_or(0), row.get(1).unwrap_or(0))),
         )
     }
@@ -611,10 +619,15 @@ pub struct ZoneAnalytics {
 }
 
 #[tauri::command]
-pub fn get_zone_analytics(db: State<'_, DbPool>) -> Result<Vec<ZoneAnalytics>, String> {
+pub fn get_zone_analytics(
+    db: State<'_, DbPool>,
+    include_imports: Option<bool>,
+) -> Result<Vec<ZoneAnalytics>, String> {
     let conn = db
         .get()
         .map_err(|e| format!("Database connection error: {e}"))?;
+
+    let include = include_imports.unwrap_or(false) as i64;
 
     // ── 1. Per-zone+category event-level stats ───────────────────────────────
     let mut zone_cat_stats: std::collections::HashMap<(String, String), (i64, i64)> =
@@ -627,13 +640,15 @@ pub fn get_zone_analytics(db: State<'_, DbPool>) -> Result<Vec<ZoneAnalytics>, S
                     SUM(CASE WHEN se.speed_bonus_earned = 1 THEN 1 ELSE 0 END) as bonus_count
              FROM survey_events se
              JOIN survey_types st ON se.survey_type = st.name COLLATE NOCASE
+             JOIN survey_session_stats sss ON se.session_id = sss.id
              WHERE se.event_type IN ('completed', 'motherlode_completed') AND st.zone IS NOT NULL
+               AND (?1 = 1 OR sss.import_id IS NULL)
              GROUP BY st.zone, st.survey_category",
             )
             .map_err(|e| format!("Failed to prepare zone stats query: {e}"))?;
 
         let rows = stmt
-            .query_map([], |row| {
+            .query_map([include], |row| {
                 let zone: String = row.get(0)?;
                 let cat: String = row.get(1)?;
                 let total: i64 = row.get(2)?;
@@ -663,9 +678,11 @@ pub fn get_zone_analytics(db: State<'_, DbPool>) -> Result<Vec<ZoneAnalytics>, S
                 FROM survey_loot_items sli
                 JOIN survey_events se ON sli.event_id = se.id
                 JOIN survey_types st ON se.survey_type = st.name COLLATE NOCASE
+                JOIN survey_session_stats sss ON se.session_id = sss.id
                 WHERE sli.is_speed_bonus = 1
                   AND se.event_type IN ('completed', 'motherlode_completed')
                   AND st.zone IS NOT NULL
+                  AND (?1 = 1 OR sss.import_id IS NULL)
                 GROUP BY se.id, st.zone, st.survey_category, sli.item_name
             )
             SELECT zone, survey_category, item_name,
@@ -681,7 +698,7 @@ pub fn get_zone_analytics(db: State<'_, DbPool>) -> Result<Vec<ZoneAnalytics>, S
             .map_err(|e| format!("Failed to prepare bonus item stats query: {e}"))?;
 
         let rows = stmt
-            .query_map([], |row| {
+            .query_map([include], |row| {
                 Ok((
                     row.get::<_, String>(0)?,
                     row.get::<_, String>(1)?,
@@ -736,10 +753,12 @@ pub fn get_zone_analytics(db: State<'_, DbPool>) -> Result<Vec<ZoneAnalytics>, S
                 JOIN survey_types st ON se.survey_type = st.name COLLATE NOCASE
                 JOIN survey_loot_items sli ON sli.event_id = se.id
                 LEFT JOIN items i ON sli.item_name = i.name COLLATE NOCASE
+                JOIN survey_session_stats sss ON se.session_id = sss.id
                 WHERE se.event_type IN ('completed', 'motherlode_completed')
                   AND se.speed_bonus_earned = 1
                   AND sli.is_speed_bonus = 1
                   AND st.zone IS NOT NULL
+                  AND (?1 = 1 OR sss.import_id IS NULL)
                 GROUP BY se.id, st.zone, st.survey_category
             )
             SELECT zone, survey_category, AVG(bonus_value) as avg_value
@@ -749,7 +768,7 @@ pub fn get_zone_analytics(db: State<'_, DbPool>) -> Result<Vec<ZoneAnalytics>, S
             .map_err(|e| format!("Failed to prepare avg bonus value query: {e}"))?;
 
         let rows = stmt
-            .query_map([], |row| {
+            .query_map([include], |row| {
                 Ok((
                     row.get::<_, String>(0)?,
                     row.get::<_, String>(1)?,
@@ -776,14 +795,16 @@ pub fn get_zone_analytics(db: State<'_, DbPool>) -> Result<Vec<ZoneAnalytics>, S
                     COUNT(*) as total_completed
              FROM survey_events se
              JOIN survey_types st ON se.survey_type = st.name COLLATE NOCASE
+             JOIN survey_session_stats sss ON se.session_id = sss.id
              WHERE se.event_type IN ('completed', 'motherlode_completed') AND st.zone IS NOT NULL
+               AND (?1 = 1 OR sss.import_id IS NULL)
              GROUP BY st.zone, st.survey_category, se.survey_type
              ORDER BY st.zone, st.survey_category, total_completed DESC",
             )
             .map_err(|e| format!("Failed to prepare type stats query: {e}"))?;
 
         let rows = stmt
-            .query_map([], |row| {
+            .query_map([include], |row| {
                 Ok((
                     row.get::<_, String>(0)?,
                     row.get::<_, String>(1)?,
@@ -820,9 +841,11 @@ pub fn get_zone_analytics(db: State<'_, DbPool>) -> Result<Vec<ZoneAnalytics>, S
                 FROM survey_loot_items sli
                 JOIN survey_events se ON sli.event_id = se.id
                 JOIN survey_types st ON se.survey_type = st.name COLLATE NOCASE
+                JOIN survey_session_stats sss ON se.session_id = sss.id
                 WHERE se.event_type IN ('completed', 'motherlode_completed')
                   AND sli.is_primary = 1
                   AND st.zone IS NOT NULL
+                  AND (?1 = 1 OR sss.import_id IS NULL)
                 GROUP BY se.id, se.survey_type, sli.item_name
             )
             SELECT survey_type, item_name,
@@ -841,7 +864,7 @@ pub fn get_zone_analytics(db: State<'_, DbPool>) -> Result<Vec<ZoneAnalytics>, S
             std::collections::HashMap::new();
 
         let rows = stmt
-            .query_map([], |row| {
+            .query_map([include], |row| {
                 Ok((
                     row.get::<_, String>(0)?,
                     row.get::<_, String>(1)?,
@@ -961,10 +984,15 @@ pub struct ItemSourceAnalysis {
 }
 
 #[tauri::command]
-pub fn get_item_cost_analysis(db: State<'_, DbPool>) -> Result<Vec<ItemSourceAnalysis>, String> {
+pub fn get_item_cost_analysis(
+    db: State<'_, DbPool>,
+    include_imports: Option<bool>,
+) -> Result<Vec<ItemSourceAnalysis>, String> {
     let conn = db
         .get()
         .map_err(|e| format!("Database connection error: {e}"))?;
+
+    let include = include_imports.unwrap_or(false) as i64;
 
     // ── 1. Per-survey-type completion + speed bonus counts ───────────────────
     let mut type_counts: std::collections::HashMap<String, (i64, i64, String, String, f64)> =
@@ -980,14 +1008,16 @@ pub fn get_item_cost_analysis(db: State<'_, DbPool>) -> Result<Vec<ItemSourceAna
                         COALESCE(st.crafting_cost, 0) as crafting_cost
                  FROM survey_events se
                  JOIN survey_types st ON se.survey_type = st.name COLLATE NOCASE
+                 JOIN survey_session_stats sss ON se.session_id = sss.id
                  WHERE se.event_type IN ('completed', 'motherlode_completed')
                    AND st.zone IS NOT NULL
+                   AND (?1 = 1 OR sss.import_id IS NULL)
                  GROUP BY se.survey_type",
             )
             .map_err(|e| format!("Failed to prepare type counts query: {e}"))?;
 
         let rows = stmt
-            .query_map([], |row| {
+            .query_map([include], |row| {
                 Ok((
                     row.get::<_, String>(0)?,
                     row.get::<_, i64>(1)?,
@@ -1018,9 +1048,11 @@ pub fn get_item_cost_analysis(db: State<'_, DbPool>) -> Result<Vec<ItemSourceAna
                     FROM survey_loot_items sli
                     JOIN survey_events se ON sli.event_id = se.id
                     JOIN survey_types st ON se.survey_type = st.name COLLATE NOCASE
+                    JOIN survey_session_stats sss ON se.session_id = sss.id
                     WHERE se.event_type IN ('completed', 'motherlode_completed')
                       AND sli.is_primary = 1
                       AND st.zone IS NOT NULL
+                      AND (?1 = 1 OR sss.import_id IS NULL)
                     GROUP BY se.id, se.survey_type, sli.item_name
                 )
                 SELECT survey_type, item_name,
@@ -1033,7 +1065,7 @@ pub fn get_item_cost_analysis(db: State<'_, DbPool>) -> Result<Vec<ItemSourceAna
             .map_err(|e| format!("Failed to prepare primary loot query: {e}"))?;
 
         let rows = stmt
-            .query_map([], |row| {
+            .query_map([include], |row| {
                 Ok((
                     row.get::<_, String>(0)?,
                     row.get::<_, String>(1)?,
@@ -1063,9 +1095,11 @@ pub fn get_item_cost_analysis(db: State<'_, DbPool>) -> Result<Vec<ItemSourceAna
                     FROM survey_loot_items sli
                     JOIN survey_events se ON sli.event_id = se.id
                     JOIN survey_types st ON se.survey_type = st.name COLLATE NOCASE
+                    JOIN survey_session_stats sss ON se.session_id = sss.id
                     WHERE se.event_type IN ('completed', 'motherlode_completed')
                       AND sli.is_speed_bonus = 1
                       AND st.zone IS NOT NULL
+                      AND (?1 = 1 OR sss.import_id IS NULL)
                     GROUP BY se.id, se.survey_type, sli.item_name
                 )
                 SELECT survey_type, item_name,
@@ -1078,7 +1112,7 @@ pub fn get_item_cost_analysis(db: State<'_, DbPool>) -> Result<Vec<ItemSourceAna
             .map_err(|e| format!("Failed to prepare bonus loot query: {e}"))?;
 
         let rows = stmt
-            .query_map([], |row| {
+            .query_map([include], |row| {
                 Ok((
                     row.get::<_, String>(0)?,
                     row.get::<_, String>(1)?,
@@ -1108,12 +1142,13 @@ pub fn get_item_cost_analysis(db: State<'_, DbPool>) -> Result<Vec<ItemSourceAna
                  JOIN survey_events se ON se.session_id = sss.id
                  WHERE se.event_type IN ('completed', 'motherlode_completed')
                    AND sss.elapsed_seconds > 0 AND sss.surveys_completed > 0
+                   AND (?1 = 1 OR sss.import_id IS NULL)
                  GROUP BY se.survey_type",
             )
             .map_err(|e| format!("Failed to prepare avg time query: {e}"))?;
 
         let rows = stmt
-            .query_map([], |row| {
+            .query_map([include], |row| {
                 Ok((
                     row.get::<_, String>(0)?,
                     row.get::<_, f64>(1).unwrap_or(0.0),

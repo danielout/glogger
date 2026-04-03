@@ -185,17 +185,16 @@ onMounted(() => {
   craftingStore.loadProjects()
 })
 
-// Skill filter options with counts
+// Skill filter options with counts — derived dynamically from loaded recipes
 const skillOptions = computed(() => {
-  const all = store.helpfulRecipes.length
-  const cooking = store.helpfulRecipes.filter(h => h.recipe.skill === 'Cooking').length
-  const sushi = store.helpfulRecipes.filter(h => h.recipe.skill === 'Sushi Making').length
-
-  const options: { value: 'all' | 'Cooking' | 'Sushi Making'; label: string; count: number }[] = [
-    { value: 'all', label: 'All', count: all },
+  const recipes = store.helpfulRecipes
+  const options: { value: string; label: string; count: number }[] = [
+    { value: 'all', label: 'All', count: recipes.length },
   ]
-  if (cooking > 0) options.push({ value: 'Cooking', label: 'Cooking', count: cooking })
-  if (sushi > 0) options.push({ value: 'Sushi Making', label: 'Sushi Making', count: sushi })
+  for (const skill of store.availableSkills) {
+    const count = recipes.filter(h => h.recipe.skill === skill).length
+    if (count > 0) options.push({ value: skill, label: skill, count })
+  }
   return options
 })
 

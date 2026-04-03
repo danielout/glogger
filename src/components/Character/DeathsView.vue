@@ -110,8 +110,8 @@
                   <span v-else class="text-text-dim">--</span>
                 </td>
                 <td class="py-1 px-2 text-right">
-                  <span class="text-red-400">{{ death.health_damage }}</span>
-                  <span v-if="death.armor_damage > 0" class="text-text-muted">
+                  <span class="text-vital-health">{{ death.health_damage }}</span>
+                  <span v-if="death.armor_damage > 0" class="text-vital-armor">
                     / {{ death.armor_damage }}
                   </span>
                 </td>
@@ -144,8 +144,8 @@
                             <span v-if="src.is_crit" class="text-yellow-400 ml-1 text-[0.6rem]">CRIT</span>
                           </td>
                           <td class="py-0.5 text-right">
-                            <span class="text-red-400">{{ src.health_damage }}</span>
-                            <span v-if="src.armor_damage > 0" class="text-text-muted">
+                            <span class="text-vital-health">{{ src.health_damage }}</span>
+                            <span v-if="src.armor_damage > 0" class="text-vital-armor">
                               / {{ src.armor_damage }}
                             </span>
                           </td>

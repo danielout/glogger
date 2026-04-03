@@ -102,6 +102,11 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         super::record_migration(conn, 15)?;
     }
 
+    if current_version < 16 {
+        migration_v16_survey_data_imports(conn)?;
+        super::record_migration(conn, 16)?;
+    }
+
     Ok(())
 }
 
@@ -1244,6 +1249,28 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
             sort_order INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY (character_name, server_name, skill_name)
         );
+        "
+    )?;
+
+    Ok(())
+}
+
+/// Migration V16: Survey data sharing — import tracking table + import_id on sessions.
+fn migration_v16_survey_data_imports(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE survey_data_imports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            label TEXT NOT NULL,
+            source_player TEXT,
+            session_count INTEGER NOT NULL DEFAULT 0,
+            event_count INTEGER NOT NULL DEFAULT 0,
+            imported_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        ALTER TABLE survey_session_stats ADD COLUMN import_id INTEGER
+            REFERENCES survey_data_imports(id) ON DELETE CASCADE;
+
+        CREATE INDEX idx_survey_session_stats_import ON survey_session_stats(import_id);
         "
     )?;
 

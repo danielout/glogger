@@ -20,6 +20,7 @@ use std::path::PathBuf;
 pub type PatternMatcher = fn(&str, &mut PlayerLogWatcher) -> Option<LogEvent>;
 
 /// Events that can be emitted by log file watchers
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum LogEvent {
     /// Chat message parsed
@@ -400,6 +401,7 @@ impl ChatLogWatcher {
     }
 
     /// Get the current session start time
+    #[allow(dead_code)]
     pub fn get_session_start(&self) -> Option<NaiveDateTime> {
         self.current_session_start
     }

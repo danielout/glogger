@@ -500,6 +500,32 @@ pub async fn get_recipes_for_skill(
     Ok(results)
 }
 
+/// Get all recipes that produce any of the given item IDs.
+/// Used by Cook's Helper to find all food-producing recipes without hardcoding skill names.
+#[tauri::command]
+pub async fn get_recipes_producing_items(
+    item_ids: Vec<u32>,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<RecipeInfo>, String> {
+    let data = state.read().await;
+    let mut seen = std::collections::HashSet::new();
+    let mut results = Vec::new();
+
+    for item_id in &item_ids {
+        if let Some(recipe_ids) = data.recipes_producing_item.get(item_id) {
+            for recipe_id in recipe_ids {
+                if seen.insert(*recipe_id) {
+                    if let Some(recipe) = data.recipes.get(recipe_id) {
+                        results.push(recipe.clone());
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(results)
+}
+
 // ── Quest query commands ──────────────────────────────────────────────────────
 
 /// Get all quests.
@@ -917,6 +943,112 @@ pub async fn get_quest_sources(
     })
 }
 
+/// Return the set of item IDs that are purchasable from NPCs (Barter or Vendor sources).
+/// Used by crafting projects to accurately split shopping lists.
+#[tauri::command]
+pub async fn get_vendor_purchasable_item_ids(
+    state: State<'_, GameDataState>,
+) -> Result<Vec<u32>, String> {
+    let data = state.read().await;
+    let mut ids = Vec::new();
+
+    for (&item_id, source_info) in &data.sources.items {
+        let is_vendor = source_info.entries.iter().any(|e| {
+            e.source_type == "Barter" || e.source_type == "Vendor"
+        });
+        if is_vendor {
+            ids.push(item_id);
+        }
+    }
+
+    Ok(ids)
+}
+
+/// A compact item summary for vendor inventory display.
+#[derive(serde::Serialize, Clone)]
+pub struct VendorItemSummary {
+    pub item_id: u32,
+    pub name: String,
+    pub value: Option<f32>,
+    pub icon_id: Option<u32>,
+}
+
+/// Get the items sold by a specific NPC (Vendor + Barter sources).
+/// Returns resolved item summaries for display.
+#[tauri::command]
+pub async fn get_npc_vendor_items(
+    npc_key: String,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<VendorItemSummary>, String> {
+    let data = state.read().await;
+
+    let item_ids = match data.vendor_items_by_npc.get(&npc_key) {
+        Some(ids) => ids,
+        None => return Ok(vec![]),
+    };
+
+    let mut results: Vec<VendorItemSummary> = item_ids
+        .iter()
+        .filter_map(|&id| {
+            let item = data.items.get(&id)?;
+            Some(VendorItemSummary {
+                item_id: id,
+                name: item.name.clone(),
+                value: item.value,
+                icon_id: item.icon_id,
+            })
+        })
+        .collect();
+
+    results.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(results)
+}
+
+/// Get the count of vendor items per NPC (for showing counts in NPC list).
+#[tauri::command]
+pub async fn get_vendor_item_counts(
+    state: State<'_, GameDataState>,
+) -> Result<std::collections::HashMap<String, usize>, String> {
+    let data = state.read().await;
+    let counts: std::collections::HashMap<String, usize> = data
+        .vendor_items_by_npc
+        .iter()
+        .map(|(npc_key, items)| (npc_key.clone(), items.len()))
+        .collect();
+    Ok(counts)
+}
+
+/// Get the NPC keys and names that sell/barter a given item (for item tooltips).
+#[derive(serde::Serialize, Clone)]
+pub struct VendorNpcSummary {
+    pub npc_key: String,
+    pub name: String,
+}
+
+#[tauri::command]
+pub async fn get_vendors_for_item(
+    item_id: u32,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<VendorNpcSummary>, String> {
+    let data = state.read().await;
+    let npc_keys = match data.vendors_for_item.get(&item_id) {
+        Some(keys) => keys,
+        None => return Ok(vec![]),
+    };
+    let mut results: Vec<VendorNpcSummary> = npc_keys
+        .iter()
+        .filter_map(|key| {
+            let npc = data.npcs.get(key)?;
+            Some(VendorNpcSummary {
+                npc_key: key.clone(),
+                name: npc.name.clone(),
+            })
+        })
+        .collect();
+    results.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(results)
+}
+
 // ── Effect description resolution ───────────────────────────────────────────
 
 #[derive(serde::Serialize, Clone)]
@@ -1301,8 +1433,8 @@ pub struct SlotTsysPower {
 /// Returns powers belonging to skill_primary, skill_secondary, or generic (no skill).
 #[tauri::command]
 pub async fn get_tsys_powers_for_slot(
-    skill_primary: Option<String>,
-    skill_secondary: Option<String>,
+    _skill_primary: Option<String>,
+    _skill_secondary: Option<String>,
     equip_slot: String,
     target_level: i64,
     state: State<'_, GameDataState>,

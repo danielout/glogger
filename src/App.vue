@@ -64,7 +64,7 @@
 
       <!-- Bottom bar -->
       <div class="shrink-0 h-6 bg-surface-base border-t border-border-default flex items-center px-3">
-        <span class="text-text-dim text-[0.6rem]">glogger v0.1 DEV</span>
+        <span class="text-text-dim text-[0.6rem]">Glogger by Zenith of Dreva -- Some portions copyright 2026 Elder Game, LLC.</span>
       </div>
 
       <ToastContainer />

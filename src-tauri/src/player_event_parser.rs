@@ -216,6 +216,7 @@ pub enum PlayerEvent {
 pub enum DeleteContext {
     StorageTransfer,
     VendorSale,
+    #[allow(dead_code)]
     Consumed,
     Unknown,
 }
@@ -260,6 +261,7 @@ struct PendingDelete {
 }
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 struct InteractionContext {
     entity_id: u32,
     npc_name: String,

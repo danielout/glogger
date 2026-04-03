@@ -229,6 +229,10 @@ export interface TrackedRecipeEntry {
   detected_output: number
   /** Estimated crafts completed */
   crafts_completed: number
+  /** Baseline completion_count from RecipeUpdated at tracking start */
+  baseline_completion_count: number | null
+  /** Manual +/- adjustment (user overrides for missed/extra detections) */
+  manual_adjustment: number
 }
 
 export interface CraftDetectionEvent {

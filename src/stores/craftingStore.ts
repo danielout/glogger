@@ -401,8 +401,12 @@ export const useCraftingStore = defineStore("crafting", () => {
       availMap.set(item.item_type_id, item);
     }
 
-    // 2. Get vendor prices for cost estimation
-    const itemData = await gameData.resolveItemsBatch(itemIds.map(String));
+    // 2. Get vendor prices and vendor-purchasable item IDs for cost estimation
+    const [itemData, vendorItemIds] = await Promise.all([
+      gameData.resolveItemsBatch(itemIds.map(String)),
+      invoke<number[]>('get_vendor_purchasable_item_ids'),
+    ]);
+    const vendorSet = new Set(vendorItemIds);
 
     // 3. Build MaterialNeed list
     const needs: MaterialNeed[] = [];
@@ -415,7 +419,9 @@ export const useCraftingStore = defineStore("crafting", () => {
       const shortfall = Math.max(0, mat.expected_quantity - totalHave);
 
       const item = itemData[String(itemId)];
-      const price = getItemPrice(itemId, item?.value);
+      // Only apply vendor price fallback for items confirmed as vendor-sold via sources data
+      const vendorValue = vendorSet.has(itemId) ? (item?.value ?? null) : null;
+      const price = getItemPrice(itemId, vendorValue);
 
       needs.push({
         item_id: itemId,
@@ -754,6 +760,8 @@ export const useCraftingStore = defineStore("crafting", () => {
         target_quantity: targetQuantity,
         detected_output: 0,
         crafts_completed: 0,
+        baseline_completion_count: null,
+        manual_adjustment: 0,
       });
     }
 
@@ -801,19 +809,83 @@ export const useCraftingStore = defineStore("crafting", () => {
   }
 
   /**
+   * Build recipe_id → entry index lookup for RecipeUpdated matching.
+   */
+  function buildRecipeIdLookup(): Map<number, number> {
+    const lookup = new Map<number, number>();
+    if (!tracker.value) return lookup;
+    for (let i = 0; i < tracker.value.entries.length; i++) {
+      lookup.set(tracker.value.entries[i].recipe_id, i);
+    }
+    return lookup;
+  }
+
+  /**
+   * Manually adjust the detected output for a tracked recipe.
+   * Positive values add crafts, negative values subtract.
+   */
+  function adjustTrackedOutput(recipeId: number, delta: number) {
+    if (!tracker.value) return;
+    const entry = tracker.value.entries.find(e => e.recipe_id === recipeId);
+    if (!entry) return;
+    entry.manual_adjustment += delta;
+    const adjustedOutput = entry.detected_output + entry.manual_adjustment;
+    entry.crafts_completed = Math.floor(Math.max(0, adjustedOutput) / entry.output_per_craft);
+    tracker.value = { ...tracker.value };
+  }
+
+  /**
    * Handle a player event to detect crafted items.
+   * Uses RecipeUpdated (authoritative) as the primary signal, with
+   * ItemAdded/ItemStackChanged as a fallback for non-tracked recipes.
    */
   function handleCraftDetection(event: PlayerEvent) {
     if (!tracker.value?.active) return;
 
-    // We detect crafts via ItemAdded — when a new item appears that matches a recipe output.
-    // ItemStackChanged with positive delta on an existing stack also counts (e.g., stackable outputs).
+    // Primary detection: RecipeUpdated provides authoritative completion count
+    if (event.kind === "RecipeUpdated") {
+      const recipeLookup = buildRecipeIdLookup();
+      const idx = recipeLookup.get(event.recipe_id);
+      if (idx !== undefined) {
+        const entry = tracker.value.entries[idx];
+
+        if (entry.baseline_completion_count === null) {
+          // First RecipeUpdated for this entry — set baseline
+          entry.baseline_completion_count = event.completion_count;
+        }
+
+        // Calculate crafts since tracking started
+        const craftsSinceStart = event.completion_count - entry.baseline_completion_count;
+        const newOutput = craftsSinceStart * entry.output_per_craft;
+
+        if (newOutput > entry.detected_output) {
+          const delta = newOutput - entry.detected_output;
+          entry.detected_output = newOutput;
+          entry.crafts_completed = Math.floor(
+            Math.max(0, entry.detected_output + entry.manual_adjustment) / entry.output_per_craft,
+          );
+
+          craftLog.value.unshift({
+            timestamp: event.timestamp,
+            recipe_name: entry.recipe_name,
+            item_name: entry.output_item_name,
+            quantity: delta,
+          });
+          if (craftLog.value.length > CRAFT_LOG_MAX) {
+            craftLog.value.length = CRAFT_LOG_MAX;
+          }
+
+          tracker.value = { ...tracker.value };
+        }
+      }
+      return;
+    }
+
+    // Fallback detection: ItemAdded/ItemStackChanged for items matching tracked outputs
     if (event.kind === "ItemAdded" && event.is_new) {
       const lookup = buildOutputLookup();
       const idx = lookup.get(event.item_name);
       if (idx !== undefined) {
-        // Will be updated when ItemStackChanged arrives with the actual quantity
-        // For now, mark that we saw this item appear
         const entry = tracker.value.entries[idx];
         // Defer quantity counting to ItemStackChanged
         craftLog.value.unshift({
@@ -832,10 +904,15 @@ export const useCraftingStore = defineStore("crafting", () => {
       const idx = lookup.get(itemName);
       if (idx !== undefined) {
         const entry = tracker.value.entries[idx];
-        entry.detected_output += event.delta;
-        entry.crafts_completed = Math.floor(entry.detected_output / entry.output_per_craft);
+        // Only use item-based detection if we haven't received RecipeUpdated for this entry
+        // (RecipeUpdated is authoritative and already counts output)
+        if (entry.baseline_completion_count !== null) return;
 
-        // Update the most recent log entry for this item if it has quantity 0
+        entry.detected_output += event.delta;
+        entry.crafts_completed = Math.floor(
+          Math.max(0, entry.detected_output + entry.manual_adjustment) / entry.output_per_craft,
+        );
+
         const recentLog = craftLog.value.find(
           (l) => l.item_name === itemName && l.quantity === 0,
         );
@@ -853,7 +930,6 @@ export const useCraftingStore = defineStore("crafting", () => {
           }
         }
 
-        // Trigger reactivity
         tracker.value = { ...tracker.value };
       }
     }
@@ -1069,6 +1145,7 @@ export const useCraftingStore = defineStore("crafting", () => {
     startQuickCalcTracking,
     stopTracking,
     clearTracking,
+    adjustTrackedOutput,
     // Work orders
     getWorkOrders,
   };

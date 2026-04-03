@@ -15,6 +15,7 @@ pub struct CharacterReport {
     pub server_name: String,
     pub timestamp: String,
     pub report: String,
+    #[allow(dead_code)]
     pub report_version: u32,
     pub race: String,
     pub skills: HashMap<String, SkillData>,
@@ -38,6 +39,7 @@ pub struct SkillData {
     pub bonus_levels: i32,
     pub xp_toward_next_level: i64,
     pub xp_needed_for_next_level: i64,
+    #[allow(dead_code)]
     pub abilities: Option<Vec<String>>,
 }
 

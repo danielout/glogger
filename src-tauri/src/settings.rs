@@ -357,6 +357,7 @@ impl SettingsManager {
     }
 
     /// Get the game data path
+    #[allow(dead_code)]
     pub fn get_game_data_path(&self) -> String {
         self.settings.read().unwrap().game_data_path.clone()
     }

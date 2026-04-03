@@ -51,12 +51,28 @@
 
         <!-- Count -->
         <span class="text-text-primary font-mono text-[0.65rem] shrink-0">
-          {{ entry.detected_output }} / {{ entry.target_quantity }}
+          {{ effectiveOutput(entry) }} / {{ entry.target_quantity }}
         </span>
+
+        <!-- Manual +/- buttons -->
+        <div class="flex items-center gap-0.5 shrink-0">
+          <button
+            class="text-text-dim text-[0.6rem] w-4 h-4 flex items-center justify-center rounded hover:bg-surface-dark hover:text-text-primary cursor-pointer bg-transparent border-none"
+            title="Subtract one craft"
+            @click="store.adjustTrackedOutput(entry.recipe_id, -entry.output_per_craft)">
+            -
+          </button>
+          <button
+            class="text-text-dim text-[0.6rem] w-4 h-4 flex items-center justify-center rounded hover:bg-surface-dark hover:text-text-primary cursor-pointer bg-transparent border-none"
+            title="Add one craft"
+            @click="store.adjustTrackedOutput(entry.recipe_id, entry.output_per_craft)">
+            +
+          </button>
+        </div>
 
         <!-- Complete badge -->
         <span
-          v-if="entry.detected_output >= entry.target_quantity"
+          v-if="effectiveOutput(entry) >= entry.target_quantity"
           class="text-green-400 text-[0.6rem] font-semibold">
           DONE
         </span>
@@ -95,14 +111,18 @@ import ItemInline from "../Shared/Item/ItemInline.vue";
 
 const store = useCraftingStore();
 
+function effectiveOutput(entry: TrackedRecipeEntry): number {
+  return Math.max(0, entry.detected_output + entry.manual_adjustment);
+}
+
 const allComplete = computed(() => {
   if (!store.tracker) return false;
-  return store.tracker.entries.every((e) => e.detected_output >= e.target_quantity);
+  return store.tracker.entries.every((e) => effectiveOutput(e) >= e.target_quantity);
 });
 
 function progressPercent(entry: TrackedRecipeEntry): number {
   if (entry.target_quantity === 0) return 0;
-  return Math.min(100, Math.round((entry.detected_output / entry.target_quantity) * 100));
+  return Math.min(100, Math.round((effectiveOutput(entry) / entry.target_quantity) * 100));
 }
 
 function progressColor(entry: TrackedRecipeEntry): string {

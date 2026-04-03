@@ -2,17 +2,58 @@
   <div class="flex flex-col gap-4">
     <div class="flex justify-between items-center">
       <h3 class="text-lg text-[#7ec8e3] m-0">Survey Analytics</h3>
-      <button @click="loadAll" :disabled="loading"
-        class="px-3 py-1.5 text-sm bg-surface-elevated border border-border-default rounded text-text-secondary hover:text-text-primary hover:border-border-hover transition-all">
-        {{ loading ? "Loading..." : "Refresh" }}
-      </button>
+      <div class="flex items-center gap-2">
+        <!-- Data source toggle (only show when imports exist) -->
+        <div v-if="hasImports" class="flex rounded border border-border-default overflow-hidden text-xs">
+          <button
+            @click="includeImports = false"
+            :class="[
+              'px-3 py-1.5 transition-all',
+              !includeImports
+                ? 'bg-accent-gold/20 text-accent-gold border-r border-accent-gold/30'
+                : 'bg-surface-elevated text-text-muted hover:text-text-secondary border-r border-border-default'
+            ]"
+          >My Data</button>
+          <button
+            @click="includeImports = true"
+            :class="[
+              'px-3 py-1.5 transition-all',
+              includeImports
+                ? 'bg-accent-gold/20 text-accent-gold'
+                : 'bg-surface-elevated text-text-muted hover:text-text-secondary'
+            ]"
+          >All Data</button>
+        </div>
+
+        <button @click="handleExport" :disabled="exporting"
+          class="px-3 py-1.5 text-sm bg-surface-elevated border border-border-default rounded text-text-secondary hover:text-text-primary hover:border-border-hover transition-all"
+          title="Export your survey data to share with others">
+          {{ exporting ? "Exporting..." : "Export" }}
+        </button>
+        <button @click="handleImport" :disabled="importing"
+          class="px-3 py-1.5 text-sm bg-surface-elevated border border-border-default rounded text-text-secondary hover:text-text-primary hover:border-border-hover transition-all"
+          title="Import survey data from another player">
+          {{ importing ? "Importing..." : "Import" }}
+        </button>
+        <button v-if="hasImports" @click="showImportManager = true"
+          class="px-3 py-1.5 text-sm bg-surface-elevated border border-border-default rounded text-text-secondary hover:text-text-primary hover:border-border-hover transition-all"
+          title="Manage imported data sets">
+          Imports ({{ importCount }})
+        </button>
+        <button @click="loadAll" :disabled="loading"
+          class="px-3 py-1.5 text-sm bg-surface-elevated border border-border-default rounded text-text-secondary hover:text-text-primary hover:border-border-hover transition-all">
+          {{ loading ? "Loading..." : "Refresh" }}
+        </button>
+      </div>
     </div>
 
     <div v-if="error" class="text-[#c87e7e] bg-[#2a1a1a] border border-[#5a3a3a] rounded p-3 text-sm">{{ error }}</div>
 
     <!-- Global Summary (quick overview) -->
     <div v-if="speedStats" class="bg-surface-card border border-border-default rounded p-4">
-      <div class="text-[0.65rem] uppercase tracking-widest text-[#7ec8e3] mb-3 font-bold">All-Time Overview</div>
+      <div class="text-[0.65rem] uppercase tracking-widest text-[#7ec8e3] mb-3 font-bold">
+        {{ includeImports && hasImports ? 'Combined Overview (Your Data + Imports)' : 'All-Time Overview' }}
+      </div>
       <div class="grid grid-cols-5 gap-4">
         <div class="text-center">
           <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Total Surveys</div>
@@ -38,7 +79,7 @@
     </div>
 
     <!-- Item Cost Calculator -->
-    <ItemCostCalculator v-if="speedStats" />
+    <ItemCostCalculator v-if="speedStats" :include-imports="includeImports" />
 
     <!-- Zone Accordions -->
     <AccordionSection
@@ -162,18 +203,29 @@
       variant="panel"
       primary="No survey data yet"
       secondary="Complete some surveys to see analytics here." />
+
+    <!-- Import Manager Modal -->
+    <SurveyImportManager
+      v-if="showImportManager"
+      @close="showImportManager = false"
+      @deleted="handleImportDeleted"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, watch, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { save, open } from "@tauri-apps/plugin-dialog";
+import { useToast } from "../../composables/useToast";
+import { useSettingsStore } from "../../stores/settingsStore";
 import EmptyState from "../Shared/EmptyState.vue";
 import AccordionSection from "../Shared/AccordionSection.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 import ItemCostCalculator from "./Analytics/ItemCostCalculator.vue";
 import SpeedBonusChart from "./Analytics/SpeedBonusChart.vue";
 import CrossZoneComparison from "./Analytics/CrossZoneComparison.vue";
+import SurveyImportManager from "./SurveyImportManager.vue";
 
 interface SpeedBonusStats {
   total_surveys: number;
@@ -225,22 +277,59 @@ interface ZoneAnalytics {
   survey_type_stats: SurveyTypeAnalytics[];
 }
 
+interface SurveyImportInfo {
+  id: number;
+  label: string;
+  source_player: string | null;
+  session_count: number;
+  event_count: number;
+  imported_at: string;
+}
+
+const toast = useToast();
+const settingsStore = useSettingsStore();
 const loading = ref(false);
+const exporting = ref(false);
+const importing = ref(false);
 const error = ref("");
 const speedStats = ref<SpeedBonusStats | null>(null);
 const zones = ref<ZoneAnalytics[]>([]);
+const includeImports = ref(false);
+const showImportManager = ref(false);
+const importCount = ref(0);
+const hasImports = ref(false);
 
 onMounted(() => {
   loadAll();
+  refreshImportCount();
 });
+
+watch(includeImports, () => {
+  loadAll();
+});
+
+async function refreshImportCount() {
+  try {
+    const imports = await invoke<SurveyImportInfo[]>("get_survey_imports");
+    importCount.value = imports.length;
+    hasImports.value = imports.length > 0;
+  } catch {
+    // ignore
+  }
+}
 
 async function loadAll() {
   loading.value = true;
   error.value = "";
   try {
     const [speed, zoneData] = await Promise.all([
-      invoke<SpeedBonusStats>("get_speed_bonus_stats", { sessionId: null }),
-      invoke<ZoneAnalytics[]>("get_zone_analytics"),
+      invoke<SpeedBonusStats>("get_speed_bonus_stats", {
+        sessionId: null,
+        includeImports: includeImports.value,
+      }),
+      invoke<ZoneAnalytics[]>("get_zone_analytics", {
+        includeImports: includeImports.value,
+      }),
     ]);
     speedStats.value = speed;
     zones.value = zoneData;
@@ -248,6 +337,68 @@ async function loadAll() {
     error.value = `Failed to load analytics: ${e}`;
   } finally {
     loading.value = false;
+  }
+}
+
+async function handleExport() {
+  exporting.value = true;
+  try {
+    const filePath = await save({
+      filters: [{ name: "Survey Data", extensions: ["glogger-survey"] }],
+      defaultPath: "survey-data.glogger-survey",
+    });
+    if (!filePath) return;
+
+    const json = await invoke<string>("export_survey_data", {
+      exporterName: settingsStore.settings.activeCharacterName ?? null,
+      serverName: settingsStore.settings.activeServerName ?? null,
+    });
+    await invoke("export_text_file", { filePath, content: json });
+    toast.success("Survey data exported successfully");
+  } catch (e) {
+    toast.error(`Export failed: ${e}`);
+  } finally {
+    exporting.value = false;
+  }
+}
+
+async function handleImport() {
+  importing.value = true;
+  try {
+    const filePath = await open({
+      filters: [{ name: "Survey Data", extensions: ["glogger-survey"] }],
+      multiple: false,
+    });
+    if (!filePath) return;
+
+    const result = await invoke<{
+      import_id: number;
+      label: string;
+      sessions_imported: number;
+      events_imported: number;
+      loot_items_imported: number;
+    }>("import_survey_data_from_file", { filePath, label: null });
+
+    toast.success(
+      `Imported "${result.label}": ${result.sessions_imported} sessions, ${result.events_imported} events`
+    );
+    await refreshImportCount();
+    // If toggle is on "All Data", reload to show new data
+    if (includeImports.value) {
+      loadAll();
+    }
+  } catch (e) {
+    toast.error(`Import failed: ${e}`);
+  } finally {
+    importing.value = false;
+  }
+}
+
+function handleImportDeleted() {
+  refreshImportCount();
+  // Reload analytics if we're showing combined data
+  if (includeImports.value) {
+    loadAll();
   }
 }
 

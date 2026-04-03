@@ -37,6 +37,7 @@ macro_rules! startup_log {
 /// Blocking operation type - prevents overlapping heavy operations
 /// Note: Player tailing and chat tailing run concurrently and are tracked
 /// separately via their watcher Option fields, NOT through this lock.
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum OperationType {
     /// No blocking operation in progress
@@ -56,6 +57,7 @@ pub enum OperationType {
 }
 
 /// Progress information for long-running operations
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize)]
 pub struct ScanProgress {
     pub current: usize,
@@ -454,10 +456,15 @@ impl DataIngestCoordinator {
         let mut domains_batch: Vec<&'static str> = Vec::new();
         let mut batch_start = Instant::now();
 
-        /// Flush helper — emits accumulated batches and resets state.
+        /// Flush helper — persists accumulated events in a single DB transaction,
+        /// then emits batches to the frontend. Resets state after flush.
         macro_rules! flush_batches {
             ($self:expr, $pe:expr, $dom:expr, $start:expr) => {
                 if !$pe.is_empty() {
+                    // Persist all accumulated events in a single SQLite transaction
+                    let result = $self.game_state.process_events_batch(&$pe, &$self.db_pool);
+                    $dom.extend(result.domains_updated);
+
                     $self
                         .app_handle
                         .emit("player-events-batch", &$pe)
@@ -556,13 +563,8 @@ impl DataIngestCoordinator {
                     }
                 }
                 LogEvent::PlayerEventParsed(player_event) => {
-                    // Persist to game state tables
-                    let result = self.game_state.process_event(&player_event, &self.db_pool);
-
-                    // Accumulate domains and player events into batches
-                    if !result.domains_updated.is_empty() {
-                        domains_batch.extend(result.domains_updated);
-                    }
+                    // Accumulate player events — DB persistence happens on flush
+                    // in a single transaction for better performance during rapid events
                     player_event_batch.push(player_event);
 
                     // Flush if batch is full or old enough
@@ -580,6 +582,7 @@ impl DataIngestCoordinator {
 
         // Flush any remaining events
         flush_batches!(self, player_event_batch, domains_batch, batch_start);
+        let _ = batch_start; // suppress "value assigned but never read" on final flush
 
         Ok(())
     }

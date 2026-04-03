@@ -472,7 +472,7 @@ pub fn get_historical_sessions(
                 s.mining_xp_gained,
                 s.geology_xp_gained
              FROM survey_session_stats s
-             WHERE s.maps_started > 0
+             WHERE s.maps_started > 0 AND s.import_id IS NULL
              ORDER BY s.start_time DESC
              LIMIT ?1"
         )

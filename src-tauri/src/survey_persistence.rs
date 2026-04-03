@@ -71,7 +71,7 @@ impl SurveySessionTracker {
             SurveyEvent::MapCrafted {
                 timestamp,
                 map_name,
-                internal_name,
+                internal_name: _,
                 ingredients_consumed,
             } => {
                 let dt = self.to_utc(timestamp);
@@ -422,6 +422,7 @@ impl SurveySessionTracker {
     }
 
     /// Check if there's an active session
+    #[allow(dead_code)]
     pub fn has_active_session(&self) -> bool {
         self.current_session_id.is_some()
     }

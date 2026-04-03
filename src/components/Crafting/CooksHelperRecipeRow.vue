@@ -72,6 +72,12 @@
         &#x2714;
       </span>
       <span
+        v-else-if="materialStatus === 'vendor'"
+        class="text-accent-gold"
+        title="Missing materials are vendor-purchasable">
+        &#x25CF;
+      </span>
+      <span
         v-else-if="materialStatus === 'partial'"
         class="text-yellow-400"
         title="Some materials missing">
@@ -107,9 +113,13 @@ defineEmits<{
 const cooksHelper = useCooksHelperStore()
 const ownedCount = computed(() => cooksHelper.ownedCount(props.entry.food.name))
 
-const materialStatus = computed<'ready' | 'partial' | 'unknown'>(() => {
+const materialStatus = computed<'ready' | 'partial' | 'vendor' | 'unknown'>(() => {
   if (!props.materialNeeds) return 'unknown'
   if (props.materialNeeds.length === 0) return 'ready'
-  return props.materialNeeds.every(n => n.shortfall === 0) ? 'ready' : 'partial'
+  const allMet = props.materialNeeds.every(n => n.shortfall === 0)
+  if (allMet) return 'ready'
+  const onlyVendorShort = props.materialNeeds.every(n => n.shortfall === 0 || n.vendor_price !== null)
+  if (onlyVendorShort) return 'vendor'
+  return 'partial'
 })
 </script>

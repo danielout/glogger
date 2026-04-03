@@ -21,6 +21,12 @@
   --color-accent-red: #d9534f;
   --color-accent-warning: #f0ad4e;
 
+  /* Player vital bars (matches in-game HUD order: health, armor, power, metabolism) */
+  --color-vital-health: #d94040;
+  --color-vital-armor: #d4a830;
+  --color-vital-power: #3a7ad5;
+  --color-vital-metabolism: #4aad4a;
+
   /* Channel colors */
   --color-channel-global: #ffd700;
   --color-channel-trade: #66cc66;

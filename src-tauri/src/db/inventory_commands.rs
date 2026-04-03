@@ -13,6 +13,7 @@ pub struct StorageReport {
     pub server_name: String,
     pub timestamp: String,
     pub report: String,
+    #[allow(dead_code)]
     pub report_version: u32,
     pub items: Vec<StorageItem>,
 }

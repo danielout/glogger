@@ -170,43 +170,73 @@ impl GameStateManager {
         );
     }
 
-    /// Process a PlayerEvent and persist derived state to the database.
-    /// Returns which domains were updated so the coordinator can notify the frontend.
+    /// Process a batch of PlayerEvents in a single SQLite transaction.
+    /// Reduces DB overhead during rapid-fire events (e.g., spam-crafting).
+    pub fn process_events_batch(&self, events: &[PlayerEvent], db: &DbPool) -> ProcessResult {
+        let character = match &self.active_character {
+            Some(c) => c.clone(),
+            None => return ProcessResult { domains_updated: vec![] },
+        };
+        let server = match &self.active_server {
+            Some(s) => s.clone(),
+            None => return ProcessResult { domains_updated: vec![] },
+        };
+        let conn = match db.get() {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("[game_state] DB error on process_events_batch: {e}");
+                return ProcessResult { domains_updated: vec![] };
+            }
+        };
+        let game_data_guard = self.game_data.try_read().ok();
+
+        let mut all_domains = Vec::new();
+        conn.execute("BEGIN IMMEDIATE", []).ok();
+        for event in events {
+            let mut domains = Vec::new();
+            self.process_event_inner(event, &conn, &character, &server, &game_data_guard, &mut domains);
+            all_domains.extend(domains);
+        }
+        conn.execute("COMMIT", []).ok();
+
+        all_domains.sort_unstable();
+        all_domains.dedup();
+        ProcessResult { domains_updated: all_domains }
+    }
+
+    /// Process a single PlayerEvent. Delegates to the shared inner implementation.
     pub fn process_event(&self, event: &PlayerEvent, db: &DbPool) -> ProcessResult {
         let character = match &self.active_character {
-            Some(c) => c.as_str(),
-            None => {
-                return ProcessResult {
-                    domains_updated: vec![],
-                }
-            }
+            Some(c) => c.clone(),
+            None => return ProcessResult { domains_updated: vec![] },
         };
-
         let server = match &self.active_server {
-            Some(s) => s.as_str(),
-            None => {
-                return ProcessResult {
-                    domains_updated: vec![],
-                }
-            }
+            Some(s) => s.clone(),
+            None => return ProcessResult { domains_updated: vec![] },
         };
-
         let conn = match db.get() {
             Ok(c) => c,
             Err(e) => {
                 eprintln!("[game_state] DB error on process_event: {e}");
-                return ProcessResult {
-                    domains_updated: vec![],
-                };
+                return ProcessResult { domains_updated: vec![] };
             }
         };
-
-        let mut domains = Vec::new();
-
-        // Acquire non-blocking read lock on game data for entity resolution.
-        // If CDN data is being refreshed (extremely rare), we skip resolution
-        // and fall back to storing raw strings with skill_id = 0.
         let game_data_guard = self.game_data.try_read().ok();
+        let mut domains = Vec::new();
+        self.process_event_inner(event, &conn, &character, &server, &game_data_guard, &mut domains);
+        ProcessResult { domains_updated: domains }
+    }
+
+    /// Inner implementation shared by process_event and process_events_batch.
+    fn process_event_inner(
+        &self,
+        event: &PlayerEvent,
+        conn: &rusqlite::Connection,
+        character: &str,
+        server: &str,
+        game_data_guard: &Option<tokio::sync::RwLockReadGuard<'_, crate::game_data::GameData>>,
+        domains: &mut Vec<&'static str>,
+    ) {
 
         match event {
             PlayerEvent::SkillsLoaded { timestamp, skills } => {
@@ -296,8 +326,8 @@ impl GameStateManager {
                 ..
             } => {
                 let dt = self.to_utc(timestamp);
-                // Batch upsert in a transaction for performance
-                conn.execute("BEGIN", []).ok();
+                // Batch upsert in a savepoint for performance (works nested or standalone)
+                conn.execute("SAVEPOINT attributes_batch", []).ok();
                 {
                     let mut stmt = conn.prepare(
                         "INSERT INTO game_state_attributes (character_name, server_name, attribute_name, value, last_confirmed_at)
@@ -316,7 +346,7 @@ impl GameStateManager {
                         }
                     }
                 }
-                conn.execute("COMMIT", []).ok();
+                conn.execute("RELEASE attributes_batch", []).ok();
                 domains.push("attributes");
             }
 
@@ -719,10 +749,6 @@ impl GameStateManager {
 
             // Events that don't produce game state updates (yet)
             _ => {}
-        }
-
-        ProcessResult {
-            domains_updated: domains,
         }
     }
 

@@ -46,7 +46,12 @@ use cdn_commands::{
     get_recipe_sources,
     get_recipes_for_item,
     get_recipes_for_skill,
+    get_recipes_producing_items,
     get_recipes_using_item,
+    get_vendor_purchasable_item_ids,
+    get_npc_vendor_items,
+    get_vendor_item_counts,
+    get_vendors_for_item,
     get_storage_vault_metadata,
     get_storage_vault_zones,
     get_all_tsys,
@@ -142,6 +147,10 @@ use db::player_commands_survey_events::{
     log_survey_loot_item,
 };
 use db::survey_commands::get_all_survey_types;
+use db::survey_sharing_commands::{
+    delete_survey_import, export_survey_data, get_survey_imports, import_survey_data_from_file,
+    rename_survey_import,
+};
 use replay::replay_dual_logs;
 use settings::{
     get_server_list, get_settings_file_path, load_settings, save_settings, SettingsManager,
@@ -308,6 +317,7 @@ pub fn run() {
             get_recipes_using_item,
             search_recipes,
             get_recipes_for_skill,
+            get_recipes_producing_items,
             // Quest queries
             get_all_quests,
             search_quests,
@@ -337,6 +347,10 @@ pub fn run() {
             get_item_sources,
             get_recipe_sources,
             get_quest_sources,
+            get_vendor_purchasable_item_ids,
+            get_npc_vendor_items,
+            get_vendor_item_counts,
+            get_vendors_for_item,
             // Cross-reference queries
             get_npcs_wanting_item,
             get_npcs_training_skill,
@@ -366,6 +380,12 @@ pub fn run() {
             get_survey_type_metrics,
             get_zone_analytics,
             get_item_cost_analysis,
+            // Player data - Survey sharing
+            export_survey_data,
+            import_survey_data_from_file,
+            get_survey_imports,
+            delete_survey_import,
+            rename_survey_import,
             // Player data - Event log
             log_event,
             get_recent_events,

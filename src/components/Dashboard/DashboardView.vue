@@ -46,7 +46,8 @@
             empty-text="No items received."
             empty-hint="Loot, crafting output, and summoned items appear here."
             show-item-links
-            unit="items" />
+            unit="items"
+            :warning-tooltip="ACCURACY_WARNING" />
         </div>
 
         <!-- Items Outgoing -->
@@ -58,7 +59,9 @@
             empty-text="No items lost."
             empty-hint="Sold, stored, and consumed items appear here."
             show-item-links
-            unit="items" />
+            unit="items"
+            quantity-prefix
+            :warning-tooltip="ACCURACY_WARNING" />
         </div>
 
         <!-- Councils (Gold) -->
@@ -70,7 +73,8 @@
             empty-text="No council changes."
             empty-hint="Vendor sales, loot, and council transactions appear here."
             unit="councils"
-            signed-total />
+            signed-total
+            :warning-tooltip="ACCURACY_WARNING" />
         </div>
       </div>
 
@@ -119,4 +123,6 @@ import CurrentZone from './CurrentZone.vue'
 
 const store = useGameStateStore()
 const viewMode = ref<'active' | 'aggregate'>('active')
+
+const ACCURACY_WARNING = 'Right now Glogger is doing the best it can to try to infer and figure out quantities, stack sizes, etc. However, due to limitations in the log files that is not a straightforward task. Do not be surprised if this is wrong! The best way to ensure Glogger has an accurate picture of your inventory is always your VIP Inventory JSON export.'
 </script>

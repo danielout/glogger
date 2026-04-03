@@ -158,6 +158,35 @@
             </ul>
           </div>
 
+          <!-- Vendor Inventory -->
+          <div v-if="vendorItems.length" class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Sells Items ({{ vendorItems.length }})</div>
+            <div class="max-h-80 overflow-y-auto border border-surface-dark">
+              <table class="w-full text-xs border-collapse">
+                <thead class="sticky top-0 bg-surface-base">
+                  <tr class="text-left text-text-dim border-b border-border-default">
+                    <th class="py-1 px-2 font-normal">Item</th>
+                    <th class="py-1 px-2 font-normal text-right">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="item in vendorItems"
+                    :key="item.item_id"
+                    class="border-b border-[#151515] hover:bg-surface-base">
+                    <td class="py-0.5 px-2">
+                      <ItemInline :reference="String(item.item_id)" />
+                    </td>
+                    <td class="py-0.5 px-2 text-right text-text-muted font-mono">
+                      <template v-if="item.value">{{ Math.ceil(item.value * 1.5) }}c</template>
+                      <span v-else class="text-text-dim">--</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <!-- Raw JSON -->
           <div v-if="settingsStore.settings.showRawJsonInDataBrowser" class="flex flex-col gap-1.5">
             <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
@@ -171,11 +200,19 @@
 <script setup lang="ts">
 import PaneLayout from "../Shared/PaneLayout.vue";
 import { ref, watch, computed } from "vue";
+import { invoke } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useKeyboard } from "../../composables/useKeyboard";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { NpcInfo, QuestInfo } from "../../types/gameData";
+
+interface VendorItemSummary {
+  item_id: number;
+  name: string;
+  value: number | null;
+  icon_id: number | null;
+}
 import QuestInline from "../Shared/Quest/QuestInline.vue";
 import SkillInline from "../Shared/Skill/SkillInline.vue";
 import AreaInline from "../Shared/Area/AreaInline.vue";
@@ -193,6 +230,7 @@ const query = ref("");
 const selectedArea = ref<string>("All Areas");
 const selected = ref<NpcInfo | null>(null);
 const associatedQuests = ref<QuestInfo[]>([]);
+const vendorItems = ref<VendorItemSummary[]>([]);
 const selectedIndex = ref(0);
 const listRef = ref<HTMLElement | null>(null);
 
@@ -238,15 +276,21 @@ watch([query, selectedArea, allNpcs], () => {
 async function selectNpc(npc: NpcInfo) {
   selected.value = npc;
   associatedQuests.value = [];
+  vendorItems.value = [];
 
   store.getQuestsForNpc(npc.key)
     .then(quests => { associatedQuests.value = quests; })
     .catch(e => { console.warn("Quest cross-ref fetch failed:", e); });
+
+  invoke<VendorItemSummary[]>('get_npc_vendor_items', { npcKey: npc.key })
+    .then(items => { vendorItems.value = items; })
+    .catch(e => { console.warn("Vendor items fetch failed:", e); });
 }
 
 function clearSelection() {
   selected.value = null;
   associatedQuests.value = [];
+  vendorItems.value = [];
 }
 
 useKeyboard({

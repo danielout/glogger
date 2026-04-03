@@ -20,6 +20,7 @@ pub mod player_commands;
 pub mod player_commands_survey_events;
 pub mod queries;
 pub mod survey_commands;
+pub mod survey_sharing_commands;
 
 pub type DbPool = r2d2::Pool<SqliteConnectionManager>;
 pub type DbConnection = r2d2::PooledConnection<SqliteConnectionManager>;

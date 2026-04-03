@@ -50,6 +50,15 @@
     </div>
   </div>
 
+  <div v-if="vendorNpcs.length" class="mt-2 pt-2 border-t border-[#2a2a3e]">
+    <div class="text-text-muted text-[0.65rem] uppercase tracking-wide mb-1">Sold by</div>
+    <div class="flex flex-wrap gap-x-0.5 gap-y-0 text-xs">
+      <template v-for="(npc, idx) in vendorNpcs" :key="npc.npc_key">
+        <NpcInline :reference="npc.npc_key" /><span v-if="idx < vendorNpcs.length - 1" class="text-text-dim">,</span>
+      </template>
+    </div>
+  </div>
+
   <div v-if="item.max_stack_size || ownedCount > 0" class="text-text-muted text-[0.7rem] mt-2 pt-2 border-t border-[#2a2a3e] flex justify-between">
     <span v-if="item.max_stack_size">Max Stack: {{ item.max_stack_size }}</span>
     <span v-if="ownedCount > 0" class="text-accent-gold">Owned: {{ ownedCount.toLocaleString() }}</span>
@@ -103,6 +112,12 @@ import { useMarketStore } from "../../../stores/marketStore";
 import { useSettingsStore } from "../../../stores/settingsStore";
 import { formatStaleness } from "../../../composables/useTimestamp";
 import type { ItemInfo } from "../../../types/gameData";
+import NpcInline from "../NPC/NpcInline.vue";
+
+interface VendorNpc {
+  npc_key: string;
+  name: string;
+}
 
 interface ResolvedEffect {
   label: string
@@ -209,5 +224,21 @@ async function resolveEffects() {
   }
 }
 
-watch(() => props.item, resolveEffects, { immediate: true });
+// Vendor NPCs
+const vendorNpcs = ref<VendorNpc[]>([]);
+
+async function loadVendorNpcs() {
+  try {
+    vendorNpcs.value = await invoke<VendorNpc[]>('get_vendors_for_item', {
+      itemId: props.item.id,
+    });
+  } catch {
+    vendorNpcs.value = [];
+  }
+}
+
+watch(() => props.item, () => {
+  resolveEffects();
+  loadVendorNpcs();
+}, { immediate: true });
 </script>

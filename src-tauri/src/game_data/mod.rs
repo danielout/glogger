@@ -45,13 +45,12 @@ pub use areas::AreaInfo;
 pub use effects::EffectInfo;
 pub use item_uses::ItemUseInfo;
 pub use items::ItemInfo;
-pub use npcs::{NpcInfo, NpcPreference};
+pub use npcs::NpcInfo;
 pub use player_titles::PlayerTitleInfo;
 pub use quests::QuestInfo;
-pub use recipes::{RecipeInfo, RecipeIngredient, RecipeResultItem};
+pub use recipes::RecipeInfo;
 pub use skills::SkillInfo;
-pub use sources::{SourceEntry, SourceInfo};
-pub use storage_vaults::StorageVaultInfo;
+pub use sources::SourceEntry;
 pub use tsys::TsysClientInfo;
 pub use xp_tables::XpTableInfo;
 
@@ -115,6 +114,7 @@ pub async fn read_file(path: &Path) -> Result<String, String> {
 
 /// All CDN data loaded into memory. Held in Tauri managed state.
 /// Built once on startup; replaced on CDN refresh.
+#[allow(dead_code)]
 pub struct GameData {
     pub version: u32,
 
@@ -184,6 +184,10 @@ pub struct GameData {
     pub quests_by_work_order_skill: HashMap<String, Vec<String>>,
     /// item keyword → recipe IDs that accept this keyword as ingredient
     pub recipes_by_ingredient_keyword: HashMap<String, Vec<u32>>,
+    /// NPC key → item IDs sold by that NPC (from Vendor/Barter source entries)
+    pub vendor_items_by_npc: HashMap<String, Vec<u32>>,
+    /// item ID → NPC keys that sell/barter it
+    pub vendors_for_item: HashMap<u32, Vec<String>>,
 }
 
 impl GameData {
@@ -235,6 +239,8 @@ impl GameData {
             quests_by_npc: HashMap::new(),
             quests_by_work_order_skill: HashMap::new(),
             recipes_by_ingredient_keyword: HashMap::new(),
+            vendor_items_by_npc: HashMap::new(),
+            vendors_for_item: HashMap::new(),
         }
     }
 
@@ -787,6 +793,41 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         }
     }
 
+    // Build NPC vendor inventory index: NPC key → item IDs (from Vendor/Barter sources)
+    let mut vendor_items_by_npc: HashMap<String, Vec<u32>> = HashMap::new();
+    for (&item_id, source_info) in &sources.items {
+        for entry in &source_info.entries {
+            if entry.source_type == "Vendor" || entry.source_type == "Barter" {
+                if let Some(ref npc_key) = entry.npc {
+                    vendor_items_by_npc
+                        .entry(npc_key.clone())
+                        .or_default()
+                        .push(item_id);
+                }
+            }
+        }
+    }
+    // Sort each NPC's item list for consistent ordering
+    for items in vendor_items_by_npc.values_mut() {
+        items.sort_unstable();
+        items.dedup();
+    }
+
+    // Build reverse index: item ID → NPC keys that sell it
+    let mut vendors_for_item: HashMap<u32, Vec<String>> = HashMap::new();
+    for (npc_key, item_ids) in &vendor_items_by_npc {
+        for &item_id in item_ids {
+            vendors_for_item
+                .entry(item_id)
+                .or_default()
+                .push(npc_key.clone());
+        }
+    }
+    for npc_keys in vendors_for_item.values_mut() {
+        npc_keys.sort();
+        npc_keys.dedup();
+    }
+
     let ability_name_index: HashMap<String, u32> = abilities
         .iter()
         .map(|(id, ability)| (ability.name.clone(), *id))
@@ -840,6 +881,8 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         quests_by_npc,
         quests_by_work_order_skill,
         recipes_by_ingredient_keyword,
+        vendor_items_by_npc,
+        vendors_for_item,
         ability_name_index,
     })
 }

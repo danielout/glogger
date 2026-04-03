@@ -163,8 +163,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+
+const props = withDefaults(defineProps<{
+  includeImports?: boolean;
+}>(), {
+  includeImports: false,
+});
 
 interface ItemSourceAnalysis {
   item_name: string;
@@ -223,11 +229,17 @@ onMounted(() => {
   loadData();
 });
 
+watch(() => props.includeImports, () => {
+  loadData();
+});
+
 async function loadData() {
   loading.value = true;
   error.value = "";
   try {
-    allData.value = await invoke<ItemSourceAnalysis[]>("get_item_cost_analysis");
+    allData.value = await invoke<ItemSourceAnalysis[]>("get_item_cost_analysis", {
+      includeImports: props.includeImports,
+    });
   } catch (e) {
     error.value = `Failed to load item analysis: ${e}`;
   } finally {

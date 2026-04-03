@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
-import { useGameDataStore } from './gameDataStore'
 import { useCraftingStore } from './craftingStore'
 import { useGameStateStore } from './gameStateStore'
 import type { RecipeInfo } from '../types/gameData/recipes'
@@ -15,21 +14,19 @@ export interface HelpfulRecipe {
 }
 
 export const useCooksHelperStore = defineStore('cooksHelper', () => {
-  const gameData = useGameDataStore()
   const crafting = useCraftingStore()
 
   // ── State ──────────────────────────────────────────────────────────────────
 
   const importedEatenNames = ref<Set<string>>(new Set())
   const allFoods = ref<FoodItem[]>([])
-  const cookingRecipes = ref<RecipeInfo[]>([])
-  const sushiRecipes = ref<RecipeInfo[]>([])
+  const foodRecipes = ref<RecipeInfo[]>([])
   const gameStateStore = useGameStateStore()
 
   const selectedRecipeIds = ref<Set<number>>(new Set())
   const materialNeedsMap = ref<Map<number, MaterialNeed[]>>(new Map())
 
-  const filterSkill = ref<'all' | 'Cooking' | 'Sushi Making'>('all')
+  const filterSkill = ref<string>('all')
   const filterAvailability = ref<'all' | 'can-craft' | 'missing-materials'>('all')
   const searchQuery = ref('')
   const sortMode = ref<'name' | 'skill-level' | 'food-level'>('name')
@@ -47,10 +44,14 @@ export const useCooksHelperStore = defineStore('cooksHelper', () => {
     allFoods.value.filter(f => !importedEatenNames.value.has(f.name))
   )
 
-  const allCookableRecipes = computed(() => [
-    ...cookingRecipes.value,
-    ...sushiRecipes.value,
-  ])
+  /** Distinct skill names present in loaded food recipes, sorted alphabetically */
+  const availableSkills = computed<string[]>(() => {
+    const skills = new Set<string>()
+    for (const r of foodRecipes.value) {
+      if (r.skill) skills.add(r.skill)
+    }
+    return [...skills].sort()
+  })
 
   /** Recipes the cook knows that produce at least one uneaten food */
   const helpfulRecipes = computed<HelpfulRecipe[]>(() => {
@@ -64,7 +65,7 @@ export const useCooksHelperStore = defineStore('cooksHelper', () => {
 
     const known = gameStateStore.knownRecipeKeys
     const results: HelpfulRecipe[] = []
-    for (const recipe of allCookableRecipes.value) {
+    for (const recipe of foodRecipes.value) {
       // Only include recipes the cook has learned
       if (known.size > 0 && !known.has(`Recipe_${recipe.id}`)) continue
 
@@ -94,7 +95,7 @@ export const useCooksHelperStore = defineStore('cooksHelper', () => {
       list = list.filter(h => {
         const needs = materialNeedsMap.value.get(h.recipe.id)
         if (!needs) return filterAvailability.value === 'missing-materials'
-        const canCraft = needs.every(n => n.shortfall === 0)
+        const canCraft = needs.every(n => n.shortfall === 0 || n.vendor_price !== null)
         return filterAvailability.value === 'can-craft' ? canCraft : !canCraft
       })
     }
@@ -171,15 +172,13 @@ export const useCooksHelperStore = defineStore('cooksHelper', () => {
   }
 
   async function loadFoodsAndRecipes() {
-    const [foods, cooking, sushi] = await Promise.all([
-      invoke<FoodItem[]>('get_all_foods'),
-      gameData.getRecipesForSkill('Cooking'),
-      gameData.getRecipesForSkill('Sushi Making'),
-    ])
-
+    const foods = await invoke<FoodItem[]>('get_all_foods')
     allFoods.value = foods
-    cookingRecipes.value = cooking
-    sushiRecipes.value = sushi
+
+    // Food-first approach: get all recipes that produce any food item
+    const foodItemIds = foods.map(f => f.item_id)
+    const recipes = await invoke<RecipeInfo[]>('get_recipes_producing_items', { itemIds: foodItemIds })
+    foodRecipes.value = recipes
   }
 
   async function checkAllMaterials() {
@@ -259,8 +258,7 @@ export const useCooksHelperStore = defineStore('cooksHelper', () => {
     importedEatenNames.value = new Set()
     blankMode.value = false
     allFoods.value = []
-    cookingRecipes.value = []
-    sushiRecipes.value = []
+    foodRecipes.value = []
     selectedRecipeIds.value = new Set()
     materialNeedsMap.value = new Map()
     error.value = null
@@ -281,6 +279,7 @@ export const useCooksHelperStore = defineStore('cooksHelper', () => {
     // Computed
     isImported,
     uneatenFoods,
+    availableSkills,
     helpfulRecipes,
     filteredRecipes,
     selectionCount,

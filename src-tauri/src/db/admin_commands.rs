@@ -213,6 +213,7 @@ pub fn purge_player_data(
 
 /// Check and perform auto-purge if needed based on settings
 /// This should be called periodically (e.g., on app startup)
+#[allow(dead_code)]
 pub fn check_auto_purge(
     conn: &DbConnection,
     auto_purge_days: Option<u32>,

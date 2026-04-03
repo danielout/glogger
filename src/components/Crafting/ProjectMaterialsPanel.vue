@@ -15,33 +15,33 @@
       </div>
 
       <!-- Recipe summary: what you're crafting -->
-      <div v-if="recipeEntries.length > 0" class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs">
-        <div
-          v-for="entry in recipeEntries"
-          :key="entry.id"
-          class="flex items-center gap-1.5 text-text-muted">
-          <RecipeInline :reference="entry.recipe_name" />
-          <template v-if="entry.target_stock !== null">
-            <span
-              v-if="getStockTarget(entry.id)"
-              class="text-[0.65rem]"
-              :class="getStockTarget(entry.id)!.effectiveQty <= 0 ? 'text-green-400' : 'text-accent-gold'">
-              {{ getStockTarget(entry.id)!.effectiveQty <= 0 ? 'met' : `×${getStockTarget(entry.id)!.effectiveQty}` }}
-            </span>
-            <span v-else class="font-mono text-[0.65rem] text-accent-gold">target {{ entry.target_stock }}</span>
-          </template>
-          <span v-else class="font-mono text-text-primary/70">&times;{{ entry.quantity }}</span>
+      <div v-if="recipeEntries.length > 0" class="flex items-start gap-2">
+        <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs flex-1 min-w-0">
+          <div
+            v-for="entry in recipeEntries"
+            :key="entry.id"
+            class="flex items-center gap-1.5 text-text-muted">
+            <RecipeInline :reference="entry.recipe_name" />
+            <template v-if="entry.target_stock !== null">
+              <span
+                v-if="getStockTarget(entry.id)"
+                class="text-[0.65rem]"
+                :class="getStockTarget(entry.id)!.effectiveQty <= 0 ? 'text-green-400' : 'text-accent-gold'">
+                {{ getStockTarget(entry.id)!.effectiveQty <= 0 ? 'met' : `×${getStockTarget(entry.id)!.effectiveQty}` }}
+              </span>
+              <span v-else class="font-mono text-[0.65rem] text-accent-gold">target {{ entry.target_stock }}</span>
+            </template>
+            <span v-else class="font-mono text-text-primary/70">&times;{{ entry.quantity }}</span>
+          </div>
         </div>
+        <button
+          v-if="hasContent"
+          class="text-[0.65rem] text-text-muted hover:text-text-primary cursor-pointer bg-transparent border border-border-light rounded px-1.5 py-0.5 shrink-0 transition-colors"
+          :disabled="resolving"
+          @click="$emit('resolve')">
+          {{ resolving ? 'Refreshing...' : 'Recheck Inventory' }}
+        </button>
       </div>
-
-      <!-- Resolve button -->
-      <button
-        v-if="hasEntries"
-        class="btn-primary text-xs py-1.5"
-        :disabled="resolving"
-        @click="$emit('resolve')">
-        {{ resolving ? 'Calculating...' : (activeGroupName ? 'Recalculate Group' : 'Calculate All Materials') }}
-      </button>
 
       <!-- Two-column layout for materials + actionable lists -->
       <div v-if="hasContent" class="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">

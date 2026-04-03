@@ -57,6 +57,7 @@ pub mod player_data {
 
 /// Survey-related queries
 /// CDN data persistence queries
+#[allow(dead_code)]
 pub mod cdn_data {
     use super::*;
 
@@ -154,6 +155,7 @@ pub mod log_positions {
     }
 
     /// Get all positions for a specific file type
+    #[allow(dead_code)]
     pub fn get_positions_by_type(
         conn: &DbConnection,
         file_type: &str,

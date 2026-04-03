@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 // ── Raw CDN shape ───────────────────────────────────────────────────────────
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 struct RawStorageVault {
