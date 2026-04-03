@@ -56,7 +56,7 @@ jobs:
           git push origin main --tags
 
       - name: Upload release notes
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: release-notes
           path: RELEASE_NOTES.md
@@ -129,7 +129,7 @@ jobs:
           ls -la release-artifacts/
 
       - name: Upload platform artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: artifacts-${{ matrix.label }}
           path: release-artifacts/*
@@ -140,12 +140,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download release notes
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: release-notes
 
       - name: Download all platform artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           pattern: artifacts-*
           path: all-artifacts
