@@ -576,6 +576,12 @@ async function computeMaterialSummary(recipes: (RecipeInfo & { completions: numb
       for (const out of r.result_items) {
         allItemIds.add(out.item_id);
       }
+      // Enchanted recipes have empty result_items but populated result_item_ids (from ProtoResultItems)
+      if (r.result_items.length === 0) {
+        for (const id of r.result_item_ids) {
+          allItemIds.add(id);
+        }
+      }
     }
 
     const items = await gameData.resolveItemsBatch([...allItemIds].map(String));
@@ -621,7 +627,14 @@ async function computeMaterialSummary(recipes: (RecipeInfo & { completions: numb
         }
       }
 
-      for (const out of r.result_items) {
+      // Use result_items when available; fall back to result_item_ids for enchanted recipes
+      // (which have empty result_items but populated ProtoResultItems via result_item_ids)
+      const outputs: { item_id: number; stack_size: number; percent_chance: number | null }[] =
+        r.result_items.length > 0
+          ? r.result_items
+          : r.result_item_ids.map((id) => ({ item_id: id, stack_size: 1, percent_chance: null }));
+
+      for (const out of outputs) {
         const chance = (out.percent_chance ?? 100) / 100;
         const qty = Math.round(out.stack_size * chance * crafts);
         const item = items[String(out.item_id)];
