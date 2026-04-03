@@ -1,14 +1,14 @@
 use crate::cdn_commands::GameDataState;
 use crate::db::DbPool;
-use crate::game_data::GameData;
 use crate::parsers::to_utc_datetime;
 /// Game State Manager — persists derived game state from PlayerEvents to SQLite.
 ///
 /// Follows the SurveySessionTracker pattern: lightweight struct that receives
 /// &DbPool per call, called synchronously from the coordinator's event loop.
 /// Maintains "last known value" tables, not event logs.
-use crate::player_event_parser::PlayerEvent;
+use crate::player_event_parser::{DeleteContext, PlayerEvent};
 use chrono::{Local, Utc};
+use rusqlite::Connection;
 
 /// Timestamped log line for startup diagnostics.
 macro_rules! startup_log {
@@ -376,14 +376,15 @@ impl GameStateManager {
                 item_name,
                 instance_id,
                 slot_index,
-                ..
+                is_new,
             } => {
                 let dt = self.to_utc(timestamp);
-                // Resolve item_type_id from CDN game data using internal name
-                let item_type_id: Option<i64> = game_data_guard
+                // Resolve item_type_id and display name from CDN game data
+                let resolved = game_data_guard
                     .as_ref()
-                    .and_then(|gd| gd.resolve_item(item_name))
-                    .map(|info| info.id as i64);
+                    .and_then(|gd| gd.resolve_item(item_name));
+                let item_type_id: Option<i64> = resolved.map(|info| info.id as i64);
+                let display_name = resolved.map(|info| info.name.as_str());
                 conn.execute(
                     "INSERT INTO game_state_inventory (character_name, server_name, instance_id, item_name, item_type_id, stack_size, slot_index, last_confirmed_at, source)
                      VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6, ?7, 'log')
@@ -394,6 +395,23 @@ impl GameStateManager {
                         last_confirmed_at = excluded.last_confirmed_at",
                     rusqlite::params![character, server, *instance_id as i64, item_name, item_type_id, slot_index, dt],
                 ).ok();
+                // Record transaction (only for genuinely new items, not login reloads)
+                if *is_new {
+                    Self::record_transaction(
+                        &conn,
+                        character,
+                        server,
+                        &dt,
+                        display_name.unwrap_or(item_name),
+                        Some(item_name),
+                        item_type_id,
+                        1, // initial stack_size; corrected later by chat or ItemStackChanged
+                        "loot",
+                        "player_log",
+                        Some(*instance_id),
+                        None,
+                    );
+                }
                 domains.push("inventory");
             }
 
@@ -420,11 +438,53 @@ impl GameStateManager {
                 domains.push("inventory");
             }
 
-            PlayerEvent::ItemDeleted { instance_id, .. } => {
+            PlayerEvent::ItemDeleted {
+                timestamp,
+                instance_id,
+                item_name,
+                context,
+            } => {
+                // Look up stack_size before deleting so we can record accurate quantity
+                let (del_item_name, del_stack_size): (String, i32) = conn
+                    .query_row(
+                        "SELECT item_name, stack_size FROM game_state_inventory
+                         WHERE character_name = ?1 AND server_name = ?2 AND instance_id = ?3",
+                        rusqlite::params![character, server, *instance_id as i64],
+                        |row| Ok((row.get(0)?, row.get(1)?)),
+                    )
+                    .unwrap_or_else(|_| {
+                        (
+                            item_name.clone().unwrap_or_else(|| "Unknown".to_string()),
+                            1,
+                        )
+                    });
+
                 conn.execute(
                     "DELETE FROM game_state_inventory WHERE character_name = ?1 AND server_name = ?2 AND instance_id = ?3",
                     rusqlite::params![character, server, *instance_id as i64],
                 ).ok();
+
+                let tx_context = match context {
+                    DeleteContext::StorageTransfer => "storage_deposit",
+                    DeleteContext::VendorSale => "vendor_sell",
+                    DeleteContext::Consumed => "consumed",
+                    DeleteContext::Unknown => "unknown",
+                };
+                let dt = self.to_utc(timestamp);
+                Self::record_transaction(
+                    &conn,
+                    character,
+                    server,
+                    &dt,
+                    &del_item_name,
+                    item_name.as_deref(),
+                    None,
+                    -del_stack_size,
+                    tx_context,
+                    "player_log",
+                    Some(*instance_id),
+                    None,
+                );
                 domains.push("inventory");
             }
 
@@ -584,7 +644,10 @@ impl GameStateManager {
             } => {
                 if let Some(vk) = vault_key {
                     let dt = self.to_utc(timestamp);
-                    // Look up item_type_id from the instance registry (via ItemStackChanged if available)
+                    let display_name = game_data_guard
+                        .as_ref()
+                        .and_then(|gd| gd.resolve_item(item_name))
+                        .map(|info| info.name.clone());
                     conn.execute(
                         "INSERT INTO game_state_storage (character_name, server_name, vault_key, instance_id, item_name, stack_size, slot_index, last_confirmed_at, source)
                          VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6, ?7, 'log')
@@ -594,20 +657,62 @@ impl GameStateManager {
                             last_confirmed_at = excluded.last_confirmed_at",
                         rusqlite::params![character, server, vk, *instance_id as i64, item_name, slot, dt],
                     ).ok();
+                    Self::record_transaction(
+                        &conn,
+                        character,
+                        server,
+                        &dt,
+                        display_name.as_deref().unwrap_or(item_name),
+                        Some(item_name),
+                        None,
+                        1, // stack_size=1 initially; corrected later
+                        "storage_deposit",
+                        "player_log",
+                        Some(*instance_id),
+                        Some(vk),
+                    );
                     domains.push("storage");
                 }
             }
 
             PlayerEvent::StorageWithdrawal {
+                timestamp,
                 vault_key,
                 instance_id,
+                quantity,
                 ..
             } => {
                 if let Some(vk) = vault_key {
+                    // Look up item name before deleting
+                    let stored_name: String = conn
+                        .query_row(
+                            "SELECT item_name FROM game_state_storage
+                             WHERE character_name = ?1 AND server_name = ?2 AND vault_key = ?3 AND instance_id = ?4",
+                            rusqlite::params![character, server, vk, *instance_id as i64],
+                            |row| row.get(0),
+                        )
+                        .unwrap_or_else(|_| "Unknown".to_string());
+
                     conn.execute(
                         "DELETE FROM game_state_storage WHERE character_name = ?1 AND server_name = ?2 AND vault_key = ?3 AND instance_id = ?4",
                         rusqlite::params![character, server, vk, *instance_id as i64],
                     ).ok();
+
+                    let dt = self.to_utc(timestamp);
+                    Self::record_transaction(
+                        &conn,
+                        character,
+                        server,
+                        &dt,
+                        &stored_name,
+                        None,
+                        None,
+                        -(*quantity as i32),
+                        "storage_withdraw",
+                        "player_log",
+                        Some(*instance_id),
+                        Some(vk),
+                    );
                     domains.push("storage");
                 }
             }
@@ -620,4 +725,176 @@ impl GameStateManager {
             domains_updated: domains,
         }
     }
+
+    /// Correct inventory/storage stack sizes using chat status data.
+    ///
+    /// Player.log's ProcessAddItem always records stack_size=1. The chat log's
+    /// "[Status] Item x5 added to inventory." gives us the real quantity.
+    /// This finds recent rows with stack_size=1 for the matching item and
+    /// updates them, returning which domains were corrected.
+    pub fn correct_stack_from_chat(
+        &self,
+        display_name: &str,
+        quantity: u32,
+        db: &DbPool,
+    ) -> Vec<&'static str> {
+        if quantity <= 1 {
+            return vec![];
+        }
+
+        let (character, server) = match (&self.active_character, &self.active_server) {
+            (Some(c), Some(s)) => (c.as_str(), s.as_str()),
+            _ => return vec![],
+        };
+
+        let conn = match db.get() {
+            Ok(c) => c,
+            Err(_) => return vec![],
+        };
+
+        // Resolve display name to internal name via CDN data
+        let internal_name = self
+            .game_data
+            .try_read()
+            .ok()
+            .and_then(|gd| gd.resolve_item(display_name).and_then(|info| info.internal_name.clone()));
+
+        let mut domains = Vec::new();
+
+        // Try to correct game_state_inventory — match by internal_name or display_name
+        let inv_corrected = correct_stack_in_table(
+            &conn,
+            "game_state_inventory",
+            "character_name = ?1 AND server_name = ?2",
+            character,
+            server,
+            None, // no vault_key filter
+            internal_name.as_deref(),
+            display_name,
+            quantity,
+        );
+        if inv_corrected {
+            domains.push("inventory");
+        }
+
+        // Try to correct game_state_storage — same logic, any vault
+        let storage_corrected = correct_stack_in_table(
+            &conn,
+            "game_state_storage",
+            "character_name = ?1 AND server_name = ?2",
+            character,
+            server,
+            None,
+            internal_name.as_deref(),
+            display_name,
+            quantity,
+        );
+        if storage_corrected {
+            domains.push("storage");
+        }
+
+        domains
+    }
+
+    /// Record an item transaction in the ledger.
+    fn record_transaction(
+        conn: &Connection,
+        character: &str,
+        server: &str,
+        dt: &str,
+        item_name: &str,
+        internal_name: Option<&str>,
+        item_type_id: Option<i64>,
+        quantity: i32,
+        context: &str,
+        source: &str,
+        instance_id: Option<u64>,
+        vault_key: Option<&str>,
+    ) {
+        conn.execute(
+            "INSERT INTO item_transactions (timestamp, character_name, server_name, item_name, internal_name, item_type_id, quantity, context, source, instance_id, vault_key)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            rusqlite::params![
+                dt,
+                character,
+                server,
+                item_name,
+                internal_name,
+                item_type_id,
+                quantity,
+                context,
+                source,
+                instance_id.map(|id| id as i64),
+                vault_key,
+            ],
+        )
+        .ok();
+    }
+}
+
+/// Correct a single stack_size=1 row in an inventory/storage table.
+/// Returns true if a row was updated.
+fn correct_stack_in_table(
+    conn: &Connection,
+    table: &str,
+    base_where: &str,
+    character: &str,
+    server: &str,
+    _vault_key: Option<&str>,
+    internal_name: Option<&str>,
+    display_name: &str,
+    quantity: u32,
+) -> bool {
+    // Build the item name match: prefer internal_name, fall back to display_name
+    let name_to_match = internal_name.unwrap_or(display_name);
+
+    // Find the most recent row with stack_size=1 for this item
+    // (rowid ordering gives us recency since rows are inserted in order)
+    let query = format!(
+        "UPDATE {table} SET stack_size = ?1
+         WHERE rowid = (
+             SELECT rowid FROM {table}
+             WHERE {base_where} AND item_name = ?3 AND stack_size = 1
+             ORDER BY rowid DESC LIMIT 1
+         )"
+    );
+
+    let updated = conn
+        .execute(
+            &query,
+            rusqlite::params![quantity, character, server, name_to_match],
+        )
+        .unwrap_or(0);
+
+    if updated > 0 {
+        eprintln!(
+            "[game-state] Corrected {table} stack: {display_name} → {quantity} (matched {name_to_match})"
+        );
+        return true;
+    }
+
+    // If internal_name didn't match and we have a display_name to try as fallback
+    if internal_name.is_some() {
+        let updated = conn
+            .execute(
+                &format!(
+                    "UPDATE {table} SET stack_size = ?1
+                     WHERE rowid = (
+                         SELECT rowid FROM {table}
+                         WHERE {base_where} AND item_name = ?3 AND stack_size = 1
+                         ORDER BY rowid DESC LIMIT 1
+                     )"
+                ),
+                rusqlite::params![quantity, character, server, display_name],
+            )
+            .unwrap_or(0);
+        if updated > 0 {
+            eprintln!(
+                "[game-state] Corrected {table} stack: {display_name} → {quantity} (matched by display name)"
+            );
+            return true;
+        }
+    }
+
+    false
 }

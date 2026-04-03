@@ -44,7 +44,7 @@ The `PlayerEvent` enum uses `#[serde(tag = "kind")]` — when serialized to the 
 | Event | Log Source | Key Fields |
 |---|---|---|
 | `ItemAdded` | `ProcessAddItem` | `item_name`, `instance_id`, `slot_index`, `is_new` |
-| `ItemStackChanged` | `ProcessUpdateItemCode` | `instance_id`, `item_type_id`, `old_stack_size`, `new_stack_size`, `delta`, `from_server` |
+| `ItemStackChanged` | `ProcessUpdateItemCode` | `instance_id`, `item_type_id`, `old_stack_size`, `new_stack_size`, `delta`, `from_server`. **Only emitted when the parser has a prior stack observation** — the first `ProcessUpdateItemCode` for an existing item (loaded at session start) establishes a baseline and is suppressed. New items (`is_new=True`) seed stack=1 so their first update emits correctly. |
 | `ItemDeleted` | `ProcessDeleteItem` | `instance_id`, `item_name`, `context` (see below) |
 
 **Delete Context** — `ItemDeleted` includes a `context` field that classifies _why_ the item was removed:
@@ -151,7 +151,7 @@ The parser is stateful. It tracks:
 | State | Type | Purpose |
 |---|---|---|
 | `instance_registry` | `HashMap<u64, InstanceInfo>` | Maps instance IDs to item names and type IDs. Built from `ProcessAddItem` events at login. |
-| `stack_sizes` | `HashMap<u64, u32>` | Last known stack size per instance ID. Used to compute deltas on `ProcessUpdateItemCode`. |
+| `stack_sizes` | `HashMap<u64, u32>` | Last known stack size per instance ID. Used to compute deltas on `ProcessUpdateItemCode`. Seeded to 1 for new items (`is_new=True`); not seeded for existing items, so the first `ProcessUpdateItemCode` establishes a baseline without emitting a false delta. |
 | `current_interaction` | `Option<InteractionContext>` | Tracks which NPC the player is currently interacting with. Set by `ProcessStartInteraction`. |
 | `pending_deletes` | `Vec<PendingDelete>` | 1-line lookahead buffer for `ProcessDeleteItem` events awaiting context resolution. |
 

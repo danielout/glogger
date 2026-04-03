@@ -32,6 +32,9 @@ export interface AppSettings {
   itemValuationMode: string;
   showRawJsonInDataBrowser: boolean;
   showUnobtainableItems: boolean;
+  timestampDisplayMode: 'local' | 'server' | 'utc';
+  timezoneOffsetSeconds: number | null;
+  manualTimezoneOverride: number | null;
   viewPreferences: Record<string, Record<string, unknown>>;
 }
 
@@ -65,6 +68,9 @@ interface BackendSettings {
   item_valuation_mode: string;
   show_raw_json_in_data_browser: boolean;
   show_unobtainable_items: boolean;
+  timestamp_display_mode: string;
+  timezone_offset_seconds: number | null;
+  manual_timezone_override: number | null;
   view_preferences: Record<string, Record<string, unknown>>;
 }
 
@@ -99,6 +105,9 @@ function toBackendSettings(settings: AppSettings): BackendSettings {
     item_valuation_mode: settings.itemValuationMode,
     show_raw_json_in_data_browser: settings.showRawJsonInDataBrowser,
     show_unobtainable_items: settings.showUnobtainableItems,
+    timestamp_display_mode: settings.timestampDisplayMode,
+    timezone_offset_seconds: settings.timezoneOffsetSeconds,
+    manual_timezone_override: settings.manualTimezoneOverride,
     view_preferences: settings.viewPreferences,
   };
 }
@@ -138,6 +147,9 @@ function fromBackendSettings(settings: BackendSettings): AppSettings {
     itemValuationMode: settings.item_valuation_mode ?? 'highest_market_vendor',
     showRawJsonInDataBrowser: settings.show_raw_json_in_data_browser ?? false,
     showUnobtainableItems: settings.show_unobtainable_items ?? false,
+    timestampDisplayMode: (settings.timestamp_display_mode ?? 'local') as 'local' | 'server' | 'utc',
+    timezoneOffsetSeconds: settings.timezone_offset_seconds ?? null,
+    manualTimezoneOverride: settings.manual_timezone_override ?? null,
     viewPreferences: settings.view_preferences ?? {},
   };
 }
@@ -173,6 +185,9 @@ function getDefaultSettings(): AppSettings {
     itemValuationMode: 'highest_market_vendor',
     showRawJsonInDataBrowser: false,
     showUnobtainableItems: false,
+    timestampDisplayMode: 'local' as const,
+    timezoneOffsetSeconds: null,
+    manualTimezoneOverride: null,
     viewPreferences: {},
   };
 }

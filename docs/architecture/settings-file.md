@@ -80,6 +80,7 @@ The exact path is displayed at the bottom of the Settings page in the app.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
+| `timestamp_display_mode` | string | `"local"` | How to display timestamps: `"local"` (browser timezone), `"server"` (game server timezone), `"utc"` |
 | `exclude_max_enchanted_recipes` | boolean | `true` | Exclude "Max-Enchanted" recipes from automated recipe selection |
 | `market_price_mode` | string | `"universal"` | `"universal"` (one price per item) or `"per_server"` (price per item per server) |
 | `item_valuation_mode` | string | `"highest_market_vendor"` | How to value items for wealth calculations. Options: `"highest_market_vendor"`, `"highest_market_buy_used"`, `"vendor_only"`, `"buy_used_only"`, `"market_only"` |
@@ -155,6 +156,7 @@ Contains day-to-day configuration:
 
 - **Game Data Directory** — text input + Browse for the Project Gorgon data folder
 - **Startup Behavior** — checkboxes for auto-tailing Player.log and Chat.log
+- **Timestamp Display** — choose between Local Time, Server Time, or UTC for all timestamp displays
 - **Game Data (CDN)** — shows cached vs. remote CDN version, update status, force refresh button
 
 ### Advanced Tab

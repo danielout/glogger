@@ -130,6 +130,11 @@ pub struct AppSettings {
     #[serde(default)]
     pub last_app_version: Option<String>,
 
+    /// How timestamps are displayed in the UI: "local" (browser local time, default),
+    /// "server" (game server time, using detected/manual timezone offset), or "utc".
+    #[serde(default = "default_timestamp_display_mode")]
+    pub timestamp_display_mode: String,
+
     /// Auto-detected timezone offset in seconds from UTC (e.g., -25200 for UTC-7).
     /// Populated from chat login line's "Timezone Offset" field.
     #[serde(default)]
@@ -139,6 +144,10 @@ pub struct AppSettings {
     /// over the auto-detected offset. Advanced setting for edge cases.
     #[serde(default)]
     pub manual_timezone_override: Option<i32>,
+}
+
+fn default_timestamp_display_mode() -> String {
+    "local".to_string()
 }
 
 fn default_market_price_mode() -> String {
@@ -272,6 +281,7 @@ impl Default for AppSettings {
             show_unobtainable_items: false,
             view_preferences: None,
             last_app_version: None,
+            timestamp_display_mode: default_timestamp_display_mode(),
             timezone_offset_seconds: None,
             manual_timezone_override: None,
         }

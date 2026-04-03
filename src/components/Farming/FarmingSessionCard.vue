@@ -69,8 +69,8 @@
       <!-- Timing + notes row -->
       <div class="flex items-start gap-4 mt-2">
         <span class="text-xs text-text-muted shrink-0 pt-1">
-          Started {{ s.startTime }}
-          <span v-if="s.endTime"> · Ended {{ s.endTime }}</span>
+          Started {{ formatTs(s.startTime) }}
+          <span v-if="s.endTime"> · Ended {{ formatTs(s.endTime) }}</span>
         </span>
         <textarea
           :value="s.notes"
@@ -217,6 +217,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { useFarmingStore } from "../../stores/farmingStore";
+import { formatAnyTimestamp as formatTs } from "../../composables/useTimestamp";
 import EmptyState from "../Shared/EmptyState.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 import SkillInline from "../Shared/Skill/SkillInline.vue";

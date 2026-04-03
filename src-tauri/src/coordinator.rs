@@ -1,6 +1,6 @@
 use crate::cdn_commands::GameDataState;
 use crate::chat_combat_parser::parse_combat_message;
-use crate::chat_status_parser::parse_status_message;
+use crate::chat_status_parser::{parse_status_message, ChatStatusEvent};
 use crate::db::chat_commands::insert_chat_messages;
 use crate::db::queries::log_positions;
 use crate::db::DbPool;
@@ -522,6 +522,7 @@ impl DataIngestCoordinator {
                                     last_confirmed_at = excluded.last_confirmed_at",
                                 rusqlite::params![character, server, area],
                             ).ok();
+                            domains_batch.push("area");
                         }
                     }
                     self.app_handle.emit("area-transition", &area).ok();
@@ -607,6 +608,62 @@ impl DataIngestCoordinator {
                                 .emit("survey-loot-correction", &correction)
                                 .ok();
                         }
+
+                        // Cross-reference with general inventory for stack correction
+                        // and record item transactions from chat status events.
+                        match &status_event {
+                            ChatStatusEvent::ItemGained {
+                                item_name,
+                                quantity,
+                                timestamp,
+                            }
+                            | ChatStatusEvent::Summoned {
+                                item_name,
+                                quantity,
+                                timestamp,
+                            } => {
+                                let context = match &status_event {
+                                    ChatStatusEvent::Summoned { .. } => "summoned",
+                                    _ => "loot",
+                                };
+
+                                // Correct inventory/storage stack sizes
+                                let corrected_domains = self.game_state.correct_stack_from_chat(
+                                    item_name,
+                                    *quantity,
+                                    &self.db_pool,
+                                );
+                                if !corrected_domains.is_empty() {
+                                    self.app_handle
+                                        .emit("game-state-updated", &corrected_domains)
+                                        .ok();
+                                }
+
+                                // Record in transaction ledger
+                                if let Ok(conn) = self.db_pool.get() {
+                                    if let (Some(character), Some(server)) = (
+                                        self.game_state.get_active_character(),
+                                        self.game_state.get_active_server(),
+                                    ) {
+                                        conn.execute(
+                                            "INSERT INTO item_transactions (timestamp, character_name, server_name, item_name, quantity, context, source)
+                                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'chat_status')",
+                                            rusqlite::params![
+                                                timestamp,
+                                                character,
+                                                server,
+                                                item_name,
+                                                *quantity as i32,
+                                                context,
+                                            ],
+                                        )
+                                        .ok();
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
+
                         self.app_handle
                             .emit("chat-status-event", &status_event)
                             .ok();

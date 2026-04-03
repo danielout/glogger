@@ -97,6 +97,11 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         super::record_migration(conn, 14)?;
     }
 
+    if current_version < 15 {
+        migration_v15_item_transactions(conn)?;
+        super::record_migration(conn, 15)?;
+    }
+
     Ok(())
 }
 
@@ -243,6 +248,32 @@ fn migration_v14_death_damage_sources(conn: &Connection) -> Result<()> {
             is_crit INTEGER NOT NULL DEFAULT 0
         );
         CREATE INDEX idx_damage_sources_death ON death_damage_sources(death_id);",
+    )?;
+    Ok(())
+}
+
+/// Migration V15: Item transaction ledger — records every item gain/loss from both
+/// Player.log and chat status for historical analysis and cross-source correlation.
+fn migration_v15_item_transactions(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE item_transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            item_name TEXT NOT NULL,
+            internal_name TEXT,
+            item_type_id INTEGER,
+            quantity INTEGER NOT NULL,
+            context TEXT NOT NULL,
+            source TEXT NOT NULL,
+            instance_id INTEGER,
+            vault_key TEXT,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX idx_item_tx_char ON item_transactions(character_name, server_name);
+        CREATE INDEX idx_item_tx_item ON item_transactions(item_name);
+        CREATE INDEX idx_item_tx_time ON item_transactions(timestamp);",
     )?;
     Ok(())
 }

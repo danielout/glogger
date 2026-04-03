@@ -27,6 +27,7 @@ src/components/Shared/
 ├── TabBar.vue                   # Tab navigation bar (v-model)
 ├── ModalDialog.vue              # Confirm/prompt modal dialog
 ├── AccordionSection.vue         # Collapsible section with arrow toggle
+├── Timestamp.vue                # Timezone-aware timestamp display
 ├── ToastContainer.vue           # Toast notification overlay
 ├── ItemCard.vue                 # Survey loot card (count + percentage)
 ├── SkillCard.vue                # Session skill summary card
@@ -74,7 +75,7 @@ Shared logic lives in [`src/composables/`](../../src/composables/):
 - **`usePaneResize(options)`** — Drag-to-resize logic for `SidePane`. Options: `side` (`"left"` | `"right"`), `minWidth`, `maxWidth`, `initialWidth`, `defaultWidth`, `onWidthChange`, `onResizeEnd`. Returns `isResizing`, `startResize(e)`, `resetWidth()`. Side-aware (left pane drag-right = wider, right pane drag-left = wider).
 - **`useViewPrefs<T>(screenKey, defaults)`** — Persists view preferences (pane widths, collapsed state) to settings store with 500ms debounce. Returns `prefs` (Ref\<T\>), `update(partial)`.
 - **`useKeyboard()`** — Keyboard navigation for list views. Supports arrow keys, W/S (list), Q/E (tabs), A/D (panes), Escape. Context-aware: suppresses nav keys when typing in inputs. Auto-scrolls selected items into view.
-- **`useTimestamp()`** — UTC-to-local timestamp formatting utilities. Exports: `formatTimeShort()`, `formatTimeFull()`, `formatDateTimeShort()`, `formatDate()`, `formatDateTimeFull()`.
+- **`useTimestamp()`** — Timezone-aware timestamp formatting utilities. All functions read the `timestampDisplayMode` setting (local/server/utc) and format accordingly. Exports: `formatTimeShort()` ("14:30"), `formatTimeFull()` ("14:30:00"), `formatDateShort()` ("Mar 26"), `formatDate()` ("2026-03-26"), `formatDateTimeShort()` ("Mar 26, 14:30"), `formatDateTimeFull()` ("2026-03-26 14:30:00"), `formatRelative()` ("2m ago"), `formatSmart()` (time if today, datetime-short otherwise), `getTimezoneSuffix()`, `parseUtc()`.
 - **`useFavorTiers()`** — Favor tier constants, colors, and utilities. Tier order: SoulMates > LikeFamily > BestFriends > CloseFriends > Friends > Comfortable > Neutral > Despised. Exports: `tierIndex()`, `isTierAtOrAbove()`, `favorColor()`, `favorBadgeClasses()`, `pointsToNextTier()`, `tierDisplayName()`.
 - **`useQuestRequirements()`** — Quest eligibility evaluation (MinSkillLevel, MinFavorLevel, ActiveCombatSkill, QuestCompleted, MinLevel, Race, Or). Exports: `evaluateRequirement()`, `evaluateQuestEligibility()`, `eligibilityLabel()`, `eligibilityClasses()`, `requirementStatusIcon()`, `requirementStatusColor()`.
 
@@ -310,6 +311,22 @@ A resizable, collapsible side pane with drag handle and persisted state. When co
 ```
 
 **Props:** `side: "left" | "right"`, `title: string`, `screenKey: string`, `defaultWidth?: number` (default `320`), `minWidth?: number` (default `200`), `maxWidth?: number` (default `700`)
+
+## Timestamp Component
+
+Displays a formatted timestamp that respects the user's `timestampDisplayMode` setting (local, server, or UTC). Hover shows the full datetime with timezone suffix.
+
+```vue
+<Timestamp value="2026-03-26 14:30:00" />
+<Timestamp value="2026-03-26 14:30:00" granularity="time-full" />
+<Timestamp value="2026-03-26 14:30:00" granularity="datetime-short" />
+```
+
+**Props:** `value: string` (UTC timestamp from DB), `granularity?: TimestampGranularity` (default `"smart"`)
+
+**Granularity options:** `time-short` ("14:30"), `time-full` ("14:30:00"), `date-short` ("Mar 26"), `date-full` ("2026-03-26"), `datetime-short` ("Mar 26, 14:30"), `datetime-full` ("2026-03-26 14:30:00"), `relative` ("2m ago"), `smart` (time if today, datetime-short otherwise)
+
+Renders as a `<time>` element with `datetime` attribute for accessibility. Use the component when timestamps appear as standalone display elements. Use the composable functions directly when timestamps are embedded in strings (e.g., `<option>` tags, interpolated text).
 
 ## UI Utility Components
 

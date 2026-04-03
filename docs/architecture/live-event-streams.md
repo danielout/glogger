@@ -50,9 +50,12 @@ DataIngestCoordinator                       DataIngestCoordinator
     +-- flush batches ──┐                              +-- emit "watch-rule-triggered"
     |                   +-- emit "player-events-batch" +-- emit "chat-messages-inserted"
     |                   +-- emit "game-state-updated"
-    +-- emit "skill-update"
-    +-- emit "character-login"
-    +-- emit "area-transition"
+    +-- emit "skill-update"                    +-- GameStateManager
+    +-- emit "character-login"                 |     .correct_stack_from_chat()
+    +-- emit "area-transition"                 |     (fixes stack_size=1 rows)
+                                               |     +-- emit "game-state-updated"
+                                               +-- item_transactions ledger
+                                                     (records chat-sourced gains)
 ```
 
 ### Poll cycle ordering
@@ -220,6 +223,19 @@ const unlistenState: UnlistenFn = await listen<string[]>('game-state-updated', (
 ### Combining streams
 
 Some data appears in both streams with different levels of detail. The pattern is: **Player.log is primary** (identity, structure), **Chat Status is supplementary** (quantities, deltas, human-readable names). Features don't deduplicate — they use different fields from each.
+
+#### Backend cross-stream correlation
+
+The coordinator performs **automatic inventory stack correction** by correlating chat status events with Player.log data:
+
+1. Player.log `ProcessAddItem` records items with `stack_size = 1` in `game_state_inventory` / `game_state_storage`
+2. Chat.log `[Status] Item x5 added to inventory.` provides the real quantity
+3. The coordinator calls `GameStateManager::correct_stack_from_chat()` which resolves the chat display name to a Player.log internal name via CDN data, finds recent `stack_size=1` rows, and updates them
+4. A `"game-state-updated"` event is emitted so the frontend refreshes
+
+Both sources also write to the `item_transactions` ledger table (v15 migration) — Player.log events with `source = 'player_log'` and chat events with `source = 'chat_status'`.
+
+#### Frontend cross-stream example
 
 ```typescript
 // Example: track items with correct quantities

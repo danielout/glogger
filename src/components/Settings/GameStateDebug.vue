@@ -167,7 +167,7 @@
           </thead>
           <tbody>
             <tr v-for="(evt, i) in gameState.liveEventLog" :key="i" class="hover:bg-surface-elevated/30">
-              <td class="px-2 py-0.5 text-text-muted">{{ evt.timestamp }}</td>
+              <td class="px-2 py-0.5 text-text-muted">{{ formatTs(evt.timestamp) }}</td>
               <td class="px-2 py-0.5" :class="eventKindColor(evt.kind)">{{ evt.kind }}</td>
               <td class="px-2 py-0.5 text-text-primary">{{ evt.item_name }}</td>
               <td class="px-2 py-0.5 text-text-muted">{{ evt.detail }}</td>
@@ -214,6 +214,7 @@
 import { computed } from "vue";
 import { useGameStateStore } from "../../stores/gameStateStore";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { formatAnyTimestamp as formatTs } from "../../composables/useTimestamp";
 import AccordionSection from "../Shared/AccordionSection.vue";
 import DomainTable from "./DomainTable.vue";
 import type { InventoryEventKind } from "../../stores/gameStateStore";

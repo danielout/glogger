@@ -93,7 +93,7 @@
                   <span class="inline-block transition-transform" :class="expandedDeathId === death.id ? 'rotate-90' : ''">&#9654;</span>
                 </td>
                 <td class="py-1 px-2 text-text-muted font-mono text-xs whitespace-nowrap">
-                  {{ death.died_at }}
+                  {{ formatTs(death.died_at) }}
                 </td>
                 <td class="py-1 px-2">
                   <EnemyInline :reference="death.killer_name" />
@@ -135,7 +135,7 @@
                       </thead>
                       <tbody>
                         <tr v-for="src in expandedSources" :key="src.id" class="text-text-secondary">
-                          <td class="py-0.5 pr-3 font-mono text-text-dim whitespace-nowrap">{{ src.timestamp }}</td>
+                          <td class="py-0.5 pr-3 font-mono text-text-dim whitespace-nowrap">{{ formatTs(src.timestamp) }}</td>
                           <td class="py-0.5 pr-3">
                             <EnemyInline :reference="src.attacker_name" />
                           </td>
@@ -166,6 +166,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useDeathStore, type DeathDamageSource } from '../../stores/deathStore'
+import { formatAnyTimestamp as formatTs } from '../../composables/useTimestamp'
 import EmptyState from '../Shared/EmptyState.vue'
 import AbilityInline from '../Shared/Ability/AbilityInline.vue'
 import EnemyInline from '../Shared/Enemy/EnemyInline.vue'

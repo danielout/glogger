@@ -8,7 +8,7 @@
       class="px-2 py-1 border-l-3 border-border-light mb-1 text-xs"
       :style="{ borderLeftColor: kindColor[entry.kind] }">
       <div class="flex items-baseline gap-2">
-        <span class="text-text-dim text-[0.65rem] shrink-0">{{ entry.timestamp }}</span>
+        <span class="text-text-dim text-[0.65rem] shrink-0">{{ formatTs(entry.timestamp) }}</span>
         <span class="shrink-0">{{ kindIcon[entry.kind] }}</span>
         <span class="text-text-primary/75">{{ entry.label }}</span>
       </div>
@@ -19,6 +19,7 @@
 
 <script setup lang="ts">
 import { useFarmingStore } from "../../stores/farmingStore";
+import { formatAnyTimestamp as formatTs } from "../../composables/useTimestamp";
 import type { FarmingLogKind } from "../../types/farming";
 
 const store = useFarmingStore();

@@ -43,6 +43,30 @@ export interface InventoryEventLog {
 
 const INVENTORY_EVENT_LOG_MAX = 50
 
+// ── Chat Status Event Types ──────────────────────────────────────────────
+// Matches Rust ChatStatusEvent enum (#[serde(tag = "kind")])
+
+export type ChatStatusEvent =
+  | { kind: 'ItemGained'; timestamp: string; item_name: string; quantity: number }
+  | { kind: 'XpGained'; timestamp: string; skill: string; amount: number }
+  | { kind: 'LevelUp'; timestamp: string; skill: string; level: number; xp: number }
+  | { kind: 'CoinsLooted'; timestamp: string; amount: number }
+  | { kind: 'CouncilsChanged'; timestamp: string; amount: number }
+  | { kind: 'TreasureDistance'; timestamp: string; meters: number }
+  | { kind: 'AnatomyResult'; timestamp: string; success: boolean }
+  | { kind: 'Summoned'; timestamp: string; item_name: string; quantity: number }
+
+// ── Activity Feed Types ──────────────────────────────────────────────────
+
+export interface ActivityEntry {
+  timestamp: string
+  label: string
+  amount: number
+  detail?: string
+}
+
+const ACTIVITY_LOG_MAX = 30
+
 // ── Session Skill Tracking ────────────────────────────────────────────────
 
 /** Per-skill session tracking — XP deltas accumulated since first seen */
@@ -100,6 +124,18 @@ export const useGameStateStore = defineStore('gameState', () => {
   // ── Live Inventory State (in-memory, not persisted) ─────────────────
   const liveItemMap = ref<Map<number, LiveInventoryItem>>(new Map())
   const liveEventLog = ref<InventoryEventLog[]>([])
+
+  // ── Activity Feeds (in-memory, session-only) ────────────────────────
+  const itemsIncoming = ref<ActivityEntry[]>([])
+  const itemsOutgoing = ref<ActivityEntry[]>([])
+  const councilChanges = ref<ActivityEntry[]>([])
+  const currencyChanges = ref<ActivityEntry[]>([])
+  const favorChanges = ref<ActivityEntry[]>([])
+
+  function pushActivity(feed: typeof itemsIncoming, entry: ActivityEntry) {
+    feed.value.unshift(entry)
+    if (feed.value.length > ACTIVITY_LOG_MAX) feed.value.length = ACTIVITY_LOG_MAX
+  }
 
   // ── Computed: Persisted State ─────────────────────────────────────────
 
@@ -418,6 +454,7 @@ export const useGameStateStore = defineStore('gameState', () => {
   function clearLiveInventory() {
     liveItemMap.value = new Map()
     liveEventLog.value = []
+    clearActivityFeeds()
   }
 
   /** Handle a player-event for inventory tracking */
@@ -493,6 +530,114 @@ export const useGameStateStore = defineStore('gameState', () => {
     }
   }
 
+  // ── Activity Feed: Player Events ─────────────────────────────────────
+
+  /** Route player events into the appropriate activity feed */
+  function handlePlayerActivityEvent(event: PlayerEvent) {
+    switch (event.kind) {
+      // Items incoming is handled exclusively by chat status events
+      // (ItemGained/Summoned) to avoid double-counting — Player.log fires
+      // both ItemAdded and ItemStackChanged for the same pickup.
+
+      case 'ItemStackChanged':
+        // Only track negative deltas (outgoing) from Player.log.
+        // Positive deltas are covered by chat status ItemGained events.
+        if (event.delta < 0) {
+          pushActivity(itemsOutgoing, {
+            timestamp: event.timestamp,
+            label: event.item_name ?? `item#${event.item_type_id}`,
+            amount: Math.abs(event.delta),
+            detail: 'stack reduced',
+          })
+        }
+        break
+
+      case 'ItemDeleted': {
+        // Look up real stack size from live inventory (still present because
+        // activity handler now runs before inventory handler)
+        const tracked = liveItemMap.value.get(event.instance_id)
+        const name = tracked?.item_name ?? event.item_name ?? 'Unknown Item'
+        const amount = tracked?.stack_size ?? 1
+        const contextLabel = event.context === 'StorageTransfer' ? 'stored'
+          : event.context === 'VendorSale' ? 'sold'
+          : event.context === 'Consumed' ? 'consumed'
+          : 'removed'
+        pushActivity(itemsOutgoing, {
+          timestamp: event.timestamp,
+          label: name,
+          amount,
+          detail: contextLabel,
+        })
+        break
+      }
+
+      case 'FavorChanged':
+        pushActivity(favorChanges, {
+          timestamp: event.timestamp,
+          label: event.npc_name,
+          amount: event.delta,
+          detail: event.is_gift ? 'gift' : undefined,
+        })
+        break
+
+      case 'VendorSold':
+        pushActivity(councilChanges, {
+          timestamp: event.timestamp,
+          label: `Sold ${event.item_name}`,
+          amount: event.price,
+          detail: 'vendor',
+        })
+        break
+    }
+  }
+
+  // ── Activity Feed: Chat Status Events ──────────────────────────────
+
+  function handleChatStatusEvent(event: ChatStatusEvent) {
+    switch (event.kind) {
+      case 'ItemGained':
+        pushActivity(itemsIncoming, {
+          timestamp: event.timestamp,
+          label: event.item_name,
+          amount: event.quantity,
+        })
+        break
+
+      case 'Summoned':
+        pushActivity(itemsIncoming, {
+          timestamp: event.timestamp,
+          label: event.item_name,
+          amount: event.quantity,
+          detail: 'summoned',
+        })
+        break
+
+      case 'CouncilsChanged':
+        pushActivity(councilChanges, {
+          timestamp: event.timestamp,
+          label: event.amount > 0 ? 'Received' : 'Spent',
+          amount: event.amount,
+        })
+        break
+
+      case 'CoinsLooted':
+        pushActivity(councilChanges, {
+          timestamp: event.timestamp,
+          label: 'Looted from corpse',
+          amount: event.amount,
+        })
+        break
+    }
+  }
+
+  function clearActivityFeeds() {
+    itemsIncoming.value = []
+    itemsOutgoing.value = []
+    councilChanges.value = []
+    currencyChanges.value = []
+    favorChanges.value = []
+  }
+
   // ── DB Actions ────────────────────────────────────────────────────────
 
   /** Load all game state domains from the database for the active character+server */
@@ -557,6 +702,7 @@ export const useGameStateStore = defineStore('gameState', () => {
         case 'weather':
         case 'combat':
         case 'mount':
+        case 'area':
           world.value = await invoke('get_game_state_world', { characterName, serverName })
           break
         case 'inventory':
@@ -606,8 +752,13 @@ export const useGameStateStore = defineStore('gameState', () => {
 
   listen<PlayerEvent[]>('player-events-batch', (event) => {
     for (const pe of event.payload) {
+      handlePlayerActivityEvent(pe) // activity feed reads liveItemMap before inventory handler modifies it
       handleInventoryEvent(pe)
     }
+  })
+
+  listen<ChatStatusEvent>('chat-status-event', (event) => {
+    handleChatStatusEvent(event.payload)
   })
 
   listen<string>('server-detected', (event) => {
@@ -695,6 +846,13 @@ export const useGameStateStore = defineStore('gameState', () => {
     liveEventLog,
     handleInventoryEvent,
     clearLiveInventory,
+
+    // Activity feeds
+    itemsIncoming,
+    itemsOutgoing,
+    councilChanges,
+    currencyChanges,
+    favorChanges,
 
     // DB actions
     loadAll,

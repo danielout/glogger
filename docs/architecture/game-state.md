@@ -74,6 +74,27 @@ All tables live in the V1 unified migration. Every table uses `last_confirmed_at
 | `game_state_currencies` | (character_name, currency_name) | amount, source |
 | `game_state_effects` | (character_name, effect_instance_id) | effect_name, source_entity_id |
 | `game_state_storage` | (character_name, server_name, vault_key, instance_id) | item_name, item_type_id, stack_size, slot_index, source |
+| `game_state_area` | (character_name, server_name) | area_name |
+| `item_transactions` | id (auto) | timestamp, item_name, internal_name, quantity, context, source, instance_id, vault_key |
+
+### Item Transaction Ledger (`item_transactions`)
+
+Added in V15 migration. Records every item gain/loss event from both Player.log and chat status for historical analysis. Unlike the `game_state_inventory` table (which tracks current state), this is an append-only audit trail.
+
+- **Player.log sources:** `ItemAdded` (new items only, not login reloads), `ItemDeleted` (with context: vendor_sell, storage_deposit, consumed, unknown), `StorageDeposit`, `StorageWithdrawal`
+- **Chat status sources:** `ItemGained`, `Summoned`
+- **`source` column:** `'player_log'` or `'chat_status'`
+- **`context` column:** `'loot'`, `'vendor_sell'`, `'storage_deposit'`, `'storage_withdraw'`, `'consumed'`, `'summoned'`, `'unknown'`
+- **`quantity`:** positive for gains, negative for losses
+
+### Chat-Based Stack Correction
+
+`GameStateManager::correct_stack_from_chat()` fixes the `stack_size=1` problem in `game_state_inventory` and `game_state_storage`. Player.log `ProcessAddItem` always records `stack_size=1`; the real quantity comes from chat status `"Item x5 added to inventory."`. The correction:
+
+1. Resolves the chat display name to a Player.log internal name via CDN `resolve_item()`
+2. Finds the most recent row with `stack_size=1` matching that item name
+3. Updates the stack size to the chat quantity
+4. Returns which domains were corrected so the coordinator can emit `"game-state-updated"`
 
 ## GameStateManager (Rust)
 
@@ -100,10 +121,11 @@ Lightweight struct with `active_character: Option<String>` and `active_server: O
 | EffectNameUpdated | game_state_effects | UPDATE effect_name | `effects` |
 | StorageDeposit | game_state_storage | UPSERT | `storage` |
 | StorageWithdrawal | game_state_storage | DELETE | `storage` |
+| *(AreaTransition — handled in coordinator)* | game_state_area | UPSERT | `area` |
 
 ### Timestamp Handling
 
-Log events have `"HH:MM:SS"` timestamps. `GameStateManager` normalizes these to `"YYYY-MM-DD HH:MM:SS"` using `chrono::Local::now()`.
+Log events have `"HH:MM:SS"` timestamps. `GameStateManager` normalizes these to `"YYYY-MM-DD HH:MM:SS"` using `chrono::Local::now()`. All stored timestamps are UTC. The frontend's `useTimestamp` composable converts UTC to the user's preferred display timezone (local, server, or UTC) based on the `timestamp_display_mode` setting.
 
 ### Login Behavior
 
@@ -187,13 +209,13 @@ These are not persisted to DB — they reset on login/session restart.
 | Currencies | `game_state_currencies` | *(none — snapshot only)* | character snapshot |
 | Effects | `game_state_effects` | `EffectsAdded`/`Removed`/`NameUpdated` | — |
 | Storage | `game_state_storage` | `StorageDeposit`/`Withdrawal` | inventory snapshot (vault items) |
+| Area | `game_state_area` | `AreaTransition` (via coordinator) | — |
 
 ### Not Yet Implemented
 
 | Domain | Status | Notes |
 |---|---|---|
 | Stats | Covered by attributes | `MAX_HEALTH` etc. are attributes — no separate table needed |
-| Location | Deferred | Transient; coordinator already tracks area transitions |
 | Quests | Needs parser work | `ProcessLoadQuests`, `ProcessAddQuest`, `ProcessUpdateQuest`, `ProcessCompleteQuest` |
 | Map Data | Needs parser work | `ProcessMapFog`, `ProcessMapFx` |
 | Character Identity | Partial | Name/login tracked via `game_state_session`; race/guild not yet |

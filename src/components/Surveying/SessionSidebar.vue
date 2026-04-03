@@ -17,8 +17,8 @@
         <span v-if="s.endTime" class="text-[0.6rem] text-text-dim uppercase shrink-0">(Ended)</span>
       </div>
       <div class="text-[0.65rem] text-text-muted mb-2">
-        Started {{ s.startTime }}
-        <span v-if="s.endTime"> · Ended {{ s.endTime }}</span>
+        Started {{ formatTs(s.startTime) }}
+        <span v-if="s.endTime"> · Ended {{ formatTs(s.endTime) }}</span>
         <br />{{ store.elapsed }} elapsed
         <span v-if="s.isPaused" class="text-[#c8b47e] font-bold ml-1">(PAUSED)</span>
       </div>
@@ -143,6 +143,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useSurveyStore } from "../../stores/surveyStore";
+import { formatAnyTimestamp as formatTs } from "../../composables/useTimestamp";
 
 const store = useSurveyStore();
 const s = computed(() => store.session);

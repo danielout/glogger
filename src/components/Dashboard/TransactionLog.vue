@@ -19,7 +19,7 @@
           :class="kindColor(event.kind)" />
 
         <!-- Timestamp -->
-        <span class="text-text-dim font-mono shrink-0">{{ event.timestamp }}</span>
+        <span class="text-text-dim font-mono shrink-0">{{ formatTs(event.timestamp) }}</span>
 
         <!-- Item name -->
         <ItemInline :reference="event.item_name" />
@@ -33,6 +33,7 @@
 
 <script setup lang="ts">
 import { useGameStateStore, type InventoryEventKind } from '../../stores/gameStateStore'
+import { formatAnyTimestamp as formatTs } from '../../composables/useTimestamp'
 import EmptyState from '../Shared/EmptyState.vue'
 import ItemInline from '../Shared/Item/ItemInline.vue'
 

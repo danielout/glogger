@@ -88,6 +88,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useCraftingStore } from "../../stores/craftingStore";
+import { formatAnyTimestamp } from "../../composables/useTimestamp";
 import type { TrackedRecipeEntry } from "../../types/crafting";
 import RecipeInline from "../Shared/Recipe/RecipeInline.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
@@ -112,10 +113,8 @@ function progressColor(entry: TrackedRecipeEntry): string {
 }
 
 function formatTime(timestamp: string): string {
-  // Timestamps from player events are like "[16:17:48]" or ISO strings
-  if (timestamp.startsWith("[")) return timestamp.slice(1, 9);
-  // Try to extract HH:MM:SS from ISO
-  const match = timestamp.match(/(\d{2}:\d{2}:\d{2})/);
-  return match ? match[1] : timestamp.slice(0, 8);
+  // Strip brackets from player event timestamps like "[16:17:48]"
+  const bare = timestamp.startsWith("[") ? timestamp.slice(1, -1) : timestamp;
+  return formatAnyTimestamp(bare);
 }
 </script>

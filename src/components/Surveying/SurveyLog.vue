@@ -8,7 +8,7 @@
       class="px-2 py-1 border-l-3 border-border-light mb-1 text-xs"
       :style="{ borderLeftColor: kindColor[entry.kind] }">
       <div class="flex items-baseline gap-2">
-        <span class="text-text-dim text-xs shrink-0">{{ entry.timestamp }}</span>
+        <span class="text-text-dim text-xs shrink-0">{{ formatTs(entry.timestamp) }}</span>
         <span class="shrink-0">{{ kindIcon[entry.kind] }}</span>
         <span class="text-text-primary/75">{{ entry.label }}</span>
       </div>
@@ -19,6 +19,7 @@
 
 <script setup lang="ts">
 import { useSurveyStore, type SurveyLogEntry } from "../../stores/surveyStore";
+import { formatAnyTimestamp as formatTs } from "../../composables/useTimestamp";
 
 withDefaults(defineProps<{
   embedded?: boolean;

@@ -66,6 +66,43 @@
     </div>
 
     <div class="settings-section">
+      <h3>Timestamp Display</h3>
+
+      <div class="mb-4">
+        <label class="block text-text-secondary mb-2 text-sm">Display timestamps in</label>
+        <div class="flex gap-2">
+          <button
+            v-for="option in timestampOptions"
+            :key="option.value"
+            @click="handleTimestampModeChange(option.value)"
+            :class="[
+              'px-3 py-1.5 rounded text-sm border transition-colors',
+              timestampMode === option.value
+                ? 'bg-accent/20 border-accent text-accent'
+                : 'border-border text-text-secondary hover:border-text-muted'
+            ]">
+            {{ option.label }}
+          </button>
+        </div>
+        <p class="mt-2 text-text-muted text-xs leading-relaxed">
+          <span v-if="timestampMode === 'local'">
+            Times are shown in your computer's local timezone.
+          </span>
+          <span v-else-if="timestampMode === 'server'">
+            Times are shown in the game server's timezone
+            <template v-if="serverOffsetLabel"> ({{ serverOffsetLabel }})</template>.
+            <template v-if="!hasServerOffset">
+              <br />Server timezone not yet detected — start chat log tailing to auto-detect from a login line.
+            </template>
+          </span>
+          <span v-else>
+            Times are shown in UTC (Coordinated Universal Time).
+          </span>
+        </p>
+      </div>
+    </div>
+
+    <div class="settings-section">
       <h3>Crafting</h3>
 
       <div>
@@ -89,7 +126,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, computed, watch } from "vue";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useSettingsStore } from "../../stores/settingsStore";
 
@@ -98,6 +135,29 @@ const localGameDataPath = ref(settingsStore.settings.gameDataPath);
 const autoTailChat = ref(settingsStore.settings.autoTailChat);
 const autoTailPlayerLog = ref(settingsStore.settings.autoTailPlayerLog);
 const excludeMaxEnchanted = ref(settingsStore.settings.excludeMaxEnchantedRecipes);
+const timestampMode = ref(settingsStore.settings.timestampDisplayMode);
+
+const timestampOptions = [
+  { value: 'local' as const, label: 'Local Time' },
+  { value: 'server' as const, label: 'Server Time' },
+  { value: 'utc' as const, label: 'UTC' },
+];
+
+const hasServerOffset = computed(() => {
+  return settingsStore.settings.manualTimezoneOverride != null
+    || settingsStore.settings.timezoneOffsetSeconds != null;
+});
+
+const serverOffsetLabel = computed(() => {
+  const offset = settingsStore.settings.manualTimezoneOverride
+    ?? settingsStore.settings.timezoneOffsetSeconds;
+  if (offset == null) return '';
+  const sign = offset >= 0 ? '+' : '-';
+  const abs = Math.abs(offset);
+  const h = Math.floor(abs / 3600);
+  const m = Math.floor((abs % 3600) / 60);
+  return `UTC${sign}${h}${m > 0 ? ':' + String(m).padStart(2, '0') : ''}`;
+});
 
 watch(
   () => settingsStore.settings.gameDataPath,
@@ -119,6 +179,11 @@ watch(
 watch(
   () => settingsStore.settings.excludeMaxEnchantedRecipes,
   (val) => { excludeMaxEnchanted.value = val; }
+);
+
+watch(
+  () => settingsStore.settings.timestampDisplayMode,
+  (val) => { timestampMode.value = val; }
 );
 
 async function browseGameDataFolder() {
@@ -151,5 +216,10 @@ function handleAutoTailPlayerLogToggle() {
 
 function handleExcludeMaxEnchantedToggle() {
   settingsStore.updateSettings({ excludeMaxEnchantedRecipes: excludeMaxEnchanted.value });
+}
+
+function handleTimestampModeChange(mode: 'local' | 'server' | 'utc') {
+  timestampMode.value = mode;
+  settingsStore.updateSettings({ timestampDisplayMode: mode });
 }
 </script>

@@ -35,11 +35,64 @@
         </div>
       </div>
 
-      <!-- Bottom row: Transactions + Notes -->
-      <div class="grid grid-cols-2 gap-4">
+      <!-- Activity Feeds -->
+      <div class="grid grid-cols-3 gap-4">
+        <!-- Items Incoming -->
         <div class="bg-[#1a1a2e] border border-border-default rounded-lg p-4">
-          <TransactionLog />
+          <ActivityFeed
+            title="Items Incoming"
+            :entries="store.itemsIncoming"
+            dot-color="bg-green-500"
+            empty-text="No items received."
+            empty-hint="Loot, crafting output, and summoned items appear here."
+            show-item-links
+            unit="items" />
         </div>
+
+        <!-- Items Outgoing -->
+        <div class="bg-[#1a1a2e] border border-border-default rounded-lg p-4">
+          <ActivityFeed
+            title="Items Outgoing"
+            :entries="store.itemsOutgoing"
+            dot-color="bg-red-500"
+            empty-text="No items lost."
+            empty-hint="Sold, stored, and consumed items appear here."
+            show-item-links
+            unit="items" />
+        </div>
+
+        <!-- Councils (Gold) -->
+        <div class="bg-[#1a1a2e] border border-border-default rounded-lg p-4">
+          <ActivityFeed
+            title="Councils"
+            :entries="store.councilChanges"
+            dot-color="bg-yellow-500"
+            empty-text="No council changes."
+            empty-hint="Vendor sales, loot, and council transactions appear here."
+            unit="councils"
+            signed-total />
+        </div>
+      </div>
+
+      <!-- Second row: Current Zone + Favor + Notes -->
+      <div class="grid grid-cols-3 gap-4">
+        <!-- Current Zone -->
+        <CurrentZone />
+
+        <!-- Favor Changes -->
+        <div class="bg-[#1a1a2e] border border-border-default rounded-lg p-4">
+          <ActivityFeed
+            title="Favor Changes"
+            :entries="store.favorChanges"
+            dot-color="bg-purple-500"
+            empty-text="No favor changes."
+            empty-hint="NPC favor gains and losses appear here."
+            show-npc-links
+            unit="favor"
+            signed-total />
+        </div>
+
+        <!-- Player Notes -->
         <div class="bg-[#1a1a2e] border border-border-default rounded-lg p-4">
           <PlayerNotes />
         </div>
@@ -59,9 +112,10 @@ import PaneLayout from '../Shared/PaneLayout.vue'
 import EmptyState from '../Shared/EmptyState.vue'
 import SkillCard from '../Shared/SkillCard.vue'
 import ContextBar from './ContextBar.vue'
-import TransactionLog from './TransactionLog.vue'
+import ActivityFeed from './ActivityFeed.vue'
 import PlayerNotes from './PlayerNotes.vue'
 import AggregateView from './AggregateView.vue'
+import CurrentZone from './CurrentZone.vue'
 
 const store = useGameStateStore()
 const viewMode = ref<'active' | 'aggregate'>('active')

@@ -219,6 +219,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useToast } from '../../composables/useToast'
+import { formatRelative } from '../../composables/useTimestamp'
 import { useMarketStore, type MarketValue, type ImportMarketValuesResult } from '../../stores/marketStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { useGameDataStore } from '../../stores/gameDataStore'
@@ -299,15 +300,7 @@ function sortIcon(field: string): string {
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return ''
-  // DB timestamps are UTC — parse as UTC
-  const utc = dateStr.includes('Z') || dateStr.includes('+') ? dateStr : dateStr.replace(' ', 'T') + 'Z'
-  const d = new Date(utc)
-  const now = new Date()
-  const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
-  if (diffDays === 0) return 'Today'
-  if (diffDays === 1) return 'Yesterday'
-  if (diffDays < 7) return `${diffDays}d ago`
-  return d.toLocaleDateString()
+  return formatRelative(dateStr)
 }
 
 function openAddForm() {

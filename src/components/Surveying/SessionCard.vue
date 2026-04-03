@@ -41,8 +41,8 @@
     </div>
     <div class="flex justify-between items-baseline mb-3">
       <span class="text-xs text-text-muted">
-        Started {{ s.startTime }}
-        <span v-if="s.endTime"> · Ended {{ s.endTime }}</span>
+        Started {{ formatTs(s.startTime) }}
+        <span v-if="s.endTime"> · Ended {{ formatTs(s.endTime) }}</span>
         · {{ store.elapsed }} elapsed
         <span v-if="s.isPaused" class="text-[#c8b47e] font-bold ml-2">(PAUSED)</span>
       </span>
@@ -187,6 +187,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useSurveyStore } from "../../stores/surveyStore";
+import { formatAnyTimestamp as formatTs } from "../../composables/useTimestamp";
 import SurveyLootGrid from "./SurveyLootGrid.vue";
 
 const store = useSurveyStore();

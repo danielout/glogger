@@ -596,6 +596,15 @@ impl PlayerEventParser {
             },
         );
 
+        // For genuinely new items, seed stack_size=1 so the subsequent
+        // ProcessUpdateItemCode computes the correct delta (N-1).
+        // For existing items loaded at session start (is_new=false), we
+        // do NOT seed — the first ProcessUpdateItemCode will establish
+        // the baseline without claiming a false gain.
+        if is_new {
+            self.stack_sizes.insert(instance_id, 1);
+        }
+
         Some(PlayerEvent::ItemAdded {
             timestamp: ts,
             item_name,
@@ -620,15 +629,24 @@ impl PlayerEventParser {
         let new_stack_size = encoded_value >> 16;
         let item_type_id = (encoded_value & 0xFFFF) as u16;
 
+        let had_prior = self.stack_sizes.contains_key(&instance_id);
         let old_stack_size = self.stack_sizes.get(&instance_id).copied().unwrap_or(0);
         let delta = new_stack_size as i32 - old_stack_size as i32;
 
-        // Update tracking state
+        // Update tracking state — always record the new stack size
         self.stack_sizes.insert(instance_id, new_stack_size);
 
         // Update type ID in registry if we have an entry
         if let Some(info) = self.instance_registry.get_mut(&instance_id) {
             info.item_type_id = Some(item_type_id);
+        }
+
+        // If we had no prior stack observation, this is establishing a baseline
+        // (e.g., session-start inventory load). Don't emit a change event since
+        // we can't know the real delta — it would falsely show the entire stack
+        // as a "gain".
+        if !had_prior {
+            return None;
         }
 
         let item_name = self
@@ -1972,19 +1990,55 @@ mod tests {
     }
 
     #[test]
-    fn test_instance_registry_populated_from_add_item() {
+    fn test_instance_registry_baseline_no_event() {
         let mut parser = PlayerEventParser::new();
+        // Existing item loaded at session start (is_new=False)
         parser.process_line(
             r#"[16:00:00] LocalPlayer: ProcessAddItem(MetalSlab2(136937342), 5, False)"#,
         );
 
-        // UpdateItemCode should resolve item name from registry
+        // First UpdateItemCode establishes baseline — no event emitted
         let events = parser.process_line(
             r#"[16:00:01] LocalPlayer: ProcessUpdateItemCode(136937342, 65536, True)"#,
         );
+        assert!(events.is_empty(), "First UpdateItemCode for existing item should not emit an event");
+
+        // Subsequent UpdateItemCode DOES emit a change event
+        let events = parser.process_line(
+            r#"[16:00:02] LocalPlayer: ProcessUpdateItemCode(136937342, 196608, True)"#,
+        );
+        assert_eq!(events.len(), 1);
         match &events[0] {
-            PlayerEvent::ItemStackChanged { item_name, .. } => {
+            PlayerEvent::ItemStackChanged { item_name, old_stack_size, new_stack_size, delta, .. } => {
                 assert_eq!(item_name.as_deref(), Some("MetalSlab2"));
+                assert_eq!(*old_stack_size, 1); // 65536 >> 16
+                assert_eq!(*new_stack_size, 3); // 196608 >> 16
+                assert_eq!(*delta, 2);
+            }
+            _ => panic!("Expected ItemStackChanged"),
+        }
+    }
+
+    #[test]
+    fn test_new_item_seeds_stack_and_emits_change() {
+        let mut parser = PlayerEventParser::new();
+        // Genuinely new item (is_new=True) — seeds stack_size=1
+        parser.process_line(
+            r#"[16:00:00] LocalPlayer: ProcessAddItem(RoyalJelly(12345678), 5, True)"#,
+        );
+
+        // UpdateItemCode should emit change with delta = new - 1
+        let events = parser.process_line(
+            r#"[16:00:01] LocalPlayer: ProcessUpdateItemCode(12345678, 327697, True)"#,
+        );
+        // 327697 >> 16 = 5, 327697 & 0xFFFF = 17
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::ItemStackChanged { item_name, old_stack_size, new_stack_size, delta, .. } => {
+                assert_eq!(item_name.as_deref(), Some("RoyalJelly"));
+                assert_eq!(*old_stack_size, 1); // seeded from ProcessAddItem(is_new=True)
+                assert_eq!(*new_stack_size, 5); // 327697 >> 16
+                assert_eq!(*delta, 4);
             }
             _ => panic!("Expected ItemStackChanged"),
         }
