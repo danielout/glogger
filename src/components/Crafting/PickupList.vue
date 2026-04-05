@@ -96,12 +96,16 @@ const areas = computed(() => {
       const areaName = vaultAreaMap.value.get(vs.vault_name) ?? vs.vault_name;
       const vaultLabel = vaultLabelMap.value.get(vs.vault_name) ?? vs.vault_name;
 
+      // For dynamic materials, use the concrete item info from the vault entry
+      const itemId = (mat.is_dynamic && vs.item_id != null) ? vs.item_id : mat.item_id;
+      const itemName = (mat.is_dynamic && vs.item_name) ? vs.item_name : mat.item_name;
+
       if (!areaMap.has(areaName)) {
         areaMap.set(areaName, []);
       }
       areaMap.get(areaName)!.push(reactive({
-        item_id: mat.item_id,
-        item_name: mat.item_name,
+        item_id: itemId,
+        item_name: itemName,
         vault_name: vs.vault_name,
         vault_label: vaultLabel,
         pickup_quantity: pickupQty,

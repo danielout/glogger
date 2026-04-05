@@ -41,6 +41,7 @@ use cdn_commands::{
     get_icon_path,
     get_item_sources,
     get_items_by_keyword,
+    get_recipe_ingredient_keywords,
     get_npcs_in_area,
     get_quest_sources,
     get_recipe_sources,
@@ -306,6 +307,7 @@ pub fn run() {
             // Item queries
             search_items,
             get_items_by_keyword,
+            get_recipe_ingredient_keywords,
             get_all_item_keywords,
             get_equip_slots,
             // Skill queries

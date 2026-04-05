@@ -133,7 +133,7 @@
                   <template v-if="ingredient.item_id !== null">
                     <ItemInline
                       v-if="ingredientItems[ingredient.item_id]?.name"
-                      :reference="ingredientItems[ingredient.item_id].name" />
+                      :reference="String(ingredient.item_id)" />
                     <span v-else class="text-text-secondary text-xs">Item #{{ ingredient.item_id }}</span>
                   </template>
                   <!-- Wildcard/keyword ingredient -->
@@ -163,7 +163,7 @@
                 <span class="flex-1">
                   <ItemInline
                     v-if="resultItems[result.item_id]?.name"
-                    :reference="resultItems[result.item_id].name" />
+                    :reference="String(result.item_id)" />
                   <span v-else class="text-text-secondary text-xs">Item #{{ result.item_id }}</span>
                 </span>
                 <span v-if="result.percent_chance !== null && result.percent_chance < 100" class="text-text-muted text-[0.72rem] italic">

@@ -193,9 +193,16 @@ pub fn get_chat_messages(
 
     // Build the full query
     let from_clause = if use_fts {
-        let search_text = filter.search_text.as_ref().unwrap();
+        let raw_search = filter.search_text.as_ref().unwrap();
+        // Sanitize for FTS5: wrap each word in double quotes to force literal matching.
+        // This prevents FTS5 syntax characters (*, ", +, -, etc.) from causing errors.
+        let sanitized: Vec<String> = raw_search
+            .split_whitespace()
+            .map(|word| format!("\"{}\"", word.replace('"', "")))
+            .collect();
+        let fts_query = sanitized.join(" ");
         conditions.insert(0, format!("fts MATCH ?{}", param_idx));
-        params.push(Box::new(search_text.clone()));
+        params.push(Box::new(fts_query));
         // param_idx not needed after this
         "FROM chat_messages cm JOIN chat_messages_fts fts ON cm.id = fts.rowid".to_string()
     } else {

@@ -155,6 +155,15 @@ export const useGameDataStore = defineStore("gameData", () => {
     return invoke<string[]>("get_all_item_keywords");
   }
 
+  interface IngredientKeywordInfo {
+    keyword: string
+    description: string
+  }
+
+  async function getRecipeIngredientKeywords(): Promise<IngredientKeywordInfo[]> {
+    return invoke<IngredientKeywordInfo[]>("get_recipe_ingredient_keywords");
+  }
+
   async function getEquipSlots(): Promise<string[]> {
     return invoke<string[]>("get_equip_slots");
   }
@@ -342,6 +351,7 @@ export const useGameDataStore = defineStore("gameData", () => {
     searchItems,
     getItemsByKeyword,
     getAllItemKeywords,
+    getRecipeIngredientKeywords,
     getEquipSlots,
     getAllSkills,
     getAbilitiesForSkill,

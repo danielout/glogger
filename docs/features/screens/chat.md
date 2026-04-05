@@ -58,7 +58,7 @@ Shared:
 Generic message list renderer used by all tabs:
 - **Standard layout** — timestamp, channel badge (optional), sender name, message body
 - **Tell/bubble layout** — chat bubbles with player messages on right, others on left
-- **Pagination** — "Load More" button, 100 messages per page
+- **Pagination** — infinite scroll (auto-loads at 200px from bottom), with fallback "Load More" button. 100 messages per page. Loading indicator is inline, preserving scroll position.
 - **Timestamps** — short format for today, full format for older messages
 
 ### MessageWithItemLinks

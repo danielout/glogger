@@ -121,6 +121,10 @@ export interface IntermediateCraft {
 export interface VaultStock {
   vault_name: string
   quantity: number
+  /** For dynamic material vault entries: the concrete item ID */
+  item_id?: number
+  /** For dynamic material vault entries: the concrete item name */
+  item_name?: string
 }
 
 export interface MaterialAvailability {
@@ -148,6 +152,19 @@ export interface MaterialNeed {
   vendor_price: number | null
   /** True if this item can be crafted via a known recipe (intermediate ingredient) */
   is_craftable: boolean
+  /** True if this is a wildcard/keyword slot (e.g. "Any Crystal") */
+  is_dynamic?: boolean
+  /** Keywords for dynamic slots (e.g. ["Crystal"]) */
+  item_keys?: string[]
+  /** For dynamic materials: per-item breakdown of what the player has */
+  dynamic_breakdown?: DynamicItemBreakdown[]
+}
+
+export interface DynamicItemBreakdown {
+  item_id: number
+  item_name: string
+  inventory_qty: number
+  storage_qty: number
 }
 
 // ── Leveling helper types ───────────────────────────────────────────────────

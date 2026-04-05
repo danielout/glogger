@@ -70,6 +70,7 @@ Per-screen documentation organized by view.
   - [crafting-workorders.md](features/screens/crafting/crafting-workorders.md) — Work Orders tab.
   - [crafting-cookshelper.md](features/screens/crafting/crafting-cookshelper.md) — Cook's Helper tab.
   - [crafting-skills.md](features/screens/crafting/crafting-skills.md) — Skills tab: per-skill summaries with charts and recipe lists.
+  - [crafting-dynamic-items.md](features/screens/crafting/crafting-dynamic-items.md) — Dynamic Items tab: configure which items are allowed for wildcard ingredient slots.
 
 ### Economics
 - [economics.md](features/screens/economics.md) — Economics screen: architecture, component hierarchy, market/farming/surveying.

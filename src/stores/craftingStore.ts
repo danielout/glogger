@@ -14,6 +14,7 @@ import type {
   CraftingProjectEntry,
   CraftingProjectSummary,
   CraftingTracker,
+  DynamicItemBreakdown,
   FlattenedMaterial,
   IntermediateCraft,
   MaterialAvailability,
@@ -371,38 +372,61 @@ export const useCraftingStore = defineStore("crafting", () => {
   /**
    * Given a flat material map (from flattenIngredients), check what the player
    * has across live inventory and the latest storage snapshot.
-   * Dynamic (keyword-based) materials are skipped since they can't be inventory-checked.
+   * Dynamic (keyword-based) materials are resolved via user preferences to
+   * determine which concrete items to check.
    */
   async function checkMaterialAvailability(
     materials: Map<string, FlattenedMaterial>,
   ): Promise<MaterialNeed[]> {
     const settingsStore = useSettingsStore();
 
-    // Filter to only concrete items (skip dynamic/keyword entries)
+    // Separate concrete and dynamic materials
     const concreteMaterials = Array.from(materials.values()).filter(
       (m) => m.item_id !== null && !m.is_dynamic,
     );
-    const itemIds = concreteMaterials.map((m) => m.item_id!);
-    if (itemIds.length === 0) return [];
+    const dynamicMaterials = Array.from(materials.values()).filter(
+      (m) => m.is_dynamic && m.item_keys.length > 0,
+    );
+
+    // Resolve dynamic keywords → enabled concrete item IDs
+    const dynamicItemIds: number[] = [];
+    const dynamicResolvedMap = new Map<string, number[]>(); // key → enabled item IDs
+    for (const mat of dynamicMaterials) {
+      const keyword = mat.item_keys[0];
+      const disabledSet = getDynamicItemDisabledSet(keyword);
+      const allItems = await gameData.getItemsByKeyword(keyword);
+      const enabledIds = allItems
+        .filter((item) => !disabledSet.has(item.id))
+        .map((item) => item.id);
+      dynamicResolvedMap.set(mat.key, enabledIds);
+      dynamicItemIds.push(...enabledIds);
+    }
+
+    // Combine all item IDs for a single batch inventory query
+    const concreteIds = concreteMaterials.map((m) => m.item_id!);
+    const allItemIds = [...concreteIds, ...dynamicItemIds];
+    if (allItemIds.length === 0 && dynamicMaterials.length === 0) return [];
 
     // 1. Query storage vaults from latest snapshot
     const characterName = settingsStore.settings.activeCharacterName;
     const serverName = settingsStore.settings.activeServerName;
 
     let storageData: MaterialAvailability[] = [];
-    if (characterName && serverName) {
+    if (characterName && serverName && allItemIds.length > 0) {
       try {
+        // Deduplicate IDs for the batch query
+        const uniqueIds = [...new Set(allItemIds)];
         storageData = await invoke<MaterialAvailability[]>("check_material_availability", {
           characterName,
           serverName,
-          itemTypeIds: itemIds,
+          itemTypeIds: uniqueIds,
         });
       } catch (e) {
         console.warn("[crafting] Failed to check storage availability:", e);
       }
     }
 
-    // Build lookup from backend results (now includes game_state_inventory + storage snapshot)
+    // Build lookup from backend results
     const availMap = new Map<number, MaterialAvailability>();
     for (const item of storageData) {
       availMap.set(item.item_type_id, item);
@@ -410,12 +434,12 @@ export const useCraftingStore = defineStore("crafting", () => {
 
     // 2. Get vendor prices and vendor-purchasable item IDs for cost estimation
     const [itemData, vendorItemIds] = await Promise.all([
-      gameData.resolveItemsBatch(itemIds.map(String)),
+      gameData.resolveItemsBatch(allItemIds.length > 0 ? [...new Set(allItemIds)].map(String) : []),
       invoke<number[]>('get_vendor_purchasable_item_ids'),
     ]);
     const vendorSet = new Set(vendorItemIds);
 
-    // 3. Build MaterialNeed list
+    // 3. Build MaterialNeed list — concrete items
     const needs: MaterialNeed[] = [];
     for (const mat of concreteMaterials) {
       const itemId = mat.item_id!;
@@ -426,7 +450,6 @@ export const useCraftingStore = defineStore("crafting", () => {
       const shortfall = Math.max(0, mat.expected_quantity - totalHave);
 
       const item = itemData[String(itemId)];
-      // Only apply vendor price fallback for items confirmed as vendor-sold via sources data
       const vendorValue = vendorSet.has(itemId) ? (item?.value ?? null) : null;
       const price = getVendorBuyPrice(vendorValue);
 
@@ -443,7 +466,112 @@ export const useCraftingStore = defineStore("crafting", () => {
       });
     }
 
+    // 4. Build MaterialNeed list — dynamic items (aggregate across enabled concrete items)
+    for (const mat of dynamicMaterials) {
+      const enabledIds = dynamicResolvedMap.get(mat.key) ?? [];
+
+      // Sum inventory and storage across all enabled items for this keyword
+      let totalInv = 0;
+      let totalStorage = 0;
+      const combinedVaultBreakdown: MaterialNeed["vault_breakdown"] = [];
+      const breakdown: DynamicItemBreakdown[] = [];
+      for (const id of enabledIds) {
+        const avail = availMap.get(id);
+        if (avail) {
+          totalInv += avail.inventory_quantity;
+          totalStorage += avail.storage_quantity;
+          for (const vb of avail.vault_breakdown) {
+            // Tag each vault entry with the concrete item info for pickup list resolution
+            combinedVaultBreakdown.push({
+              ...vb,
+              item_id: avail.item_type_id,
+              item_name: avail.item_name,
+            });
+          }
+          // Track per-item breakdown for materials display
+          if (avail.inventory_quantity > 0 || avail.storage_quantity > 0) {
+            breakdown.push({
+              item_id: avail.item_type_id,
+              item_name: avail.item_name,
+              inventory_qty: avail.inventory_quantity,
+              storage_qty: avail.storage_quantity,
+            });
+          }
+        }
+      }
+      const totalHave = totalInv + totalStorage;
+      const shortfall = Math.max(0, mat.expected_quantity - totalHave);
+
+      needs.push({
+        item_id: 0, // sentinel for dynamic
+        item_name: mat.item_name,
+        quantity_needed: mat.expected_quantity,
+        inventory_have: totalInv,
+        storage_have: totalStorage,
+        vault_breakdown: combinedVaultBreakdown,
+        shortfall,
+        vendor_price: null,
+        is_craftable: false,
+        is_dynamic: true,
+        item_keys: mat.item_keys,
+        dynamic_breakdown: breakdown.length > 0 ? breakdown.sort((a, b) => a.item_name.localeCompare(b.item_name)) : undefined,
+      });
+    }
+
     return needs.sort((a, b) => a.item_name.localeCompare(b.item_name));
+  }
+
+  // ── Dynamic item preferences ──────────────────────────────────────────────
+
+  /**
+   * Get the set of disabled item IDs for a keyword.
+   * Default = all items enabled (empty disabled set).
+   */
+  function getDynamicItemDisabledSet(keyword: string): Set<number> {
+    const settingsStore = useSettingsStore();
+    const dynamicItems = settingsStore.settings.viewPreferences?.dynamicItems as
+      | Record<string, number[]>
+      | undefined;
+    const disabled = dynamicItems?.[keyword];
+    return new Set(disabled ?? []);
+  }
+
+  /**
+   * Toggle an item enabled/disabled for a keyword and persist.
+   */
+  function setDynamicItemDisabled(keyword: string, itemId: number, disabled: boolean) {
+    const settingsStore = useSettingsStore();
+    const allPrefs = { ...(settingsStore.settings.viewPreferences ?? {}) };
+    const dynamicItems = { ...((allPrefs.dynamicItems as Record<string, number[]>) ?? {}) };
+    const current = new Set(dynamicItems[keyword] ?? []);
+
+    if (disabled) {
+      current.add(itemId);
+    } else {
+      current.delete(itemId);
+    }
+
+    dynamicItems[keyword] = Array.from(current);
+    allPrefs.dynamicItems = dynamicItems;
+    settingsStore.updateSettings({ viewPreferences: allPrefs });
+  }
+
+  /**
+   * Bulk-set all items for a keyword as enabled or disabled.
+   */
+  function setAllDynamicItems(keyword: string, itemIds: number[], disabled: boolean) {
+    const settingsStore = useSettingsStore();
+    const allPrefs = { ...(settingsStore.settings.viewPreferences ?? {}) };
+    const dynamicItems = { ...((allPrefs.dynamicItems as Record<string, number[]>) ?? {}) };
+
+    if (disabled) {
+      dynamicItems[keyword] = [...itemIds];
+    } else {
+      dynamicItems[keyword] = [];
+    }
+
+    allPrefs.dynamicItems = dynamicItems;
+    settingsStore.updateSettings({ viewPreferences: allPrefs });
   }
 
   /**
@@ -1134,6 +1262,10 @@ export const useCraftingStore = defineStore("crafting", () => {
     // Material availability
     checkMaterialAvailability,
     exportMaterialList,
+    // Dynamic item preferences
+    getDynamicItemDisabledSet,
+    setDynamicItemDisabled,
+    setAllDynamicItems,
     // Stock targets
     resolveStockTargets,
     queryItemStock,

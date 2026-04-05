@@ -9,6 +9,7 @@
         <WorkOrdersTab v-else-if="activeTab === 'work-orders'" />
         <CooksHelperTab v-else-if="activeTab === 'cooks-helper'" />
         <SkillsTab v-else-if="activeTab === 'skills'" />
+        <DynamicItemsTab v-else-if="activeTab === 'dynamic-items'" />
       </div>
     </div>
   </PaneLayout>
@@ -23,6 +24,7 @@ import HistoryTab from "./HistoryTab.vue";
 import WorkOrdersTab from "./WorkOrdersTab.vue";
 import CooksHelperTab from "./CooksHelperTab.vue";
 import SkillsTab from "./SkillsTab.vue";
+import DynamicItemsTab from "./DynamicItemsTab.vue";
 
 defineProps<{
   activeTab: string;

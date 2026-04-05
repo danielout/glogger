@@ -1,14 +1,15 @@
 <template>
   <div class="flex flex-col h-full bg-surface-base">
-    <div v-if="loading" class="flex flex-col items-center justify-center h-full text-text-muted">
+    <!-- Initial loading (no messages yet) -->
+    <div v-if="loading && messages.length === 0" class="flex flex-col items-center justify-center h-full text-text-muted">
       <div class="w-10 h-10 border-3 border-border-default border-t-accent-gold rounded-full animate-spin mb-4"></div>
       <p>Loading messages...</p>
     </div>
-    <div v-else-if="messages.length === 0" class="flex flex-col items-center justify-center h-full text-text-muted">
+    <div v-else-if="!loading && messages.length === 0" class="flex flex-col items-center justify-center h-full text-text-muted">
       <p class="my-1">No messages found</p>
       <p class="text-sm text-text-dim">Try importing chat logs from the Management tab</p>
     </div>
-    <div v-else class="flex-1 overflow-y-auto p-4" ref="messagesContainer">
+    <div v-else class="flex-1 overflow-y-auto p-4" ref="messagesContainer" @scroll="onScroll">
       <!-- Tell conversation layout -->
       <template v-if="isTellView">
         <div
@@ -62,15 +63,20 @@
           </span>
         </div>
       </template>
-    </div>
-    <div v-if="messages.length > 0 && hasMore" class="p-4 text-center border-t border-border-default">
-      <button
-        @click="$emit('load-more')"
-        :disabled="loading"
-        class="px-6 py-2 bg-surface-elevated border border-border-light text-text-primary rounded cursor-pointer transition-all hover:bg-border-default hover:border-border-hover disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        Load More Messages
-      </button>
+      <!-- Inline loading indicator for pagination -->
+      <div v-if="loading && messages.length > 0" class="flex items-center justify-center py-4 text-text-muted">
+        <div class="w-6 h-6 border-2 border-border-default border-t-accent-gold rounded-full animate-spin mr-3"></div>
+        <span class="text-sm">Loading more messages...</span>
+      </div>
+      <!-- Manual load more fallback (in case scroll detection misses) -->
+      <div v-else-if="hasMore && !loading" class="py-4 text-center">
+        <button
+          @click="$emit('load-more')"
+          class="px-6 py-2 bg-surface-elevated border border-border-light text-text-primary rounded cursor-pointer transition-all hover:bg-border-default hover:border-border-hover text-sm"
+        >
+          Load More Messages
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -95,11 +101,23 @@ const isTellView = computed(() => {
     && !props.showChannel
 })
 
-defineEmits<{
+const emit = defineEmits<{
   'load-more': []
 }>()
 
 const messagesContainer = ref<HTMLElement>()
+
+function onScroll() {
+  if (!messagesContainer.value || props.loading || !props.hasMore) return
+
+  const el = messagesContainer.value
+  const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+
+  // Trigger load when within 200px of the bottom
+  if (distanceFromBottom < 200) {
+    emit('load-more')
+  }
+}
 
 function channelColorClass(channel: string): string {
   const map: Record<string, string> = {

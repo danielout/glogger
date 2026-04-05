@@ -62,7 +62,11 @@
             :key="item.item_id"
             class="border-b border-surface-dark">
             <td class="py-1">
-              <ItemInline :reference="item.item_name" />
+              <template v-if="item.is_dynamic">
+                <span class="text-accent-gold/60 text-[0.65rem] mr-1">&#9670;</span>
+                <span class="text-text-secondary">{{ item.item_name }}</span>
+              </template>
+              <ItemInline v-else :reference="item.item_name" />
               <span v-if="item.is_craftable" class="text-accent-gold/70 text-[0.6rem] ml-1" title="Can be crafted">craftable</span>
             </td>
             <td class="text-right py-1 font-mono text-text-primary">{{ item.shortfall }}</td>
@@ -91,6 +95,7 @@ interface ShoppingItem {
   shortfall: number
   cost: number | null
   is_craftable: boolean
+  is_dynamic: boolean
 }
 
 const allShortfalls = computed((): ShoppingItem[] => {
@@ -102,6 +107,7 @@ const allShortfalls = computed((): ShoppingItem[] => {
       shortfall: m.shortfall,
       cost: m.vendor_price ? m.vendor_price * m.shortfall : null,
       is_craftable: m.is_craftable,
+      is_dynamic: m.is_dynamic ?? false,
     }))
     .sort((a, b) => a.item_name.localeCompare(b.item_name));
 });

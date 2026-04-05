@@ -51,7 +51,7 @@ When a project is selected, materials and inventory availability are automatical
 Two-column layout for efficient use of horizontal space:
 
 **Left column:**
-- **Materials table** — unified view showing Need/Inv/Storage/Shortfall when availability has been checked. Shows all ingredients needed across recipes, with deduplication.
+- **Materials table** — unified view showing Need/Inv/Storage/Shortfall when availability has been checked. Shows all ingredients needed across recipes, with deduplication. Dynamic/wildcard slots (e.g. "Any Crystal") are included with aggregated inventory from user-configured enabled items (see Dynamic Items tab).
 - **Craft or Buy** — centralized list of all craftable ingredients. Toggle each between "craft this" (expand into sub-ingredients) and "buy this" (keep as a leaf material). Toggling applies project-wide across all recipe entries that share that ingredient. Replaces needing to dig into individual recipe entries.
 
 **Right column:**

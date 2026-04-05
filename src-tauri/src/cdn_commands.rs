@@ -315,6 +315,47 @@ pub async fn get_items_by_keyword(
     Ok(results)
 }
 
+/// Info about a keyword used as a recipe ingredient slot.
+#[derive(Debug, serde::Serialize, Clone)]
+pub struct IngredientKeywordInfo {
+    pub keyword: String,
+    pub description: String,
+}
+
+/// Return all distinct keywords used as wildcard ingredient slots in recipes,
+/// along with their player-facing descriptions (from the CDN `Desc` field).
+#[tauri::command]
+pub async fn get_recipe_ingredient_keywords(
+    state: State<'_, GameDataState>,
+) -> Result<Vec<IngredientKeywordInfo>, String> {
+    let data = state.read().await;
+    let mut keyword_descs: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+
+    // Iterate recipes to collect keyword → first description mapping
+    for recipe in data.recipes.values() {
+        for ingredient in &recipe.ingredients {
+            if ingredient.item_id.is_none() && !ingredient.item_keys.is_empty() {
+                let desc = ingredient
+                    .description
+                    .clone()
+                    .unwrap_or_else(|| ingredient.item_keys.join(", "));
+                for keyword in &ingredient.item_keys {
+                    keyword_descs
+                        .entry(keyword.clone())
+                        .or_insert_with(|| desc.clone());
+                }
+            }
+        }
+    }
+
+    let mut results: Vec<IngredientKeywordInfo> = keyword_descs
+        .into_iter()
+        .map(|(keyword, description)| IngredientKeywordInfo { keyword, description })
+        .collect();
+    results.sort_by(|a, b| a.description.cmp(&b.description));
+    Ok(results)
+}
+
 /// Return a sorted list of all distinct keyword values across all items.
 #[tauri::command]
 pub async fn get_all_item_keywords(state: State<'_, GameDataState>) -> Result<Vec<String>, String> {
