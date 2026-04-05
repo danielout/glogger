@@ -219,6 +219,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { save, open } from "@tauri-apps/plugin-dialog";
 import { useToast } from "../../composables/useToast";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { useSurveyStore } from "../../stores/surveyStore";
 import EmptyState from "../Shared/EmptyState.vue";
 import AccordionSection from "../Shared/AccordionSection.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
@@ -288,6 +289,7 @@ interface SurveyImportInfo {
 
 const toast = useToast();
 const settingsStore = useSettingsStore();
+const surveyStore = useSurveyStore();
 const loading = ref(false);
 const exporting = ref(false);
 const importing = ref(false);
@@ -305,6 +307,11 @@ onMounted(() => {
 });
 
 watch(includeImports, () => {
+  loadAll();
+});
+
+// Auto-reload when a survey session is finalized (auto-end or manual end)
+watch(() => surveyStore.sessionFinalizedCounter, () => {
   loadAll();
 });
 

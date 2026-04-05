@@ -45,6 +45,7 @@ Two-column layout:
 
 *Left column (w-52):*
 - **Stats** — duration, maps crafted, surveys completed
+- **Timing** — editable start/end datetime inputs for correcting session timestamps (useful for imported sessions)
 - **XP Gained** — Surveying, Mining, Geology XP (each with skill-specific color)
 - **Economics** — revenue, cost, profit, profit/hour
 - **Notes** — editable textarea, persisted via `update_survey_session`
@@ -73,5 +74,6 @@ Historical session economics (revenue, profit, profit/hour) are **recomputed on 
 Session names and notes are editable directly in the list:
 - **Name** — inline `<input>` in the summary row; triggers `update_survey_session` on change
 - **Notes** — `<textarea>` in the expanded detail; triggers `update_survey_session` on change
+- **Timing** — start and end timestamps are editable via `datetime-local` inputs in the expanded detail's "Timing" section. Changing either triggers `update_survey_session_times`, which updates the timestamps in the DB and re-runs `finalize_session` to recompute `elapsed_seconds` and `profit_per_hour`. This is particularly useful for correcting imported sessions where the rapid log parse produced incorrect durations.
 
-Both persist immediately to the database.
+All edits persist immediately to the database.

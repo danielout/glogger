@@ -1143,14 +1143,17 @@ pub fn get_item_cost_analysis(
     {
         let mut stmt = conn
             .prepare(
-                "SELECT se.survey_type,
-                        CAST(SUM(sss.elapsed_seconds) AS REAL) / NULLIF(SUM(sss.surveys_completed), 0) as avg_secs
-                 FROM survey_session_stats sss
-                 JOIN survey_events se ON se.session_id = sss.id
-                 WHERE se.event_type IN ('completed', 'motherlode_completed')
-                   AND sss.elapsed_seconds > 0 AND sss.surveys_completed > 0
-                   AND (?1 = 1 OR sss.import_id IS NULL)
-                 GROUP BY se.survey_type",
+                "SELECT survey_type,
+                        CAST(SUM(elapsed_seconds) AS REAL) / NULLIF(SUM(surveys_completed), 0) as avg_secs
+                 FROM (
+                     SELECT DISTINCT se.survey_type, sss.id, sss.elapsed_seconds, sss.surveys_completed
+                     FROM survey_session_stats sss
+                     JOIN survey_events se ON se.session_id = sss.id
+                     WHERE se.event_type IN ('completed', 'motherlode_completed')
+                       AND sss.elapsed_seconds > 0 AND sss.surveys_completed > 0
+                       AND (?1 = 1 OR sss.import_id IS NULL)
+                 )
+                 GROUP BY survey_type",
             )
             .map_err(|e| format!("Failed to prepare avg time query: {e}"))?;
 

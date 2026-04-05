@@ -542,6 +542,19 @@ impl DataIngestCoordinator {
                     let result = self
                         .survey_tracker
                         .process_event(&survey_event, &self.db_pool);
+
+                    // Warn loudly if session creation failed — frontend will see
+                    // events but no data will be persisted
+                    if result.session_id.is_none() {
+                        eprintln!(
+                            "[coordinator] WARNING: survey event processed but session_id is None \
+                             (event: {:?}, tracker current_session={:?}, last_session={:?})",
+                            std::mem::discriminant(&survey_event),
+                            self.survey_tracker.current_session_id(),
+                            self.survey_tracker.last_session_id(),
+                        );
+                    }
+
                     // Wrap the event with session_id so the frontend can track it
                     let mut payload = serde_json::to_value(&survey_event).unwrap_or_default();
                     if let (serde_json::Value::Object(ref mut map), Some(sid)) =

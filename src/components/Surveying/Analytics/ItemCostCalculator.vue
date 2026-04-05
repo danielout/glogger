@@ -261,13 +261,15 @@ const sortedResults = computed<CalculatedResult[]>(() => {
   // Group by survey type — an item might appear as both primary and bonus from the same survey
   // but our backend already provides one row per (survey_type, item_name) pair with both splits
   const results: CalculatedResult[] = itemData.map(d => {
-    // effective yield = primary avg per completion + observed bonus per completion
-    // bonus_total_qty / total_completions already accounts for both the proc rate
-    // AND the item's individual drop rate within bonus procs
+    // effective yield per survey = total items obtained / total surveys completed
+    // This accounts for the drop rate (not every survey yields this item)
+    const primaryPerSurvey = d.total_completions > 0
+      ? d.primary_total_qty / d.total_completions
+      : 0;
     const bonusPerCompletion = d.total_completions > 0
       ? d.bonus_total_qty / d.total_completions
       : 0;
-    const effectiveYield = d.primary_avg_per_completion + bonusPerCompletion;
+    const effectiveYield = primaryPerSurvey + bonusPerCompletion;
 
     const surveysNeeded = effectiveYield > 0 ? Math.ceil(qty / effectiveYield) : Infinity;
     const totalCost = surveysNeeded * d.crafting_cost;
@@ -288,7 +290,7 @@ const sortedResults = computed<CalculatedResult[]>(() => {
       total_cost: surveysNeeded === Infinity ? 0 : totalCost,
       total_time_seconds: surveysNeeded === Infinity ? 0 : totalTime,
       avg_seconds_per_survey: d.avg_seconds_per_survey,
-      primary_avg: d.primary_avg_per_completion,
+      primary_avg: primaryPerSurvey,
       primary_times_seen: d.primary_times_seen,
       bonus_per_completion: bonusPerCompletion,
       bonus_avg_per_proc: d.bonus_avg_per_proc,

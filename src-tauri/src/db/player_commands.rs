@@ -370,17 +370,25 @@ pub fn patch_survey_session(
     // (Re-)run finalization to compute revenue/cost/profit/bonus counts/summaries
     crate::survey_persistence::finalize_session(&conn, session_id);
 
-    // Now read the freshly computed profit and recompute profit_per_hour with
-    // the frontend's accurate elapsed time (which accounts for pauses)
-    let total_profit: f64 = conn
+    // Read the freshly computed profit and the DB-derived elapsed (from event timestamps).
+    // The DB elapsed is authoritative for imported logs where the frontend's Date.now()
+    // produces ~1s durations. Only use the frontend elapsed if it's at least as large
+    // as the DB elapsed (meaning real-time tracking with pause accounting).
+    let (total_profit, db_elapsed): (f64, i64) = conn
         .query_row(
-            "SELECT total_profit FROM survey_session_stats WHERE id = ?1",
+            "SELECT total_profit, elapsed_seconds FROM survey_session_stats WHERE id = ?1",
             [session_id],
-            |row| row.get(0),
+            |row| Ok((row.get(0)?, row.get(1)?)),
         )
         .map_err(|e| format!("Failed to read session: {e}"))?;
 
-    let hours = input.elapsed_seconds as f64 / 3600.0;
+    let elapsed = if input.elapsed_seconds >= db_elapsed {
+        input.elapsed_seconds
+    } else {
+        db_elapsed
+    };
+
+    let hours = elapsed as f64 / 3600.0;
     let profit_per_hour = if hours > 0.0 {
         total_profit / hours
     } else {
@@ -397,7 +405,7 @@ pub fn patch_survey_session(
             profit_per_hour = ?6
          WHERE id = ?7",
         rusqlite::params![
-            input.elapsed_seconds,
+            elapsed,
             input.surveying_xp_gained,
             input.mining_xp_gained,
             input.geology_xp_gained,
@@ -527,6 +535,31 @@ pub fn update_survey_session(
         rusqlite::params![name, notes, session_id],
     )
     .map_err(|e| format!("Failed to update session: {e}"))?;
+    Ok(())
+}
+
+/// Update the start/end timestamps of a historical session and re-finalize economics.
+/// This lets users correct timestamps for imported sessions where duration was wrong.
+#[tauri::command]
+pub fn update_survey_session_times(
+    db: State<'_, DbPool>,
+    session_id: i64,
+    start_time: String,
+    end_time: Option<String>,
+) -> Result<(), String> {
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
+
+    conn.execute(
+        "UPDATE survey_session_stats SET start_time = ?1, end_time = ?2 WHERE id = ?3",
+        rusqlite::params![start_time, end_time, session_id],
+    )
+    .map_err(|e| format!("Failed to update session times: {e}"))?;
+
+    // Re-finalize to recompute elapsed_seconds and profit_per_hour from new timestamps
+    crate::survey_persistence::finalize_session(&conn, session_id);
+
     Ok(())
 }
 

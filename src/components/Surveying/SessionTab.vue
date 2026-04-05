@@ -9,6 +9,11 @@
   </div>
 
   <div v-else>
+    <!-- Warning: backend session not created (only for auto-started sessions that received events) -->
+    <div v-if="store.sessionActive && !store.backendSessionId && !store.session?.manualMode && (store.session?.mapsStarted ?? 0) > 0" class="mb-3 flex items-center gap-3 bg-[#2a1a1a] border border-[#5a3a3a] rounded-lg px-4 py-2">
+      <span class="text-xs text-[#c87e7e]">Warning: Session data is not being saved to disk. Try re-importing the Player.log from Settings > Advanced after your session.</span>
+    </div>
+
     <!-- Session ended banner with New Session button -->
     <div v-if="store.sessionEnded" class="mb-3 flex items-center gap-3 bg-[#1a2a1a] border border-[#3a5a3a] rounded-lg px-4 py-2">
       <span class="text-xs text-text-dim">Session ended.</span>

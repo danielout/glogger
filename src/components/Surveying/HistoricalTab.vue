@@ -104,6 +104,31 @@
                 </div>
               </div>
 
+              <!-- Timing (editable) -->
+              <div class="bg-black/20 border border-border-default rounded-lg p-3">
+                <div class="text-[0.65rem] uppercase tracking-widest text-[#7ec8e3] mb-2 font-bold">Timing</div>
+                <div class="flex flex-col gap-1.5">
+                  <div class="flex flex-col gap-0.5">
+                    <span class="text-[0.6rem] text-text-muted">Start</span>
+                    <input
+                      type="datetime-local"
+                      :value="toLocalDatetime(sess.start_time)"
+                      @change="(e) => updateSessionTimes(sess, 'start_time', (e.target as HTMLInputElement).value)"
+                      class="text-xs text-text-primary bg-black/30 border border-border-default rounded px-1.5 py-1 outline-none focus:border-border-hover w-full"
+                    />
+                  </div>
+                  <div class="flex flex-col gap-0.5">
+                    <span class="text-[0.6rem] text-text-muted">End</span>
+                    <input
+                      type="datetime-local"
+                      :value="toLocalDatetime(sess.end_time)"
+                      @change="(e) => updateSessionTimes(sess, 'end_time', (e.target as HTMLInputElement).value)"
+                      class="text-xs text-text-primary bg-black/30 border border-border-default rounded px-1.5 py-1 outline-none focus:border-border-hover w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <!-- XP -->
               <div v-if="sess.surveying_xp_gained || sess.mining_xp_gained || sess.geology_xp_gained" class="bg-black/20 border border-border-default rounded-lg p-3">
                 <div class="text-[0.65rem] uppercase tracking-widest text-[#7ec8e3] mb-2 font-bold">XP Gained</div>
@@ -246,15 +271,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import type { HistoricalSession } from "../../types/database";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 import PaneLayout from "../Shared/PaneLayout.vue";
 import { useMarketStore } from "../../stores/marketStore";
+import { useSurveyStore } from "../../stores/surveyStore";
 import { formatDateTimeShort, formatDuration } from "../../composables/useTimestamp";
 
 const marketStore = useMarketStore();
+const surveyStore = useSurveyStore();
 
 interface LootBreakdownEntry {
   item_name: string;
@@ -324,6 +351,11 @@ const bestSessionProfitPerHour = computed(() => {
 });
 
 onMounted(() => {
+  loadSessions();
+});
+
+// Auto-reload when a survey session is finalized (auto-end or manual end)
+watch(() => surveyStore.sessionFinalizedCounter, () => {
   loadSessions();
 });
 
@@ -425,6 +457,39 @@ async function deleteSession(id: number) {
 
 function formatDate(dateStr: string): string {
   return formatDateTimeShort(dateStr)
+}
+
+/** Convert a UTC datetime string from the DB to a datetime-local input value (local time). */
+function toLocalDatetime(dateStr: string | null): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr + "Z"); // DB stores UTC, append Z to parse as UTC
+  if (isNaN(d.getTime())) return "";
+  // Format as YYYY-MM-DDTHH:MM for datetime-local input
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** Convert a datetime-local input value back to a UTC ISO string for storage. */
+function fromLocalDatetime(localStr: string): string {
+  const d = new Date(localStr); // parsed as local time
+  return d.toISOString().replace("T", " ").replace(/\.\d+Z$/, "");
+}
+
+async function updateSessionTimes(sess: HistoricalSession, field: 'start_time' | 'end_time', localValue: string) {
+  if (!localValue) return;
+  const utcValue = fromLocalDatetime(localValue);
+  sess[field] = utcValue;
+  try {
+    await invoke("update_survey_session_times", {
+      sessionId: sess.id,
+      startTime: sess.start_time,
+      endTime: sess.end_time,
+    });
+    // Reload to get updated elapsed_seconds and profit_per_hour
+    await loadSessions();
+  } catch (e) {
+    console.error(`Failed to update session times:`, e);
+  }
 }
 
 

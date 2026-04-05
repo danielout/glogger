@@ -99,7 +99,18 @@ impl SurveySessionTracker {
                             );
                         }
                         Err(e) => {
-                            eprintln!("[survey-persist] Failed to create session: {e}");
+                            eprintln!("[survey-persist] CRITICAL: Failed to create session for {map_name}: {e}");
+                            eprintln!("[survey-persist] Timestamp was: {dt}");
+                            // Dump table schema to help diagnose
+                            if let Ok(schema) = conn.query_row(
+                                "SELECT sql FROM sqlite_master WHERE type='table' AND name='survey_session_stats'",
+                                [],
+                                |row| row.get::<_, String>(0),
+                            ) {
+                                eprintln!("[survey-persist] Current table schema: {schema}");
+                            } else {
+                                eprintln!("[survey-persist] WARNING: survey_session_stats table may not exist!");
+                            }
                         }
                     }
                 } else {

@@ -79,6 +79,10 @@ export const useSurveyStore = defineStore("survey", () => {
   const log = ref<SurveyLogEntry[]>([]);
   const backendSessionId = ref<number | null>(null);
 
+  /** Incremented each time a session is fully ended and patched to the backend.
+   *  Other components (HistoricalTab, AnalyticsTab) can watch this to know when to reload. */
+  const sessionFinalizedCounter = ref(0);
+
   const gameDataStore = useGameDataStore();
   const marketStore = useMarketStore();
 
@@ -193,6 +197,11 @@ export const useSurveyStore = defineStore("survey", () => {
     // Track the backend session ID for patching on end
     if (payload.session_id != null) {
       backendSessionId.value = payload.session_id;
+    } else if (payload.kind === "MapCrafted") {
+      console.error(
+        "[survey] WARNING: MapCrafted event received without session_id — " +
+        "backend may have failed to create the session. Survey data will NOT be persisted!"
+      );
     }
     if (payload.kind === "MapCrafted") {
       // Ensure survey type costs are loaded before we need them
@@ -498,6 +507,7 @@ export const useSurveyStore = defineStore("survey", () => {
           is_manual: s.manualMode,
         },
       });
+      sessionFinalizedCounter.value++;
     } catch (e) {
       console.error("[survey] Failed to patch session:", e);
     }
@@ -747,6 +757,8 @@ export const useSurveyStore = defineStore("survey", () => {
     profitPerSurvey,
     profitPerHour,
     sessionEnded,
+    sessionFinalizedCounter,
+    backendSessionId,
     newSession,
     surveysToLevelSurveying,
     surveysToLevelMining,

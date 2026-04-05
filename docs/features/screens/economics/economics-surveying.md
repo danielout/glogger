@@ -138,8 +138,9 @@ Columns: id, event_id (FK), item_id, item_name, quantity, is_speed_bonus, is_pri
 | Command | Purpose |
 |---------|---------|
 | `get_all_survey_types` | List all survey types from CDN data |
-| `patch_survey_session` | Patch frontend-known fields (elapsed, XP, manual) onto finalized session |
+| `patch_survey_session` | Patch frontend-known fields (elapsed, XP, manual) onto finalized session. Uses the larger of frontend-computed or DB-computed elapsed to prevent imported sessions from getting ~1s durations |
 | `update_survey_session` | Update user-provided name and notes |
+| `update_survey_session_times` | Update start/end timestamps and re-finalize economics (for correcting imported session timing) |
 | `get_historical_sessions` | Query pre-computed session stats |
 | `get_speed_bonus_stats` | Aggregate speed bonus metrics (optional session filter) |
 | `get_loot_breakdown` | Aggregate loot by item for a session |
