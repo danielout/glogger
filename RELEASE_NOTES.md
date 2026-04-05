@@ -1,8 +1,10 @@
-## What's Changed since v0.4.1
+## What's Changed since v0.4.2
 
 ### Other
-- fixing silly build error (`a2060fe`)
-- more workflow updates. i'm dumb and can't read (`a543909`)
+- fixing survey summary historical data (`0552339`)
+- documenting our NPC vendor stuff (`37e36db`)
+- market prices made the app think it was vendor buyable due to legacy code. aka last week me is dumb (`624053c`)
+- Properly displaying recipes with proto items in the crafting skills display. (`2d914a8`)
 
 ---
-*2 commits since v0.4.1*
+*4 commits since v0.4.2*
