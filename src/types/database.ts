@@ -187,6 +187,58 @@ export interface SurveyTypeMetrics {
   avg_items_per_survey: number;
 }
 
+// Zone-level survey analytics types (from get_zone_analytics command)
+export interface SpeedBonusItemStats {
+  item_name: string;
+  total_quantity: number;
+  times_seen: number;
+  total_procs: number;
+  min_per_proc: number;
+  max_per_proc: number;
+  avg_per_proc: number;
+}
+
+export interface CategorySpeedBonusStats {
+  category: string;
+  total_surveys: number;
+  speed_bonus_count: number;
+  speed_bonus_rate: number;
+  avg_bonus_value: number;
+  item_stats: SpeedBonusItemStats[];
+}
+
+export interface SurveyItemStats {
+  item_name: string;
+  total_quantity: number;
+  times_seen: number;
+  min_per_completion: number;
+  max_per_completion: number;
+  avg_per_completion: number;
+}
+
+export interface SurveyTypeAnalytics {
+  survey_type: string;
+  category: string;
+  crafting_cost: number;
+  total_completed: number;
+  item_stats: SurveyItemStats[];
+}
+
+export interface ZoneAnalytics {
+  zone: string;
+  speed_bonus_stats: CategorySpeedBonusStats[];
+  survey_type_stats: SurveyTypeAnalytics[];
+}
+
+export interface SurveyImportInfo {
+  id: number;
+  label: string;
+  source_player: string | null;
+  session_count: number;
+  event_count: number;
+  imported_at: string;
+}
+
 // Chat message types
 export interface ChatItemLink {
   raw_text: string;

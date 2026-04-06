@@ -1,162 +1,160 @@
 <template>
-  <div class="bg-surface-card border border-border-default rounded p-4">
-    <div class="text-[0.65rem] uppercase tracking-widest text-[#7ec8e3] mb-3 font-bold">
-      Item Cost Calculator
-    </div>
+  <div class="bg-surface-card border border-border-default rounded p-3">
+    <!-- Controls row: title + inputs + sort all inline -->
+    <div class="flex items-center gap-3 flex-wrap">
+      <div class="text-[0.65rem] uppercase tracking-widest text-[#7ec8e3] font-bold shrink-0">
+        Item Cost Calculator
+      </div>
 
-    <!-- Controls -->
-    <div class="flex items-center gap-3 mb-4 flex-wrap">
       <select
         v-model="selectedItem"
-        class="bg-surface-elevated border border-border-default rounded px-3 py-1.5 text-sm text-text-primary min-w-[200px]"
+        class="bg-surface-elevated border border-border-default rounded px-2 py-1 text-xs text-text-primary min-w-[180px]"
       >
         <option value="">Select an item...</option>
         <option v-for="item in availableItems" :key="item" :value="item">{{ item }}</option>
       </select>
 
-      <div class="flex items-center gap-1.5">
-        <label class="text-[0.65rem] text-text-muted uppercase tracking-wide">Qty</label>
+      <div class="flex items-center gap-1">
+        <label class="text-[0.6rem] text-text-muted uppercase">Qty</label>
         <input
           v-model.number="desiredQty"
           type="number"
           min="1"
           placeholder="100"
-          class="bg-surface-elevated border border-border-default rounded px-3 py-1.5 text-sm text-text-primary w-24 font-mono"
+          class="bg-surface-elevated border border-border-default rounded px-2 py-1 text-xs text-text-primary w-20 font-mono"
         />
       </div>
 
-      <div class="flex items-center gap-1.5">
-        <label class="text-[0.65rem] text-text-muted uppercase tracking-wide">Sell Price</label>
+      <div class="flex items-center gap-1">
+        <label class="text-[0.6rem] text-text-muted uppercase">Sell</label>
         <input
           v-model.number="sellPrice"
           type="number"
           min="0"
           placeholder="0g"
-          class="bg-surface-elevated border border-border-default rounded px-3 py-1.5 text-sm text-text-primary w-24 font-mono"
+          class="bg-surface-elevated border border-border-default rounded px-2 py-1 text-xs text-text-primary w-20 font-mono"
         />
       </div>
 
-      <div class="flex gap-1 bg-surface-elevated border border-border-default rounded p-0.5">
+      <div class="flex gap-0.5 bg-surface-elevated border border-border-default rounded p-0.5">
         <button
           @click="sortMode = 'cost'"
           :class="[
-            'px-2.5 py-1 text-xs rounded transition-all',
+            'px-2 py-0.5 text-[0.6rem] rounded transition-all',
             sortMode === 'cost'
               ? 'bg-[#7ec8e3]/20 text-[#7ec8e3] font-semibold'
               : 'text-text-muted hover:text-text-secondary'
           ]"
-        >Sort by Cost</button>
+        >Cost</button>
         <button
           @click="sortMode = 'time'"
           :class="[
-            'px-2.5 py-1 text-xs rounded transition-all',
+            'px-2 py-0.5 text-[0.6rem] rounded transition-all',
             sortMode === 'time'
               ? 'bg-[#7ec8e3]/20 text-[#7ec8e3] font-semibold'
               : 'text-text-muted hover:text-text-secondary'
           ]"
-        >Sort by Time</button>
+        >Time</button>
         <button
           v-if="hasSellPrice"
           @click="sortMode = 'profit'"
           :class="[
-            'px-2.5 py-1 text-xs rounded transition-all',
+            'px-2 py-0.5 text-[0.6rem] rounded transition-all',
             sortMode === 'profit'
               ? 'bg-[#7ec8e3]/20 text-[#7ec8e3] font-semibold'
               : 'text-text-muted hover:text-text-secondary'
           ]"
-        >Sort by Profit/hr</button>
+        >Profit/hr</button>
       </div>
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="text-text-dim italic text-xs">Loading item data...</div>
+    <div v-if="loading" class="text-text-dim italic text-xs mt-2">Loading item data...</div>
 
     <!-- Error -->
-    <div v-else-if="error" class="text-[#c87e7e] text-xs">{{ error }}</div>
+    <div v-else-if="error" class="text-[#c87e7e] text-xs mt-2">{{ error }}</div>
 
     <!-- Results table -->
-    <div v-else-if="selectedItem && (desiredQty ?? 0) > 0 && sortedResults.length > 0">
-      <div class="flex flex-col gap-1">
-        <!-- Header -->
-        <div :class="gridCols" class="gap-3 px-3 py-1.5 text-[0.6rem] uppercase tracking-wide text-text-muted font-bold">
-          <div>Survey Type</div>
-          <div class="text-right">Zone</div>
-          <div class="text-right">Avg Yield</div>
-          <div class="text-right">Needed</div>
-          <div class="text-right">Cost Each</div>
-          <div class="text-right">Total Cost</div>
-          <div class="text-right">Est. Time</div>
-          <div v-if="hasSellPrice" class="text-right">Profit</div>
-          <div v-if="hasSellPrice" class="text-right">Profit/hr</div>
-        </div>
+    <div v-else-if="selectedItem && (desiredQty ?? 0) > 0 && sortedResults.length > 0" class="mt-2">
+      <table class="text-xs">
+        <thead>
+          <tr class="text-[0.6rem] uppercase tracking-wide text-text-muted font-bold">
+            <th class="text-left py-1 px-2 font-bold">Survey Type</th>
+            <th class="text-right py-1 px-2 font-bold">Zone</th>
+            <th class="text-right py-1 px-2 font-bold">Avg Yield</th>
+            <th class="text-right py-1 px-2 font-bold">Needed</th>
+            <th class="text-right py-1 px-2 font-bold">Cost Each</th>
+            <th class="text-right py-1 px-2 font-bold">Total Cost</th>
+            <th class="text-right py-1 px-2 font-bold">Est. Time</th>
+            <th v-if="hasSellPrice" class="text-right py-1 px-2 font-bold">Profit</th>
+            <th v-if="hasSellPrice" class="text-right py-1 px-2 font-bold">Profit/hr</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template v-for="(r, idx) in sortedResults" :key="r.survey_type">
+            <tr class="bg-black/20 border-b border-border-default hover:bg-black/30">
+              <td class="py-1 px-2">
+                <span class="text-text-primary font-semibold">{{ r.survey_type }}</span>
+                <span v-if="idx === 0" class="ml-1 text-[0.55rem] text-[#7ec87e] uppercase tracking-wider font-bold">Best</span>
+              </td>
+              <td class="text-right py-1 px-2 text-text-secondary text-[0.65rem]">{{ formatZone(r.zone) }}</td>
+              <td class="text-right py-1 px-2 font-mono text-text-primary">{{ r.effective_yield.toFixed(1) }}</td>
+              <td class="text-right py-1 px-2 font-mono text-text-primary">{{ r.surveys_needed }}</td>
+              <td class="text-right py-1 px-2 font-mono text-text-secondary">{{ formatGold(r.crafting_cost) }}</td>
+              <td class="text-right py-1 px-2 font-mono" :class="idx === 0 && sortMode === 'cost' ? 'text-[#7ec87e] font-bold' : 'text-text-primary'">
+                {{ formatGold(r.total_cost) }}
+              </td>
+              <td class="text-right py-1 px-2 font-mono" :class="[
+                r.avg_seconds_per_survey <= 0 ? 'text-text-dim italic' : '',
+                idx === 0 && sortMode === 'time' ? 'text-[#7ec87e] font-bold' : 'text-text-primary'
+              ]">
+                {{ r.avg_seconds_per_survey > 0 ? formatTime(r.total_time_seconds) : 'N/A' }}
+              </td>
+              <td v-if="hasSellPrice" class="text-right py-1 px-2 font-mono" :class="r.profit >= 0 ? 'text-[#7ec87e]' : 'text-[#c87e7e]'">
+                {{ r.profit >= 0 ? '+' : '' }}{{ formatGold(r.profit) }}
+              </td>
+              <td v-if="hasSellPrice" class="text-right py-1 px-2 font-mono" :class="[
+                r.avg_seconds_per_survey <= 0 ? 'text-text-dim italic' : '',
+                idx === 0 && sortMode === 'profit' ? 'text-[#7ec87e] font-bold' : r.profit_per_hour >= 0 ? 'text-[#7ec87e]' : 'text-[#c87e7e]'
+              ]">
+                {{ r.avg_seconds_per_survey > 0 ? (r.profit_per_hour >= 0 ? '+' : '') + formatGold(r.profit_per_hour) + '/hr' : 'N/A' }}
+              </td>
+            </tr>
+            <!-- Yield breakdown sub-row -->
+            <tr class="text-[0.6rem] text-text-dim">
+              <td :colspan="hasSellPrice ? 9 : 7" class="px-2 py-0.5 pl-6">
+                <span v-if="r.primary_avg > 0">
+                  Primary: {{ r.primary_avg.toFixed(1) }}/survey
+                  <span class="text-text-muted">({{ r.primary_times_seen }}/{{ r.total_completions }})</span>
+                </span>
+                <span v-if="r.bonus_per_completion > 0" class="text-[#c8b47e] ml-3">
+                  Speed Bonus: {{ r.bonus_avg_per_proc.toFixed(1) }}/proc
+                  <span class="text-text-muted">({{ r.bonus_times_seen }}/{{ r.total_completions }} &middot; {{ r.bonus_per_completion.toFixed(2) }}/survey)</span>
+                </span>
+                <span class="text-text-muted ml-3">{{ r.total_completions }} completions</span>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
 
-        <!-- Rows -->
-        <div
-          v-for="(r, idx) in sortedResults"
-          :key="r.survey_type"
-          class="group"
-        >
-          <div :class="gridCols" class="gap-3 px-3 py-1.5 text-xs bg-black/20 border border-border-default rounded hover:bg-black/30">
-            <div class="min-w-0 truncate">
-              <span class="text-text-primary font-semibold">{{ r.survey_type }}</span>
-              <span v-if="idx === 0" class="ml-1.5 text-[0.55rem] text-[#7ec87e] uppercase tracking-wider font-bold">Best</span>
-            </div>
-            <div class="text-right text-text-secondary text-[0.65rem]">{{ formatZone(r.zone) }}</div>
-            <div class="text-right font-mono text-text-primary">{{ r.effective_yield.toFixed(1) }}</div>
-            <div class="text-right font-mono text-text-primary">{{ r.surveys_needed }}</div>
-            <div class="text-right font-mono text-text-secondary">{{ formatGold(r.crafting_cost) }}</div>
-            <div class="text-right font-mono" :class="idx === 0 && sortMode === 'cost' ? 'text-[#7ec87e] font-bold' : 'text-text-primary'">
-              {{ formatGold(r.total_cost) }}
-            </div>
-            <div class="text-right font-mono" :class="[
-              r.avg_seconds_per_survey <= 0 ? 'text-text-dim italic' : '',
-              idx === 0 && sortMode === 'time' ? 'text-[#7ec87e] font-bold' : 'text-text-primary'
-            ]">
-              {{ r.avg_seconds_per_survey > 0 ? formatTime(r.total_time_seconds) : 'N/A' }}
-            </div>
-            <div v-if="hasSellPrice" class="text-right font-mono" :class="r.profit >= 0 ? 'text-[#7ec87e]' : 'text-[#c87e7e]'">
-              {{ r.profit >= 0 ? '+' : '' }}{{ formatGold(r.profit) }}
-            </div>
-            <div v-if="hasSellPrice" class="text-right font-mono" :class="[
-              r.avg_seconds_per_survey <= 0 ? 'text-text-dim italic' : '',
-              idx === 0 && sortMode === 'profit' ? 'text-[#7ec87e] font-bold' : r.profit_per_hour >= 0 ? 'text-[#7ec87e]' : 'text-[#c87e7e]'
-            ]">
-              {{ r.avg_seconds_per_survey > 0 ? (r.profit_per_hour >= 0 ? '+' : '') + formatGold(r.profit_per_hour) + '/hr' : 'N/A' }}
-            </div>
-          </div>
-
-          <!-- Yield breakdown sub-row -->
-          <div class="px-3 py-1 text-[0.6rem] text-text-dim ml-4 flex gap-4">
-            <span v-if="r.primary_avg > 0">
-              Primary: {{ r.primary_avg.toFixed(1) }}/survey
-              <span class="text-text-muted">({{ r.primary_times_seen }}/{{ r.total_completions }} surveys)</span>
-            </span>
-            <span v-if="r.bonus_per_completion > 0" class="text-[#c8b47e]">
-              Speed Bonus: {{ r.bonus_avg_per_proc.toFixed(1) }}/proc
-              <span class="text-text-muted">({{ r.bonus_times_seen }}/{{ r.total_completions }} surveys &middot; {{ r.bonus_per_completion.toFixed(2) }}/survey effective)</span>
-            </span>
-            <span class="text-text-muted">{{ r.total_completions }} completions recorded</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-2 text-[0.55rem] text-text-dim italic">
+      <div class="mt-1.5 text-[0.55rem] text-text-dim italic">
         Yield includes primary loot + expected speed bonus contribution. Time estimates are averaged from session data.
       </div>
     </div>
 
     <!-- No results for this item -->
-    <div v-else-if="selectedItem && (desiredQty ?? 0) > 0 && sortedResults.length === 0" class="text-text-dim italic text-xs">
+    <div v-else-if="selectedItem && (desiredQty ?? 0) > 0 && sortedResults.length === 0" class="text-text-dim italic text-xs mt-2">
       No survey data found for this item.
     </div>
 
     <!-- Empty prompt -->
-    <div v-else-if="!loading && availableItems.length > 0" class="text-text-dim italic text-xs">
+    <div v-else-if="!loading && availableItems.length > 0" class="text-text-dim italic text-xs mt-2">
       Select an item and enter a desired quantity to calculate acquisition costs.
     </div>
 
     <!-- No data at all -->
-    <div v-else-if="!loading" class="text-text-dim italic text-xs">
+    <div v-else-if="!loading" class="text-text-dim italic text-xs mt-2">
       No survey loot data available yet. Complete some surveys to use the calculator.
     </div>
   </div>
@@ -218,12 +216,6 @@ const sellPrice = ref<number | null>(null);
 const sortMode = ref<"cost" | "time" | "profit">("cost");
 
 const hasSellPrice = computed(() => (sellPrice.value ?? 0) > 0);
-
-const gridCols = computed(() =>
-  hasSellPrice.value
-    ? 'grid grid-cols-[1fr_80px_80px_70px_90px_90px_90px_90px_90px]'
-    : 'grid grid-cols-[1fr_80px_80px_70px_90px_90px_90px]'
-);
 
 onMounted(() => {
   loadData();

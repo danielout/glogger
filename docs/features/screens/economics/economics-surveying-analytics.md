@@ -4,30 +4,71 @@ Parent: [economics-surveying.md](economics-surveying.md)
 
 ## Overview
 
-The Analytics tab provides all-time aggregate survey statistics organized by zone. It includes an item cost calculator for planning material acquisition, speed bonus analysis, per-survey-type loot distributions, cross-zone comparisons, and speed bonus rate charts.
+The Analytics tab provides all-time aggregate survey statistics through a 3-panel PaneLayout. The left panel is a view navigator for switching between overview, per-zone, and per-survey-type views. The center panel renders the active view with multi-column card grids. The right panel houses the Item Cost Calculator for planning material acquisition.
 
 Players can export their survey data and import data from other players to build community knowledge. A data source toggle switches between viewing personal data only or combined data (personal + imported).
 
 ## Files
 
-- `src/components/Surveying/AnalyticsTab.vue` — tab orchestrator, imports sub-components, export/import/toggle controls
-- `src/components/Surveying/SurveyImportManager.vue` — modal for viewing and deleting imported data sets
-- `src/components/Surveying/Analytics/ItemCostCalculator.vue` — item cost/efficiency calculator
-- `src/components/Surveying/Analytics/SpeedBonusChart.vue` — bar chart of bonus rates by zone
-- `src/components/Surveying/Analytics/CrossZoneComparison.vue` — zone comparison table
+### Orchestrator
+- `src/components/Surveying/AnalyticsTab.vue` — PaneLayout orchestrator (`screen-key="survey-analytics"`), data loading, export/import logic, view state management
+
+### Analytics Sub-Components (`src/components/Surveying/Analytics/`)
+- `AnalyticsViewNav.vue` — left panel view selector (Overview, Zones, Survey Types)
+- `AnalyticsHeader.vue` — center panel header with inline stats + controls
+- `OverviewView.vue` — default center view (global stats, cross-zone comparison, all survey types table)
+- `ZoneDetailView.vue` — per-zone center view composing card components
+- `SurveyTypeDetailView.vue` — per-survey-type center view with cross-zone item data + charts
+- `ZoneRewardsCard.vue` — item rewards table for a survey type
+- `ZoneSpeedBonusCard.vue` — speed bonus items table for a category
+- `SurveyTypeDistributionChart.vue` — VueUiXy bar chart of survey type completions
+- `ProfitRateCard.vue` — expected profit/loss per survey per category
+- `CrossZoneComparison.vue` — zone comparison table (reused in OverviewView)
+- `ItemCostCalculator.vue` — item cost/efficiency calculator (in right pane)
+
+### Supporting
+- `src/components/Surveying/SurveyImportManager.vue` — modal for managing imported data sets
+- `src/types/database.ts` — shared interfaces (`ZoneAnalytics`, `CategorySpeedBonusStats`, `SurveyTypeAnalytics`, etc.)
+
+### Backend
 - `src-tauri/src/db/player_commands_survey_events.rs` — `get_speed_bonus_stats`, `get_zone_analytics`, `get_item_cost_analysis` commands
 - `src-tauri/src/db/survey_sharing_commands.rs` — `export_survey_data`, `import_survey_data_from_file`, `get_survey_imports`, `delete_survey_import` commands
 
-## Layout Order
+## Layout
 
-1. Header + Data source toggle + Export/Import/Manage buttons + Refresh
-2. All-Time Overview (summary card, label changes based on toggle)
-3. **Item Cost Calculator** (prominent card)
-4. Zone Accordions (existing per-zone breakdowns)
-5. **Speed Bonus Rates by Zone** (accordion, shown when 2+ zones)
-6. **Cross-Zone Comparison** (accordion, shown when 2+ zones)
-7. Empty state
-8. Import Manager modal (on demand)
+### 3-Panel PaneLayout
+
+```
+┌──────────────┬────────────────────────────────────┬──────────────────┐
+│  Left Pane   │  Center Panel                      │  Right Pane      │
+│  View Nav    │  Header: stats + controls           │  Item Cost       │
+│              │  Active view (scrollable)           │  Calculator      │
+│  • Overview  │                                    │                  │
+│  • Zones     │  Multi-column card grid             │  (collapsible,   │
+│  • Types     │                                    │   default open)  │
+└──────────────┴────────────────────────────────────┴──────────────────┘
+```
+
+- **Left pane** (default 220px): View navigation with sections for Overview, Zones, and Survey Types. Selected view highlighted with standard list styling. Selection persisted via `useViewPrefs`.
+- **Center panel**: Header bar (always visible) + scrollable view area. Views switch via `v-if` based on selected view key.
+- **Right pane** (default 400px): Item Cost Calculator. Collapsible, defaults to open.
+
+### View Keys
+- `"overview"` — default view
+- `"zone:<ZoneName>"` — e.g., `"zone:Eltibule"`
+- `"surveytype:<SurveyTypeName>"` — e.g., `"surveytype:Eltibule Green Mineral Survey"`
+
+### Center Panel Views
+
+**Overview** — Global stat summary boxes (total surveys, bonus rate, bonus items, category split), Cross-Zone Comparison table, All Survey Types table. 2-column responsive grid.
+
+**Zone Detail** — Zone summary stats row, then multi-column card grid (`grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3`):
+- ZoneRewardsCard per survey type (item loot tables with ItemInline)
+- ZoneSpeedBonusCard per category with bonus data
+- SurveyTypeDistributionChart (VueUiXy bar chart, shown when 2+ types)
+- ProfitRateCard (expected profit/loss per category)
+
+**Survey Type Detail** — Summary stats, per-zone item rewards tables, speed bonus context cards, item quantity chart (VueUiXy).
 
 ## Data Sharing
 
@@ -75,23 +116,11 @@ A segmented control `[My Data] [All Data]` appears when imports exist. Default i
 
 **`survey_session_stats.import_id` column:** Nullable FK to `survey_data_imports(id)` with `ON DELETE CASCADE`. NULL = local data, non-NULL = imported.
 
-## All-Time Overview
+## Item Cost Calculator
 
-A summary card with five global metrics:
+Interactive tool for answering "how much does it cost to get X quantity of an item?" Located in the right pane.
 
-| Metric | Description |
-|--------|-------------|
-| Total Surveys | All-time survey completions |
-| Bonuses Earned | Total speed bonus procs |
-| Bonus Rate | Percentage of surveys that earned a speed bonus |
-| Bonus Items | Total items received from speed bonuses |
-| Zones Active | Number of distinct zones with survey data |
-
-### Item Cost Calculator
-
-Interactive tool for answering "how much does it cost to get X quantity of an item?"
-
-**Controls:** Item dropdown (all items seen in survey loot) + quantity input + sort toggle (Cost / Time)
+**Controls:** Item dropdown (all items seen in survey loot) + quantity input + sell price input + sort toggle (Cost / Time / Profit)
 
 **Results table columns:**
 
@@ -104,6 +133,8 @@ Interactive tool for answering "how much does it cost to get X quantity of an it
 | Cost Each | Crafting cost per survey |
 | Total Cost | Total gold needed |
 | Est. Time | Estimated time based on session averages |
+| Profit | Revenue minus total cost (when sell price set) |
+| Profit/hr | Profit per hour (when sell price set and time data available) |
 
 Each row includes a sub-detail showing primary vs speed bonus yield breakdown, proc rate, and sample size.
 
@@ -111,42 +142,16 @@ Each row includes a sub-detail showing primary vs speed bonus yield breakdown, p
 
 **Data source:** `get_item_cost_analysis` command — fetched on mount and when `includeImports` prop changes. All filtering/calculation done client-side.
 
-### Zone Accordions
-
-Expandable `AccordionSection` per zone (auto-expanded when only one zone). Within each zone, data split by category (mineral vs mining):
-
-**Speed Bonus Items Table** (per category): Item, Total, Seen, Min, Max, Avg, Out of (procs)
-
-**Per-Survey-Type Breakdown**: Survey type name, completions, crafting cost, and loot item table with min/max/avg per completion.
-
-### Speed Bonus Rates by Zone
-
-Bar chart (`VueUiXy`) comparing speed bonus rates across zones for the selected category (mineral/mining toggle). Zones sorted by bonus rate descending.
-
-### Cross-Zone Comparison
-
-Comparison table with one row per zone for the selected category:
-
-| Column | Description |
-|--------|-------------|
-| Zone | Zone name |
-| Surveys | Total completions |
-| Bonus Rate | Speed bonus proc percentage |
-| Avg Bonus Val | Average value per speed bonus proc |
-| Avg Cost | Weighted average crafting cost per survey |
-| Survey Types | Number of distinct survey types used |
-| Profit/Survey | Expected bonus value per survey minus avg cost |
-
-Sortable by any column. Profit is color-coded green/red.
-
 ## Data Loading
 
-- All-Time Overview + Zone data loads on mount via two parallel `invoke` calls:
-  - `get_speed_bonus_stats` (with `sessionId: null, includeImports: bool` for all-time)
-  - `get_zone_analytics` (with `includeImports: bool`) — zone-grouped data passed as props to SpeedBonusChart and CrossZoneComparison
+- AnalyticsTab loads all data on mount via two parallel `invoke` calls:
+  - `get_speed_bonus_stats` (with `sessionId: null, includeImports: bool`)
+  - `get_zone_analytics` (with `includeImports: bool`)
+- Data is passed as props to all child view components — no additional backend calls per view
 - Item Cost Calculator makes its own call to `get_item_cost_analysis` on mount and when `includeImports` changes
 - Data source toggle triggers a full reload of all analytics
-- Manual refresh button re-fetches the overview + zone data
+- Auto-reload when survey session is finalized (via `surveyStore.sessionFinalizedCounter` watcher)
+- View selection persisted via `useViewPrefs("survey-analytics.view")` — falls back to "overview" if persisted view no longer exists in data
 
 ## Data Structures
 

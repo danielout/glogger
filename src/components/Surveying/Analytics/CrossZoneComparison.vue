@@ -44,35 +44,36 @@
     </div>
 
     <!-- Table -->
-    <div v-if="zoneRows.length > 0" class="flex flex-col gap-1">
-      <!-- Header -->
-      <div class="grid grid-cols-[1fr_80px_80px_90px_90px_90px_90px] gap-3 px-3 py-1.5 text-[0.6rem] uppercase tracking-wide text-text-muted font-bold">
-        <div>Zone</div>
-        <div class="text-right">Surveys</div>
-        <div class="text-right">Bonus Rate</div>
-        <div class="text-right">Avg Bonus Val</div>
-        <div class="text-right">Avg Cost</div>
-        <div class="text-right">Survey Types</div>
-        <div class="text-right">Profit/Survey</div>
-      </div>
-
-      <!-- Rows -->
-      <div
-        v-for="row in zoneRows"
-        :key="row.zone"
-        class="grid grid-cols-[1fr_80px_80px_90px_90px_90px_90px] gap-3 px-3 py-1.5 text-xs bg-black/20 border border-border-default rounded hover:bg-black/30"
-      >
-        <div class="text-text-primary font-semibold">{{ formatZone(row.zone) }}</div>
-        <div class="text-right font-mono text-text-primary">{{ row.totalSurveys }}</div>
-        <div class="text-right font-mono text-[#c8b47e]">{{ row.bonusRate.toFixed(1) }}%</div>
-        <div class="text-right font-mono text-text-secondary">{{ row.avgBonusValue > 0 ? formatGold(row.avgBonusValue) : '-' }}</div>
-        <div class="text-right font-mono text-text-secondary">{{ formatGold(row.avgCostPerSurvey) }}</div>
-        <div class="text-right font-mono text-text-dim">{{ row.surveyTypeCount }}</div>
-        <div class="text-right font-mono" :class="(row.profitIndicator ?? 0) >= 0 ? 'text-[#7ec87e]' : 'text-[#c87e7e]'">
-          {{ row.profitIndicator !== null ? ((row.profitIndicator ?? 0) >= 0 ? '+' : '') + formatGold(row.profitIndicator ?? 0) : '-' }}
-        </div>
-      </div>
-    </div>
+    <table v-if="zoneRows.length > 0" class="text-xs">
+      <thead>
+        <tr class="text-[0.6rem] uppercase tracking-wide text-text-muted font-bold">
+          <th class="text-left py-1 px-2 font-bold">Zone</th>
+          <th class="text-right py-1 px-2 font-bold">Surveys</th>
+          <th class="text-right py-1 px-2 font-bold">Bonus Rate</th>
+          <th class="text-right py-1 px-2 font-bold">Avg Bonus</th>
+          <th class="text-right py-1 px-2 font-bold">Avg Cost</th>
+          <th class="text-right py-1 px-2 font-bold">Types</th>
+          <th class="text-right py-1 px-2 font-bold">Profit/Survey</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          v-for="row in zoneRows"
+          :key="row.zone"
+          class="bg-black/20 border-b border-border-default hover:bg-black/30"
+        >
+          <td class="py-1 px-2 text-text-primary font-semibold">{{ formatZone(row.zone) }}</td>
+          <td class="text-right py-1 px-2 font-mono text-text-primary">{{ row.totalSurveys }}</td>
+          <td class="text-right py-1 px-2 font-mono text-[#c8b47e]">{{ row.bonusRate.toFixed(1) }}%</td>
+          <td class="text-right py-1 px-2 font-mono text-text-secondary">{{ row.avgBonusValue > 0 ? formatGold(row.avgBonusValue) : '-' }}</td>
+          <td class="text-right py-1 px-2 font-mono text-text-secondary">{{ formatGold(row.avgCostPerSurvey) }}</td>
+          <td class="text-right py-1 px-2 font-mono text-text-dim">{{ row.surveyTypeCount }}</td>
+          <td class="text-right py-1 px-2 font-mono" :class="(row.profitIndicator ?? 0) >= 0 ? 'text-[#7ec87e]' : 'text-[#c87e7e]'">
+            {{ row.profitIndicator !== null ? ((row.profitIndicator ?? 0) >= 0 ? '+' : '') + formatGold(row.profitIndicator ?? 0) : '-' }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
 
     <div v-else class="text-text-dim italic text-xs">
       No {{ category }} survey data available across zones.
@@ -86,29 +87,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
-
-interface CategorySpeedBonusStats {
-  category: string;
-  total_surveys: number;
-  speed_bonus_count: number;
-  speed_bonus_rate: number;
-  avg_bonus_value: number;
-  item_stats: unknown[];
-}
-
-interface SurveyTypeAnalytics {
-  survey_type: string;
-  category: string;
-  crafting_cost: number;
-  total_completed: number;
-  item_stats: unknown[];
-}
-
-interface ZoneAnalytics {
-  zone: string;
-  speed_bonus_stats: CategorySpeedBonusStats[];
-  survey_type_stats: SurveyTypeAnalytics[];
-}
+import type { ZoneAnalytics } from "../../../types/database";
 
 const props = defineProps<{
   zones: ZoneAnalytics[];

@@ -35,6 +35,30 @@ Implemented in the `useKeyboard` composable (`src/composables/useKeyboard.ts`). 
 
 ## Layout
 
+### Desktop-First Design
+
+glogger is a desktop application targeting desktop monitors (1920×1080 and above). All layout decisions should maximize use of the available screen real estate. Do not design as if this were a mobile or narrow-viewport web app.
+
+**Horizontal space principles:**
+- **Use the full width.** Tables, grids, and data-heavy views should spread across the available width rather than centering in a narrow column. Avoid `max-w-*` constraints on data layouts unless there's a specific readability reason.
+- **Prefer horizontal arrangements over vertical stacking** when content fits. Controls, filters, and metadata that would read naturally side-by-side should be placed horizontally. Only stack vertically when items genuinely need full width or when there are too many to fit in a row.
+- **Multi-column layouts for related data.** When displaying groups of related information (e.g., zone breakdowns, category stats), use side-by-side columns or grid layouts instead of stacking everything into a single tall scrolling list.
+- **Tables should be information-dense.** Don't add excessive padding or spacing between table rows/columns. Use compact row heights (`py-1` to `py-1.5`), tight column gaps, and let data breathe through alignment rather than whitespace.
+- **Inline metadata over dedicated rows.** Stats, badges, and secondary info should sit alongside their parent element (inline or in adjacent columns) rather than occupying their own full-width row when possible.
+
+**Vertical space principles:**
+- **Minimize vertical stacking of single-row elements.** A header, then a toggle, then a filter bar, each on their own full-width row, wastes vertical space. Combine toolbar elements into a single row where possible.
+- **Accordions and collapsibles are good** for secondary content, but primary data should be visible without expanding anything.
+- **Scrollable regions over pagination.** Desktop users have scroll wheels and large viewports — prefer continuous scrolling within panes over paginated views.
+
+**Anti-patterns to avoid:**
+- Centering a narrow content column in a wide viewport (mobile-web pattern).
+- Full-width cards containing a single line of text or a small table.
+- Stacking items vertically that could sit side-by-side at desktop widths.
+- Excessive padding/margins that push content below the fold unnecessarily.
+- Summary stats displayed as a single horizontal row of cards when there's room to integrate them more compactly.
+- **`w-full` on data tables** when the table doesn't need to fill the container width. This causes the first column (usually item/entity names) to absorb all remaining space, pushing data columns to the far right with a huge empty gap. Prefer auto-width tables that shrink-wrap to their content. Only use `w-full` when you intentionally want a column to stretch (e.g., a description field that benefits from wrapping).
+
 ### Menu Bar
 - Always sticky at the top of the frame.
 - **Left block ("identity"):**
