@@ -1,10 +1,9 @@
-## What's Changed since v0.4.3
+## What's Changed since v0.4.4
 
 ### Other
-- statehelm rep tracker (`fcc3570`)
-- survey analytics improvements (`bfec7fd`)
-- crafting views now properly support dynamic slots, and valid daynamic slot items can be set by players (`c0e7e86`)
-- survey and analytics fixes (`d263a9d`)
+- bad text on npc browser (`bcfc6a3`)
+- gourmand screen scroll fix (`9ef266a`)
+- multi-character fix (`b9fcca7`)
 
 ---
-*5 commits since v0.4.3*
+*3 commits since v0.4.4*
