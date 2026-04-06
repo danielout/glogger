@@ -124,7 +124,8 @@ use db::game_state_commands::{
     get_game_state_active_skills, get_game_state_attributes, get_game_state_currencies,
     get_game_state_effects, get_game_state_equipment, get_game_state_favor,
     get_game_state_inventory, get_game_state_recipes, get_game_state_skills,
-    get_game_state_storage, get_game_state_world, get_tracked_skills, set_tracked_skills,
+    get_game_state_storage, get_game_state_world, get_gift_log, add_manual_gift,
+    remove_last_gift, get_tracked_skills, set_tracked_skills,
 };
 use db::gourmand_commands::{
     export_text_file, get_all_foods, get_gourmand_eaten_foods, import_cooks_helper_file,
@@ -503,6 +504,9 @@ pub fn run() {
             get_game_state_recipes,
             get_game_state_equipment,
             get_game_state_favor,
+            get_gift_log,
+            add_manual_gift,
+            remove_last_gift,
             get_game_state_currencies,
             get_game_state_effects,
             get_game_state_storage,

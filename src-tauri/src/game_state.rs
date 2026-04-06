@@ -540,6 +540,7 @@ impl GameStateManager {
                 timestamp,
                 npc_name,
                 delta,
+                is_gift,
                 ..
             } => {
                 let dt = self.to_utc(timestamp);
@@ -562,6 +563,16 @@ impl GameStateManager {
                         source = CASE WHEN game_state_favor.source = 'snapshot' THEN 'both' ELSE 'log' END",
                     rusqlite::params![character, server, npc_key, display_name, *delta as f64, dt],
                 ).ok();
+
+                // Log individual gift events for weekly gift-limit tracking
+                if *is_gift {
+                    conn.execute(
+                        "INSERT INTO game_state_gift_log (character_name, server_name, npc_key, npc_name, gifted_at, favor_delta)
+                         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                        rusqlite::params![character, server, npc_key, display_name, dt, *delta as f64],
+                    ).ok();
+                }
+
                 domains.push("favor");
             }
 

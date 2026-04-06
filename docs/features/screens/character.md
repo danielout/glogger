@@ -2,14 +2,14 @@
 
 ## Overview
 
-The character screen is a 6-tab hub for all character-specific data: skill progression, character report stats, NPC relationships, quest tracking, gourmand progress, and build planning. Data comes from a mix of live session tracking, persisted game state, character report imports, and CDN enrichment.
+The character screen is a 7-tab hub for all character-specific data: skill progression, character report stats, NPC relationships, quest tracking, gourmand progress, Statehelm reputation tracking, and build planning. Data comes from a mix of live session tracking, persisted game state, character report imports, and CDN enrichment.
 
 ## Architecture
 
 ### Files
 
 **Frontend (Vue/TS):**
-- `src/components/Character/CharacterView.vue` — 6-tab container
+- `src/components/Character/CharacterView.vue` — 7-tab container
 - `src/components/Character/SkillsScreen.vue` — skills tab (two-panel + tracked skills)
 - `src/components/Character/NpcsScreen.vue` — NPCs tab (two-panel favor/services)
 - `src/components/Character/QuestsScreen.vue` — quests tab (two-panel with eligibility)
@@ -23,7 +23,7 @@ The character screen is a 6-tab hub for all character-specific data: skill progr
 ### Component Hierarchy
 
 ```
-CharacterView.vue                   — 6-tab container
+CharacterView.vue                   — 7-tab container
 ├── SkillsScreen.vue                — unified skill view
 │   ├── TrackedSkillsBar.vue        — pinned skill cards at top
 │   │   └── TrackedSkillCard.vue    — individual tracked skill
@@ -49,6 +49,7 @@ CharacterView.vue                   — 6-tab container
 │       ├── QuestObjectivesSection.vue
 │       └── QuestRewardsSection.vue
 ├── Gourmand tab                    — food tracking for Gourmand skill
+├── StatehelmView.vue               — Statehelm weekly gift tracker
 └── Build Planner tab               — combat build planning (stub)
 ```
 
@@ -59,6 +60,7 @@ CharacterView.vue                   — 6-tab container
 - [character-npcs.md](character/character-npcs.md) — NPCs: favor progression, services, gift preferences
 - [character-quests.md](character/character-quests.md) — Quests: personalized quest reference with requirement eligibility
 - [character-gourmand.md](character/character-gourmand.md) — Gourmand: food tracking and progress
+- [character-statehelm.md](character/character-statehelm.md) — Statehelm: weekly gift tracking and NPC services
 - [character-buildplanner.md](character/character-buildplanner.md) — Build Planner (stub)
 
 ## Data Sources
@@ -68,6 +70,7 @@ CharacterView.vue                   — 6-tab container
 | Skill levels & XP | `game_state_skills` (DB) + session tracking (memory) | DB + session |
 | Active combat skills | `game_state_active_skills` (DB) | DB |
 | NPC favor | `game_state_favor` (DB) | DB |
+| Gift log | `game_state_gift_log` (DB) | DB |
 | Character report data | `character_snapshots` (DB) | DB |
 | Skill/NPC/Quest details | CDN via `gameDataStore` | CDN cache |
 | Tracked skills | DB (per-character) | DB |

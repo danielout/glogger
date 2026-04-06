@@ -96,6 +96,11 @@
       <GourmandView />
     </template>
 
+    <!-- Statehelm -->
+    <template v-else-if="activeTab === 'statehelm'">
+      <StatehelmView />
+    </template>
+
     <!-- Build Planner -->
     <template v-else-if="activeTab === 'build-planner'">
       <BuildPlannerScreen />
@@ -119,6 +124,7 @@ import CurrencyTable from './CurrencyTable.vue'
 import GourmandView from '../Gourmand/GourmandView.vue'
 import BuildPlannerScreen from './BuildPlanner/BuildPlannerScreen.vue'
 import DeathsView from './DeathsView.vue'
+import StatehelmView from './StatehelmView.vue'
 
 defineProps<{
   activeTab: string;

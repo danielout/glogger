@@ -107,6 +107,11 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
         super::record_migration(conn, 16)?;
     }
 
+    if current_version < 17 {
+        migration_v17_gift_log(conn)?;
+        super::record_migration(conn, 17)?;
+    }
+
     Ok(())
 }
 
@@ -1249,6 +1254,26 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
             sort_order INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY (character_name, server_name, skill_name)
         );
+        "
+    )?;
+
+    Ok(())
+}
+
+/// Migration V17: Gift log — tracks individual gift events for weekly gift-limit tracking.
+fn migration_v17_gift_log(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE game_state_gift_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            npc_key TEXT NOT NULL,
+            npc_name TEXT NOT NULL,
+            gifted_at TEXT NOT NULL,
+            favor_delta REAL NOT NULL
+        );
+        CREATE INDEX idx_gs_gift_log_char ON game_state_gift_log(character_name, server_name);
+        CREATE INDEX idx_gs_gift_log_npc_week ON game_state_gift_log(character_name, server_name, npc_key, gifted_at);
         "
     )?;
 

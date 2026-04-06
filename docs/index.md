@@ -53,6 +53,7 @@ Per-screen documentation organized by view.
   - [character-npcs.md](features/screens/character/character-npcs.md) — NPCs tab: favor progression, services, gift preferences.
   - [character-quests.md](features/screens/character/character-quests.md) — Quests tab: personalized quest reference with requirement eligibility.
   - [character-gourmand.md](features/screens/character/character-gourmand.md) — Gourmand tab.
+  - [character-statehelm.md](features/screens/character/character-statehelm.md) — Statehelm tab: weekly gift tracker with NPC services and filters.
   - [character-buildplanner.md](features/screens/character/character-buildplanner.md) — Build Planner tab (stub).
 
 ### Inventory

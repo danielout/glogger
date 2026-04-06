@@ -581,3 +581,84 @@ pub fn set_tracked_skills(
 
     Ok(())
 }
+
+// ── Gift Log ────────────────────────────────────────────────────────────────
+
+#[derive(Serialize)]
+pub struct GiftLogEntry {
+    pub npc_key: String,
+    pub npc_name: String,
+    pub gifted_at: String,
+    pub favor_delta: f64,
+}
+
+#[tauri::command]
+pub fn get_gift_log(
+    db: State<'_, DbPool>,
+    character_name: String,
+    server_name: String,
+) -> Result<Vec<GiftLogEntry>, String> {
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT npc_key, npc_name, gifted_at, favor_delta
+             FROM game_state_gift_log
+             WHERE character_name = ?1 AND server_name = ?2
+             ORDER BY gifted_at DESC",
+        )
+        .map_err(|e| format!("Query error: {e}"))?;
+
+    let rows = stmt
+        .query_map(rusqlite::params![character_name, server_name], |row| {
+            Ok(GiftLogEntry {
+                npc_key: row.get(0)?,
+                npc_name: row.get(1)?,
+                gifted_at: row.get(2)?,
+                favor_delta: row.get(3)?,
+            })
+        })
+        .map_err(|e| format!("Query error: {e}"))?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Row error: {e}"))
+}
+
+#[tauri::command]
+pub fn add_manual_gift(
+    db: State<'_, DbPool>,
+    character_name: String,
+    server_name: String,
+    npc_key: String,
+    npc_name: String,
+) -> Result<(), String> {
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+    let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
+    conn.execute(
+        "INSERT INTO game_state_gift_log (character_name, server_name, npc_key, npc_name, gifted_at, favor_delta)
+         VALUES (?1, ?2, ?3, ?4, ?5, 0.0)",
+        rusqlite::params![character_name, server_name, npc_key, npc_name, now],
+    )
+    .map_err(|e| format!("Insert error: {e}"))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn remove_last_gift(
+    db: State<'_, DbPool>,
+    character_name: String,
+    server_name: String,
+    npc_key: String,
+    week_start: String,
+) -> Result<(), String> {
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+    conn.execute(
+        "DELETE FROM game_state_gift_log WHERE id = (
+            SELECT id FROM game_state_gift_log
+            WHERE character_name = ?1 AND server_name = ?2 AND npc_key = ?3 AND gifted_at >= ?4
+            ORDER BY gifted_at DESC LIMIT 1
+        )",
+        rusqlite::params![character_name, server_name, npc_key, week_start],
+    )
+    .map_err(|e| format!("Delete error: {e}"))?;
+    Ok(())
+}
