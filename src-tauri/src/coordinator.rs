@@ -219,6 +219,22 @@ impl DataIngestCoordinator {
             }
         }
 
+        // Re-seed game state from settings — the setup wizard may have set
+        // the active character+server after the coordinator was created.
+        let current_settings = self.settings.get();
+        if let (Some(char_name), Some(server_name)) = (
+            &current_settings.active_character_name,
+            &current_settings.active_server_name,
+        ) {
+            startup_log!(
+                "Seeding game state from settings: {} on {}",
+                char_name,
+                server_name
+            );
+            self.game_state.set_active_character_name(char_name);
+            self.game_state.set_active_server_name(server_name);
+        }
+
         // Load known survey types for the survey parser
         let known_surveys = load_known_surveys(&conn);
         drop(conn);
@@ -492,6 +508,30 @@ impl DataIngestCoordinator {
                     flush_batches!(self, player_event_batch, domains_batch, batch_start);
 
                     startup_log!("Character detected from Player.log: {}", character_name);
+
+                    // During initial catch-up (replay mode), the Player.log may
+                    // contain login lines for multiple characters. If the user
+                    // already selected a character during setup, only track events
+                    // for that character — ignore logins for others so their data
+                    // doesn't get persisted under the wrong identity.
+                    if !self.game_state.is_live() {
+                        let selected = self.settings.get().active_character_name.clone();
+                        if let Some(ref selected_name) = selected {
+                            if *selected_name != character_name {
+                                startup_log!(
+                                    "Ignoring catch-up login for '{}' (selected character is '{}')",
+                                    character_name,
+                                    selected_name
+                                );
+                                // Clear game state character so events for this
+                                // character are silently dropped by process_events_batch
+                                // (it returns early when active_character is None).
+                                self.game_state.clear_active_character();
+                                continue;
+                            }
+                        }
+                    }
+
                     // Player.log knows the character name but NOT the server.
                     // Update the character name in settings; the chat log's
                     // ServerDetected + CharacterLogin pair is the authoritative

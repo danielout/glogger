@@ -334,6 +334,11 @@ export const useGameStateStore = defineStore('gameState', () => {
     tnl: number
     timestamp: string
   }) {
+    // During startup catch-up, skill updates come from historical log replay
+    // and may include data from other characters. Skip session accumulation
+    // until the app is fully started and we're in live tailing mode.
+    if (!startupComplete.value) return
+
     const key = payload.skill_type
 
     if (!sessionSkills.value[key]) {
@@ -459,6 +464,10 @@ export const useGameStateStore = defineStore('gameState', () => {
 
   /** Handle a player-event for inventory tracking */
   function handleInventoryEvent(event: PlayerEvent) {
+    // Skip live inventory accumulation during startup catch-up — historical
+    // replay may include events from other characters or stale sessions.
+    if (!startupComplete.value) return
+
     switch (event.kind) {
       case 'ItemAdded': {
         const entry: LiveInventoryItem = {
@@ -534,6 +543,10 @@ export const useGameStateStore = defineStore('gameState', () => {
 
   /** Route player events into the appropriate activity feed */
   function handlePlayerActivityEvent(event: PlayerEvent) {
+    // Skip session feed accumulation during startup catch-up — historical
+    // replay may include events from other characters or stale sessions.
+    if (!startupComplete.value) return
+
     switch (event.kind) {
       // Items incoming is handled exclusively by chat status events
       // (ItemGained/Summoned) to avoid double-counting — Player.log fires
@@ -594,6 +607,10 @@ export const useGameStateStore = defineStore('gameState', () => {
   // ── Activity Feed: Chat Status Events ──────────────────────────────
 
   function handleChatStatusEvent(event: ChatStatusEvent) {
+    // Skip session feed accumulation during startup catch-up — historical
+    // replay may include events from other characters or stale sessions.
+    if (!startupComplete.value) return
+
     switch (event.kind) {
       case 'ItemGained':
         pushActivity(itemsIncoming, {

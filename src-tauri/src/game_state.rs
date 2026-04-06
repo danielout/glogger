@@ -69,6 +69,12 @@ impl GameStateManager {
         self.active_server.as_deref()
     }
 
+    /// Clear the active character so that events are silently dropped.
+    /// Used during catch-up replay to skip events for non-selected characters.
+    pub fn clear_active_character(&mut self) {
+        self.active_character = None;
+    }
+
     /// Update just the character name without touching the database or server.
     /// Used by Player.log handler which knows the character but not the server.
     pub fn set_active_character_name(&mut self, name: &str) {
