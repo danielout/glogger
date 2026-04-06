@@ -133,7 +133,7 @@
 
           <!-- Gift Favor Tiers -->
           <div v-if="selected.gift_favor_tiers.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Accepts Gifts At</div>
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Gives Gifts At</div>
             <div class="flex flex-wrap gap-1.5">
               <span
                 v-for="tier in selected.gift_favor_tiers"
