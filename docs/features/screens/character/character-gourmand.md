@@ -59,11 +59,18 @@ The store resolves the player's Gourmand level with a priority chain:
 
 This level determines which foods the player can currently eat (foods with `gourmand_req > level` are marked unusable).
 
+## Layout
+
+Uses `PaneLayout` (screen-key `char-gourmand`) with left + conditional right panes:
+- **Left pane** — progress bars (overall + per-category) and favorites (top 3 per category)
+- **Center** — header bar, controls, and food category lists (scrollable)
+- **Right pane** — food buff comparison panel (only appears when a meal or snack is selected)
+
 ## UI Features
 
-- **Progress bars** — overall and per-category (Meals, Snacks, Instant-Snacks)
-- **Favorites** — top 3 most-eaten foods per category
-- **Food Buff panel** — select a meal + snack to see combined buff stats with numeric values summed
+- **Progress bars** — overall and per-category (Meals, Snacks, Instant-Snacks), shown in left pane
+- **Favorites** — top 3 most-eaten foods per category, shown in left pane
+- **Food Buff panel** — select a meal + snack to see combined buff stats in the right pane
 - **Card and list views** — toggle between grid cards and compact three-column lists
 - **Sorting** — by gourmand level, food level, or alphabetical; ascending or descending
 - **Filtering** — hide eaten foods, hide unusable foods (gourmand level too low)
