@@ -1,9 +1,10 @@
-## What's Changed since v0.4.4
+## What's Changed since v0.4.5
+
+### Fixes
+- fix: test fix to bypass false failure (`7bd4f26`)
 
 ### Other
-- bad text on npc browser (`bcfc6a3`)
-- gourmand screen scroll fix (`9ef266a`)
-- multi-character fix (`b9fcca7`)
+- Time fix, update notifs, build flow improvements (`991c7f9`)
 
 ---
-*3 commits since v0.4.4*
+*2 commits since v0.4.5*
