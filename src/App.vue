@@ -63,8 +63,22 @@
       </div>
 
       <!-- Bottom bar -->
-      <div class="shrink-0 h-6 bg-surface-base border-t border-border-default flex items-center px-3">
+      <div class="shrink-0 h-6 bg-surface-base border-t border-border-default flex items-center justify-between px-3">
         <span class="text-text-dim text-[0.6rem]">Glogger by Zenith of Dreva -- Some portions copyright 2026 Elder Game, LLC.</span>
+        <div v-if="updateStore.updateAvailable && !updateStore.dismissed" class="flex items-center gap-1.5 text-[0.6rem]">
+          <button
+            class="flex items-center gap-1.5 text-accent-blue hover:text-accent-blue-bright transition-colors cursor-pointer"
+            @click="openUpdate"
+          >
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-accent-blue animate-pulse" />
+            v{{ updateStore.latestVersion }} available
+          </button>
+          <button
+            class="text-text-dim hover:text-text-default transition-colors cursor-pointer"
+            title="Dismiss"
+            @click="updateStore.dismiss()"
+          >✕</button>
+        </div>
       </div>
 
       <ToastContainer />
@@ -82,6 +96,8 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useSettingsStore } from "./stores/settingsStore";
 import { useStartupStore } from "./stores/startupStore";
+import { useUpdateStore } from "./stores/updateStore";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useGameStateStore } from "./stores/gameStateStore";
 import { useSurveyStore } from "./stores/surveyStore";
 import { provideEntityNavigation, type EntityNavigationTarget } from "./composables/useEntityNavigation";
@@ -109,6 +125,11 @@ import type { SearchResult } from "./composables/useQuickSearch";
 
 const settingsStore = useSettingsStore();
 const startup = useStartupStore();
+const updateStore = useUpdateStore();
+
+function openUpdate() {
+  openUrl(updateStore.downloadUrl);
+}
 
 const error = ref("");
 const parsing = ref(false);
@@ -186,6 +207,7 @@ provideEntityNavigation((target) => {
 
 onMounted(async () => {
   await startup.initialize();
+  updateStore.startPolling();
 });
 
 async function parseLog() {

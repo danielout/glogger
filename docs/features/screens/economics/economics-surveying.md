@@ -155,8 +155,8 @@ Surveying follows the app-wide time standards defined in [time.md](../../../arch
 ### Backend
 
 - All `survey_events.timestamp` and `survey_session_stats.start_time`/`end_time` values are stored as UTC strings (`YYYY-MM-DD HH:MM:SS`).
-- Player.log timestamps are converted to UTC via `SurveySessionTracker::to_utc()`, which delegates to `to_utc_datetime()` in `parsers.rs`.
-- Replay timestamps use the dual-log interleaving strategy (Chat.log UTC timestamps are authoritative; Player.log times are converted using the chat login timezone offset).
+- Player.log timestamps are already UTC — `SurveySessionTracker::to_utc()` delegates to `to_utc_datetime()` in `parsers.rs` which just adds today's UTC date.
+- Chat.log timestamps are local time — converted to UTC via `chat_local_to_utc()` using the detected timezone offset before entering the pipeline.
 
 ### Frontend
 

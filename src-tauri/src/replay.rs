@@ -18,7 +18,7 @@ use crate::chat_parser::{
 use crate::chat_status_parser::parse_status_message;
 use crate::db::DbPool;
 use crate::game_state::GameStateManager;
-use crate::parsers::{parse_skill_update, parse_timestamp};
+use crate::parsers::{chat_local_to_utc, parse_skill_update, parse_timestamp};
 use crate::player_event_parser::PlayerEventParser;
 use crate::survey_parser::{KnownSurveyType, SurveyParser};
 use crate::survey_persistence::SurveySessionTracker;
@@ -92,16 +92,11 @@ pub struct ReplayResult {
 /// Parse Player.log into timestamped lines.
 ///
 /// Player.log timestamps are local time `[HH:MM:SS]` with no date.
-/// We need a timezone offset to convert to UTC. If none is provided yet,
-/// we store lines with a provisional UTC second of 0 and fix them up
-/// once we know the offset from the chat login line.
-///
-/// Since Player.log has no date, we derive the date from the chat log filename
-/// or fall back to a default.
+/// Player.log timestamps are already UTC with no date. We derive the date from
+/// the chat log filename or fall back to today's UTC date.
 fn parse_player_log_lines(
     path: &PathBuf,
     base_date: chrono::NaiveDate,
-    tz_offset_seconds: i32,
 ) -> Result<Vec<TimedEvent>, String> {
     let file = File::open(path).map_err(|e| format!("Failed to open Player.log: {}", e))?;
     let reader = BufReader::new(file);
@@ -114,14 +109,10 @@ fn parse_player_log_lines(
             continue;
         }
 
-        // Extract [HH:MM:SS] timestamp
+        // Extract [HH:MM:SS] timestamp — already UTC
         if let Some(ts_str) = parse_timestamp(&line) {
-            if let Ok(local_time) = chrono::NaiveTime::parse_from_str(&ts_str, "%H:%M:%S") {
-                let local_dt = base_date.and_time(local_time);
-                // The game's "Timezone Offset -07:00:00" means UTC-7.
-                // Player.log timestamps are local time. UTC = local + offset_seconds.
-                // Example: local 22:32:50 + (-25200s) = 15:32:50 UTC ✓
-                let utc_dt = local_dt + chrono::Duration::seconds(tz_offset_seconds as i64);
+            if let Ok(utc_time) = chrono::NaiveTime::parse_from_str(&ts_str, "%H:%M:%S") {
+                let utc_dt = base_date.and_time(utc_time);
                 let utc_second = utc_dt.and_utc().timestamp();
 
                 events.push(TimedEvent::PlayerLine { utc_second, line });
@@ -272,9 +263,37 @@ fn run_replay(
     )
     .ok();
 
-    let player_events = parse_player_log_lines(&player_log_path, base_date, tz_offset)?;
+    let player_events = parse_player_log_lines(&player_log_path, base_date)?;
 
-    // --- Phase 3: Merge and sort ---
+    // --- Phase 3: Apply timezone offset to chat events and merge ---
+    // Chat.log timestamps are local time; convert to UTC using the detected offset.
+    let chat_events: Vec<TimedEvent> = chat_events
+        .into_iter()
+        .map(|event| match event {
+            TimedEvent::ChatMessage { msg, .. } => {
+                let mut msg = msg;
+                msg.timestamp = chat_local_to_utc(msg.timestamp, tz_offset);
+                let utc_second = msg.timestamp.and_utc().timestamp();
+                TimedEvent::ChatMessage { utc_second, msg }
+            }
+            TimedEvent::ChatLogin {
+                server_name,
+                character_name,
+                timezone_offset_seconds,
+                ..
+            } => {
+                // Recalculate utc_second with offset applied
+                TimedEvent::ChatLogin {
+                    utc_second: 0, // Login lines sort first regardless
+                    server_name,
+                    character_name,
+                    timezone_offset_seconds,
+                }
+            }
+            other => other,
+        })
+        .collect();
+
     let total_events = player_events.len() + chat_events.len();
     let mut all_events: Vec<TimedEvent> = Vec::with_capacity(total_events);
     all_events.extend(player_events);
@@ -327,9 +346,6 @@ fn run_replay(
     let mut survey_tracker = SurveySessionTracker::new();
     let mut game_state = GameStateManager::new(game_data);
 
-    survey_tracker.set_timezone_offset(tz_offset);
-    game_state.set_timezone_offset(tz_offset);
-
     let mut result = ReplayResult {
         player_lines_processed: 0,
         chat_messages_processed: 0,
@@ -367,15 +383,8 @@ fn run_replay(
             TimedEvent::ChatLogin {
                 server_name,
                 character_name,
-                timezone_offset_seconds,
                 ..
             } => {
-                // Update timezone offset if this login carries one
-                if let Some(offset) = timezone_offset_seconds {
-                    game_state.set_timezone_offset(*offset);
-                    survey_tracker.set_timezone_offset(*offset);
-                }
-
                 game_state.set_active_character_name(character_name);
                 game_state.set_active_server_name(server_name);
 

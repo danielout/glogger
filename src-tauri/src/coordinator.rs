@@ -6,6 +6,7 @@ use crate::db::queries::log_positions;
 use crate::db::DbPool;
 use crate::game_state::GameStateManager;
 use crate::log_watchers::{ChatLogWatcher, LogEvent, LogFileWatcher, PlayerLogWatcher};
+use crate::parsers::chat_local_to_utc;
 use crate::player_event_parser::PlayerEvent;
 use crate::settings::SettingsManager;
 use crate::survey_parser::KnownSurveyType;
@@ -116,15 +117,7 @@ impl DataIngestCoordinator {
             game_state.set_active_server_name(server_name);
         }
 
-        // Seed timezone offset from persisted settings (manual override takes precedence)
-        let mut survey_tracker = SurveySessionTracker::new();
-        if let Some(offset) = current_settings
-            .manual_timezone_override
-            .or(current_settings.timezone_offset_seconds)
-        {
-            game_state.set_timezone_offset(offset);
-            survey_tracker.set_timezone_offset(offset);
-        }
+        let survey_tracker = SurveySessionTracker::new();
 
         Ok(Self {
             player_watcher: None,
@@ -648,9 +641,21 @@ impl DataIngestCoordinator {
     fn process_chat_events(&mut self, events: Vec<LogEvent>) -> Result<(), String> {
         let mut messages = Vec::new();
 
+        // Get timezone offset for converting Chat.log local timestamps to UTC
+        let tz_offset = self
+            .settings
+            .get()
+            .manual_timezone_override
+            .or(self.settings.get().timezone_offset_seconds)
+            .unwrap_or(0);
+
         for event in events {
             match event {
                 LogEvent::ChatMessage(msg) => {
+                    // Convert chat timestamp from local time to UTC
+                    let mut msg = msg;
+                    msg.timestamp = chat_local_to_utc(msg.timestamp, tz_offset);
+
                     // Run Status channel messages through the structured parser
                     if let Some(status_event) = parse_status_message(&msg) {
                         // Cross-reference with survey tracker for loot quantity correction.
@@ -765,14 +770,12 @@ impl DataIngestCoordinator {
                         character_name
                     );
 
-                    // Store timezone offset for UTC timestamp conversion
+                    // Store timezone offset for chat timestamp conversion
                     if let Some(offset) = timezone_offset_seconds {
                         startup_log!("Timezone offset detected: {}s from UTC", offset);
                         let mut settings = self.settings.get();
                         settings.timezone_offset_seconds = Some(offset);
                         self.settings.update(settings).ok();
-                        self.game_state.set_timezone_offset(offset);
-                        self.survey_tracker.set_timezone_offset(offset);
                     }
 
                     // Auto-create server record

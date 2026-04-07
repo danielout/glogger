@@ -25,8 +25,9 @@ pub mod survey_sharing_commands;
 pub type DbPool = r2d2::Pool<SqliteConnectionManager>;
 pub type DbConnection = r2d2::PooledConnection<SqliteConnectionManager>;
 
-/// Initialize the database pool with the given path
-pub fn init_pool(db_path: PathBuf) -> Result<DbPool, Box<dyn std::error::Error>> {
+/// Initialize the database pool with the given path.
+/// `tz_offset_seconds` is needed for one-time migration to fix historical timestamps.
+pub fn init_pool(db_path: PathBuf, tz_offset_seconds: Option<i32>) -> Result<DbPool, Box<dyn std::error::Error>> {
     // Create parent directory if it doesn't exist
     if let Some(parent) = db_path.parent() {
         std::fs::create_dir_all(parent)?;
@@ -46,7 +47,7 @@ pub fn init_pool(db_path: PathBuf) -> Result<DbPool, Box<dyn std::error::Error>>
 
     // Run migrations on a connection
     let conn = pool.get()?;
-    migrations::run_migrations(&conn)?;
+    migrations::run_migrations(&conn, tz_offset_seconds)?;
     drop(conn); // Release connection back to pool
 
     Ok(pool)

@@ -36,6 +36,7 @@ Cross-cutting feature documentation not tied to a single screen.
 - [chat-parser.md](features/chat-parser.md) — Chat log parser: file format, line parsing, channel exclusion, item link extraction, watch rules.
 - [chat-item-linking.md](features/chat-item-linking.md) — Detecting and linking item references in chat messages to CDN data.
 - [advanced-settings.md](features/advanced-settings.md) — Advanced Settings tab: log reparsing, database statistics, and diagnostics.
+- [update-notifications.md](features/update-notifications.md) — Update notifications: GitHub release check, bottom bar indicator, toast alert.
 
 *Feature docs that were specific to a single screen have been merged into the corresponding screen docs below (character import → [character-stats](features/screens/character/character-stats.md), inventory import → [inventory-snapshots](features/screens/inventory/inventory-snapshots.md), farming → [economics-farming](features/screens/economics/economics-farming.md), surveying → [economics-surveying](features/screens/economics/economics-surveying.md), storage vaults → [inventory-vaults](features/screens/inventory/inventory-vaults.md), data browser → [data-browser](features/screens/data-browser.md), dashboard → [dashboard](features/screens/dashboard.md), gourmand → [character-gourmand](features/screens/character/character-gourmand.md)).*
 

@@ -41,26 +41,30 @@ pub fn parse_timestamp(line: &str) -> Option<String> {
 
 /// Convert a Player.log time-only timestamp ("HH:MM:SS") to a full UTC datetime string.
 ///
-/// Player.log timestamps are local time with no date. We combine with today's UTC date
-/// and apply the timezone offset to produce a UTC datetime.
-///
-/// `tz_offset_seconds`: offset from UTC in seconds (e.g., -25200 for UTC-7).
-/// The log time is local, so UTC = local_time - offset.
-pub fn to_utc_datetime(time_str: &str, tz_offset_seconds: i32) -> String {
-    use chrono::{Duration, NaiveTime, Utc};
+/// Player.log timestamps are already UTC with no date. We combine with today's UTC date
+/// to produce a full UTC datetime.
+pub fn to_utc_datetime(time_str: &str) -> String {
+    use chrono::{NaiveTime, Utc};
 
     let today = Utc::now().date_naive();
 
-    // Parse the HH:MM:SS time string
-    if let Ok(local_time) = NaiveTime::parse_from_str(time_str, "%H:%M:%S") {
-        let local_dt = today.and_time(local_time);
-        // UTC = local - offset (offset is seconds east of UTC)
-        let utc_dt = local_dt - Duration::seconds(tz_offset_seconds as i64);
+    // Parse the HH:MM:SS time string (already UTC)
+    if let Ok(utc_time) = NaiveTime::parse_from_str(time_str, "%H:%M:%S") {
+        let utc_dt = today.and_time(utc_time);
         utc_dt.format("%Y-%m-%d %H:%M:%S").to_string()
     } else {
         // Fallback: use current UTC time if parsing fails
         Utc::now().format("%Y-%m-%d %H:%M:%S").to_string()
     }
+}
+
+/// Convert a Chat.log local-time NaiveDateTime to UTC by subtracting the timezone offset.
+///
+/// Chat.log timestamps are in the player's local timezone. The offset (seconds east of UTC)
+/// is parsed from the chat login line's "Timezone Offset" field.
+pub fn chat_local_to_utc(local_dt: chrono::NaiveDateTime, tz_offset_seconds: i32) -> chrono::NaiveDateTime {
+    use chrono::Duration;
+    local_dt - Duration::seconds(tz_offset_seconds as i64)
 }
 
 // Extracts the value after `key` up to the next comma or `}`

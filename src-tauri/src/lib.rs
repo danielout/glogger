@@ -17,6 +17,7 @@ mod settings;
 mod setup_commands;
 mod survey_parser;
 mod survey_persistence;
+mod update_check;
 mod watch_rules;
 
 use chrono::Local;
@@ -154,6 +155,7 @@ use db::survey_sharing_commands::{
     rename_survey_import,
 };
 use replay::replay_dual_logs;
+use update_check::check_for_update;
 use settings::{
     get_server_list, get_settings_file_path, load_settings, save_settings, SettingsManager,
 };
@@ -222,7 +224,12 @@ pub fn run() {
             }
 
             // Step 4: Initialize database (migrations run automatically)
-            let db_pool = db::init_pool(db_path).expect("Failed to initialize database");
+            // Pass timezone offset for one-time migration to fix historical timestamps
+            let tz_offset = {
+                let s = settings_manager.get();
+                s.manual_timezone_override.or(s.timezone_offset_seconds)
+            };
+            let db_pool = db::init_pool(db_path, tz_offset).expect("Failed to initialize database");
             startup_log!("Database initialized");
 
             // Step 5: Initialize DataIngestCoordinator
@@ -521,6 +528,8 @@ pub fn run() {
             get_aggregate_inventory,
             get_aggregate_wealth,
             get_aggregate_skills,
+            // Update check
+            check_for_update,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

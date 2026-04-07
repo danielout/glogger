@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+#
+# Warn (but don't block) when a commit message doesn't start with a known
+# conventional prefix. This improves changelog generation quality.
+#
+# Known prefixes: feat, fix, refactor, docs, test, chore, style, perf, ci, build, release
+#
+# Install: git config core.hooksPath .githooks
+# Or run:  scripts/setup-hooks.sh
+
+MSG_FILE="$1"
+FIRST_LINE="$(head -1 "$MSG_FILE")"
+
+# Allow merge commits and release commits unconditionally
+if echo "$FIRST_LINE" | grep -qiE '^(Merge |release:)'; then
+  exit 0
+fi
+
+# Check for a known prefix (with optional scope)
+if echo "$FIRST_LINE" | grep -qE '^(feat|fix|refactor|docs|test|chore|style|perf|ci|build)(\(.*\))?!?:'; then
+  exit 0
+fi
+
+echo ""
+echo "  ⚠  Commit message has no conventional prefix."
+echo "     Expected: feat|fix|refactor|docs|test|chore|style|perf|ci|build"
+echo "     Example:  fix: correct scroll behavior on gourmand screen"
+echo ""
+echo "     Your message: $FIRST_LINE"
+echo ""
+echo "  Committing anyway — this is just a warning to help changelog quality."
+echo ""
+
+exit 0

@@ -297,9 +297,9 @@ All timestamps are **UTC internally**. The frontend converts to local time for d
 
 | Source | Raw Format | How it becomes UTC |
 |---|---|---|
-| Player.log | `[HH:MM:SS]` (local time, no date) | Combined with system date, converted via timezone offset using `to_utc_datetime()` in [`parsers.rs`](../../src-tauri/src/parsers.rs) |
-| Chat.log | `YY-MM-DD HH:MM:SS` (already UTC) | Used as-is |
-| Timezone offset | `Timezone Offset -07:00:00` in chat login line | Parsed by `parse_timezone_offset()` in [`chat_parser.rs`](../../src-tauri/src/chat_parser.rs), stored in settings, propagated to `GameStateManager` and `SurveySessionTracker` |
+| Player.log | `[HH:MM:SS]` (already UTC, no date) | Combined with today's UTC date via `to_utc_datetime()` in [`parsers.rs`](../../src-tauri/src/parsers.rs) — no offset needed |
+| Chat.log | `YY-MM-DD HH:MM:SS` (player's local time) | Converted to UTC via `chat_local_to_utc()` in [`parsers.rs`](../../src-tauri/src/parsers.rs) using the detected timezone offset |
+| Timezone offset | `Timezone Offset -07:00:00` in chat login line | Parsed by `parse_timezone_offset()` in [`chat_parser.rs`](../../src-tauri/src/chat_parser.rs), stored in settings, used for Chat.log timestamp conversion |
 
 ### Frontend display
 

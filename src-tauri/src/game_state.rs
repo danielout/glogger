@@ -34,8 +34,6 @@ pub struct GameStateManager {
     live_mode: bool,
     /// Reference to loaded CDN game data for entity resolution
     game_data: GameDataState,
-    /// Timezone offset in seconds from UTC, used to convert Player.log HH:MM:SS to UTC
-    timezone_offset_seconds: i32,
 }
 
 impl GameStateManager {
@@ -45,7 +43,6 @@ impl GameStateManager {
             active_server: None,
             live_mode: false,
             game_data,
-            timezone_offset_seconds: 0,
         }
     }
 
@@ -87,14 +84,10 @@ impl GameStateManager {
         self.active_server = Some(server.to_string());
     }
 
-    /// Set the timezone offset (seconds from UTC) for timestamp conversion.
-    pub fn set_timezone_offset(&mut self, offset_seconds: i32) {
-        self.timezone_offset_seconds = offset_seconds;
-    }
-
     /// Convert a Player.log HH:MM:SS timestamp to a full UTC datetime string.
+    /// Player.log timestamps are already UTC — just needs a date component added.
     fn to_utc(&self, ts: &str) -> String {
-        to_utc_datetime(ts, self.timezone_offset_seconds)
+        to_utc_datetime(ts)
     }
 
     /// Update the active character.

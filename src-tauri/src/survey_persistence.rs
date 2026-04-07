@@ -29,8 +29,6 @@ pub struct SurveySessionTracker {
     completable_maps: u32,
     /// How many surveys have been completed in this session
     surveys_completed: u32,
-    /// Timezone offset in seconds from UTC for timestamp conversion
-    timezone_offset_seconds: i32,
 }
 
 impl SurveySessionTracker {
@@ -40,18 +38,13 @@ impl SurveySessionTracker {
             last_session_id: None,
             completable_maps: 0,
             surveys_completed: 0,
-            timezone_offset_seconds: 0,
         }
     }
 
-    /// Set the timezone offset (seconds from UTC) for timestamp conversion.
-    pub fn set_timezone_offset(&mut self, offset_seconds: i32) {
-        self.timezone_offset_seconds = offset_seconds;
-    }
-
     /// Convert a Player.log HH:MM:SS timestamp to a full UTC datetime string.
+    /// Player.log timestamps are already UTC — just needs a date component added.
     fn to_utc(&self, ts: &str) -> String {
-        to_utc_datetime(ts, self.timezone_offset_seconds)
+        to_utc_datetime(ts)
     }
 
     /// Process a survey event and persist it to the database.

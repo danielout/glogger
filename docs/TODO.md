@@ -12,6 +12,18 @@ Small tasks and notes that don't belong in a dedicated plan.
 - IMPROVEMENT: Market Prices screen needs better layout.
 - IMPROVEMENT: Market Prices screen needs filtering.
 - IMPROVEMENT: Some way to bulk set prices?
+- IMPROVEMENT: better support in build planner for using recipes that consume crafting points (right now we really only support augments)
+- IMPROVEMENT: belts in the build planner are kinda busted. need a systematic way to handle belts
+- IMPROVEMENT: build planner layout needs to use our PanelLayout
+- IMPROVEMENT: Save page state of projects page when navigating off it.
+- IDEA/BRAINSTORM: How do we improve the UI/UX of going to check the recipe of something, etc then going back to what you were doing? Should the whole databrowser live as a popover? Think on this UX
+- IDEA: Quick reference favorites somehow? a panel? popup from bottom toolbar? something? what's our version of solving the players with multiple wiki tabs open. 
+- IMPROVEMENT: Need better formatting for older chat lines that include date.
+- IMPROVEMENT: Primary/Secondary naming on gear is confusing in the build planner. We can make this more descriptive.
+- IMPROVEMENT: Actually implement toast notifications and audio alerts for watchwords
+- IMPROVEMENT: show latest detections of watchwords on the dashboard
+- IMPROVEMENT: show rez timer on the dashboard
+- IMPROVEMENT: show critical resources (diamonds, amethysts, aquamarines, eternal greens, salt, fire dust) counts in inventory on the dashboard.
 
 ---
 

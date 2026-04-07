@@ -15,7 +15,7 @@ use rusqlite::{Connection, Result};
 ///     super::record_migration(conn, 2)?;
 /// }
 /// ```
-pub fn run_migrations(conn: &Connection) -> Result<()> {
+pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Result<()> {
     // Create migrations table if it doesn't exist
     conn.execute(
         "CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -110,6 +110,11 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
     if current_version < 17 {
         migration_v17_gift_log(conn)?;
         super::record_migration(conn, 17)?;
+    }
+
+    if current_version < 18 {
+        migration_v18_fix_timestamps(conn, tz_offset_seconds)?;
+        super::record_migration(conn, 18)?;
     }
 
     Ok(())
@@ -1276,6 +1281,129 @@ fn migration_v17_gift_log(conn: &Connection) -> Result<()> {
         CREATE INDEX idx_gs_gift_log_npc_week ON game_state_gift_log(character_name, server_name, npc_key, gifted_at);
         "
     )?;
+
+    Ok(())
+}
+
+/// Migration V18: Fix all timestamps that were stored with incorrect timezone handling.
+///
+/// Two bugs existed:
+///
+/// 1) Player.log timestamps are UTC but were treated as local time. The old code did:
+///      stored = actual_utc - tz_offset_seconds
+///    For UTC-7 (offset=-25200): stored = utc + 25200 (7 hours too late).
+///    Fix: correct = stored + offset  (player_modifier)
+///
+/// 2) Chat.log timestamps are local time but were stored as-is (treated as UTC).
+///    For UTC-7 (offset=-25200): stored = local = utc + (-offset) = utc - 25200
+///    The stored value is 7 hours too early.
+///    Fix: correct = stored - offset  (chat_modifier, opposite direction)
+fn migration_v18_fix_timestamps(conn: &Connection, tz_offset_seconds: Option<i32>) -> Result<()> {
+    let offset = match tz_offset_seconds {
+        Some(o) if o != 0 => o,
+        _ => {
+            // No offset known or offset is zero — nothing to fix
+            return Ok(());
+        }
+    };
+
+    // SQLite datetime() accepts a modifier like '+3600 seconds' or '-3600 seconds'
+    let player_modifier = format!("{} seconds", offset);
+    let chat_modifier = format!("{} seconds", -offset);
+
+    // --- Player.log-derived timestamps (need +offset correction) ---
+
+    // Tables with last_confirmed_at columns
+    let last_confirmed_tables = [
+        "game_state_skills",
+        "game_state_active_skills",
+        "game_state_attributes",
+        "game_state_weather",
+        "game_state_combat",
+        "game_state_mount",
+        "game_state_inventory",
+        "game_state_equipment",
+        "game_state_effects",
+        "game_state_storage",
+        "game_state_recipes",
+        "game_state_favor",
+    ];
+
+    for table in &last_confirmed_tables {
+        conn.execute(
+            &format!(
+                "UPDATE {} SET last_confirmed_at = datetime(last_confirmed_at, ?1)
+                 WHERE last_confirmed_at IS NOT NULL",
+                table
+            ),
+            [&player_modifier],
+        )?;
+    }
+
+    // game_state_gift_log: gifted_at column
+    conn.execute(
+        "UPDATE game_state_gift_log SET gifted_at = datetime(gifted_at, ?1)
+         WHERE gifted_at IS NOT NULL",
+        [&player_modifier],
+    )?;
+
+    // item_transactions: Player.log-sourced rows
+    conn.execute(
+        "UPDATE item_transactions SET timestamp = datetime(timestamp, ?1)
+         WHERE timestamp IS NOT NULL AND source != 'chat_status'",
+        [&player_modifier],
+    )?;
+
+    // survey_session_stats: start_time and end_time
+    conn.execute(
+        "UPDATE survey_session_stats SET
+            start_time = datetime(start_time, ?1),
+            end_time = CASE WHEN end_time IS NOT NULL THEN datetime(end_time, ?1) ELSE NULL END
+         WHERE start_time IS NOT NULL",
+        [&player_modifier],
+    )?;
+
+    // survey_events: timestamp
+    conn.execute(
+        "UPDATE survey_events SET timestamp = datetime(timestamp, ?1)
+         WHERE timestamp IS NOT NULL",
+        [&player_modifier],
+    )?;
+
+    // --- Chat.log-derived timestamps (need -offset correction) ---
+
+    // chat_messages: timestamp column
+    conn.execute(
+        "UPDATE chat_messages SET timestamp = datetime(timestamp, ?1)
+         WHERE timestamp IS NOT NULL",
+        [&chat_modifier],
+    )?;
+
+    // item_transactions: chat_status-sourced rows
+    conn.execute(
+        "UPDATE item_transactions SET timestamp = datetime(timestamp, ?1)
+         WHERE timestamp IS NOT NULL AND source = 'chat_status'",
+        [&chat_modifier],
+    )?;
+
+    // character_deaths: died_at (from chat combat events)
+    conn.execute(
+        "UPDATE character_deaths SET died_at = datetime(died_at, ?1)
+         WHERE died_at IS NOT NULL",
+        [&chat_modifier],
+    )?;
+
+    // death_damage_sources: timestamp (from chat combat events)
+    conn.execute(
+        "UPDATE death_damage_sources SET timestamp = datetime(timestamp, ?1)
+         WHERE timestamp IS NOT NULL",
+        [&chat_modifier],
+    )?;
+
+    eprintln!(
+        "[migration_v18] Fixed timestamps: Player.log correction={}, Chat.log correction={}",
+        player_modifier, chat_modifier
+    );
 
     Ok(())
 }

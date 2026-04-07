@@ -22,18 +22,19 @@ The app ingests timestamps from two sources with different raw formats:
 
 | Source | Raw Format | Conversion |
 |---|---|---|
-| Player.log | `[HH:MM:SS]` — local time, no date | Combined with system date and timezone offset via [`to_utc_datetime()`](../../src-tauri/src/parsers.rs) |
-| Chat.log | `YY-MM-DD HH:MM:SS` — already UTC | Used as-is |
+| Player.log | `[HH:MM:SS]` — UTC, no date | Combined with today's UTC date via [`to_utc_datetime()`](../../src-tauri/src/parsers.rs) — no offset needed |
+| Chat.log | `YY-MM-DD HH:MM:SS` — player's local time | Converted to UTC via [`chat_local_to_utc()`](../../src-tauri/src/parsers.rs) using the detected timezone offset |
 
 ### Timezone Offset Detection
 
-The game's chat login line contains `Timezone Offset -07:00:00` (or similar). This is parsed by [`parse_timezone_offset()`](../../src-tauri/src/chat_parser.rs) into total seconds from UTC, stored in settings as `timezone_offset_seconds`, and propagated to `GameStateManager` and `SurveySessionTracker` for Player.log timestamp conversion.
+The game's chat login line contains `Timezone Offset -07:00:00` (or similar). This is parsed by [`parse_timezone_offset()`](../../src-tauri/src/chat_parser.rs) into total seconds from UTC and stored in settings as `timezone_offset_seconds`. This offset is used to convert Chat.log local timestamps to UTC at ingestion time (in the coordinator, replay, and scan commands).
 
 Users can also set `manual_timezone_override` in settings, which takes precedence over auto-detection.
 
 ## Backend (Rust)
 
-- Use `to_utc_datetime(time_str, tz_offset_seconds)` from [`parsers.rs`](../../src-tauri/src/parsers.rs) to convert Player.log `HH:MM:SS` times to UTC.
+- Use `to_utc_datetime(time_str)` from [`parsers.rs`](../../src-tauri/src/parsers.rs) to convert Player.log `HH:MM:SS` times to full UTC datetime strings (Player.log is already UTC, just needs a date).
+- Use `chat_local_to_utc(dt, tz_offset_seconds)` from [`parsers.rs`](../../src-tauri/src/parsers.rs) to convert Chat.log `NaiveDateTime` from local time to UTC.
 - Use `chrono::Utc::now()` when generating timestamps from the system clock.
 - Never store local time in the database.
 - The `chrono` crate (with `serde` feature) is the only date/time dependency.

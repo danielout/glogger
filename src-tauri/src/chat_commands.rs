@@ -2,6 +2,7 @@
 use crate::chat_parser;
 use crate::db::queries::log_positions;
 use crate::db::{chat_commands, DbPool};
+use crate::parsers::chat_local_to_utc;
 use crate::settings::SettingsManager;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -22,7 +23,12 @@ pub async fn scan_chat_logs(
     app: AppHandle,
 ) -> Result<ScanResult, String> {
     let chat_logs_path = PathBuf::from(&path);
-    let excluded_channels = settings.get().excluded_chat_channels;
+    let app_settings = settings.get();
+    let excluded_channels = app_settings.excluded_chat_channels.clone();
+    let tz_offset = app_settings
+        .manual_timezone_override
+        .or(app_settings.timezone_offset_seconds)
+        .unwrap_or(0);
 
     let log_files = chat_parser::get_chat_log_files(&chat_logs_path)
         .map_err(|e| format!("Failed to scan chat logs directory: {e}"))?;
@@ -57,6 +63,15 @@ pub async fn scan_chat_logs(
         let (messages, new_position) =
             chat_parser::read_chat_log(&log_file.file_path, start_position)
                 .map_err(|e| format!("Failed to read chat log: {e}"))?;
+
+        // Convert chat timestamps from local time to UTC
+        let messages: Vec<_> = messages
+            .into_iter()
+            .map(|mut msg| {
+                msg.timestamp = chat_local_to_utc(msg.timestamp, tz_offset);
+                msg
+            })
+            .collect();
 
         if !messages.is_empty() {
             let inserted = chat_commands::insert_chat_messages(
@@ -107,7 +122,12 @@ pub async fn scan_chat_log_file(
     settings: State<'_, Arc<SettingsManager>>,
 ) -> Result<ScanResult, String> {
     let log_path = PathBuf::from(&path);
-    let excluded_channels = settings.get().excluded_chat_channels;
+    let app_settings = settings.get();
+    let excluded_channels = app_settings.excluded_chat_channels.clone();
+    let tz_offset = app_settings
+        .manual_timezone_override
+        .or(app_settings.timezone_offset_seconds)
+        .unwrap_or(0);
 
     if !log_path.exists() {
         return Err(format!("Chat log file not found: {}", path));
@@ -134,6 +154,15 @@ pub async fn scan_chat_log_file(
 
     let (messages, new_position) = chat_parser::read_chat_log(&log_path, start_position)
         .map_err(|e| format!("Failed to read chat log: {e}"))?;
+
+    // Convert chat timestamps from local time to UTC
+    let messages: Vec<_> = messages
+        .into_iter()
+        .map(|mut msg| {
+            msg.timestamp = chat_local_to_utc(msg.timestamp, tz_offset);
+            msg
+        })
+        .collect();
 
     let mut messages_imported = 0;
     if !messages.is_empty() {
@@ -235,7 +264,12 @@ pub async fn tail_chat_log(
     settings: State<'_, Arc<SettingsManager>>,
 ) -> Result<Vec<chat_commands::ChatMessageRow>, String> {
     let log_path = PathBuf::from(&chat_log_file);
-    let excluded_channels = settings.get().excluded_chat_channels;
+    let app_settings = settings.get();
+    let excluded_channels = app_settings.excluded_chat_channels.clone();
+    let tz_offset = app_settings
+        .manual_timezone_override
+        .or(app_settings.timezone_offset_seconds)
+        .unwrap_or(0);
 
     if !log_path.exists() {
         return Err(format!("Chat log file not found: {}", chat_log_file));
@@ -253,6 +287,15 @@ pub async fn tail_chat_log(
     if messages.is_empty() {
         return Ok(Vec::new());
     }
+
+    // Convert chat timestamps from local time to UTC
+    let messages: Vec<_> = messages
+        .into_iter()
+        .map(|mut msg| {
+            msg.timestamp = chat_local_to_utc(msg.timestamp, tz_offset);
+            msg
+        })
+        .collect();
 
     let file_name = log_path
         .file_name()

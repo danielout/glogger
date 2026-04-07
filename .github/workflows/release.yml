@@ -16,8 +16,47 @@ env:
   RELEASE_REPO: ${{ github.repository_owner }}/glogger-release
 
 jobs:
+  # ── Step 0: validate the project builds and tests pass ──
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Frontend type-check and build
+        run: npm run build
+
+      - name: Rust check and tests
+        working-directory: src-tauri
+        run: |
+          cargo check
+          cargo test
+
   # ── Step 1: bump version, generate changelog, push tag ──
   prepare:
+    needs: validate
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -108,22 +147,34 @@ jobs:
         shell: bash
         run: npm run tauri:build
 
-      - name: Collect artifacts
+      - name: Collect and rename artifacts
         shell: bash
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           BUNDLE_DIR="src-tauri/target/release/bundle"
           mkdir -p release-artifacts
 
           # Windows: MSI + NSIS
-          find "$BUNDLE_DIR/msi" -name "*.msi" -exec cp {} release-artifacts/ \; 2>/dev/null || true
-          find "$BUNDLE_DIR/nsis" -name "*.exe" -exec cp {} release-artifacts/ \; 2>/dev/null || true
+          for f in "$BUNDLE_DIR"/msi/*.msi; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-windows.msi"
+          done
+          for f in "$BUNDLE_DIR"/nsis/*.exe; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-windows-setup.exe"
+          done
 
-          # macOS: DMG + app bundle
-          find "$BUNDLE_DIR/dmg" -name "*.dmg" -exec cp {} release-artifacts/ \; 2>/dev/null || true
+          # macOS: DMG
+          for f in "$BUNDLE_DIR"/dmg/*.dmg; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-macos.dmg"
+          done
 
           # Linux: deb + AppImage
-          find "$BUNDLE_DIR/deb" -name "*.deb" -exec cp {} release-artifacts/ \; 2>/dev/null || true
-          find "$BUNDLE_DIR/appimage" -name "*.AppImage" -exec cp {} release-artifacts/ \; 2>/dev/null || true
+          for f in "$BUNDLE_DIR"/deb/*.deb; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-linux.deb"
+          done
+          for f in "$BUNDLE_DIR"/appimage/*.AppImage; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-linux.AppImage"
+          done
 
           echo "Collected artifacts:"
           ls -la release-artifacts/
@@ -160,11 +211,36 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
         run: |
           TAG="v${{ needs.prepare.outputs.version }}"
+          VERSION="${{ needs.prepare.outputs.version }}"
+          BASE_URL="https://github.com/$RELEASE_REPO/releases/download/$TAG"
+
+          # Build a download table from the artifacts that actually exist
+          DOWNLOADS="## Downloads\n\n| Platform | Installer |\n|----------|-----------|"
+          for file in all-artifacts/*; do
+            [ -f "$file" ] || continue
+            NAME="$(basename "$file")"
+            case "$NAME" in
+              *-windows-setup.exe) DOWNLOADS="$DOWNLOADS\n| **Windows** (recommended) | [$NAME]($BASE_URL/$NAME) |" ;;
+              *-windows.msi)       DOWNLOADS="$DOWNLOADS\n| **Windows** (MSI) | [$NAME]($BASE_URL/$NAME) |" ;;
+              *-macos.dmg)         DOWNLOADS="$DOWNLOADS\n| **macOS** | [$NAME]($BASE_URL/$NAME) |" ;;
+              *-linux.deb)         DOWNLOADS="$DOWNLOADS\n| **Linux** (Debian/Ubuntu) | [$NAME]($BASE_URL/$NAME) |" ;;
+              *-linux.AppImage)    DOWNLOADS="$DOWNLOADS\n| **Linux** (AppImage) | [$NAME]($BASE_URL/$NAME) |" ;;
+            esac
+          done
+
+          # Prepend downloads table to changelog
+          {
+            echo -e "$DOWNLOADS"
+            echo ""
+            echo "---"
+            echo ""
+            cat RELEASE_NOTES.md
+          } > FULL_RELEASE_NOTES.md
 
           gh release create "$TAG" \
             --repo "$RELEASE_REPO" \
             --title "$TAG" \
-            --notes-file RELEASE_NOTES.md
+            --notes-file FULL_RELEASE_NOTES.md
 
           for file in all-artifacts/*; do
             [ -f "$file" ] || continue
