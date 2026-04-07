@@ -69,11 +69,8 @@ if [ ${#fixes[@]} -gt 0 ]; then
   echo ""
 fi
 
-if [ ${#other[@]} -gt 0 ]; then
-  echo "### Other"
-  printf '%s\n' "${other[@]}"
-  echo ""
-fi
+# "Other" commits (docs, chore, refactor, etc.) are intentionally
+# excluded from user-facing release notes.
 
 # Stats
 COMMIT_COUNT=$(git rev-list --count "$RANGE" 2>/dev/null || echo "0")
