@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-4xl">
+  <div class="max-w-4xl h-full overflow-y-auto">
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-accent-gold text-2xl m-0">Market Values</h2>
       <div class="flex items-center gap-2">

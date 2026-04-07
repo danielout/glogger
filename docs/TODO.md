@@ -14,7 +14,7 @@ Small tasks and notes that don't belong in a dedicated plan.
 
 ## Quick Wins (Small Effort, Noticeable Value)
 
-- [ ] BUG: Market Prices screen doesn't scroll properly
+- [x] BUG: Market Prices screen doesn't scroll properly
   - The main values table in `MarketView.vue` has no explicit overflow handling inside its PaneLayout parent. Likely just needs an `overflow-y-auto` on the table container.
   - **Effort: Small | Impact: Medium (unusable at scale)**
 
