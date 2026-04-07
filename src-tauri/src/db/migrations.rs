@@ -9,7 +9,7 @@ use rusqlite::{Connection, Result};
 /// have that schema applied and won't re-run it.
 ///
 /// Example of adding a new migration:
-/// ```
+/// ```text
 /// if current_version < 2 {
 ///     migration_v2_add_foo(conn)?;
 ///     super::record_migration(conn, 2)?;
