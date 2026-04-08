@@ -1,10 +1,7 @@
-## What's Changed since v0.4.5
+## What's Changed since v0.4.6
 
 ### Fixes
-- fix: test fix to bypass false failure (`7bd4f26`)
-
-### Other
-- Time fix, update notifs, build flow improvements (`991c7f9`)
+- fix: market price list didn't scroll (`1c4dd53`)
 
 ---
-*2 commits since v0.4.5*
+*4 commits since v0.4.6*
