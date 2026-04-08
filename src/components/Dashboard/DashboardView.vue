@@ -78,7 +78,7 @@
         </div>
       </div>
 
-      <!-- Second row: Current Zone + Favor + Notes -->
+      <!-- Second row: Current Zone + Favor + Moon Phase -->
       <div class="grid grid-cols-3 gap-4">
         <!-- Current Zone -->
         <CurrentZone />
@@ -101,6 +101,11 @@
           <PlayerNotes />
         </div>
       </div>
+
+      <!-- Third row: Moon Phase + future cards -->
+      <div class="grid grid-cols-3 gap-4">
+        <MoonPhaseCard />
+      </div>
     </template>
 
     <!-- Aggregate view -->
@@ -120,6 +125,7 @@ import ActivityFeed from './ActivityFeed.vue'
 import PlayerNotes from './PlayerNotes.vue'
 import AggregateView from './AggregateView.vue'
 import CurrentZone from './CurrentZone.vue'
+import MoonPhaseCard from './MoonPhaseCard.vue'
 
 const store = useGameStateStore()
 const viewMode = ref<'active' | 'aggregate'>('active')

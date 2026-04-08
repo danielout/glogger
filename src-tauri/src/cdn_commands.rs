@@ -567,6 +567,99 @@ pub async fn get_recipes_producing_items(
     Ok(results)
 }
 
+// ── Moon phase commands ──────────────────────────────────────────────────────
+
+#[derive(serde::Serialize)]
+pub struct MoonPhaseResult {
+    /// Game phase name (e.g. "FullMoon", "WaningGibbousMoon")
+    pub game_phase: String,
+    /// Human-readable label (e.g. "Full Moon", "Waning Gibbous")
+    pub label: String,
+    /// 0-7 index into the phase cycle (0 = New Moon)
+    pub phase_index: u8,
+    /// Days until each future phase, in cycle order starting from the next phase
+    pub days_until: Vec<DaysUntilPhase>,
+}
+
+#[derive(serde::Serialize)]
+pub struct DaysUntilPhase {
+    pub game_phase: String,
+    pub label: String,
+    pub days: u32,
+}
+
+const GAME_PHASE_NAMES: &[(&str, &str)] = &[
+    ("NewMoon", "New Moon"),
+    ("WaxingCrescentMoon", "Waxing Crescent"),
+    ("QuarterMoon", "First Quarter"),
+    ("WaxingGibbousMoon", "Waxing Gibbous"),
+    ("FullMoon", "Full Moon"),
+    ("WaningGibbousMoon", "Waning Gibbous"),
+    ("LastQuarterMoon", "Last Quarter"),
+    ("WaningCrescentMoon", "Waning Crescent"),
+];
+
+/// Compute the game's moon phase index (0-7) from the crate's raw phase fraction.
+/// The game uses floor-based binning rather than the crate's round-based binning,
+/// which shifts phase boundaries by half a bin (~1.8 days).
+fn phase_fraction_to_index(mp: &moon_phase::MoonPhase) -> u8 {
+    let mut phase = mp.phase;
+    if phase < 0.0 {
+        phase += 1.0;
+    }
+    (phase * 8.0).floor() as u8 % 8
+}
+
+/// Get the current moon phase, snapped to midnight Eastern (server time).
+#[tauri::command]
+pub async fn get_current_moon_phase() -> Result<MoonPhaseResult, String> {
+    use std::time::{Duration, UNIX_EPOCH};
+
+    // Get current time in Eastern timezone to find today's date
+    let now = chrono::Utc::now();
+    let eastern = chrono_tz::US::Eastern;
+    let eastern_now = now.with_timezone(&eastern);
+    let midnight_eastern = eastern_now.date_naive().and_hms_opt(0, 0, 0).unwrap();
+    let midnight_utc = midnight_eastern
+        .and_local_timezone(eastern)
+        .unwrap()
+        .with_timezone(&chrono::Utc);
+    let midnight_system = UNIX_EPOCH + Duration::from_secs(midnight_utc.timestamp() as u64);
+
+    let mp = moon_phase::MoonPhase::new(midnight_system);
+    let current_index = phase_fraction_to_index(&mp);
+
+    // Calculate days until each future phase by walking forward day by day
+    let mut days_until = Vec::new();
+    for target_idx in 1..=7u8 {
+        let target_phase = (current_index + target_idx) % 8;
+        // Walk forward to find when this phase starts
+        for day in 1..=30u32 {
+            let future_time = UNIX_EPOCH
+                + Duration::from_secs(midnight_utc.timestamp() as u64 + (day as u64) * 86400);
+            let future_mp = moon_phase::MoonPhase::new(future_time);
+            let future_idx = phase_fraction_to_index(&future_mp);
+            if future_idx == target_phase {
+                let (game_name, label) = GAME_PHASE_NAMES[target_phase as usize];
+                days_until.push(DaysUntilPhase {
+                    game_phase: game_name.to_string(),
+                    label: label.to_string(),
+                    days: day,
+                });
+                break;
+            }
+        }
+    }
+
+    let (game_name, label) = GAME_PHASE_NAMES[current_index as usize];
+    Ok(MoonPhaseResult {
+        game_phase: game_name.to_string(),
+        label: label.to_string(),
+        phase_index: current_index,
+        days_until,
+    })
+}
+
 // ── Quest query commands ──────────────────────────────────────────────────────
 
 /// Get all quests.
@@ -1985,6 +2078,52 @@ pub async fn get_quests_for_skill(
         .iter()
         .filter_map(|key| data.quests.get(key).cloned())
         .collect();
+    Ok(results)
+}
+
+/// Get all quests that require a specific moon phase (via RequirementsToSustain).
+#[tauri::command]
+pub async fn get_quests_by_moon_phase(
+    moon_phase: String,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<QuestInfo>, String> {
+    let data = state.read().await;
+
+    fn has_moon_phase(req: &serde_json::Value, phase: &str) -> bool {
+        if let Some(t) = req.get("T").and_then(|v| v.as_str()) {
+            if t == "MoonPhase" {
+                if let Some(mp) = req.get("MoonPhase").and_then(|v| v.as_str()) {
+                    return mp == phase;
+                }
+            }
+        }
+        false
+    }
+
+    let mut results: Vec<QuestInfo> = data
+        .quests
+        .values()
+        .filter(|quest| {
+            if let Some(reqs) = quest.raw.get("RequirementsToSustain") {
+                // Can be a single object or an array
+                if let Some(arr) = reqs.as_array() {
+                    arr.iter().any(|r| has_moon_phase(r, &moon_phase))
+                } else {
+                    has_moon_phase(reqs, &moon_phase)
+                }
+            } else {
+                false
+            }
+        })
+        .cloned()
+        .collect();
+
+    results.sort_by(|a, b| {
+        let a_name = a.raw.get("DisplayName").and_then(|v| v.as_str()).unwrap_or("");
+        let b_name = b.raw.get("DisplayName").and_then(|v| v.as_str()).unwrap_or("");
+        a_name.cmp(b_name)
+    });
+
     Ok(results)
 }
 

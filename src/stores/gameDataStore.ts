@@ -292,6 +292,10 @@ export const useGameDataStore = defineStore("gameData", () => {
     return invoke<RecipeInfo[]>("get_recipes_for_keyword", { keyword });
   }
 
+  async function getQuestsByMoonPhase(moonPhase: string): Promise<QuestInfo[]> {
+    return invoke<QuestInfo[]>("get_quests_by_moon_phase", { moonPhase });
+  }
+
   // ── Storage vault queries ──────────────────────────────────────────────────
 
   interface StorageVaultZoneInfo {
@@ -385,6 +389,7 @@ export const useGameDataStore = defineStore("gameData", () => {
     getNpcsTrainingSkill,
     getQuestsForNpc,
     getQuestsForSkill,
+    getQuestsByMoonPhase,
     getRecipesForKeyword,
   };
 });

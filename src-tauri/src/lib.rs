@@ -85,6 +85,8 @@ use cdn_commands::{
     get_npcs_training_skill,
     get_quests_for_npc,
     get_quests_for_skill,
+    get_quests_by_moon_phase,
+    get_current_moon_phase,
     get_recipes_for_keyword,
     GameDataState,
 };
@@ -366,6 +368,8 @@ pub fn run() {
             get_npcs_training_skill,
             get_quests_for_npc,
             get_quests_for_skill,
+            get_quests_by_moon_phase,
+            get_current_moon_phase,
             get_recipes_for_keyword,
             // Player data - Market prices
             add_market_price,
