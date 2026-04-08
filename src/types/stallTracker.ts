@@ -12,6 +12,7 @@ export interface StallEvent {
   price_total: number | null
   raw_message: string
   created_at: string
+  ignored: boolean
 }
 
 export interface StallStats {

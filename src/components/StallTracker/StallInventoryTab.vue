@@ -224,7 +224,7 @@ const baseInventory = computed(() => {
   }
 
   for (const e of events) {
-    if (!e.item) continue
+    if (!e.item || e.ignored) continue
     const item = getItem(e.item)
     const sk = timestampToSortKey(e.event_timestamp)
 
@@ -288,7 +288,7 @@ const inventory = computed((): InventoryItem[] => {
   // Count sales per item within the period
   const periodSales = new Map<string, { sold: number, revenue: number }>()
   for (const e of store.shopLog) {
-    if (e.action !== 'bought' || !e.item) continue
+    if (e.action !== 'bought' || !e.item || e.ignored) continue
     const dk = timestampToDateKey(e.event_timestamp)
     if (!periodDates.has(dk)) continue
     const s = periodSales.get(e.item) ?? { sold: 0, revenue: 0 }

@@ -37,6 +37,7 @@ pub struct StallEvent {
     pub price_total: Option<i64>,
     pub raw_message: String,
     pub created_at: String,
+    pub ignored: bool,
 }
 
 #[derive(Serialize)]
@@ -79,6 +80,28 @@ pub fn insert_stall_events(pool: &DbPool, events: &[StallEventInput]) -> Result<
     Ok(count)
 }
 
+// ── Row mapper ─────────────────────────────────────────────────────────────
+
+fn row_to_stall_event(row: &rusqlite::Row) -> rusqlite::Result<StallEvent> {
+    let ignored_int: i64 = row.get(13)?;
+    Ok(StallEvent {
+        id: row.get(0)?,
+        event_timestamp: row.get(1)?,
+        log_timestamp: row.get(2)?,
+        log_title: row.get(3)?,
+        action: row.get(4)?,
+        player: row.get(5)?,
+        owner: row.get(6)?,
+        item: row.get(7)?,
+        quantity: row.get(8)?,
+        price_unit: row.get(9)?,
+        price_total: row.get(10)?,
+        raw_message: row.get(11)?,
+        created_at: row.get(12)?,
+        ignored: ignored_int != 0,
+    })
+}
+
 // ── Tauri commands ──────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -93,7 +116,7 @@ pub fn get_stall_sales(
 
     let mut stmt = conn
         .prepare(
-            "SELECT id, event_timestamp, log_timestamp, log_title, action, player, owner, item, quantity, price_unit, price_total, raw_message, created_at
+            "SELECT id, event_timestamp, log_timestamp, log_title, action, player, owner, item, quantity, price_unit, price_total, raw_message, created_at, ignored
              FROM stall_events
              WHERE action = 'bought'
              ORDER BY event_timestamp DESC
@@ -102,23 +125,7 @@ pub fn get_stall_sales(
         .map_err(|e| e.to_string())?;
 
     let rows = stmt
-        .query_map(rusqlite::params![limit, offset], |row| {
-            Ok(StallEvent {
-                id: row.get(0)?,
-                event_timestamp: row.get(1)?,
-                log_timestamp: row.get(2)?,
-                log_title: row.get(3)?,
-                action: row.get(4)?,
-                player: row.get(5)?,
-                owner: row.get(6)?,
-                item: row.get(7)?,
-                quantity: row.get(8)?,
-                price_unit: row.get(9)?,
-                price_total: row.get(10)?,
-                raw_message: row.get(11)?,
-                created_at: row.get(12)?,
-            })
-        })
+        .query_map(rusqlite::params![limit, offset], row_to_stall_event)
         .map_err(|e| e.to_string())?;
 
     rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
@@ -136,7 +143,7 @@ pub fn get_stall_log(
 
     let mut stmt = conn
         .prepare(
-            "SELECT id, event_timestamp, log_timestamp, log_title, action, player, owner, item, quantity, price_unit, price_total, raw_message, created_at
+            "SELECT id, event_timestamp, log_timestamp, log_title, action, player, owner, item, quantity, price_unit, price_total, raw_message, created_at, ignored
              FROM stall_events
              ORDER BY event_timestamp DESC
              LIMIT ?1 OFFSET ?2",
@@ -144,23 +151,7 @@ pub fn get_stall_log(
         .map_err(|e| e.to_string())?;
 
     let rows = stmt
-        .query_map(rusqlite::params![limit, offset], |row| {
-            Ok(StallEvent {
-                id: row.get(0)?,
-                event_timestamp: row.get(1)?,
-                log_timestamp: row.get(2)?,
-                log_title: row.get(3)?,
-                action: row.get(4)?,
-                player: row.get(5)?,
-                owner: row.get(6)?,
-                item: row.get(7)?,
-                quantity: row.get(8)?,
-                price_unit: row.get(9)?,
-                price_total: row.get(10)?,
-                raw_message: row.get(11)?,
-                created_at: row.get(12)?,
-            })
-        })
+        .query_map(rusqlite::params![limit, offset], row_to_stall_event)
         .map_err(|e| e.to_string())?;
 
     rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
@@ -217,4 +208,19 @@ pub fn clear_stall_events(db: State<'_, DbPool>) -> Result<usize, String> {
         .execute("DELETE FROM stall_events", [])
         .map_err(|e| e.to_string())?;
     Ok(deleted)
+}
+
+#[tauri::command]
+pub fn toggle_stall_event_ignored(
+    db: State<'_, DbPool>,
+    id: i64,
+    ignored: bool,
+) -> Result<(), String> {
+    let conn = db.get().map_err(|e| e.to_string())?;
+    conn.execute(
+        "UPDATE stall_events SET ignored = ?1 WHERE id = ?2",
+        rusqlite::params![ignored as i32, id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
 }

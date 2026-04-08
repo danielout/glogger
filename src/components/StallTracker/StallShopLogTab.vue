@@ -24,6 +24,7 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="text-left text-text-muted text-xs uppercase tracking-wide border-b border-border-default">
+              <th class="pb-2 w-8"></th>
               <th class="pb-2 pr-4 cursor-pointer hover:text-text-primary" @click="toggleSort('event_timestamp')">Date {{ sortIcon('event_timestamp') }}</th>
               <th class="pb-2 pr-4 cursor-pointer hover:text-text-primary" @click="toggleSort('player')">Player {{ sortIcon('player') }}</th>
               <th class="pb-2 pr-4 cursor-pointer hover:text-text-primary" @click="toggleSort('action')">Action {{ sortIcon('action') }}</th>
@@ -36,7 +37,16 @@
             <tr
               v-for="entry in sortedLog"
               :key="entry.id"
-              class="border-b border-border-light hover:bg-[#1a1a2e] transition-colors">
+              class="border-b border-border-light hover:bg-[#1a1a2e] transition-colors"
+              :class="{ 'opacity-35': entry.ignored }">
+              <td class="py-1.5 pr-2 text-center">
+                <button
+                  class="text-text-dim hover:text-text-primary text-xs cursor-pointer"
+                  :title="entry.ignored ? 'Include in stats' : 'Exclude from stats'"
+                  @click="handleToggleIgnored(entry)">
+                  {{ entry.ignored ? '\u25CB' : '\u2298' }}
+                </button>
+              </td>
               <td class="py-1.5 pr-4 text-text-dim text-xs whitespace-nowrap">{{ entry.event_timestamp }}</td>
               <td class="py-1.5 pr-4 text-entity-player">{{ entry.player }}</td>
               <td class="py-1.5 pr-4">
@@ -57,6 +67,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { confirm } from '@tauri-apps/plugin-dialog'
 import EmptyState from '../Shared/EmptyState.vue'
 import ItemInline from '../Shared/Item/ItemInline.vue'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
@@ -153,5 +164,17 @@ function formatGold(entry: StallEvent): string {
   if (entry.price_total != null) return entry.price_total.toLocaleString() + 'g'
   if (entry.price_unit != null) return Math.round(entry.price_unit).toLocaleString() + 'g/ea'
   return ''
+}
+
+async function handleToggleIgnored(event: StallEvent) {
+  const action = event.ignored ? 'Include' : 'Exclude'
+  const item = event.item ?? 'this event'
+  const ok = await confirm(
+    `${action} "${item}" (${event.action}, ${event.event_timestamp}) from stats?`,
+    { title: `${action} Event`, kind: 'info' },
+  )
+  if (ok) {
+    await store.toggleIgnored(event.id, !event.ignored)
+  }
 }
 </script>

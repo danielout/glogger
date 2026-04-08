@@ -127,6 +127,11 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 20)?;
     }
 
+    if current_version < 21 {
+        migration_v21_stall_ignored(conn)?;
+        super::record_migration(conn, 21)?;
+    }
+
     Ok(())
 }
 
@@ -1513,5 +1518,13 @@ fn migration_v20_stall_entry_index(conn: &Connection) -> Result<()> {
         "
     )?;
 
+    Ok(())
+}
+
+/// Migration V21: Add ignored flag to stall_events for soft-muting individual events.
+fn migration_v21_stall_ignored(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "ALTER TABLE stall_events ADD COLUMN ignored INTEGER NOT NULL DEFAULT 0;"
+    )?;
     Ok(())
 }

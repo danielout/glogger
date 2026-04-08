@@ -134,6 +134,7 @@ const filteredSales = computed(() => {
   const fromKey = filterDateFrom.value ? timestampToDateKey(filterDateFrom.value) : 0
   const toKey = filterDateTo.value ? timestampToDateKey(filterDateTo.value) : Infinity
   return store.sales.filter(s => {
+    if (s.ignored) return false
     if (fb && s.player !== fb) return false
     if (fi && s.item !== fi) return false
     if (fromKey || toKey < Infinity) {

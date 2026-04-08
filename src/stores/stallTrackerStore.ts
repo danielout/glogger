@@ -49,6 +49,11 @@ export const useStallTrackerStore = defineStore('stallTracker', () => {
     await Promise.all([loadSales(), loadShopLog(), loadStats()])
   }
 
+  async function toggleIgnored(id: number, ignored: boolean) {
+    await invoke('toggle_stall_event_ignored', { id, ignored })
+    await loadAll()
+  }
+
   async function clearAll(): Promise<number> {
     const deleted = await invoke<number>('clear_stall_events')
     await loadAll()
@@ -70,6 +75,7 @@ export const useStallTrackerStore = defineStore('stallTracker', () => {
     loadShopLog,
     loadStats,
     loadAll,
+    toggleIgnored,
     clearAll,
   }
 })

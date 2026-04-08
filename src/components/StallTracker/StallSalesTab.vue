@@ -44,6 +44,7 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="text-left text-text-muted text-xs uppercase tracking-wide border-b border-border-default">
+              <th class="pb-2 w-8"></th>
               <th class="pb-2 pr-4 cursor-pointer hover:text-text-primary" @click="toggleSort('event_timestamp')">Date {{ sortIcon('event_timestamp') }}</th>
               <th class="pb-2 pr-4 cursor-pointer hover:text-text-primary" @click="toggleSort('player')">Buyer {{ sortIcon('player') }}</th>
               <th class="pb-2 pr-4 cursor-pointer hover:text-text-primary" @click="toggleSort('item')">Item {{ sortIcon('item') }}</th>
@@ -56,7 +57,16 @@
             <tr
               v-for="sale in sortedSales"
               :key="sale.id"
-              class="border-b border-border-light hover:bg-[#1a1a2e] transition-colors">
+              class="border-b border-border-light hover:bg-[#1a1a2e] transition-colors"
+              :class="{ 'opacity-35': sale.ignored }">
+              <td class="py-1.5 pr-2 text-center">
+                <button
+                  class="text-text-dim hover:text-text-primary text-xs cursor-pointer"
+                  :title="sale.ignored ? 'Include in stats' : 'Exclude from stats'"
+                  @click="handleToggleIgnored(sale)">
+                  {{ sale.ignored ? '\u25CB' : '\u2298' }}
+                </button>
+              </td>
               <td class="py-1.5 pr-4 text-text-dim text-xs whitespace-nowrap">{{ sale.event_timestamp }}</td>
               <td class="py-1.5 pr-4 text-entity-player">{{ sale.player }}</td>
               <td class="py-1.5 pr-4"><ItemInline v-if="sale.item" :reference="sale.item" :show-icon="false" /></td>
@@ -73,10 +83,12 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { confirm } from '@tauri-apps/plugin-dialog'
 import EmptyState from '../Shared/EmptyState.vue'
 import ItemInline from '../Shared/Item/ItemInline.vue'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
+import type { StallEvent } from '../../types/stallTracker'
 import { timestampToSortKey, timestampToDateKey, uniqueDates } from './stallTimestamp'
 
 const store = useStallTrackerStore()
@@ -128,7 +140,7 @@ const sortedSales = computed(() => {
 })
 
 const filteredStats = computed(() => {
-  const list = sortedSales.value
+  const list = sortedSales.value.filter(s => !s.ignored)
   return {
     totalSales: list.length,
     totalRevenue: list.reduce((sum, s) => sum + (s.price_total ?? 0), 0),
@@ -149,5 +161,17 @@ function toggleSort(key: SortKey) {
 function sortIcon(key: string): string {
   if (sortKey.value !== key) return ''
   return sortAsc.value ? '\u25B2' : '\u25BC'
+}
+
+async function handleToggleIgnored(event: StallEvent) {
+  const action = event.ignored ? 'Include' : 'Exclude'
+  const item = event.item ?? 'this event'
+  const ok = await confirm(
+    `${action} "${item}" (${event.event_timestamp}, ${event.price_total?.toLocaleString() ?? 0}g) from stats?`,
+    { title: `${action} Event`, kind: 'info' },
+  )
+  if (ok) {
+    await store.toggleIgnored(event.id, !event.ignored)
+  }
 }
 </script>
