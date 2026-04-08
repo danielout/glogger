@@ -1,0 +1,64 @@
+#!/usr/bin/env ruby
+
+# Converts a sales history CSV (exported from a spreadsheet) into
+# PlayerShopLog-style .txt files that glogger can import.
+#
+# Usage:
+#   ruby bin/csv_to_book path/to/pg-sales-history.csv [output_dir]
+#
+# Produces one file per date in the output directory (default: ./output/):
+#   shop-log-2026-03-23.txt
+#   shop-log-2026-03-24.txt
+#   ...
+
+require "csv"
+require "time"
+require "fileutils"
+
+csv_path = ARGV[0] || abort("Usage: ruby bin/csv_to_book <csv_file> [output_dir]")
+output_dir = ARGV[1] || File.join(File.dirname(csv_path), "shop-log-import")
+
+FileUtils.mkdir_p(output_dir)
+
+# Group rows by date
+rows_by_date = Hash.new { |h, k| h[k] = [] }
+
+CSV.foreach(csv_path, headers: true) do |row|
+  date = row["date"]
+  next if date.nil? || date.strip.empty?
+
+  rows_by_date[date] << row
+end
+
+puts "Read #{rows_by_date.values.sum(&:length)} entries across #{rows_by_date.size} dates"
+
+rows_by_date.each do |date, rows|
+  # Sort by timestamp newest first — matches the game's book format.
+  # The Rust parser reverses entries to assign stable indices (oldest = 0).
+  rows.sort_by! { |r| r["date_time"] }.reverse!
+
+  lines = rows.map do |row|
+    time = Time.parse(row["date_time"])
+    timestamp = time.strftime("%a %b %-d %H:%M")
+
+    player = row["player"]
+    item = row["item"]
+    quantity = (row["quantity"] || "1").to_i
+    price_total = row["price_total"].to_i
+
+    # Build the game log format:
+    #   "Player bought Item at a cost of X per Y = Z"
+    #   "Player bought Item xN at a cost of X per Y = Z" (when quantity > 1)
+    item_part = quantity > 1 ? "#{item} x#{quantity}" : item
+    # Use "price_total per quantity" — always produces valid integer values
+    cost_part = "at a cost of #{price_total} per #{quantity} = #{price_total}"
+
+    "#{timestamp} - #{player} bought #{item_part} #{cost_part}"
+  end
+
+  filename = File.join(output_dir, "shop-log-#{date}.txt")
+  File.write(filename, lines.join("\n\n") + "\n\n")
+  puts "  #{filename} (#{lines.length} entries)"
+end
+
+puts "Done!"
