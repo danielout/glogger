@@ -24,11 +24,11 @@ static REMOVED_RE: Lazy<Regex> = Lazy::new(|| {
 });
 
 static CONFIGURED_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^(?P<player>\S+) configured (?P<item>.+?)x?(?P<quantity>\d+)? to cost (?P<price_unit>\d+) per (?P<quantity_unit>\d+)\.?\s*(?P<rest>.*)$").unwrap()
+    Regex::new(r"^(?P<player>\S+) configured (?P<item>.+?) ?x?(?P<quantity>\d+)? to cost (?P<price_unit>\d+) per (?P<quantity_unit>\d+)\.?\s*(?P<rest>.*)$").unwrap()
 });
 
 static VISIBLE_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^(?P<player>\S+) made (?P<item>.+?)x?(?P<quantity>\d+)? visible in shop at a cost of (?P<price_unit>\d+) per (?P<quantity_unit>\d+)\.?\s*(?P<rest>.*)$").unwrap()
+    Regex::new(r"^(?P<player>\S+) made (?P<item>.+?) ?x?(?P<quantity>\d+)? visible in shop at a cost of (?P<price_unit>\d+) per (?P<quantity_unit>\d+)\.?\s*(?P<rest>.*)$").unwrap()
 });
 
 static COLLECTED_RE: Lazy<Regex> = Lazy::new(|| {
@@ -339,6 +339,24 @@ mod tests {
         assert_eq!(entry.player, "Deradon");
         assert_eq!(entry.item, Some("Nice Saddle".to_string()));
         assert_eq!(entry.price_unit, Some(4000.0));
+    }
+
+    #[test]
+    fn test_parse_visible_with_space_before_quantity() {
+        let entry = parse_entry(0, "Sat Mar 28 13:30", "Deradon made Aquamarine x49 visible in shop at a cost of 750 per 1");
+        assert_eq!(entry.action, "visible");
+        assert_eq!(entry.item, Some("Aquamarine".to_string()));
+        assert_eq!(entry.quantity, 49);
+        assert_eq!(entry.price_unit, Some(750.0));
+    }
+
+    #[test]
+    fn test_parse_configured_with_space_before_quantity() {
+        let entry = parse_entry(0, "Sat Mar 28 13:30", "Deradon configured Aquamarine x49 to cost 750 per 1");
+        assert_eq!(entry.action, "configured");
+        assert_eq!(entry.item, Some("Aquamarine".to_string()));
+        assert_eq!(entry.quantity, 49);
+        assert_eq!(entry.price_unit, Some(750.0));
     }
 
     #[test]

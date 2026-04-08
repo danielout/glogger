@@ -225,7 +225,9 @@ interface BaseItem {
 
 const baseInventory = computed(() => {
   const events = [...store.shopLog]
-  events.sort((a, b) => timestampToSortKey(a.event_timestamp) - timestampToSortKey(b.event_timestamp))
+  // Sort chronologically; use id as tiebreaker for events within the same
+  // minute so that added → visible → bought order is preserved.
+  events.sort((a, b) => timestampToSortKey(a.event_timestamp) - timestampToSortKey(b.event_timestamp) || a.id - b.id)
 
   const items = new Map<string, {
     tiers: PriceTier[]          // price stack: each entry is a (qty, price) slot
@@ -278,15 +280,28 @@ const baseInventory = computed(() => {
       case 'configured': {
         if (e.price_unit != null) {
           item.lastPrice = e.price_unit
-          // Set price on the most recent unpriced tier, or update the last tier
-          let unpricedIdx = -1
-          for (let i = item.tiers.length - 1; i >= 0; i--) {
-            if (item.tiers[i].price === null) { unpricedIdx = i; break }
+          // Price up to e.quantity units across unpriced tiers.
+          // The event says "N units at this price", so we apply to
+          // that many units, not all unpriced stock.
+          let remaining = e.quantity
+          let foundUnpriced = false
+          for (const tier of item.tiers) {
+            if (remaining <= 0) break
+            if (tier.price === null && tier.qty > 0) {
+              const apply = Math.min(tier.qty, remaining)
+              if (apply === tier.qty) {
+                tier.price = e.price_unit
+              } else {
+                // Split tier: price part of it, leave the rest unpriced
+                tier.qty -= apply
+                item.tiers.push({ qty: apply, price: e.price_unit })
+              }
+              remaining -= apply
+              foundUnpriced = true
+            }
           }
-          if (unpricedIdx >= 0) {
-            item.tiers[unpricedIdx].price = e.price_unit
-          } else if (item.tiers.length > 0) {
-            // All tiers already priced — update the last one
+          if (!foundUnpriced && item.tiers.length > 0) {
+            // All tiers already priced — update the last one (price change)
             item.tiers[item.tiers.length - 1].price = e.price_unit
           }
         }
