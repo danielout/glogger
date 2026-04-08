@@ -13,6 +13,7 @@
       <StallSalesTab v-if="activeTab === 'sales'" />
       <StallShopLogTab v-else-if="activeTab === 'shop-log'" />
       <StallRevenueTab v-else-if="activeTab === 'revenue'" />
+      <StallInventoryTab v-else-if="activeTab === 'inventory'" />
     </div>
   </div>
 </template>
@@ -24,12 +25,14 @@ import TabBar from '../Shared/TabBar.vue'
 import StallSalesTab from './StallSalesTab.vue'
 import StallShopLogTab from './StallShopLogTab.vue'
 import StallRevenueTab from './StallRevenueTab.vue'
+import StallInventoryTab from './StallInventoryTab.vue'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 
 const tabs = [
   { id: 'sales', label: 'Sales' },
   { id: 'shop-log', label: 'Shop Log' },
   { id: 'revenue', label: 'Revenue' },
+  { id: 'inventory', label: 'Inventory' },
 ]
 
 const activeTab = ref('sales')
