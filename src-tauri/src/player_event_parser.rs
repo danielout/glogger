@@ -986,13 +986,11 @@ impl PlayerEventParser {
         let args_start = line.find("ProcessBook(")? + "ProcessBook(".len();
         let args = &line[args_start..];
 
-        // Extract first three quoted strings
-        let title = extract_quoted_string(args, 0)?;
-        let after_title = &args[args.find(&format!("\"{}\"", title))? + title.len() + 2..];
-        let content = extract_quoted_string(after_title, 0)?;
-        let after_content =
-            &after_title[after_title.find(&format!("\"{}\"", content))? + content.len() + 2..];
-        let book_type = extract_quoted_string(after_content, 0)?;
+        // Extract quoted strings sequentially using position tracking
+        // so escaped quotes inside content don't break parsing.
+        let (title, pos1) = extract_quoted_string_with_pos(args, 0)?;
+        let (content, pos2) = extract_quoted_string_with_pos(&args[pos1..], 0)?;
+        let (book_type, _) = extract_quoted_string_with_pos(&args[pos1 + pos2..], 0)?;
 
         Some(PlayerEvent::BookOpened {
             timestamp: ts,
@@ -1459,26 +1457,55 @@ fn extract_block_field(block: &str, key: &str) -> Option<String> {
 }
 
 /// Extract the nth quoted string from text (0-indexed)
-fn extract_quoted_string(text: &str, n: usize) -> Option<String> {
+/// Extract the n-th quoted string from `text`, properly handling escaped
+/// quotes (`\"`) inside the string. Returns `(value, end_pos)` where
+/// `end_pos` is the byte index just past the closing quote.
+fn extract_quoted_string_with_pos(text: &str, n: usize) -> Option<(String, usize)> {
+    let bytes = text.as_bytes();
     let mut count = 0;
     let mut pos = 0;
-    while pos < text.len() {
-        if let Some(q_start) = text[pos..].find('"') {
-            let abs_start = pos + q_start + 1;
-            if let Some(q_end) = text[abs_start..].find('"') {
+
+    while pos < bytes.len() {
+        // Find the opening quote
+        let q_start = pos + memchr_quote(&bytes[pos..])?;
+        let content_start = q_start + 1;
+
+        // Scan for the closing quote, skipping escaped quotes
+        let mut i = content_start;
+        let mut value = String::new();
+        loop {
+            if i >= bytes.len() {
+                return None; // unterminated string
+            }
+            if bytes[i] == b'\\' && i + 1 < bytes.len() && bytes[i + 1] == b'"' {
+                // Escaped quote — include literal quote and skip both chars
+                value.push('"');
+                i += 2;
+            } else if bytes[i] == b'"' {
+                // Unescaped closing quote
                 if count == n {
-                    return Some(text[abs_start..abs_start + q_end].to_string());
+                    return Some((value, i + 1));
                 }
                 count += 1;
-                pos = abs_start + q_end + 1;
-            } else {
+                pos = i + 1;
                 break;
+            } else {
+                value.push(bytes[i] as char);
+                i += 1;
             }
-        } else {
-            break;
         }
     }
     None
+}
+
+/// Find the first `"` byte in a slice.
+fn memchr_quote(bytes: &[u8]) -> Option<usize> {
+    bytes.iter().position(|&b| b == b'"')
+}
+
+/// Backwards-compatible wrapper used by most call sites that don't need position.
+fn extract_quoted_string(text: &str, n: usize) -> Option<String> {
+    extract_quoted_string_with_pos(text, n).map(|(s, _)| s)
 }
 
 // ============================================================
@@ -1860,6 +1887,48 @@ mod tests {
             } => {
                 assert_eq!(title, "Yesterday's Shop Logs");
                 assert_eq!(content, "Toncom bought Guava x5");
+                assert_eq!(book_type, "PlayerShopLog");
+            }
+            _ => panic!("Expected BookOpened"),
+        }
+    }
+
+    #[test]
+    fn test_parse_book_with_escaped_quotes() {
+        let mut parser = PlayerEventParser::new();
+        let line = r####"[20:26:42] LocalPlayer: ProcessBook("Today's Shop Logs", "Tue Apr 7 16:25 - Deradon set shop sign to \"### Buying \"Pixie Dust\" ###\"\n\nTue Apr 7 15:00 - Kork bought Orcish Spell Pouch at a cost of 450 per 1 = 450", "PlayerShopLog", "", "", False, False, False, False, False, "")"####;
+        let events = parser.process_line(line);
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::BookOpened {
+                title,
+                content,
+                book_type,
+                ..
+            } => {
+                assert_eq!(title, "Today's Shop Logs");
+                assert!(content.contains("Pixie Dust"), "content should contain shop sign text: {}", content);
+                assert!(content.contains("Kork bought Orcish Spell Pouch"), "content should contain sale entry: {}", content);
+                assert_eq!(book_type, "PlayerShopLog");
+            }
+            _ => panic!("Expected BookOpened"),
+        }
+    }
+
+    #[test]
+    fn test_parse_book_with_shop_name_quotes() {
+        let mut parser = PlayerEventParser::new();
+        let line = r##"[20:26:44] LocalPlayer: ProcessBook("Yesterday's Shop Logs", "Mon Apr 6 10:00 - Deradon set shop name to \"Horse Gear and Co\"\n\nMon Apr 6 09:00 - Synreal bought Quality Horseshoes at a cost of 5000 per 1 = 5000", "PlayerShopLog", "", "", False, False, False, False, False, "")"##;
+        let events = parser.process_line(line);
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::BookOpened {
+                content,
+                book_type,
+                ..
+            } => {
+                assert!(content.contains("Horse Gear and Co"), "content should contain shop name: {}", content);
+                assert!(content.contains("Synreal bought"), "content should contain sale: {}", content);
                 assert_eq!(book_type, "PlayerShopLog");
             }
             _ => panic!("Expected BookOpened"),

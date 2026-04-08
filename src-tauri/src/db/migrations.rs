@@ -117,6 +117,11 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 18)?;
     }
 
+    if current_version < 19 {
+        migration_v19_stall_tracker(conn)?;
+        super::record_migration(conn, 19)?;
+    }
+
     Ok(())
 }
 
@@ -1424,6 +1429,35 @@ fn migration_v16_survey_data_imports(conn: &Connection) -> Result<()> {
             REFERENCES survey_data_imports(id) ON DELETE CASCADE;
 
         CREATE INDEX idx_survey_session_stats_import ON survey_session_stats(import_id);
+        "
+    )?;
+
+    Ok(())
+}
+
+/// Migration V19: Stall tracker — stores parsed shop log events from PlayerShopLog books.
+fn migration_v19_stall_tracker(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE stall_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_timestamp TEXT NOT NULL,
+            log_timestamp TEXT NOT NULL,
+            log_title TEXT NOT NULL,
+            action TEXT NOT NULL,
+            player TEXT NOT NULL,
+            owner TEXT,
+            item TEXT,
+            quantity INTEGER NOT NULL DEFAULT 1,
+            price_unit REAL,
+            price_total INTEGER,
+            raw_message TEXT NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(event_timestamp, raw_message)
+        );
+
+        CREATE INDEX idx_stall_events_action ON stall_events(action);
+        CREATE INDEX idx_stall_events_created ON stall_events(created_at DESC);
+        CREATE INDEX idx_stall_events_timestamp ON stall_events(event_timestamp);
         "
     )?;
 

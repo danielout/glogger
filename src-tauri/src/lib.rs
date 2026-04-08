@@ -13,6 +13,7 @@ mod log_watchers;
 mod parsers;
 mod player_event_parser;
 mod replay;
+mod shop_log_parser;
 mod settings;
 mod setup_commands;
 mod survey_parser;
@@ -139,6 +140,7 @@ use db::market_commands::{
     delete_market_value, export_market_values, get_market_value, get_market_values,
     import_market_values, set_market_value,
 };
+use db::stall_tracker_commands::{get_stall_log, get_stall_sales, get_stall_stats};
 use db::player_commands::{
     add_market_price, add_sale, get_historical_sessions, get_market_prices_for_item,
     get_recent_events, get_recent_sales, log_event, patch_survey_session,
@@ -528,6 +530,10 @@ pub fn run() {
             get_aggregate_inventory,
             get_aggregate_wealth,
             get_aggregate_skills,
+            // Stall tracker
+            get_stall_sales,
+            get_stall_log,
+            get_stall_stats,
             // Update check
             check_for_update,
         ])

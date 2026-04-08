@@ -19,6 +19,7 @@ pub mod migrations;
 pub mod player_commands;
 pub mod player_commands_survey_events;
 pub mod queries;
+pub mod stall_tracker_commands;
 pub mod survey_commands;
 pub mod survey_sharing_commands;
 

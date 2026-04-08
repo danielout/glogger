@@ -9,6 +9,7 @@ use crate::log_watchers::{ChatLogWatcher, LogEvent, LogFileWatcher, PlayerLogWat
 use crate::parsers::chat_local_to_utc;
 use crate::player_event_parser::PlayerEvent;
 use crate::settings::SettingsManager;
+use crate::shop_log_parser;
 use crate::survey_parser::KnownSurveyType;
 use crate::survey_persistence::SurveySessionTracker;
 use crate::watch_rules::evaluate_rules;
@@ -609,6 +610,40 @@ impl DataIngestCoordinator {
                     }
                 }
                 LogEvent::PlayerEventParsed(player_event) => {
+                    // Check for shop log books and persist stall events
+                    if let PlayerEvent::BookOpened { ref timestamp, ref title, ref content, ref book_type } = player_event {
+                        if book_type == "PlayerShopLog" {
+                            let shop_log = shop_log_parser::parse_shop_log(title, content, timestamp);
+                            if !shop_log.entries.is_empty() {
+                                let inputs: Vec<_> = shop_log.entries.iter().map(|e| {
+                                    crate::db::stall_tracker_commands::StallEventInput {
+                                        event_timestamp: e.timestamp.clone(),
+                                        log_timestamp: shop_log.log_timestamp.clone(),
+                                        log_title: shop_log.title.clone(),
+                                        action: e.action.clone(),
+                                        player: e.player.clone(),
+                                        owner: shop_log.owner.clone(),
+                                        item: e.item.clone(),
+                                        quantity: e.quantity,
+                                        price_unit: e.price_unit,
+                                        price_total: e.price_total,
+                                        raw_message: e.raw_message.clone(),
+                                    }
+                                }).collect();
+                                match crate::db::stall_tracker_commands::insert_stall_events(&self.db_pool, &inputs) {
+                                    Ok(inserted) => {
+                                        if inserted > 0 {
+                                            self.app_handle.emit("stall-events-updated", inserted).ok();
+                                        }
+                                    }
+                                    Err(e) => {
+                                        eprintln!("[coordinator] Failed to persist stall events: {e}");
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // Accumulate player events — DB persistence happens on flush
                     // in a single transaction for better performance during rapid events
                     player_event_batch.push(player_event);

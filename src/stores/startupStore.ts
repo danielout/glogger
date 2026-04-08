@@ -10,6 +10,7 @@ import { useCoordinatorStore } from "./coordinatorStore";
 import { useMarketStore } from "./marketStore";
 import { useSurveyStore } from "./surveyStore";
 import { useFarmingStore } from "./farmingStore";
+import { useStallTrackerStore } from "./stallTrackerStore";
 import { useDeathStore } from "./deathStore";
 import type { PlayerEvent } from "../types/playerEvents";
 
@@ -204,6 +205,7 @@ export const useStartupStore = defineStore("startup", () => {
     const marketStore = useMarketStore();
     const surveyStore = useSurveyStore();
     const farmingStore = useFarmingStore();
+    const stallTrackerStore = useStallTrackerStore();
     const deathStore = useDeathStore();
 
     // ── Task 1: Wait for game data (CDN) ────────────────────────────────
@@ -317,6 +319,8 @@ export const useStartupStore = defineStore("startup", () => {
       await gameState.loadStorageVaults();
       // Load market values
       await marketStore.loadAll();
+      // Load stall tracker data
+      await stallTrackerStore.loadAll();
       log("Game state ready");
       updateTask(TASK_GAME_STATE, "done");
     } catch (e) {
