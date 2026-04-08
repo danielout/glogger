@@ -11,11 +11,11 @@ export const useStallTrackerStore = defineStore('stallTracker', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function loadSales(limit?: number, offset?: number) {
+  async function loadSales() {
     loading.value = true
     error.value = null
     try {
-      sales.value = await invoke<StallEvent[]>('get_stall_sales', { limit, offset })
+      sales.value = await invoke<StallEvent[]>('get_stall_sales')
     } catch (e) {
       error.value = String(e)
       console.error('[stallTrackerStore] Failed to load sales:', e)
@@ -24,11 +24,11 @@ export const useStallTrackerStore = defineStore('stallTracker', () => {
     }
   }
 
-  async function loadShopLog(limit?: number, offset?: number) {
+  async function loadShopLog() {
     loading.value = true
     error.value = null
     try {
-      shopLog.value = await invoke<StallEvent[]>('get_stall_log', { limit, offset })
+      shopLog.value = await invoke<StallEvent[]>('get_stall_log')
     } catch (e) {
       error.value = String(e)
       console.error('[stallTrackerStore] Failed to load shop log:', e)
