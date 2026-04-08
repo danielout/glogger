@@ -224,3 +224,45 @@ pub fn toggle_stall_event_ignored(
     .map_err(|e| e.to_string())?;
     Ok(())
 }
+
+#[derive(Serialize)]
+pub struct ImportResult {
+    pub total_entries: usize,
+    pub new_entries: usize,
+}
+
+#[tauri::command]
+pub fn import_shop_log_file(
+    db: State<'_, DbPool>,
+    path: String,
+) -> Result<ImportResult, String> {
+    let content = std::fs::read_to_string(&path)
+        .map_err(|e| format!("Failed to read file: {e}"))?;
+
+    let shop_log = crate::shop_log_parser::parse_shop_log("Imported", &content, "imported");
+    let total_entries = shop_log.entries.len();
+
+    let inputs: Vec<StallEventInput> = shop_log.entries.iter().map(|e| {
+        StallEventInput {
+            event_timestamp: e.timestamp.clone(),
+            log_timestamp: "imported".to_string(),
+            log_title: "Imported".to_string(),
+            action: e.action.clone(),
+            player: e.player.clone(),
+            owner: shop_log.owner.clone(),
+            item: e.item.clone(),
+            quantity: e.quantity,
+            price_unit: e.price_unit,
+            price_total: e.price_total,
+            raw_message: e.raw_message.clone(),
+            entry_index: e.entry_index,
+        }
+    }).collect();
+
+    let new_entries = insert_stall_events(&db, &inputs)?;
+
+    Ok(ImportResult {
+        total_entries,
+        new_entries,
+    })
+}
