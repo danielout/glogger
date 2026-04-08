@@ -34,6 +34,8 @@
           <select
             v-model.number="salesPeriodDays"
             class="px-2 py-1 bg-surface-base border border-border-default rounded text-xs text-text-primary focus:outline-none focus:border-accent-gold/50">
+            <option :value="1">Last day</option>
+            <option :value="2">Last 2 days</option>
             <option :value="7">Last 7 days</option>
             <option :value="14">Last 14 days</option>
             <option :value="30">Last 30 days</option>
