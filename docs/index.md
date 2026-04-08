@@ -108,6 +108,8 @@ Per-screen documentation organized by view.
 
 ## Plans
 
+- [build-planner-improvements.md](plans/build-planner-improvements.md) — Build planner polish and accuracy improvements.
+- [dashboard-improvements.md](plans/dashboard-improvements.md) — Dashboard cards, layout polish, and new tracker features.
 - [unified-event-stream.md](plans/unified-event-stream.md) — Unifying Player.log and Chat.log into a single event stream (Phase 0+1 complete, Phase 2+ remaining).
 
 ## Samples

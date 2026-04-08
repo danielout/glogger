@@ -33,10 +33,6 @@ Small tasks and notes that don't belong in a dedicated plan.
   - Currently uses generic "Primary"/"Secondary" labels with blue/emerald color coding. Could replace with actual skill names (e.g., "Sword / Psychology") throughout the UI — the skill names are already available on the preset.
   - **Effort: Small | Impact: Medium (reduces confusion)**
 
-- [ ] Dashboard currency card layout improvements and a more useful header card
-  - `ContextBar.vue` currently shows currencies in a simple horizontal row. Needs layout polish and a more informative header. Straightforward styling/layout work.
-  - **Effort: Small | Impact: Low-Medium (polish)**
-
 ---
 
 ## Medium Effort, High Value
@@ -45,33 +41,6 @@ Small tasks and notes that don't belong in a dedicated plan.
   - Design/UX task. All tabs already use `PaneLayout` with consistent two-pane search/detail pattern. Improvements are incremental polish: better section headers, consistent key-value grids, spacing per `docs/architecture/ux-standards.md`. Could break into sub-tasks per browser tab.
   - **Effort: Medium (iterative) | Impact: Medium (polish)**
 
-- [ ] Better, more detailed gear searching in both data browser and build planner
-  - `ItemSearch.vue` has text search, keyword filter, slot filter, and level range. `SlotItemPicker.vue` has text search, skill filter, and level range. Neither supports armor type, weapon type, or searching within item attributes/effects. Would need new filter dropdowns and backend filtering logic.
-  - **Effort: Medium | Impact: High (core workflow improvement)**
-
-- [ ] Build planner layout needs to use PaneLayout
-  - `BuildPlannerScreen.vue` uses custom flex layout (`w-80 shrink-0` + `flex-1`) instead of PaneLayout. Needs migration to match the project convention. Summary pane is a teleported slide-out overlay which further complicates layout.
-  - **Effort: Medium | Impact: Medium (consistency + resizable panes)**
-
-- [ ] Build planner summary pane needs massive formatting improvements
-  - `BuildSummary.vue` is a slide-out overlay with many sections (skills, armor breakdown, CP overview, per-slot table, effects by skill/totals/ability). The information density is high and formatting is rough. May also want to reconsider whether a slide-out is the best pattern vs. a dedicated pane.
-  - **Effort: Medium | Impact: Medium (usability of a core feature)**
-
-- [ ] Better support in build planner for recipes that consume crafting points
-  - System currently handles augments (100 CP each) and has per-slot CP budgets (100-160 depending on item origin). Regular recipes that consume CP from the budget aren't well represented in the mod picker. Needs investigation into what the game actually supports beyond augments.
-  - **Effort: Medium | Impact: Medium (build accuracy)**
-
-- [ ] Belts in the build planner need a systematic fix
-  - Belts are in `EQUIPMENT_SLOTS` as a standard slot in the `'extra'` group but treated identically to armor/weapons. Belts likely have unique constraints (different mod pools, no rarity tiers?) that aren't modeled. Needs game-knowledge investigation.
-  - **Effort: Medium | Impact: Medium (build accuracy)**
-
-- [ ] Show critical resources on the dashboard
-  - Diamonds, amethysts, aquamarines, eternal greens, salt, fire dust — inventory data is already tracked. Needs a new dashboard card that pulls specific item counts from inventory store and displays them prominently.
-  - **Effort: Medium | Impact: High (at-a-glance value)**
-
-- [ ] Show latest watchword detections on the dashboard
-  - Watchword matches are already stored and viewable per-rule in `WatchwordsView.vue`. Needs a new dashboard card that aggregates recent matches across all rules into a live feed.
-  - **Effort: Medium | Impact: Medium (awareness without navigating to chat)**
 
 - [ ] Actually implement audio alerts for watchwords
   - The "Play sound" checkbox exists in the rule editor UI and the setting is stored in `WatchNotifyConfig`, but there's no audio playback implementation behind it. Toast notifications appear to be wired up. Need to add actual audio file(s) and playback logic.
@@ -97,17 +66,6 @@ Small tasks and notes that don't belong in a dedicated plan.
   - We have the book data already. Would make books easier to read than the in-game UI. Needs a new detail view/tab in the data browser.
   - **Effort: Medium | Impact: Medium (nice quality-of-life feature)**
 
-- [ ] Moon phase tracker dashboard card
-  - So much in the game is tied to the moon phase. Could be a small, medium, or large card with different amounts of info. Needs research into what moon phase data is available.
-  - **Effort: Medium | Impact: Medium-High (broadly useful game mechanic)**
-
-- [ ] Daily quest tracker dashboard card
-  - Track daily quest availability/completion. Needs investigation into what log events or game data support this.
-  - **Effort: Medium | Impact: Medium (daily engagement feature)**
-
-- [ ] Statehelm tracker summary dashboard card
-  - Small card-sized summary of the statehelm tracker. Maybe let users set favorite NPCs and show a lightweight version on the dashboard.
-  - **Effort: Medium | Impact: Medium (at-a-glance NPC favor info)**
 
 - [ ] Hot tips tracker
   - Track hot tips in the game. Needs investigation into what data is available.
@@ -124,14 +82,6 @@ Small tasks and notes that don't belong in a dedicated plan.
 ---
 
 ## Larger Efforts / Research Needed
-
-- [ ] Show rez timer on the dashboard
-  - No rez timer tracking exists anywhere. Would need to detect the death/resurrection event in PlayerEventParser, track the cooldown start time, and display a countdown on the dashboard. Requires parser work + new dashboard card.
-  - **Effort: Large | Impact: Medium**
-
-- [ ] Detect long-cooldown activations and display timers on dashboard
-  - Resuscitate, opening portals, Hoplology, etc. — no cooldown tracking infrastructure exists in game state. Would need: identifying the relevant log events, adding them to the PlayerEventParser, a new cooldown tracking system, and dashboard timer cards. Cooldown durations may not be in log data and might need manual configuration.
-  - **Effort: Large | Impact: Medium-High (very useful if feasible)**
 
 - [ ] UX for checking recipes/data without losing context
   - Brainstorm: the data browser currently lives as a full screen. Ideas include: a floating/popover data browser, a quick-peek modal, breadcrumb-style navigation history, or split-view. This is a significant UX architecture decision that affects many workflows.
@@ -153,13 +103,6 @@ Small tasks and notes that don't belong in a dedicated plan.
   - Need to look up all the challenges and see which ones we can track. Some are easy (1200 armor) and some are harder (have 4x 10-second premonition buffs). Could also track how many letters of authority the player has as an alternate path. Requires research + parser work.
   - **Effort: Large (research + implementation) | Impact: Medium (niche but useful)**
 
-- [ ] "What should I do next" dashboard card
-  - Generate suggestions — some randomized, but could also be smart: "craft 5 [highest level uncrafted item in a craft skill they know]" etc. Needs access to skill levels, recipe data, and crafting history to make good suggestions.
-  - **Effort: Large | Impact: Medium (fun, engagement feature)**
-
-- [ ] Gardening almanac dashboard card
-  - Unclear if we can pull this data from the game. Could be user-fed. Needs research into what data is available from logs or game files.
-  - **Effort: Large (research) | Impact: Medium (if feasible)**
 
 - [ ] Gardening helper
   - Should be able to detect seeds, fertilizer, water in inventory. Could also track what nearby plants need. Needs investigation into what inventory/proximity data is available from logs.
