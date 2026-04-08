@@ -79,6 +79,7 @@
 <script setup lang="ts">
 import { ref, nextTick, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { confirm } from "@tauri-apps/plugin-dialog";
 import { useToast } from "../../composables/useToast";
 
 interface SurveyImportInfo {
@@ -138,9 +139,8 @@ async function saveRename(imp: SurveyImportInfo) {
 }
 
 async function handleDelete(imp: SurveyImportInfo) {
-  if (!confirm(`Remove "${imp.label}"? This will delete all ${imp.session_count} imported sessions and their data.`)) {
-    return;
-  }
+  const ok = await confirm(`Remove "${imp.label}"? This will delete all ${imp.session_count} imported sessions and their data.`, { title: "Remove Import", kind: "warning" });
+  if (!ok) return;
 
   deleting.value = imp.id;
   try {

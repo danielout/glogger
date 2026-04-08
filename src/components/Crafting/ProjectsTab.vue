@@ -52,6 +52,7 @@
 import { ref, computed, watch, onBeforeUnmount } from "vue";
 import PaneLayout from "../Shared/PaneLayout.vue";
 import { invoke } from "@tauri-apps/api/core";
+import { confirm } from "@tauri-apps/plugin-dialog";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useCraftingStore } from "../../stores/craftingStore";
 import type { FlattenedMaterial, IntermediateCraft, MaterialNeed } from "../../types/crafting";
@@ -194,7 +195,8 @@ async function duplicateProject() {
 
 async function deleteProject() {
   if (!store.activeProject) return;
-  if (!confirm(`Delete project "${store.activeProject.name}"?`)) return;
+  const ok = await confirm(`Delete project "${store.activeProject.name}"?`, { title: "Delete Project", kind: "warning" });
+  if (!ok) return;
   await store.deleteProject(store.activeProject.id);
   projectMaterials.value = new Map();
   projectIntermediates.value = [];
