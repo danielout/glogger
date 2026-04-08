@@ -48,7 +48,7 @@
             'bg-accent-blue/5 hover:bg-accent-blue/10': msg.from_player === true
           }"
         >
-          <span class="shrink-0 w-15 text-text-muted text-sm font-mono">{{ formatTime(msg.timestamp) }}</span>
+          <span class="shrink-0 whitespace-nowrap text-text-muted text-sm font-mono">{{ formatTime(msg.timestamp) }}</span>
           <span
             v-if="showChannel && msg.channel"
             class="shrink-0 font-semibold text-[0.9rem]"
