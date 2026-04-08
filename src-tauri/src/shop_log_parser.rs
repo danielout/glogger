@@ -16,7 +16,7 @@ static BOUGHT_RE: Lazy<Regex> = Lazy::new(|| {
 });
 
 static ADDED_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^(?P<player>\S+) added (?P<item>.+) to shop$").unwrap()
+    Regex::new(r"^(?P<player>\S+) added (?P<item>.+?) ?x?(?P<quantity>\d+)? to shop$").unwrap()
 });
 
 static REMOVED_RE: Lazy<Regex> = Lazy::new(|| {
@@ -93,13 +93,16 @@ fn parse_entry(entry_index: i64, timestamp: &str, message: &str) -> ShopLogEntry
 
     // Try added
     if let Some(caps) = ADDED_RE.captures(message) {
+        let quantity: i64 = caps.name("quantity")
+            .and_then(|m| m.as_str().parse().ok())
+            .unwrap_or(1);
         return ShopLogEntry {
             entry_index,
             timestamp: timestamp.to_string(),
             action: "added".to_string(),
             player: caps["player"].to_string(),
             item: Some(caps["item"].to_string()),
-            quantity: 1,
+            quantity,
             price_unit: None,
             price_total: None,
             raw_message: message.to_string(),
@@ -277,6 +280,14 @@ mod tests {
         assert_eq!(entry.action, "added");
         assert_eq!(entry.player, "Deradon");
         assert_eq!(entry.item, Some("Quality Mystic Saddlebag".to_string()));
+    }
+
+    #[test]
+    fn test_parse_added_with_quantity() {
+        let entry = parse_entry(0, "Sat Mar 28 15:39", "Deradon added Barley Seeds x36 to shop");
+        assert_eq!(entry.action, "added");
+        assert_eq!(entry.item, Some("Barley Seeds".to_string()));
+        assert_eq!(entry.quantity, 36);
     }
 
     #[test]
