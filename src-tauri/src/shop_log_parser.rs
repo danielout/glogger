@@ -39,6 +39,7 @@ static COLLECTED_RE: Lazy<Regex> = Lazy::new(|| {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ShopLogEntry {
+    pub entry_index: i64,
     pub timestamp: String,
     pub action: String,
     pub player: String,
@@ -65,7 +66,7 @@ fn is_owner_action(action: &str) -> bool {
 
 // ── Parsing ────────────────────────────────────────────────────────────────
 
-fn parse_entry(timestamp: &str, message: &str) -> ShopLogEntry {
+fn parse_entry(entry_index: i64, timestamp: &str, message: &str) -> ShopLogEntry {
     let message = message.trim();
 
     // Try bought
@@ -78,6 +79,7 @@ fn parse_entry(timestamp: &str, message: &str) -> ShopLogEntry {
         let price_total: i64 = caps["price_total"].parse().unwrap_or(0);
 
         return ShopLogEntry {
+            entry_index,
             timestamp: timestamp.to_string(),
             action: "bought".to_string(),
             player: caps["player"].to_string(),
@@ -92,6 +94,7 @@ fn parse_entry(timestamp: &str, message: &str) -> ShopLogEntry {
     // Try added
     if let Some(caps) = ADDED_RE.captures(message) {
         return ShopLogEntry {
+            entry_index,
             timestamp: timestamp.to_string(),
             action: "added".to_string(),
             player: caps["player"].to_string(),
@@ -109,6 +112,7 @@ fn parse_entry(timestamp: &str, message: &str) -> ShopLogEntry {
             .and_then(|m| m.as_str().parse().ok())
             .unwrap_or(1);
         return ShopLogEntry {
+            entry_index,
             timestamp: timestamp.to_string(),
             action: "removed".to_string(),
             player: caps["player"].to_string(),
@@ -130,6 +134,7 @@ fn parse_entry(timestamp: &str, message: &str) -> ShopLogEntry {
         let effective_price = price_unit as f64 / quantity_unit as f64;
 
         return ShopLogEntry {
+            entry_index,
             timestamp: timestamp.to_string(),
             action: "configured".to_string(),
             player: caps["player"].to_string(),
@@ -151,6 +156,7 @@ fn parse_entry(timestamp: &str, message: &str) -> ShopLogEntry {
         let effective_price = price_unit as f64 / quantity_unit as f64;
 
         return ShopLogEntry {
+            entry_index,
             timestamp: timestamp.to_string(),
             action: "visible".to_string(),
             player: caps["player"].to_string(),
@@ -166,6 +172,7 @@ fn parse_entry(timestamp: &str, message: &str) -> ShopLogEntry {
     if let Some(caps) = COLLECTED_RE.captures(message) {
         let price_total: i64 = caps["price_total"].parse().unwrap_or(0);
         return ShopLogEntry {
+            entry_index,
             timestamp: timestamp.to_string(),
             action: "collected".to_string(),
             player: caps["player"].to_string(),
@@ -179,6 +186,7 @@ fn parse_entry(timestamp: &str, message: &str) -> ShopLogEntry {
 
     // Unknown
     ShopLogEntry {
+        entry_index,
         timestamp: timestamp.to_string(),
         action: "unknown".to_string(),
         player: String::new(),
@@ -218,7 +226,7 @@ pub fn parse_shop_log(title: &str, content: &str, log_timestamp: &str) -> ShopLo
 
         let message = content[msg_start..msg_end].trim();
         if !message.is_empty() {
-            entries.push(parse_entry(timestamp, message));
+            entries.push(parse_entry(i as i64, timestamp, message));
         }
     }
 
@@ -243,7 +251,7 @@ mod tests {
 
     #[test]
     fn test_parse_bought() {
-        let entry = parse_entry("Sat Mar 28 15:09", "MrBonq bought Quality Reins at a cost of 4500 per 1 = 4500");
+        let entry = parse_entry(0, "Sat Mar 28 15:09", "MrBonq bought Quality Reins at a cost of 4500 per 1 = 4500");
         assert_eq!(entry.action, "bought");
         assert_eq!(entry.player, "MrBonq");
         assert_eq!(entry.item, Some("Quality Reins".to_string()));
@@ -254,7 +262,7 @@ mod tests {
 
     #[test]
     fn test_parse_bought_with_quantity() {
-        let entry = parse_entry("Tue Apr 7 16:25", "Zangariel bought Orcish Spell Pouch x12 at a cost of 450 per 1 = 5400");
+        let entry = parse_entry(0, "Tue Apr 7 16:25", "Zangariel bought Orcish Spell Pouch x12 at a cost of 450 per 1 = 5400");
         assert_eq!(entry.action, "bought");
         assert_eq!(entry.player, "Zangariel");
         assert_eq!(entry.item, Some("Orcish Spell Pouch".to_string()));
@@ -265,7 +273,7 @@ mod tests {
 
     #[test]
     fn test_parse_added() {
-        let entry = parse_entry("Sat Mar 28 15:39", "Deradon added Quality Mystic Saddlebag to shop");
+        let entry = parse_entry(0, "Sat Mar 28 15:39", "Deradon added Quality Mystic Saddlebag to shop");
         assert_eq!(entry.action, "added");
         assert_eq!(entry.player, "Deradon");
         assert_eq!(entry.item, Some("Quality Mystic Saddlebag".to_string()));
@@ -273,7 +281,7 @@ mod tests {
 
     #[test]
     fn test_parse_removed() {
-        let entry = parse_entry("Sat Mar 28 15:39", "Deradon removed Decent Horseshoes from shop");
+        let entry = parse_entry(0, "Sat Mar 28 15:39", "Deradon removed Decent Horseshoes from shop");
         assert_eq!(entry.action, "removed");
         assert_eq!(entry.player, "Deradon");
         assert_eq!(entry.item, Some("Decent Horseshoes".to_string()));
@@ -282,7 +290,7 @@ mod tests {
 
     #[test]
     fn test_parse_removed_with_quantity() {
-        let entry = parse_entry("Sat Mar 28 15:39", "Deradon removed Barley Seeds x36 from shop");
+        let entry = parse_entry(0, "Sat Mar 28 15:39", "Deradon removed Barley Seeds x36 from shop");
         assert_eq!(entry.action, "removed");
         assert_eq!(entry.item, Some("Barley Seeds".to_string()));
         assert_eq!(entry.quantity, 36);
@@ -290,7 +298,7 @@ mod tests {
 
     #[test]
     fn test_parse_configured() {
-        let entry = parse_entry("Sat Mar 28 13:30", "Deradon configured Decent Horseshoes to cost 3500 per 1");
+        let entry = parse_entry(0, "Sat Mar 28 13:30", "Deradon configured Decent Horseshoes to cost 3500 per 1");
         assert_eq!(entry.action, "configured");
         assert_eq!(entry.player, "Deradon");
         assert_eq!(entry.item, Some("Decent Horseshoes".to_string()));
@@ -299,7 +307,7 @@ mod tests {
 
     #[test]
     fn test_parse_configured_with_bulk_and_restriction() {
-        let entry = parse_entry("Sat Mar 28 13:30", "Deradon configured Barley Seedsx36 to cost 3000 per 2. Item can only be purchased by Wogan.");
+        let entry = parse_entry(0, "Sat Mar 28 13:30", "Deradon configured Barley Seedsx36 to cost 3000 per 2. Item can only be purchased by Wogan.");
         assert_eq!(entry.action, "configured");
         assert_eq!(entry.item, Some("Barley Seeds".to_string()));
         assert_eq!(entry.quantity, 36);
@@ -308,7 +316,7 @@ mod tests {
 
     #[test]
     fn test_parse_visible() {
-        let entry = parse_entry("Sat Mar 28 15:38", "Deradon made Nice Saddle visible in shop at a cost of 4000 per 1");
+        let entry = parse_entry(0, "Sat Mar 28 15:38", "Deradon made Nice Saddle visible in shop at a cost of 4000 per 1");
         assert_eq!(entry.action, "visible");
         assert_eq!(entry.player, "Deradon");
         assert_eq!(entry.item, Some("Nice Saddle".to_string()));
@@ -317,7 +325,7 @@ mod tests {
 
     #[test]
     fn test_parse_visible_with_bulk_and_restriction() {
-        let entry = parse_entry("Sat Mar 28 13:30", "Deradon made Barley Seedsx36 visible in shop at a cost of 3000 per 2. Item can only be purchased by Wogan.");
+        let entry = parse_entry(0, "Sat Mar 28 13:30", "Deradon made Barley Seedsx36 visible in shop at a cost of 3000 per 2. Item can only be purchased by Wogan.");
         assert_eq!(entry.action, "visible");
         assert_eq!(entry.item, Some("Barley Seeds".to_string()));
         assert_eq!(entry.quantity, 36);
@@ -326,7 +334,7 @@ mod tests {
 
     #[test]
     fn test_parse_collected() {
-        let entry = parse_entry("Sat Mar 28 14:13", "Deradon collected 30500 Councils from customer purchases");
+        let entry = parse_entry(0, "Sat Mar 28 14:13", "Deradon collected 30500 Councils from customer purchases");
         assert_eq!(entry.action, "collected");
         assert_eq!(entry.player, "Deradon");
         assert_eq!(entry.item, None);
@@ -335,7 +343,7 @@ mod tests {
 
     #[test]
     fn test_parse_unknown() {
-        let entry = parse_entry("Sat Mar 28 05:21", "Deradon paid 14100 Councils to hire Gluzzibab for another 24 hours. Paid hours remaining = 35");
+        let entry = parse_entry(0, "Sat Mar 28 05:21", "Deradon paid 14100 Councils to hire Gluzzibab for another 24 hours. Paid hours remaining = 35");
         assert_eq!(entry.action, "unknown");
         assert!(entry.raw_message.contains("paid 14100"));
     }
@@ -366,5 +374,19 @@ mod tests {
         assert_eq!(log.entries.len(), 2);
         assert_eq!(log.entries[0].action, "bought");
         assert_eq!(log.entries[1].action, "collected");
+    }
+
+    #[test]
+    fn test_duplicate_entries_get_different_indices() {
+        // Two identical purchases in the same minute should get different entry_index values
+        let content = "Sat Mar 28 15:09 - Kork bought Nice Saddle at a cost of 4000 per 1 = 4000\n\nSat Mar 28 15:09 - Kork bought Nice Saddle at a cost of 4000 per 1 = 4000\n\n";
+        let log = parse_shop_log("Today's Shop Logs", content, "19:40:40");
+
+        assert_eq!(log.entries.len(), 2);
+        assert_eq!(log.entries[0].raw_message, log.entries[1].raw_message);
+        assert_eq!(log.entries[0].timestamp, log.entries[1].timestamp);
+        assert_ne!(log.entries[0].entry_index, log.entries[1].entry_index);
+        assert_eq!(log.entries[0].entry_index, 0);
+        assert_eq!(log.entries[1].entry_index, 1);
     }
 }

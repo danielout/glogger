@@ -122,6 +122,11 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 19)?;
     }
 
+    if current_version < 20 {
+        migration_v20_stall_entry_index(conn)?;
+        super::record_migration(conn, 20)?;
+    }
+
     Ok(())
 }
 
@@ -1454,6 +1459,53 @@ fn migration_v19_stall_tracker(conn: &Connection) -> Result<()> {
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(event_timestamp, raw_message)
         );
+
+        CREATE INDEX idx_stall_events_action ON stall_events(action);
+        CREATE INDEX idx_stall_events_created ON stall_events(created_at DESC);
+        CREATE INDEX idx_stall_events_timestamp ON stall_events(event_timestamp);
+        "
+    )?;
+
+    Ok(())
+}
+
+/// Migration V20: Add entry_index to stall_events for deduplicating identical
+/// entries that occur multiple times within the same minute (e.g., two purchases
+/// of the same item at the same price in the same minute).
+fn migration_v20_stall_entry_index(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "-- Add the index column (default 0 for existing rows)
+        ALTER TABLE stall_events ADD COLUMN entry_index INTEGER NOT NULL DEFAULT 0;
+
+        -- Drop old unique constraint by recreating the table
+        -- SQLite doesn't support DROP CONSTRAINT, so we rebuild.
+        CREATE TABLE stall_events_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_timestamp TEXT NOT NULL,
+            log_timestamp TEXT NOT NULL,
+            log_title TEXT NOT NULL,
+            action TEXT NOT NULL,
+            player TEXT NOT NULL,
+            owner TEXT,
+            item TEXT,
+            quantity INTEGER NOT NULL DEFAULT 1,
+            price_unit REAL,
+            price_total INTEGER,
+            raw_message TEXT NOT NULL,
+            entry_index INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(event_timestamp, raw_message, entry_index)
+        );
+
+        INSERT INTO stall_events_new
+            (id, event_timestamp, log_timestamp, log_title, action, player, owner,
+             item, quantity, price_unit, price_total, raw_message, entry_index, created_at)
+        SELECT id, event_timestamp, log_timestamp, log_title, action, player, owner,
+               item, quantity, price_unit, price_total, raw_message, entry_index, created_at
+        FROM stall_events;
+
+        DROP TABLE stall_events;
+        ALTER TABLE stall_events_new RENAME TO stall_events;
 
         CREATE INDEX idx_stall_events_action ON stall_events(action);
         CREATE INDEX idx_stall_events_created ON stall_events(created_at DESC);

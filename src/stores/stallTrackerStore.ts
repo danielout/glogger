@@ -49,6 +49,12 @@ export const useStallTrackerStore = defineStore('stallTracker', () => {
     await Promise.all([loadSales(), loadShopLog(), loadStats()])
   }
 
+  async function clearAll(): Promise<number> {
+    const deleted = await invoke<number>('clear_stall_events')
+    await loadAll()
+    return deleted
+  }
+
   // Listen for real-time updates from the coordinator
   listen<number>('stall-events-updated', () => {
     loadAll()
@@ -64,5 +70,6 @@ export const useStallTrackerStore = defineStore('stallTracker', () => {
     loadShopLog,
     loadStats,
     loadAll,
+    clearAll,
   }
 })

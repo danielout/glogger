@@ -628,6 +628,7 @@ impl DataIngestCoordinator {
                                         price_unit: e.price_unit,
                                         price_total: e.price_total,
                                         raw_message: e.raw_message.clone(),
+                                        entry_index: e.entry_index,
                                     }
                                 }).collect();
                                 match crate::db::stall_tracker_commands::insert_stall_events(&self.db_pool, &inputs) {

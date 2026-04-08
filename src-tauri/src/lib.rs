@@ -140,7 +140,7 @@ use db::market_commands::{
     delete_market_value, export_market_values, get_market_value, get_market_values,
     import_market_values, set_market_value,
 };
-use db::stall_tracker_commands::{get_stall_log, get_stall_sales, get_stall_stats};
+use db::stall_tracker_commands::{clear_stall_events, get_stall_log, get_stall_sales, get_stall_stats};
 use db::player_commands::{
     add_market_price, add_sale, get_historical_sessions, get_market_prices_for_item,
     get_recent_events, get_recent_sales, log_event, patch_survey_session,
@@ -534,6 +534,7 @@ pub fn run() {
             get_stall_sales,
             get_stall_log,
             get_stall_stats,
+            clear_stall_events,
             // Update check
             check_for_update,
         ])

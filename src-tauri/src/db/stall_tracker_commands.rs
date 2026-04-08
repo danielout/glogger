@@ -17,6 +17,7 @@ pub struct StallEventInput {
     pub price_unit: Option<f64>,
     pub price_total: Option<i64>,
     pub raw_message: String,
+    pub entry_index: i64,
 }
 
 // ── Output types ────────────────────────────────────────────────────────────
@@ -56,8 +57,8 @@ pub fn insert_stall_events(pool: &DbPool, events: &[StallEventInput]) -> Result<
     for event in events {
         let result = conn.execute(
             "INSERT OR IGNORE INTO stall_events
-                (event_timestamp, log_timestamp, log_title, action, player, owner, item, quantity, price_unit, price_total, raw_message)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                (event_timestamp, log_timestamp, log_title, action, player, owner, item, quantity, price_unit, price_total, raw_message, entry_index)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             rusqlite::params![
                 event.event_timestamp,
                 event.log_timestamp,
@@ -70,6 +71,7 @@ pub fn insert_stall_events(pool: &DbPool, events: &[StallEventInput]) -> Result<
                 event.price_unit,
                 event.price_total,
                 event.raw_message,
+                event.entry_index,
             ],
         ).map_err(|e| e.to_string())?;
         count += result;
@@ -206,4 +208,13 @@ pub fn get_stall_stats(db: State<'_, DbPool>) -> Result<StallStats, String> {
         unique_buyers,
         unique_items,
     })
+}
+
+#[tauri::command]
+pub fn clear_stall_events(db: State<'_, DbPool>) -> Result<usize, String> {
+    let conn = db.get().map_err(|e| e.to_string())?;
+    let deleted = conn
+        .execute("DELETE FROM stall_events", [])
+        .map_err(|e| e.to_string())?;
+    Ok(deleted)
 }
