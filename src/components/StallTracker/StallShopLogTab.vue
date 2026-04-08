@@ -9,6 +9,14 @@
       secondary="Open your shop log book in-game to import stall data." />
 
     <template v-else>
+      <!-- Filters -->
+      <div class="flex items-center gap-3 flex-wrap">
+        <SearchableSelect v-model="filterPlayer" :options="playerOptions" placeholder="All players" />
+        <SearchableSelect v-model="filterAction" :options="actionOptions" placeholder="All actions" />
+        <SearchableSelect v-model="filterItem" :options="itemOptions" placeholder="All items" />
+        <span class="text-xs text-text-muted">{{ sortedLog.length }} of {{ store.shopLog.length }} entries</span>
+      </div>
+
       <div class="overflow-auto">
         <table class="w-full text-sm">
           <thead>
@@ -47,10 +55,25 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import EmptyState from '../Shared/EmptyState.vue'
+import SearchableSelect from '../Shared/SearchableSelect.vue'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 import type { StallEvent } from '../../types/stallTracker'
 
 const store = useStallTrackerStore()
+
+const filterPlayer = ref('')
+const filterAction = ref('')
+const filterItem = ref('')
+
+const playerOptions = computed(() =>
+  [...new Set(store.shopLog.map(e => e.player).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+)
+const actionOptions = computed(() =>
+  [...new Set(store.shopLog.map(e => e.action))].sort((a, b) => a.localeCompare(b))
+)
+const itemOptions = computed(() =>
+  [...new Set(store.shopLog.map(e => e.item).filter((v): v is string => v != null))].sort((a, b) => a.localeCompare(b))
+)
 
 const MONTHS: Record<string, number> = {
   Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6,
@@ -76,7 +99,14 @@ function goldValue(entry: StallEvent): number {
 }
 
 const sortedLog = computed(() => {
-  const list = [...store.shopLog]
+  const fp = filterPlayer.value
+  const fa = filterAction.value
+  const fi = filterItem.value
+  const list = store.shopLog.filter(e =>
+    (!fp || e.player === fp) &&
+    (!fa || e.action === fa) &&
+    (!fi || e.item === fi)
+  )
   const dir = sortAsc.value ? 1 : -1
   const key = sortKey.value
   list.sort((a, b) => {

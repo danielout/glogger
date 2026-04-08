@@ -10,23 +10,30 @@
 
     <template v-else>
       <!-- Stats summary -->
-      <div v-if="store.stats" class="flex gap-6 flex-wrap text-center">
+      <div class="flex gap-6 flex-wrap text-center">
         <div>
           <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Total Sales</div>
-          <div class="text-lg font-bold text-text-primary">{{ store.stats.total_sales.toLocaleString() }}</div>
+          <div class="text-lg font-bold text-text-primary">{{ filteredStats.totalSales.toLocaleString() }}</div>
         </div>
         <div>
           <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Total Revenue</div>
-          <div class="text-lg font-bold text-[#d4af37]">{{ store.stats.total_revenue.toLocaleString() }}g</div>
+          <div class="text-lg font-bold text-[#d4af37]">{{ filteredStats.totalRevenue.toLocaleString() }}g</div>
         </div>
         <div>
           <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Unique Buyers</div>
-          <div class="text-lg font-bold text-text-primary">{{ store.stats.unique_buyers.toLocaleString() }}</div>
+          <div class="text-lg font-bold text-text-primary">{{ filteredStats.uniqueBuyers.toLocaleString() }}</div>
         </div>
         <div>
           <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Unique Items</div>
-          <div class="text-lg font-bold text-text-primary">{{ store.stats.unique_items.toLocaleString() }}</div>
+          <div class="text-lg font-bold text-text-primary">{{ filteredStats.uniqueItems.toLocaleString() }}</div>
         </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="flex items-center gap-3 flex-wrap">
+        <SearchableSelect v-model="filterBuyer" :options="buyerOptions" placeholder="All buyers" />
+        <SearchableSelect v-model="filterItem" :options="itemOptions" placeholder="All items" />
+        <span class="text-xs text-text-muted">{{ sortedSales.length }} of {{ store.sales.length }} sales</span>
       </div>
 
       <!-- Sales table -->
@@ -64,9 +71,20 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import EmptyState from '../Shared/EmptyState.vue'
+import SearchableSelect from '../Shared/SearchableSelect.vue'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 
 const store = useStallTrackerStore()
+
+const filterBuyer = ref('')
+const filterItem = ref('')
+
+const buyerOptions = computed(() =>
+  [...new Set(store.sales.map(s => s.player))].sort((a, b) => a.localeCompare(b))
+)
+const itemOptions = computed(() =>
+  [...new Set(store.sales.map(s => s.item).filter((v): v is string => v != null))].sort((a, b) => a.localeCompare(b))
+)
 
 const MONTHS: Record<string, number> = {
   Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6,
@@ -89,7 +107,12 @@ const sortKey = ref<SortKey>('event_timestamp')
 const sortAsc = ref(false)
 
 const sortedSales = computed(() => {
-  const list = [...store.sales]
+  const fb = filterBuyer.value
+  const fi = filterItem.value
+  const list = store.sales.filter(s =>
+    (!fb || s.player === fb) &&
+    (!fi || s.item === fi)
+  )
   const dir = sortAsc.value ? 1 : -1
   const key = sortKey.value
   list.sort((a, b) => {
@@ -103,6 +126,16 @@ const sortedSales = computed(() => {
     return ((av as number) - (bv as number)) * dir
   })
   return list
+})
+
+const filteredStats = computed(() => {
+  const list = sortedSales.value
+  return {
+    totalSales: list.length,
+    totalRevenue: list.reduce((sum, s) => sum + (s.price_total ?? 0), 0),
+    uniqueBuyers: new Set(list.map(s => s.player)).size,
+    uniqueItems: new Set(list.map(s => s.item).filter(Boolean)).size,
+  }
 })
 
 function toggleSort(key: SortKey) {
