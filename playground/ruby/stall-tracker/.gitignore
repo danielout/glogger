@@ -1,0 +1,7 @@
+*.csv
+*.swp
+.DS_Store
+/.bundle
+/coverage
+/tmp
+/vendor/bundle

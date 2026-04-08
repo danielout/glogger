@@ -1,0 +1,1 @@
+[19:40:40] LocalPlayer: ProcessBook("Today's Shop Logs", "Sat Mar 28 15:00 - Daysun bought Nice Horseshoes at a cost of 4500 per 1 = 4500\n\nSat Mar 28 14:30 - Arkaniux bought Great Horseshoes at a cost of 5500 per 1 = 5500\n\nSat Mar 28 14:28 - Arkaniux bought Great Reins at a cost of 5000 per 1 = 5000\n\n", "PlayerShopLog", "", "", False, False, False, False, False, "")

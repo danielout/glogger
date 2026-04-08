@@ -1,0 +1,17 @@
+# frozen_string_literal: true
+
+source "https://rubygems.org"
+
+ruby "3.3.1"
+
+# [The RSpec monorepo](https://github.com/rspec/rspec)
+gem "rspec"
+
+# [`its` for RSpec 3 extracted from rspec-core 2.x](https://github.com/rspec/rspec-its)
+gem "rspec-its"
+
+# [A Ruby static code analyzer and formatter, based on the community Ruby style guide.](https://github.com/rubocop/rubocop)
+gem "rubocop", require: false
+
+# [Code style checking for RSpec files.](https://github.com/rubocop/rubocop-rspec)
+gem "rubocop-rspec", require: false

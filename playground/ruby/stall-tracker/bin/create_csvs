@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+
+require "bundler/setup"
+require "project_gorgon"
+
+ProjectGorgon.write_sales_csv
+ProjectGorgon.write_debug_csv
