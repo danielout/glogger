@@ -56,8 +56,8 @@
               v-for="item in pivot.items"
               :key="item"
               class="hover:bg-[#1a1a2e] transition-colors">
-              <td class="sticky left-0 bg-surface-base text-entity-item px-2 py-1 border-r border-b border-border-light whitespace-nowrap">
-                {{ item }}
+              <td class="sticky left-0 bg-surface-base px-2 py-1 border-r border-b border-border-light whitespace-nowrap">
+                <ItemInline :reference="item" :show-icon="false" />
               </td>
               <td
                 v-for="period in pivot.periods"
@@ -95,6 +95,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import EmptyState from '../Shared/EmptyState.vue'
+import ItemInline from '../Shared/Item/ItemInline.vue'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 import {

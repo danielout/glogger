@@ -59,7 +59,7 @@
               class="border-b border-border-light hover:bg-[#1a1a2e] transition-colors">
               <td class="py-1.5 pr-4 text-text-dim text-xs whitespace-nowrap">{{ sale.event_timestamp }}</td>
               <td class="py-1.5 pr-4 text-entity-player">{{ sale.player }}</td>
-              <td class="py-1.5 pr-4 text-entity-item">{{ sale.item }}</td>
+              <td class="py-1.5 pr-4"><ItemInline v-if="sale.item" :reference="sale.item" :show-icon="false" /></td>
               <td class="py-1.5 pr-4 text-right text-text-secondary">{{ sale.quantity }}</td>
               <td class="py-1.5 pr-4 text-right text-text-secondary">{{ sale.price_unit != null ? Math.round(sale.price_unit).toLocaleString() + 'g' : '' }}</td>
               <td class="py-1.5 text-right text-[#d4af37] font-medium">{{ sale.price_total != null ? sale.price_total.toLocaleString() + 'g' : '' }}</td>
@@ -74,6 +74,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import EmptyState from '../Shared/EmptyState.vue'
+import ItemInline from '../Shared/Item/ItemInline.vue'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 import { timestampToSortKey, timestampToDateKey, uniqueDates } from './stallTimestamp'

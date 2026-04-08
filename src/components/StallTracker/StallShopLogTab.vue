@@ -44,7 +44,7 @@
                   {{ entry.action }}
                 </span>
               </td>
-              <td class="py-1.5 pr-4 text-entity-item">{{ entry.item ?? '' }}</td>
+              <td class="py-1.5 pr-4"><ItemInline v-if="entry.item" :reference="entry.item" :show-icon="false" /></td>
               <td class="py-1.5 pr-4 text-right text-text-secondary">{{ entry.item ? entry.quantity : '' }}</td>
               <td class="py-1.5 text-right text-[#d4af37]">{{ formatGold(entry) }}</td>
             </tr>
@@ -58,6 +58,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import EmptyState from '../Shared/EmptyState.vue'
+import ItemInline from '../Shared/Item/ItemInline.vue'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 import type { StallEvent } from '../../types/stallTracker'
