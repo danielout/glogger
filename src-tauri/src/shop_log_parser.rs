@@ -214,12 +214,12 @@ pub fn parse_shop_log(title: &str, content: &str, log_timestamp: &str) -> ShopLo
     // Find all timestamp matches and split content into (timestamp, message) pairs
     let matches: Vec<_> = ENTRY_RE.find_iter(&content).collect();
 
+    // Collect raw (timestamp, message) pairs in content order (newest first)
+    let mut raw_entries: Vec<(&str, &str)> = Vec::new();
     for (i, m) in matches.iter().enumerate() {
         let timestamp_str = &content[m.start()..m.end()];
-        // Extract just the date part (before " - ")
         let timestamp = timestamp_str.trim_end_matches(" - ").trim();
 
-        // Message runs from end of this match to start of next match (or end of content)
         let msg_start = m.end();
         let msg_end = if i + 1 < matches.len() {
             matches[i + 1].start()
@@ -229,8 +229,15 @@ pub fn parse_shop_log(title: &str, content: &str, log_timestamp: &str) -> ShopLo
 
         let message = content[msg_start..msg_end].trim();
         if !message.is_empty() {
-            entries.push(parse_entry(i as i64, timestamp, message));
+            raw_entries.push((timestamp, message));
         }
+    }
+
+    // Reverse so oldest entry gets index 0. This ensures stable indices
+    // when new entries are prepended to the log on subsequent opens.
+    raw_entries.reverse();
+    for (i, (timestamp, message)) in raw_entries.iter().enumerate() {
+        entries.push(parse_entry(i as i64, timestamp, message));
     }
 
     // Detect owner from first owner action
@@ -369,12 +376,16 @@ mod tests {
         assert_eq!(log.entries.len(), 3);
         assert_eq!(log.owner, Some("Deradon".to_string()));
 
-        assert_eq!(log.entries[0].action, "bought");
-        assert_eq!(log.entries[0].player, "MrBonq");
+        // Entries are reversed: oldest (14:13) first, newest (15:09) last
+        assert_eq!(log.entries[0].action, "collected");
+        assert_eq!(log.entries[0].player, "Deradon");
+        assert_eq!(log.entries[0].entry_index, 0);
         assert_eq!(log.entries[1].action, "bought");
         assert_eq!(log.entries[1].player, "AlestiarWolf");
-        assert_eq!(log.entries[2].action, "collected");
-        assert_eq!(log.entries[2].player, "Deradon");
+        assert_eq!(log.entries[1].entry_index, 1);
+        assert_eq!(log.entries[2].action, "bought");
+        assert_eq!(log.entries[2].player, "MrBonq");
+        assert_eq!(log.entries[2].entry_index, 2);
     }
 
     #[test]
@@ -383,8 +394,9 @@ mod tests {
         let log = parse_shop_log("Yesterday's Shop Logs", content, "13:26:04");
 
         assert_eq!(log.entries.len(), 2);
-        assert_eq!(log.entries[0].action, "bought");
-        assert_eq!(log.entries[1].action, "collected");
+        // Reversed: oldest first
+        assert_eq!(log.entries[0].action, "collected");
+        assert_eq!(log.entries[1].action, "bought");
     }
 
     #[test]
@@ -399,5 +411,24 @@ mod tests {
         assert_ne!(log.entries[0].entry_index, log.entries[1].entry_index);
         assert_eq!(log.entries[0].entry_index, 0);
         assert_eq!(log.entries[1].entry_index, 1);
+    }
+
+    #[test]
+    fn test_entry_indices_stable_across_reopens() {
+        // First open: two entries (newest first in content)
+        let content1 = "Sat Mar 28 15:09 - MrBonq bought Quality Reins at a cost of 4500 per 1 = 4500\n\nSat Mar 28 14:13 - Deradon collected 30500 Councils from customer purchases\n\n";
+        let log1 = parse_shop_log("Today's Shop Logs", content1, "16:00:00");
+
+        // Second open: new entry prepended, same old entries follow
+        let content2 = "Sat Mar 28 16:30 - Kork bought Nice Saddle at a cost of 4000 per 1 = 4000\n\nSat Mar 28 15:09 - MrBonq bought Quality Reins at a cost of 4500 per 1 = 4500\n\nSat Mar 28 14:13 - Deradon collected 30500 Councils from customer purchases\n\n";
+        let log2 = parse_shop_log("Today's Shop Logs", content2, "17:00:00");
+
+        // Old entries should keep the same indices across both opens
+        assert_eq!(log1.entries[0].entry_index, log2.entries[0].entry_index); // collected = index 0
+        assert_eq!(log1.entries[0].raw_message, log2.entries[0].raw_message);
+        assert_eq!(log1.entries[1].entry_index, log2.entries[1].entry_index); // MrBonq = index 1
+        assert_eq!(log1.entries[1].raw_message, log2.entries[1].raw_message);
+        // New entry gets the highest index
+        assert_eq!(log2.entries[2].entry_index, 2); // Kork = index 2
     }
 }
