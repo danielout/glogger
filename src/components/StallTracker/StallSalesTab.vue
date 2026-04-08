@@ -31,6 +31,9 @@
 
       <!-- Filters -->
       <div class="flex items-center gap-3 flex-wrap">
+        <SearchableSelect v-model="filterDateFrom" :options="dateOptions" placeholder="From date" />
+        <span class="text-text-dim text-xs">&ndash;</span>
+        <SearchableSelect v-model="filterDateTo" :options="dateOptions" placeholder="To date" />
         <SearchableSelect v-model="filterBuyer" :options="buyerOptions" placeholder="All buyers" />
         <SearchableSelect v-model="filterItem" :options="itemOptions" placeholder="All items" />
         <span class="text-xs text-text-muted">{{ sortedSales.length }} of {{ store.sales.length }} sales</span>
@@ -73,34 +76,22 @@ import { ref, computed } from 'vue'
 import EmptyState from '../Shared/EmptyState.vue'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
+import { timestampToSortKey, timestampToDateKey, uniqueDates } from './stallTimestamp'
 
 const store = useStallTrackerStore()
 
+const filterDateFrom = ref('')
+const filterDateTo = ref('')
 const filterBuyer = ref('')
 const filterItem = ref('')
 
+const dateOptions = computed(() => uniqueDates(store.sales.map(s => s.event_timestamp)))
 const buyerOptions = computed(() =>
   [...new Set(store.sales.map(s => s.player))].sort((a, b) => a.localeCompare(b))
 )
 const itemOptions = computed(() =>
   [...new Set(store.sales.map(s => s.item).filter((v): v is string => v != null))].sort((a, b) => a.localeCompare(b))
 )
-
-const MONTHS: Record<string, number> = {
-  Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6,
-  Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12,
-}
-
-/** Convert "Sat Mar 28 15:39" to a sortable number (MMDDHHMM). */
-function timestampToSortKey(ts: string): number {
-  // Format: "Day Mon DD HH:MM"
-  const parts = ts.split(/\s+/)
-  if (parts.length < 4) return 0
-  const mon = MONTHS[parts[1]] ?? 0
-  const day = parseInt(parts[2]) || 0
-  const [hh, mm] = (parts[3] ?? '0:0').split(':').map(Number)
-  return mon * 1000000 + day * 10000 + (hh || 0) * 100 + (mm || 0)
-}
 
 type SortKey = 'event_timestamp' | 'player' | 'item' | 'quantity' | 'price_unit' | 'price_total'
 const sortKey = ref<SortKey>('event_timestamp')
@@ -109,10 +100,17 @@ const sortAsc = ref(false)
 const sortedSales = computed(() => {
   const fb = filterBuyer.value
   const fi = filterItem.value
-  const list = store.sales.filter(s =>
-    (!fb || s.player === fb) &&
-    (!fi || s.item === fi)
-  )
+  const fromKey = filterDateFrom.value ? timestampToDateKey(filterDateFrom.value) : 0
+  const toKey = filterDateTo.value ? timestampToDateKey(filterDateTo.value) : Infinity
+  const list = store.sales.filter(s => {
+    if (fb && s.player !== fb) return false
+    if (fi && s.item !== fi) return false
+    if (fromKey || toKey < Infinity) {
+      const dk = timestampToDateKey(s.event_timestamp)
+      if (dk < fromKey || dk > toKey) return false
+    }
+    return true
+  })
   const dir = sortAsc.value ? 1 : -1
   const key = sortKey.value
   list.sort((a, b) => {
