@@ -219,9 +219,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useSettingsStore } from '../../stores/settingsStore'
+import { pendingWatchwordRuleId } from '../../composables/useViewNavigation'
 import type { WatchRule, WatchCondition, ConditionMatch, ChatMessage } from '../../types/database'
 import ChatMessageList from './ChatMessageList.vue'
 
@@ -433,4 +434,14 @@ function conditionPlaceholder(type: WatchCondition['type']): string {
     case 'FromSender': return 'e.g., TraderJoe'
   }
 }
+
+// ── External navigation (from dashboard widget) ────────────────
+watch(pendingWatchwordRuleId, (ruleId) => {
+  if (ruleId == null) return
+  const rule = rules.value.find(r => r.id === ruleId)
+  if (rule) {
+    selectRule(rule)
+  }
+  pendingWatchwordRuleId.value = null
+}, { immediate: true })
 </script>

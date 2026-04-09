@@ -15,7 +15,8 @@
         <div
           v-for="match in recentMatches"
           :key="`${match.ruleId}-${match.message.id}`"
-          class="flex items-start gap-2 py-1 px-2 rounded text-xs hover:bg-surface-elevated/50">
+          class="flex items-start gap-2 py-1 px-2 rounded text-xs hover:bg-surface-elevated/50 cursor-pointer"
+          @click="goToRule(match.ruleId)">
           <!-- Timestamp -->
           <span class="text-text-dim font-mono shrink-0">{{ formatTs(match.message.timestamp) }}</span>
 
@@ -45,7 +46,10 @@ import { ref, computed, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useSettingsStore } from '../../../stores/settingsStore'
 import { formatAnyTimestamp } from '../../../composables/useTimestamp'
+import { useViewNavigation, pendingWatchwordRuleId } from '../../../composables/useViewNavigation'
 import type { ChatMessage } from '../../../types/database'
+
+const { navigateToView } = useViewNavigation()
 
 const settingsStore = useSettingsStore()
 const loading = ref(false)
@@ -60,6 +64,11 @@ const recentMatches = ref<MatchEntry[]>([])
 
 const rules = computed(() => settingsStore.settings.watchRules)
 const activeRuleCount = computed(() => rules.value.filter(r => r.enabled).length)
+
+function goToRule(ruleId: number) {
+  pendingWatchwordRuleId.value = ruleId
+  navigateToView({ view: 'chat', subTab: 'watchwords' })
+}
 
 function formatTs(ts: string): string {
   return formatAnyTimestamp(ts)

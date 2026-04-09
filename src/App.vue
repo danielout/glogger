@@ -104,6 +104,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { useGameStateStore } from "./stores/gameStateStore";
 import { useSurveyStore } from "./stores/surveyStore";
 import { provideEntityNavigation, type EntityNavigationTarget } from "./composables/useEntityNavigation";
+import { provideViewNavigation } from "./composables/useViewNavigation";
 import MenuBar, { type AppView } from "./components/MenuBar.vue";
 import DashboardView from "./components/Dashboard/DashboardView.vue";
 import CharacterView from "./components/Character/CharacterView.vue";
@@ -193,6 +194,16 @@ function handleSearchNavigate(result: SearchResult) {
     activeSubTab.value = result.navigation.subTab;
   }
 }
+
+provideViewNavigation((target) => {
+  const view = target.view as AppView;
+  visited.add(view);
+  currentView.value = view;
+  if (target.subTab && menuBarRef.value) {
+    menuBarRef.value.activeSubTabs[view] = target.subTab;
+    activeSubTab.value = target.subTab;
+  }
+});
 
 provideEntityNavigation((target) => {
   visited.add("data-browser");
