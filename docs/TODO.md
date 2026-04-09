@@ -8,13 +8,6 @@ Small tasks and notes that don't belong in a dedicated plan.
 
 ## To Sort
 
-- IMPROVEMENT: Character->Skills: Needs to be using our PanelLayout.
-- IMPROVEMENT: Character->Skills: Skills show should rewards already attained, not just upcoming.
-- IMPROVEMENT: Character->Skills: Skills should show what other skills grant that skill bonus levels, with checkmarks next to ones that have been achieved.
-- IMPROVEMENT: Character->Skills: In the list view on the left, skills without bonus levels have their level aligned differently than skills with them.
-- IMPROVEMENT: Character->Skills: We've got massive amounts of empty horizontal space on this screen, to the point where if a table row has left aligned and right aligned content it is difficult to assiociate which is which. We need to think of a better layout for making use of this.
-- IMPROVEMENT: Character->Skills: 
-
 - IMPROVEMENT: Found these lines in the player.log, probably something we can work in to our parsing to improve things:
     ```
     [16:00:51] New Network State: Picking Character... (GotCharacters -> PickingCharacter)
@@ -47,6 +40,9 @@ Small tasks and notes that don't belong in a dedicated plan.
 
 - [x] Better formatting for older chat lines that include date
   - Fixed: timestamp column had fixed `w-15` width too narrow for date+time format; switched to `whitespace-nowrap` with auto width.
+
+- [x] Character->Skills: PaneLayout, rewards, bonus sources, alignment, and layout improvements
+  - Converted to PaneLayout with resizable/collapsible left pane. Rewards now show attained (with checkmarks) and upcoming. Bonus level sources section shows which skills grant bonuses with achieved status. Fixed level alignment. XP/Session stats use responsive grid layout.
 
 - [ ] Primary/Secondary naming on gear is confusing in the build planner
   - Currently uses generic "Primary"/"Secondary" labels with blue/emerald color coding. Could replace with actual skill names (e.g., "Sword / Psychology") throughout the UI — the skill names are already available on the preset.

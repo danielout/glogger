@@ -1,14 +1,10 @@
 <template>
-  <div v-if="trackedSkills.length > 0 || showEmpty" class="flex flex-col gap-2">
-    <div class="flex items-center justify-between">
-      <div class="text-xs uppercase tracking-widest text-text-dim">Tracked Skills</div>
-    </div>
-
+  <div v-if="trackedSkills.length > 0 || showEmpty" class="flex flex-col gap-2 h-full overflow-y-auto p-2">
     <div v-if="trackedSkills.length === 0" class="text-xs text-text-dim italic py-2">
-      Track skills you want to watch closely. Select a skill below and click Track.
+      Track skills you want to watch closely. Select a skill and click Track.
     </div>
 
-    <div v-else class="flex flex-wrap gap-3">
+    <template v-else>
       <TrackedSkillCard
         v-for="gs in trackedSkills"
         :key="gs.skill_name"
@@ -16,7 +12,7 @@
         :session="store.sessionSkills[gs.skill_name] ?? null"
         :is-selected="selectedSkill === gs.skill_name"
         @select="$emit('select', $event)" />
-    </div>
+    </template>
   </div>
 </template>
 

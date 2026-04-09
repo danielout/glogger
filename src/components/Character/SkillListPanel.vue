@@ -72,10 +72,11 @@
               title="Equipped combat skill">&#x2694;</span>
 
             <!-- Level: always show effective (base+bonus) -->
-            <SkillLevelDisplay :skill="row" class="text-right min-w-8 shrink-0">
-              <span class="text-accent-gold font-bold">{{ skillTotalLevel(row) }}</span>
-            </SkillLevelDisplay>
-            <span v-if="!row.bonus_levels" class="min-w-12 shrink-0"></span>
+            <span class="text-right min-w-20 shrink-0">
+              <SkillLevelDisplay :skill="row">
+                <span class="text-accent-gold font-bold">{{ skillTotalLevel(row) }}</span>
+              </SkillLevelDisplay>
+            </span>
 
             <!-- Compact progress bar -->
             <div class="w-12 h-1 bg-border-default rounded-sm overflow-hidden shrink-0">

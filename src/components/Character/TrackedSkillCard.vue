@@ -1,6 +1,6 @@
 <template>
   <div
-    class="bg-[#1a1a2e] border border-border-default rounded-lg p-3 min-w-44 max-w-52 cursor-pointer transition-all hover:border-accent-gold/40"
+    class="bg-[#1a1a2e] border border-border-default rounded-lg p-3 cursor-pointer transition-all hover:border-accent-gold/40"
     :class="{ 'border-accent-gold/60': isSelected }"
     @click="$emit('select', skill.skill_name)">
     <div class="mb-1.5">

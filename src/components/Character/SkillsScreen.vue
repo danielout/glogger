@@ -1,47 +1,50 @@
 <template>
   <div class="flex flex-col gap-3 h-full overflow-hidden">
-    <!-- Summary bar -->
-    <div v-if="store.skills.length > 0" class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <span class="text-sm text-text-primary font-semibold">
-          {{ settingsStore.settings.activeCharacterName ?? 'Character' }}
-        </span>
-        <span v-if="settingsStore.settings.activeServerName" class="text-xs text-text-muted">
-          {{ settingsStore.settings.activeServerName }}
-        </span>
-      </div>
-      <div class="flex items-center gap-4 text-xs">
-        <div>
-          <span class="text-text-muted">Total Levels:</span>
-          <span class="text-accent-gold font-bold ml-1">{{ totalLevels.toLocaleString() }}</span>
-          <span v-if="totalBonusLevels > 0" class="text-text-dim ml-1">({{ totalBonusLevels }} from bonuses)</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tracked skills -->
-    <TrackedSkillsBar
-      :selected-skill="selectedSkill"
-      :show-empty="store.skills.length > 0"
-      @select="selectSkill" />
-
     <!-- Empty state -->
     <EmptyState
       v-if="store.skills.length === 0 && store.sessionSkillList.length === 0"
       primary="No skill data loaded."
       secondary="Log in to a character to see your skills." />
 
-    <!-- Two-panel layout -->
-    <div v-else class="flex gap-3 flex-1 min-h-0">
-      <div class="w-80 shrink-0 flex flex-col min-h-0">
-        <SkillListPanel
-          :selected-skill="selectedSkill"
-          :cdn-skills="cdnSkillMap"
-          @select="selectSkill" />
-      </div>
+    <!-- Three-panel layout -->
+    <PaneLayout
+      v-else
+      screen-key="character-skills"
+      :left-pane="{ title: 'Skills', defaultWidth: 320, minWidth: 240, maxWidth: 500 }"
+      :right-pane="{ title: 'Tracked Skills', defaultWidth: 260, minWidth: 200, maxWidth: 400, defaultCollapsed: !hasTrackedSkills }">
+      <template #left>
+        <div class="flex flex-col gap-2 h-full overflow-hidden">
+          <!-- Summary bar -->
+          <div class="flex items-center justify-between px-1">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-text-primary font-semibold">
+                {{ settingsStore.settings.activeCharacterName ?? 'Character' }}
+              </span>
+              <span v-if="settingsStore.settings.activeServerName" class="text-[0.65rem] text-text-muted">
+                {{ settingsStore.settings.activeServerName }}
+              </span>
+            </div>
+            <div class="text-[0.65rem] text-text-dim">
+              {{ totalLevels.toLocaleString() }} levels
+              <span v-if="totalBonusLevels > 0">({{ totalBonusLevels }} bonus)</span>
+            </div>
+          </div>
+          <SkillListPanel
+            :selected-skill="selectedSkill"
+            :cdn-skills="cdnSkillMap"
+            @select="selectSkill" />
+        </div>
+      </template>
 
-      <SkillDetailPanel :skill="selectedGameStateSkill" />
-    </div>
+      <SkillDetailPanel :skill="selectedGameStateSkill" :cdn-skills="cdnSkillMap" />
+
+      <template #right>
+        <TrackedSkillsBar
+          :selected-skill="selectedSkill"
+          :show-empty="true"
+          @select="selectSkill" />
+      </template>
+    </PaneLayout>
   </div>
 </template>
 
@@ -52,6 +55,7 @@ import { useGameDataStore } from '../../stores/gameDataStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import type { SkillInfo } from '../../types/gameData'
 import type { GameStateSkill } from '../../types/gameState'
+import PaneLayout from '../Shared/PaneLayout.vue'
 import EmptyState from '../Shared/EmptyState.vue'
 import TrackedSkillsBar from './TrackedSkillsBar.vue'
 import SkillListPanel from './SkillListPanel.vue'
@@ -73,6 +77,8 @@ const totalLevels = computed(() =>
 const totalBonusLevels = computed(() =>
   store.skills.reduce((sum, s) => sum + s.bonus_levels, 0)
 )
+
+const hasTrackedSkills = computed(() => store.trackedSkillNames.length > 0)
 
 const selectedGameStateSkill = computed<GameStateSkill | null>(() => {
   if (!selectedSkill.value) return null
