@@ -1,4 +1,4 @@
-use chrono::Local;
+use chrono::{Datelike, Local};
 /// Tauri commands for CDN data management and game data queries.
 /// These are the invoke() endpoints the Vue frontend calls.
 use std::path::PathBuf;
@@ -599,59 +599,255 @@ const GAME_PHASE_NAMES: &[(&str, &str)] = &[
     ("WaningCrescentMoon", "Waning Crescent"),
 ];
 
-/// Compute the game's moon phase index (0-7) from the crate's raw phase fraction.
-/// The game uses floor-based binning rather than the crate's round-based binning,
-/// which shifts phase boundaries by half a bin (~1.8 days).
-fn phase_fraction_to_index(mp: &moon_phase::MoonPhase) -> u8 {
-    let mut phase = mp.phase;
-    if phase < 0.0 {
-        phase += 1.0;
-    }
-    (phase * 8.0).floor() as u8 % 8
+// ── Meeus lunar algorithms (ported from the game server's Moon.java) ─────────
+
+/// Mean elongation of the moon (Meeus 47.2).
+fn meeus_d(t: f64) -> f64 {
+    297.8501921
+        + t * (445267.1114034 + t * (-0.0018819 + t * (1.0 / 545868.0 - t / 113065000.0)))
 }
 
-/// Get the current moon phase, snapped to midnight Eastern (server time).
+/// Sun's mean anomaly (Meeus 47.3).
+fn meeus_m(t: f64) -> f64 {
+    357.5291092 + t * (35999.0502909 + t * (-0.0001536 + t / 24490000.0))
+}
+
+/// Moon's mean anomaly (Meeus 47.4).
+fn meeus_m_prime(t: f64) -> f64 {
+    134.9633964
+        + t * (477198.8675055 + t * (0.0087414 + t * (1.0 / 69699.0 - t / 14712000.0)))
+}
+
+/// Phase angle between sun, moon, and earth (Meeus 48.4).
+fn meeus_phase_angle(t: f64) -> f64 {
+    let d = meeus_d(t);
+    let m = meeus_m(t);
+    let mp = meeus_m_prime(t);
+    180.0 - d
+        - 6.289 * mp.to_radians().sin()
+        + 2.100 * m.to_radians().sin()
+        - 1.274 * (2.0 * d - mp).to_radians().sin()
+        - 0.658 * (2.0 * d).to_radians().sin()
+        - 0.214 * (2.0 * mp).to_radians().sin()
+        - 0.110 * d.to_radians().sin()
+}
+
+fn moon_is_waning(phase_angle: f64) -> bool {
+    let s = phase_angle.to_radians().sin();
+    if s < 0.0 {
+        return true;
+    }
+    if s > 0.0 {
+        return false;
+    }
+    phase_angle.to_radians().cos() > 0.0
+}
+
+fn moon_illuminated_fraction(phase_angle: f64) -> f64 {
+    (1.0 + phase_angle.to_radians().cos()) * 0.5
+}
+
+/// Compute Julian Day number for a calendar date at midnight UTC (Meeus ch. 7).
+fn calendar_to_jd(year: i32, month: u32, day: u32) -> f64 {
+    let (y, m) = if month <= 2 {
+        (year - 1, month + 12)
+    } else {
+        (year, month)
+    };
+    let a = (y as f64 / 100.0).floor() as i32;
+    let b = 2 - a + (a as f64 / 4.0).floor() as i32;
+    (365.25 * (y + 4716) as f64).floor()
+        + (30.6001 * (m + 1) as f64).floor()
+        + day as f64
+        + b as f64
+        - 1524.5
+}
+
+struct MoonDay {
+    illuminated: f64,
+    waning: bool,
+}
+
+/// Get the moon's illumination and waning state for a calendar date at midnight UTC.
+fn moon_for_date(year: i32, month: u32, day: u32) -> MoonDay {
+    let jd = calendar_to_jd(year, month, day);
+    let t = (jd - 2451545.0) / 36525.0; // Meeus 22.1 — centuries since J2000.0
+    let i = meeus_phase_angle(t);
+    MoonDay {
+        illuminated: moon_illuminated_fraction(i),
+        waning: moon_is_waning(i),
+    }
+}
+
+/// Get the current moon phase using the game server's exact algorithm.
+///
+/// The server (MoonPhaseCalculator.java) builds a 31-day window of daily
+/// illumination data, then assigns the four major phases (Full, New, First
+/// Quarter, Last Quarter) as exactly 3-day spans centered on the transition
+/// day. Remaining days are filled with crescent/gibbous based on illumination
+/// and waning state.
 #[tauri::command]
 pub async fn get_current_moon_phase() -> Result<MoonPhaseResult, String> {
-    use std::time::{Duration, UNIX_EPOCH};
-
-    // Get current time in Eastern timezone to find today's date
+    // Get today's date in Eastern timezone (game server time)
     let now = chrono::Utc::now();
     let eastern = chrono_tz::US::Eastern;
     let eastern_now = now.with_timezone(&eastern);
-    let midnight_eastern = eastern_now.date_naive().and_hms_opt(0, 0, 0).unwrap();
-    let midnight_utc = midnight_eastern
-        .and_local_timezone(eastern)
-        .unwrap()
-        .with_timezone(&chrono::Utc);
-    let midnight_system = UNIX_EPOCH + Duration::from_secs(midnight_utc.timestamp() as u64);
+    let today = eastern_now.date_naive();
 
-    let mp = moon_phase::MoonPhase::new(midnight_system);
-    let current_index = phase_fraction_to_index(&mp);
+    // Build 31-day window starting from yesterday, matching the server's
+    // calcPhasesForDate which uses `date.plusDays(loop - 1)` for loop 0..31.
+    // phases[1] = today's phase.
+    let window_start = today - chrono::Duration::days(1);
+    let mut days: Vec<(chrono::NaiveDate, MoonDay)> = Vec::with_capacity(31);
+    for i in 0..31 {
+        let date = window_start + chrono::Duration::days(i);
+        let md = moon_for_date(date.year(), date.month(), date.day());
+        days.push((date, md));
+    }
 
-    // Calculate days until each future phase by walking forward day by day
+    // Assign major phases (exactly 3 days each), matching the server's algorithm.
+    let mut assigned: Vec<Option<u8>> = vec![None; 31];
+
+    // Full Moon: transition from non-waning to waning
+    for i in 0..30 {
+        if !days[i].1.waning && days[i + 1].1.waning {
+            if i > 0 {
+                assigned[i - 1] = Some(4);
+            }
+            assigned[i] = Some(4);
+            if i + 1 < 31 {
+                assigned[i + 1] = Some(4);
+            }
+            break;
+        }
+    }
+
+    // New Moon: transition from waning to non-waning
+    for i in 0..30 {
+        if days[i].1.waning && !days[i + 1].1.waning {
+            if i > 0 {
+                assigned[i - 1] = Some(0);
+            }
+            assigned[i] = Some(0);
+            if i + 1 < 31 {
+                assigned[i + 1] = Some(0);
+            }
+            break;
+        }
+    }
+
+    // First Quarter: illumination crosses 0.5 upward while waxing
+    for i in 0..30 {
+        if !days[i].1.waning
+            && !days[i + 1].1.waning
+            && days[i].1.illuminated <= 0.5
+            && days[i + 1].1.illuminated > 0.5
+        {
+            if i > 0 {
+                assigned[i - 1] = Some(2);
+            }
+            assigned[i] = Some(2);
+            if i + 1 < 31 {
+                assigned[i + 1] = Some(2);
+            }
+            break;
+        }
+    }
+
+    // Last Quarter: illumination crosses 0.5 downward while waning
+    for i in 0..30 {
+        if days[i].1.waning
+            && days[i + 1].1.waning
+            && days[i].1.illuminated >= 0.5
+            && days[i + 1].1.illuminated < 0.5
+        {
+            if i > 0 {
+                assigned[i - 1] = Some(6);
+            }
+            assigned[i] = Some(6);
+            if i + 1 < 31 {
+                assigned[i + 1] = Some(6);
+            }
+            break;
+        }
+    }
+
+    // Fill remaining days with crescent/gibbous based on illumination
+    for i in 0..31 {
+        if assigned[i].is_none() {
+            assigned[i] = Some(if days[i].1.waning {
+                if days[i].1.illuminated >= 0.5 {
+                    5
+                } else {
+                    7
+                }
+            } else if days[i].1.illuminated <= 0.5 {
+                1
+            } else {
+                3
+            });
+        }
+    }
+
+    // phases[1] = today's phase
+    let current_index = assigned[1].unwrap();
+    let (game_name, label) = GAME_PHASE_NAMES[current_index as usize];
+
+    // Calculate days until each future phase by scanning forward from today (index 2+)
     let mut days_until = Vec::new();
-    for target_idx in 1..=7u8 {
-        let target_phase = (current_index + target_idx) % 8;
-        // Walk forward to find when this phase starts
-        for day in 1..=30u32 {
-            let future_time = UNIX_EPOCH
-                + Duration::from_secs(midnight_utc.timestamp() as u64 + (day as u64) * 86400);
-            let future_mp = moon_phase::MoonPhase::new(future_time);
-            let future_idx = phase_fraction_to_index(&future_mp);
-            if future_idx == target_phase {
-                let (game_name, label) = GAME_PHASE_NAMES[target_phase as usize];
+    let mut seen_phases = std::collections::HashSet::new();
+    seen_phases.insert(current_index);
+
+    // Walk forward through the window, then extend if needed
+    // First pass: use the 31-day window (indices 2..31 = tomorrow through day+29)
+    for i in 2..31 {
+        let phase_idx = assigned[i].unwrap();
+        if !seen_phases.contains(&phase_idx) {
+            seen_phases.insert(phase_idx);
+            let (gn, lb) = GAME_PHASE_NAMES[phase_idx as usize];
+            let day_offset = (i as u32) - 1; // days from today
+            days_until.push(DaysUntilPhase {
+                game_phase: gn.to_string(),
+                label: lb.to_string(),
+                days: day_offset,
+            });
+        }
+    }
+
+    // If we haven't found all 7 remaining phases in the window, extend the search.
+    // This handles the rare case where a phase change falls beyond 29 days out.
+    if seen_phases.len() < 8 {
+        for extra_day in 30..=60u32 {
+            let date = today + chrono::Duration::days(extra_day as i64);
+            let md = moon_for_date(date.year(), date.month(), date.day());
+            // Simple classification for extended days (no 3-day span logic needed
+            // since we only need the first occurrence of each missing phase)
+            let phase_idx = if md.waning {
+                if md.illuminated >= 0.5 {
+                    5
+                } else {
+                    7
+                }
+            } else if md.illuminated <= 0.5 {
+                1
+            } else {
+                3
+            };
+            if !seen_phases.contains(&phase_idx) {
+                seen_phases.insert(phase_idx);
+                let (gn, lb) = GAME_PHASE_NAMES[phase_idx as usize];
                 days_until.push(DaysUntilPhase {
-                    game_phase: game_name.to_string(),
-                    label: label.to_string(),
-                    days: day,
+                    game_phase: gn.to_string(),
+                    label: lb.to_string(),
+                    days: extra_day,
                 });
+            }
+            if seen_phases.len() >= 8 {
                 break;
             }
         }
     }
 
-    let (game_name, label) = GAME_PHASE_NAMES[current_index as usize];
     Ok(MoonPhaseResult {
         game_phase: game_name.to_string(),
         label: label.to_string(),

@@ -24,7 +24,6 @@ rusqlite = { version = "0.32", features = ["bundled", "serde_json"] }
 r2d2 = "0.8"
 r2d2_sqlite = "0.25"
 chrono = { version = "0.4", features = ["serde"] }
-moon-phase = "0.1.0"
 chrono-tz = "0.10.4"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
