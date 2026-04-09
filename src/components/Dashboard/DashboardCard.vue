@@ -22,7 +22,7 @@
     </div>
 
     <!-- Card content -->
-    <div class="p-4 flex-1 min-h-0">
+    <div class="p-4 flex-1 min-h-0 overflow-y-auto max-h-96">
       <slot />
     </div>
   </div>
