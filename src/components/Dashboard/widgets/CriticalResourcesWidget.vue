@@ -26,7 +26,7 @@ const DEFAULT_TRACKED_ITEMS = [
   'Diamond',
   'Amethyst',
   'Aquamarine',
-  'Eternal Green',
+  'Eternal Greens',
   'Salt',
   'Fire Dust',
 ]

@@ -43,11 +43,11 @@ export const DASHBOARD_WIDGETS: DashboardWidget[] = [
   { id: 'items-incoming', name: 'Items Incoming', component: ItemsIncomingWidget, defaultSize: 'medium' },
   { id: 'items-outgoing', name: 'Items Outgoing', component: ItemsOutgoingWidget, defaultSize: 'medium' },
   { id: 'councils', name: 'Councils', component: CouncilsWidget, defaultSize: 'medium' },
-  { id: 'current-zone', name: 'Current Zone', component: CurrentZone, defaultSize: 'medium' },
+  { id: 'current-zone', name: 'Zone NPCs', component: CurrentZone, defaultSize: 'medium' },
   { id: 'favor-changes', name: 'Favor Changes', component: FavorChangesWidget, defaultSize: 'medium' },
   { id: 'player-notes', name: 'Notes', component: PlayerNotes, defaultSize: 'medium' },
 
-  { id: 'critical-resources', name: 'Critical Resources', component: CriticalResourcesWidget, defaultSize: 'medium' },
+  { id: 'critical-resources', name: 'Critical Resources', component: CriticalResourcesWidget, defaultSize: 'small' },
   { id: 'statehelm-summary', name: 'Statehelm Gifting', component: StatehelmSummaryWidget, defaultSize: 'medium' },
   { id: 'watchword-detections', name: 'Watchword Alerts', component: WatchwordDetectionsWidget, defaultSize: 'medium' },
 ]
