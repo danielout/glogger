@@ -62,6 +62,9 @@
         </div>
       </div>
 
+      <!-- Reference Shelf -->
+      <ReferenceShelf />
+
       <!-- Bottom bar -->
       <div class="shrink-0 h-6 bg-surface-base border-t border-border-default flex items-center justify-between px-3">
         <span class="text-text-dim text-[0.6rem]">Glogger by Zenith of Dreva -- Some portions copyright 2026 Elder Game, LLC.</span>
@@ -121,6 +124,7 @@ import SetupCharacterStep from "./components/Startup/SetupCharacterStep.vue";
 import CharacterSelect from "./components/Startup/CharacterSelect.vue";
 import ToastContainer from "./components/Shared/ToastContainer.vue";
 import QuickSearchOverlay from "./components/Search/QuickSearchOverlay.vue";
+import ReferenceShelf from "./components/Shared/ReferenceShelf/ReferenceShelf.vue";
 import type { SearchResult } from "./composables/useQuickSearch";
 
 const settingsStore = useSettingsStore();

@@ -1,20 +1,5 @@
 <template>
   <div class="flex flex-col h-full">
-    <div class="flex items-center gap-1.5 mb-2">
-      <h3 class="text-xs font-bold text-text-secondary uppercase tracking-wide">{{ title }}</h3>
-      <span
-        v-if="warningTooltip"
-        class="relative group cursor-help text-yellow-500/70 hover:text-yellow-400 text-xs"
-        title="">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
-          <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.168-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.457-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
-        </svg>
-        <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 rounded bg-[#1e1e3a] border border-border-default text-xs text-text-secondary leading-snug opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50 shadow-lg">
-          {{ warningTooltip }}
-        </span>
-      </span>
-    </div>
-
     <EmptyState
       v-if="entries.length === 0"
       variant="compact"
@@ -48,8 +33,20 @@
     </div>
 
     <!-- Summary line -->
-    <div v-if="entries.length > 0" class="mt-auto pt-2 border-t border-border-default text-xs text-text-muted flex justify-between">
-      <span>{{ entries.length }} {{ entries.length === 1 ? 'entry' : 'entries' }}</span>
+    <div v-if="entries.length > 0" class="mt-auto pt-2 border-t border-border-default text-xs text-text-muted flex items-center justify-between">
+      <span class="flex items-center gap-1.5">
+        {{ entries.length }} {{ entries.length === 1 ? 'entry' : 'entries' }}
+        <span
+          v-if="warningTooltip"
+          class="relative group cursor-help text-yellow-500/70 hover:text-yellow-400">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3 h-3">
+            <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.168-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.457-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+          </svg>
+          <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 rounded bg-surface-elevated border border-border-default text-xs text-text-secondary leading-snug opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50 shadow-lg">
+            {{ warningTooltip }}
+          </span>
+        </span>
+      </span>
       <span class="font-mono" :class="amountClass(total)">
         {{ signedTotal ? formatSigned(total) : total.toLocaleString() }} {{ unit }}
       </span>
@@ -66,7 +63,6 @@ import ItemInline from '../Shared/Item/ItemInline.vue'
 import NpcInline from '../Shared/NPC/NpcInline.vue'
 
 const props = withDefaults(defineProps<{
-  title: string
   entries: ActivityEntry[]
   dotColor?: string
   emptyText?: string

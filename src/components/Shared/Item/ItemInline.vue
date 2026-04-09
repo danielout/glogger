@@ -2,6 +2,9 @@
   <EntityTooltipWrapper
     border-class="border-entity-item/50"
     :interactive="true"
+    entity-type="item"
+    :entity-reference="reference"
+    :entity-label="itemData?.name ?? reference"
     @hover="loadData"
   >
     <span

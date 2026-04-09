@@ -2,6 +2,9 @@
   <EntityTooltipWrapper
     border-class="border-entity-npc/50"
     :disabled="!resolvedNpc"
+    entity-type="npc"
+    :entity-reference="reference"
+    :entity-label="resolvedNpc?.name ?? reference"
     @hover="() => {}"
   >
     <span

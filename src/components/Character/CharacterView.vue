@@ -105,6 +105,11 @@
     <template v-else-if="activeTab === 'build-planner'">
       <BuildPlannerScreen />
     </template>
+
+    <!-- Account Overview -->
+    <template v-else-if="activeTab === 'account'">
+      <AggregateView />
+    </template>
   </div>
   </PaneLayout>
 </template>
@@ -125,6 +130,7 @@ import GourmandView from '../Gourmand/GourmandView.vue'
 import BuildPlannerScreen from './BuildPlanner/BuildPlannerScreen.vue'
 import DeathsView from './DeathsView.vue'
 import StatehelmView from './StatehelmView.vue'
+import AggregateView from '../Dashboard/AggregateView.vue'
 
 defineProps<{
   activeTab: string;

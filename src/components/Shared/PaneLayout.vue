@@ -7,7 +7,8 @@
       :screen-key="screenKey"
       :default-width="leftPane.defaultWidth ?? 320"
       :min-width="leftPane.minWidth ?? 200"
-      :max-width="leftPane.maxWidth ?? 700">
+      :max-width="leftPane.maxWidth ?? 700"
+      :default-collapsed="leftPane.defaultCollapsed ?? false">
       <slot name="left" />
     </SidePane>
 
@@ -22,7 +23,8 @@
       :screen-key="screenKey"
       :default-width="rightPane.defaultWidth ?? 320"
       :min-width="rightPane.minWidth ?? 200"
-      :max-width="rightPane.maxWidth ?? 700">
+      :max-width="rightPane.maxWidth ?? 700"
+      :default-collapsed="rightPane.defaultCollapsed ?? false">
       <slot name="right" />
     </SidePane>
   </div>
@@ -36,6 +38,7 @@ export interface PaneConfig {
   defaultWidth?: number;
   minWidth?: number;
   maxWidth?: number;
+  defaultCollapsed?: boolean;
 }
 
 defineProps<{

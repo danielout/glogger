@@ -1,6 +1,9 @@
 <template>
   <EntityTooltipWrapper
     border-class="border-entity-quest/50"
+    entity-type="quest"
+    :entity-reference="reference"
+    :entity-label="displayName"
     @hover="loadData"
   >
     <span

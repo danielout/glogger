@@ -1,7 +1,5 @@
 <template>
-  <div class="bg-[#1a1a2e] border border-border-default rounded-lg p-4">
-    <h2 class="text-sm font-bold text-text-secondary uppercase tracking-wide mb-3">Current Zone</h2>
-
+  <div>
     <div v-if="!areaName" class="text-text-dim text-sm italic">
       No area data yet.
     </div>

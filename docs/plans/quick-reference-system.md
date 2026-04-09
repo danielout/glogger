@@ -168,7 +168,7 @@ This covers all three TODO items at a basic level:
 - Keyboard shortcut to toggle shelf visibility
 - "Pin" action in Data Browser detail pane (not just tooltips)
 - Chip grouping by entity type (visual separators, not categories)
-- Limit max pins with a gentle nudge ("shelf is getting full, unpin something?")
+
 
 ## Open Questions
 

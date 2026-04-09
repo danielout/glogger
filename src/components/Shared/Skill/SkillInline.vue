@@ -1,6 +1,9 @@
 <template>
   <EntityTooltipWrapper
     border-class="border-entity-skill/50"
+    entity-type="skill"
+    :entity-reference="reference"
+    :entity-label="skillData?.name ?? reference"
     @hover="loadData"
   >
     <span

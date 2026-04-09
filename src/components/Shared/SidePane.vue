@@ -69,14 +69,16 @@ const props = withDefaults(defineProps<{
   defaultWidth?: number;
   minWidth?: number;
   maxWidth?: number;
+  defaultCollapsed?: boolean;
 }>(), {
   defaultWidth: 320,
   minWidth: 200,
   maxWidth: 700,
+  defaultCollapsed: false,
 });
 
 const { prefs, update } = useViewPrefs(`${props.screenKey}.pane.${props.side}`, {
-  collapsed: false,
+  collapsed: props.defaultCollapsed,
   width: props.defaultWidth,
 });
 

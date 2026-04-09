@@ -1,6 +1,9 @@
 <template>
   <EntityTooltipWrapper
     border-class="border-entity-recipe/50"
+    entity-type="recipe"
+    :entity-reference="reference"
+    :entity-label="recipeData?.name ?? reference"
     @hover="loadData"
   >
     <span

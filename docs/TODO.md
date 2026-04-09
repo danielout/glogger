@@ -8,7 +8,26 @@ Small tasks and notes that don't belong in a dedicated plan.
 
 ## To Sort
 
--
+- IMPROVEMENT: Character->Skills: Needs to be using our PanelLayout.
+- IMPROVEMENT: Character->Skills: Skills show should rewards already attained, not just upcoming.
+- IMPROVEMENT: Character->Skills: Skills should show what other skills grant that skill bonus levels, with checkmarks next to ones that have been achieved.
+- IMPROVEMENT: Character->Skills: In the list view on the left, skills without bonus levels have their level aligned differently than skills with them.
+- IMPROVEMENT: Character->Skills: We've got massive amounts of empty horizontal space on this screen, to the point where if a table row has left aligned and right aligned content it is difficult to assiociate which is which. We need to think of a better layout for making use of this.
+- IMPROVEMENT: Character->Skills: 
+
+- IMPROVEMENT: Found these lines in the player.log, probably something we can work in to our parsing to improve things:
+    ```
+    [16:00:51] New Network State: Picking Character... (GotCharacters -> PickingCharacter)
+    [16:00:51] Vivox - LoginAsync(Zenith)
+    [16:00:51] Logged in as character Zenith. Time UTC=03/06/2026 16:00:51. Timezone Offset -08:00:00
+    EVENT(Ok): loginCharacter, numChars=2
+    [16:00:51] New Network State: Joined Area... Initializing Scene (PickingCharacter -> JoinedArea)
+    [16:00:51] LOADING LEVEL AreaCasino
+    Unloading 3 Unused Serialized files (Serialized files now loaded: 8)
+    [16:00:51] Logging chat to C:/Users/danie/AppData/LocalLow/Elder Game/Project Gorgon/ChatLogs/Chat-26-03-06.log
+    UnloadTime: 4.145100 ms
+    ```
+
 
 ---
 
@@ -75,21 +94,18 @@ Small tasks and notes that don't belong in a dedicated plan.
   - Right now in the data browser, items show up as "gift from grindstone" or "gift from ripesunflowerplant" with no direct linkage. Need to check if CDN data has a way to link seedling → plant → milling product.
   - **Effort: Medium | Impact: Low-Medium (data browser completeness)**
 
-- [ ] Pinned tooltips in a bottom tray
-  - Pin a tooltip and it shows up in the bottom tray — not the whole tooltip, just the name that can be hovered to see the tooltip. Needs UI design for the tray and pin interaction.
-  - **Effort: Medium | Impact: Medium (reference while working)**
+- [x] Pinned tooltips in a bottom tray
+  - Implemented as the Reference Shelf — see `docs/plans/quick-reference-system.md`. Pin entities from tooltips, hover shelf chips to peek, click to navigate.
 
 ---
 
 ## Larger Efforts / Research Needed
 
-- [ ] UX for checking recipes/data without losing context
-  - Brainstorm: the data browser currently lives as a full screen. Ideas include: a floating/popover data browser, a quick-peek modal, breadcrumb-style navigation history, or split-view. This is a significant UX architecture decision that affects many workflows.
-  - **Effort: Large (design + implementation) | Impact: High (core UX pain point)**
+- [x] UX for checking recipes/data without losing context
+  - Addressed by Reference Shelf — hover pinned chips to see full tooltips without leaving current screen.
 
-- [ ] Quick reference favorites / bookmarking system
-  - No favorites system exists. Would need: data model for bookmarked entities, UI for managing favorites (panel, popup, toolbar), integration with entity navigation. Related to the data browser UX question above — could be part of a unified solution.
-  - **Effort: Large | Impact: High (solves the "multiple wiki tabs" problem)**
+- [x] Quick reference favorites / bookmarking system
+  - Implemented as the Reference Shelf pin system. Pins persist across screens and sessions.
 
 - [ ] Shop/stall tracking — track what you put in, what sells, trends (would require manual entry or future log support) (reported by Reyetta)
   - Big feature. Needs: investigation of what log events exist for stalls, schema for tracking stock/sales, analytics UI. Manual entry fallback would work but adoption is questionable (Reyetta herself said manual entry is "too much effort"). The player event parser handles ~24 of ~60 known event types — player vendor events are in the "low priority / future" bucket per the parser docs.

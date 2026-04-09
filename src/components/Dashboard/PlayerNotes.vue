@@ -1,7 +1,5 @@
 <template>
   <div class="flex flex-col h-full">
-    <h3 class="text-xs font-bold text-text-secondary uppercase tracking-wide mb-2">Notes</h3>
-
     <!-- Add note input -->
     <div class="flex gap-1 mb-2">
       <input

@@ -45,7 +45,19 @@ Cross-cutting feature documentation not tied to a single screen.
 Per-screen documentation organized by view.
 
 ### Dashboard
-- [dashboard.md](features/screens/dashboard.md) — Dashboard screen: active character live view, aggregate server-wide analytics.
+- [dashboard.md](features/screens/dashboard.md) — Dashboard screen: widget registry, 6-column grid, drag-to-reorder, settings pane.
+  - [widget-status.md](features/screens/dashboard/widget-status.md) — Status widget: weather, combat/mount, effects, currencies.
+  - [widget-skill-tracking.md](features/screens/dashboard/widget-skill-tracking.md) — Live Skill Tracking widget: session XP gains.
+  - [widget-items-incoming.md](features/screens/dashboard/widget-items-incoming.md) — Items Incoming widget: loot, crafts, summoned.
+  - [widget-items-outgoing.md](features/screens/dashboard/widget-items-outgoing.md) — Items Outgoing widget: sold, stored, consumed.
+  - [widget-councils.md](features/screens/dashboard/widget-councils.md) — Councils widget: gold currency changes.
+  - [widget-current-zone.md](features/screens/dashboard/widget-current-zone.md) — Current Zone widget: area + NPCs with favor.
+  - [widget-favor-changes.md](features/screens/dashboard/widget-favor-changes.md) — Favor Changes widget: NPC favor deltas.
+  - [widget-notes.md](features/screens/dashboard/widget-notes.md) — Notes widget: personal checklist.
+
+  - [widget-critical-resources.md](features/screens/dashboard/widget-critical-resources.md) — Critical Resources widget: tracked item quantities.
+  - [widget-statehelm-summary.md](features/screens/dashboard/widget-statehelm-summary.md) — Statehelm Gifting widget: weekly gift progress.
+  - [widget-watchword-alerts.md](features/screens/dashboard/widget-watchword-alerts.md) — Watchword Alerts widget: recent match feed.
 
 ### Character
 - [character.md](features/screens/character.md) — Character screen: architecture, component hierarchy, data sources.
@@ -56,6 +68,7 @@ Per-screen documentation organized by view.
   - [character-gourmand.md](features/screens/character/character-gourmand.md) — Gourmand tab.
   - [character-statehelm.md](features/screens/character/character-statehelm.md) — Statehelm tab: weekly gift tracker with NPC services and filters.
   - [character-buildplanner.md](features/screens/character/character-buildplanner.md) — Build Planner tab (stub).
+  - Account tab: server-wide aggregate view (wealth, inventory, skills across all characters). Uses `AggregateView.vue` from Dashboard components.
 
 ### Inventory
 - [inventory.md](features/screens/inventory.md) — Inventory screen: architecture, component hierarchy, vault capacity models.
@@ -110,6 +123,7 @@ Per-screen documentation organized by view.
 
 - [build-planner-improvements.md](plans/build-planner-improvements.md) — Build planner polish and accuracy improvements.
 - [dashboard-improvements.md](plans/dashboard-improvements.md) — Dashboard cards, layout polish, and new tracker features.
+- [quick-reference-system.md](plans/quick-reference-system.md) — Reference Shelf: pinnable entity tooltips in a bottom tray (Phase 1 complete).
 - [unified-event-stream.md](plans/unified-event-stream.md) — Unifying Player.log and Chat.log into a single event stream (Phase 0+1 complete, Phase 2+ remaining).
 
 ## Samples

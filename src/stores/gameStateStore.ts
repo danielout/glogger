@@ -125,6 +125,42 @@ export const useGameStateStore = defineStore('gameState', () => {
   const liveItemMap = ref<Map<number, LiveInventoryItem>>(new Map())
   const liveEventLog = ref<InventoryEventLog[]>([])
 
+  // ── Clocks (computed from wall clock, session-only) ────────────────
+  // Server time = US Eastern. Game time = 12 game days per real day
+  // (1 game hour = 5 real minutes), anchored to Eastern midnight.
+  const serverTime = ref('--:--')
+  const gameTime = ref('--:--')
+
+  let _clockInterval: ReturnType<typeof setInterval> | null = null
+
+  function _tickClocks() {
+    const now = new Date()
+
+    // Server time (Eastern)
+    serverTime.value = now.toLocaleTimeString('en-US', {
+      hour: '2-digit', minute: '2-digit', hour12: false,
+      timeZone: 'America/New_York',
+    })
+
+    // Game time: 12× real speed anchored to Eastern midnight
+    const eastern = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }))
+    const realMinutes = eastern.getHours() * 60 + eastern.getMinutes() + eastern.getSeconds() / 60
+    const gameMinutesInDay = (realMinutes * 12) % 1440
+    const gh = Math.floor(gameMinutesInDay / 60)
+    const gm = Math.floor(gameMinutesInDay % 60)
+    gameTime.value = `${String(gh).padStart(2, '0')}:${String(gm).padStart(2, '0')}`
+  }
+
+  function startClocks() {
+    _tickClocks()
+    if (!_clockInterval) {
+      _clockInterval = setInterval(_tickClocks, 1000)
+    }
+  }
+
+  // Start immediately when the store is created
+  startClocks()
+
   // ── Activity Feeds (in-memory, session-only) ────────────────────────
   const itemsIncoming = ref<ActivityEntry[]>([])
   const itemsOutgoing = ref<ActivityEntry[]>([])
@@ -863,6 +899,10 @@ export const useGameStateStore = defineStore('gameState', () => {
     liveEventLog,
     handleInventoryEvent,
     clearLiveInventory,
+
+    // Clocks
+    serverTime,
+    gameTime,
 
     // Activity feeds
     itemsIncoming,

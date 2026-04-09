@@ -2,144 +2,140 @@
 
 ## Overview
 
-The dashboard is the landing screen — an at-a-glance view of the player's current session and server-wide progress. It supports two modes toggled by a button in the top-right: **Active Character** (live session data) and **All Characters on Server** (aggregate analytics).
+The dashboard is the landing screen — an at-a-glance view of the player's current session. It renders a configurable grid of widget cards that can be reordered via drag-and-drop and shown/hidden via a settings pane.
+
+The **Aggregate View** (server-wide analytics across all characters) has moved to the **Character > Account** tab.
 
 ## Architecture
 
+### Widget System
+
+The dashboard is built on a registry-driven widget system:
+
+- **Widget registry** (`src/components/Dashboard/dashboardWidgets.ts`) — array of `{ id, name, component, defaultSize }` objects. All widgets are registered here. Adding a new widget means creating the component and adding a registry entry.
+- **DashboardCard** (`src/components/Dashboard/DashboardCard.vue`) — shared wrapper providing card chrome (background, border, rounded corners), a compact title bar (drag handle), and an optional gear icon with config popover slot. The gear icon only appears when the widget provides a `config` slot.
+- **Responsive CSS grid** — uses `repeat(auto-fill, minmax(280px, 1fr))` so column count adapts to screen width. Wider monitors fit more widgets per row; narrower monitors fewer. No fixed column count.
+- **Widget sizes**: Small (1 column, ~280px), Medium (2 columns, span 2), Large (4 columns, span 4 = 2x medium).
+- **Drag-to-reorder** — via `vuedraggable` (SortableJS wrapper). Cards are dragged by their title bar. New order is persisted.
+- **Settings pane** — right-side pane ("Widgets") with checkboxes to show/hide each widget. Defaults to open.
+
+### Persistence
+
+Widget order and visibility are stored in `viewPreferences['dashboard']` via `useViewPrefs`:
+- `cardOrder: string[]` — widget IDs in display order
+- `hiddenCards: string[]` — widget IDs that are hidden
+
+New widgets (added in code updates) automatically append to the end of the card order.
+
 ### Files
 
-**Frontend (Vue/TS):**
-- `src/components/Dashboard/DashboardView.vue` — main container with view mode toggle
-- `src/components/Dashboard/ContextBar.vue` — weather, combat/mount status, effects, currencies
-- `src/components/Dashboard/ActivityFeed.vue` — reusable activity feed card (used by all five feed cards)
+**Core:**
+- `src/components/Dashboard/DashboardView.vue` — main container with registry-driven grid
+- `src/components/Dashboard/DashboardCard.vue` — shared card wrapper (title bar, config popover)
+- `src/components/Dashboard/DashboardSettingsPane.vue` — right pane with widget visibility toggles
+- `src/components/Dashboard/dashboardWidgets.ts` — widget registry and size class definitions
+
+**Shared components used by widgets:**
+- `src/components/Dashboard/ActivityFeed.vue` — reusable activity feed (used by 4 feed widgets)
+- `src/components/Dashboard/ContextBar.vue` — time, moon phase, weather, combat/mount, currencies
+- `src/components/Dashboard/ContextBarConfig.vue` — config panel for Status widget section toggles
 - `src/components/Dashboard/CurrentZone.vue` — current area with friendly NPCs and favor ranks
 - `src/components/Dashboard/PlayerNotes.vue` — localStorage-backed checklist
-- `src/components/Dashboard/AggregateView.vue` — server-wide analytics
+
+**Widget wrappers** (`src/components/Dashboard/widgets/`):
+Self-contained components that bind store data to shared components. Each is a thin wrapper.
 
 **Stores:**
-- `gameStateStore` — live session data (skills, inventory events, activity feeds, world state, currencies)
-- `aggregateStore` — server-wide wealth, inventory, and skill data
-- `coordinatorStore` — tailing status indicators
+- `gameStateStore` — live session data (skills, inventory, activity feeds, world state, currencies)
+- `settingsStore` — watch rules (for Watchword Alerts widget)
+- `useStatehelmTracker` composable — gift tracking (for Statehelm Gifting widget)
 
 ### Component Hierarchy
 
 ```
-DashboardView.vue                — view mode toggle (Active / Aggregate)
-├── Active Character View
-│   ├── ContextBar               — weather, combat, mount, effects, currencies
-│   ├── SkillCard grid           — live XP tracking per skill
-│   ├── Activity row (3-col)
-│   │   ├── ActivityFeed         — Items Incoming (loot, crafts, summoned)
-│   │   ├── ActivityFeed         — Items Outgoing (sold, stored, consumed)
-│   │   └── ActivityFeed         — Councils (vendor gold, loot, transactions)
-│   └── Bottom row (3-col)
-│       ├── CurrentZone          — current area, friendly NPCs, favor ranks
-│       ├── ActivityFeed         — Favor Changes (NPC favor deltas)
-│       └── PlayerNotes          — simple checklist (localStorage)
-└── Aggregate View
-    └── AggregateView            — server-wide stats across all characters
+DashboardView.vue
+├── PaneLayout (screen-key="dashboard", right pane: "Widgets")
+│   ├── Center: responsive CSS grid
+│   │   └── draggable wrapper (vuedraggable)
+│   │       └── DashboardCard (v-for widget in orderedWidgets)
+│   │           └── <component :is="widget.component" />
+│   └── Right pane: DashboardSettingsPane
+│       └── Checkbox list of all registered widgets
 ```
 
-## Active Character View
+## Widgets
 
-### Context Bar
-Single horizontal row of real-time environmental and character state:
-- Current zone weather
-- Combat/mount status indicators
-- Active named effects count
-- Non-zero currency balances
+Each widget is documented in its own file under `dashboard/`:
 
-### Live Skill Tracking
-Grid of `SkillCard` components for skills that have gained XP during the current session:
-- Skill name and level (with bonus level breakdown)
-- XP gained and XP/hour rate
-- Levels gained during session
-- Progress bar toward next level
-- Estimated time to next level
+| Widget | Size | Description |
+|--------|------|-------------|
+| [Status](dashboard/widget-status.md) | Small | Server/game time, moon phase, weather, combat, currencies |
+| [Live Skill Tracking](dashboard/widget-skill-tracking.md) | Large | Session XP gains per skill |
+| [Items Incoming](dashboard/widget-items-incoming.md) | Medium | Loot, crafts, summoned items |
+| [Items Outgoing](dashboard/widget-items-outgoing.md) | Medium | Sold, stored, consumed items |
+| [Councils](dashboard/widget-councils.md) | Medium | Gold/council currency changes |
+| [Current Zone](dashboard/widget-current-zone.md) | Medium | Area + NPCs with favor ranks |
+| [Favor Changes](dashboard/widget-favor-changes.md) | Medium | NPC favor deltas |
+| [Notes](dashboard/widget-notes.md) | Medium | Personal checklist (localStorage) |
 
-Empty state: "No skill updates yet." when no XP has been gained.
+| [Critical Resources](dashboard/widget-critical-resources.md) | Medium | Tracked item quantities |
+| [Statehelm Gifting](dashboard/widget-statehelm-summary.md) | Medium | Weekly gift progress summary |
+| [Watchword Alerts](dashboard/widget-watchword-alerts.md) | Medium | Recent watchword match feed |
 
-### Activity Feeds
+## Adding a New Widget
 
-Five activity feed cards replace the old single transaction log, each showing a focused stream of events. All use the reusable `ActivityFeed.vue` component.
-
-**Items Incoming** (green dot) — items gained during the session:
-- Chat status only: `ItemGained` and `Summoned` events (Player.log item events are excluded to avoid double-counting — the same pickup fires both `ItemAdded` and `ItemStackChanged` in Player.log alongside `ItemGained` in chat)
-- Item names rendered via `ItemInline` for tooltips and navigation
-
-**Items Outgoing** (red dot) — items lost during the session:
-- Player.log only: `ItemDeleted` (with context: sold, stored, consumed) and `ItemStackChanged` (negative delta)
-- Chat status has no item removal events, so Player.log is the sole source
-- Item names rendered via `ItemInline`
-
-**Councils** (yellow dot) — gold/council currency changes:
-- Chat status: `CouncilsChanged` (received/spent) and `CoinsLooted` (corpse search)
-- Player.log: `VendorSold` events (sale price)
-- Shows signed running total
-
-**Favor Changes** (purple dot) — NPC favor deltas:
-- Player.log: `FavorChanged` events (gifts, quest rewards, etc.)
-- NPC names rendered via `NpcInline` for tooltips and navigation
-- Shows signed running total
-
-Each feed shows up to 30 entries with a summary footer (entry count + total amount).
-
-### Current Zone
-Shows the player's current area and lists all friendly NPCs located there:
-- Area name displayed via `AreaInline`
-- NPC list loaded from CDN data via `getNpcsInArea()`, each rendered with `NpcInline` for click-to-navigate
-- Favor rank badge next to each NPC (from `gameStateStore.favorByNpc`), color-coded by tier
-- Updates reactively when the player transitions to a new zone
-
-### Player Notes
-Simple checklist persisted to `localStorage` (key: `glogger-player-notes`):
-- Add new notes
-- Toggle checkbox completion
-- Clear all completed notes
-
-## Aggregate View
-
-Server-wide analytics across all characters, loaded on-demand via `aggregateStore.loadAll()`:
-
-### Wealth Summary
-Three summary cards:
-- **Total Currencies** — sum of all currency holdings across characters
-- **Inventory Market Value** — estimated value based on market prices
-- **Grand Total** — combined
-
-### Per-Character Wealth Breakdown
-Table showing currencies + inventory market value per character.
-
-### Combined Inventory
-Searchable table of all items across all characters with per-character quantity breakdown.
-
-### Skills Across Characters
-Collapsible, searchable table showing skill levels as a matrix (rows = skills, columns = characters). Collapsed by default for performance.
+1. Create a component in `src/components/Dashboard/widgets/`. It should be self-contained — import its own stores and bind its own data. No props from the parent.
+2. Add a registry entry to `dashboardWidgets.ts`:
+   ```ts
+   { id: 'my-widget', name: 'My Widget', component: MyWidget, defaultSize: 'medium' }
+   ```
+3. The widget automatically appears on new users' dashboards. Existing users see it appended to their card order.
+4. To add per-widget configuration, use the `config` slot on `DashboardCard` — the gear icon only appears when this slot is provided.
 
 ## Data Sources
 
 | Data | Source | Persistence |
 |------|--------|-------------|
+| Server time, game time | `gameStateStore.serverTime` / `gameTime` | Session (computed, 1s tick) |
 | Weather, combat, mount | `gameStateStore.world` | Session (in-memory) |
 | Currencies | `gameStateStore.currencies` | Session (in-memory) |
 | Skill tracking | `gameStateStore.sessionSkillList` | Session (in-memory) |
 | Items incoming/outgoing | `gameStateStore.itemsIncoming` / `itemsOutgoing` | Session (last 30, in-memory) |
 | Council changes | `gameStateStore.councilChanges` | Session (last 30, in-memory) |
 | Favor changes | `gameStateStore.favorChanges` | Session (last 30, in-memory) |
-| Current area | `gameStateStore.world.area` | Persistent (database, `game_state_area`) |
-| Area NPCs | `gameDataStore.getNpcsInArea()` → CDN data | CDN cache |
+| Current area | `gameStateStore.world.area` | Persistent (database) |
+| Area NPCs | `gameDataStore.getNpcsInArea()` | CDN cache |
 | NPC favor ranks | `gameStateStore.favorByNpc` | Persistent (database) |
-| Chat status events | Backend `chat-status-event` → `gameStateStore` listener | Session (in-memory) |
-| Item transactions | `item_transactions` table (v15 migration) | Persistent (database) |
+| Inventory counts | `gameStateStore.ownedItemCounts` | Persistent + live (merged) |
+| Gift tracking | `useStatehelmTracker` composable | Persistent (database) |
+| Watch rule matches | `get_watch_rule_messages` Tauri command | Persistent (database) |
+| Moon phase | `useMoonPhase` composable (calculated) | N/A (derived) |
 | Player notes | `localStorage` | Persistent (browser) |
-| Aggregate wealth/inventory/skills | `aggregateStore` → Tauri commands | On-demand from database |
+| Widget order/visibility | `viewPreferences['dashboard']` | Persistent (settings file) |
 
 ## Key Design Decisions
 
-- **Two-mode dashboard** — toggle between character-centric live view and server-wide analytics, rather than cramming both into one screen.
-- **Split activity feeds** — five focused cards instead of one mixed transaction log, making it easy to scan specific categories at a glance.
-- **Single source per feed** — each feed uses exactly one event source to avoid double-counting. Items Incoming uses chat status exclusively (correct quantities in one event); Items Outgoing uses Player.log exclusively (chat has no removal events); Councils uses both (non-overlapping: Player.log has VendorSold, chat has CouncilsChanged/CoinsLooted); Favor uses Player.log exclusively.
-- **Reusable ActivityFeed component** — all five cards use the same component with props for dot color, entity links (ItemInline/NpcInline), signed totals, and empty states.
-- **Bounded feeds** — each feed keeps last 30 entries to prevent memory bloat.
-- **Lazy aggregate loading** — skills section collapsed by default; data fetched on demand rather than at startup.
-- **Notes in localStorage** — player notes are intentionally not in the database since they're personal scratch-pad items, not game state.
+- **Widget registry** — data-driven rendering instead of hardcoded template. Adding a widget is just a component + a registry entry.
+- **Self-contained widgets** — each widget component owns its store bindings. No props threading from the parent. This makes widgets independently testable and easy to add/remove.
+- **Responsive grid** — `repeat(auto-fill, minmax(280px, 1fr))` adapts column count to available width. No fixed column count prevents stretched/ugly cards on ultrawide monitors.
+- **Split activity feeds** — five focused feed cards instead of one mixed transaction log, making it easy to scan specific categories at a glance.
+- **Single source per feed** — each feed uses exactly one event source to avoid double-counting.
+- **Conditional gear icon** — the config popover gear only renders when a widget provides a `config` slot, keeping the title bar clean for widgets without options.
+- **Drag-to-reorder** — vuedraggable with `v-model` on a writable computed. Title bar as handle. Order persisted via useViewPrefs.
+- **Notes in localStorage** — player notes are intentionally not in the database since they're personal scratch-pad items.
+
+## Future Work
+
+### New Widget Ideas
+
+- **Daily Quest Tracker** — track daily quest availability/completion. Needs investigation into log events for daily quest accept/complete, whether CDN data marks quests as daily, and reset schedules. **Effort: Medium | Impact: Medium**
+- **Rez Timer** — detect death events in PlayerEventParser, track cooldown, display countdown. Research needed into death/rez log lines. **Effort: Large | Impact: Medium**
+- **Long-Cooldown Timers** — Resuscitate, portals, Hoplology, etc. Needs cooldown tracking infrastructure, parser work, and possibly manual duration config. Generalized version of rez timer. **Effort: Large | Impact: Medium-High**
+- **"What Should I Do Next"** — suggestion engine using skill levels, recipe data, crafting history. Start simple (random tips), get smarter over time. **Effort: Large | Impact: Medium**
+- **Gardening Almanac** — unclear if garden data appears in Player.log. May require manual entry. Needs research. **Effort: Large | Impact: Medium**
+
+### Widget System Enhancements
+
+- **Size override from settings pane** — allow changing a widget's width class (small/medium/large) from the Widgets pane
+- **Critical Resources: user-configurable item list** — let users pick which items to track via the DashboardCard config popover
+- **Status widget polish** — grouped/categorized currencies, icons or color coding, richer header with character name, level range, current area, session duration

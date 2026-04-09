@@ -2,14 +2,14 @@
 
 ## Overview
 
-The character screen is a 7-tab hub for all character-specific data: skill progression, character report stats, NPC relationships, quest tracking, gourmand progress, Statehelm reputation tracking, and build planning. Data comes from a mix of live session tracking, persisted game state, character report imports, and CDN enrichment.
+The character screen is an 8-tab hub for all character-specific data: skill progression, character report stats, NPC relationships, quest tracking, death tracking, gourmand progress, Statehelm reputation tracking, build planning, and account-wide analytics. Data comes from a mix of live session tracking, persisted game state, character report imports, and CDN enrichment.
 
 ## Architecture
 
 ### Files
 
 **Frontend (Vue/TS):**
-- `src/components/Character/CharacterView.vue` — 7-tab container
+- `src/components/Character/CharacterView.vue` — 8-tab container
 - `src/components/Character/SkillsScreen.vue` — skills tab (two-panel + tracked skills)
 - `src/components/Character/NpcsScreen.vue` — NPCs tab (two-panel favor/services)
 - `src/components/Character/QuestsScreen.vue` — quests tab (two-panel with eligibility)
@@ -23,7 +23,7 @@ The character screen is a 7-tab hub for all character-specific data: skill progr
 ### Component Hierarchy
 
 ```
-CharacterView.vue                   — 7-tab container
+CharacterView.vue                   — 8-tab container
 ├── SkillsScreen.vue                — unified skill view
 │   ├── TrackedSkillsBar.vue        — pinned skill cards at top
 │   │   └── TrackedSkillCard.vue    — individual tracked skill
