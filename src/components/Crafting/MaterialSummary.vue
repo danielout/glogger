@@ -22,6 +22,7 @@
         <tr class="text-text-dim border-b border-border-light">
           <th class="text-left py-1 font-medium">Item</th>
           <th class="text-right py-1 font-medium w-16">Need</th>
+          <th v-if="pricingMode" class="text-right py-1 font-medium w-20">They Give</th>
           <th class="text-right py-1 font-medium w-16">Inv</th>
           <th class="text-right py-1 font-medium w-16">Storage</th>
           <th class="text-right py-1 font-medium w-20">Shortfall</th>
@@ -45,6 +46,15 @@
               <ItemInline v-else :reference="mat.item_name" />
             </td>
             <td class="text-right py-1 font-mono text-text-primary">{{ mat.quantity_needed }}</td>
+            <td v-if="pricingMode" class="text-right py-1">
+              <input
+                :value="getCustomerProvides(mat)"
+                type="number"
+                min="0"
+                :max="Math.ceil(mat.quantity_needed)"
+                class="input w-14 text-xs text-right py-0"
+                @change="onCustomerProvidesChange(getMaterialKey(mat), mat.quantity_needed, $event)" />
+            </td>
             <td class="text-right py-1 font-mono" :class="mat.inventory_have > 0 ? 'text-green-400' : 'text-text-muted'">
               {{ mat.inventory_have }}
             </td>
@@ -86,9 +96,33 @@ import ItemInline from "../Shared/Item/ItemInline.vue";
 const props = withDefaults(defineProps<{
   needs: MaterialNeed[]
   bare?: boolean
+  pricingMode?: boolean
+  customerProvides?: Record<string, number>
 }>(), {
   bare: false,
+  pricingMode: false,
 });
+
+const emit = defineEmits<{
+  'update-customer-provides': [key: string, quantity: number]
+}>();
+
+function onCustomerProvidesChange(key: string, maxQty: number, event: Event) {
+  const target = event.target as HTMLInputElement;
+  const qty = Math.max(0, Math.min(Math.ceil(maxQty), parseFloat(target.value) || 0));
+  emit('update-customer-provides', key, qty);
+}
+
+function getCustomerProvides(mat: MaterialNeed): number {
+  if (!props.customerProvides) return 0;
+  // MaterialNeed uses item_id (number) or item_name for dynamic — match to the key format used by flattenIngredients
+  const key = mat.is_dynamic ? `kw:${mat.item_name}` : String(mat.item_id);
+  return props.customerProvides[key] ?? 0;
+}
+
+function getMaterialKey(mat: MaterialNeed): string {
+  return mat.is_dynamic ? `kw:${mat.item_name}` : String(mat.item_id);
+}
 
 const expandedKeys = ref(new Set<string>());
 

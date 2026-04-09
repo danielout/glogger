@@ -11,6 +11,7 @@ pub struct CreateProjectInput {
     pub name: String,
     pub notes: Option<String>,
     pub group_name: Option<String>,
+    pub fee_config: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -19,6 +20,8 @@ pub struct UpdateProjectInput {
     pub name: String,
     pub notes: String,
     pub group_name: Option<String>,
+    pub fee_config: Option<String>,
+    pub customer_provides: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -52,6 +55,8 @@ pub struct CraftingProject {
     pub name: String,
     pub notes: String,
     pub group_name: Option<String>,
+    pub fee_config: String,
+    pub customer_provides: String,
     pub created_at: String,
     pub updated_at: String,
     pub entries: Vec<CraftingProjectEntry>,
@@ -91,9 +96,12 @@ pub fn create_crafting_project(
         .get()
         .map_err(|e| format!("Database connection error: {e}"))?;
 
+    let default_fee = r#"{"per_craft_fee":0,"material_pct":0,"material_pct_basis":"total","flat_fee":0}"#;
+    let fee_config = input.fee_config.as_deref().unwrap_or(default_fee);
+
     conn.execute(
-        "INSERT INTO crafting_projects (name, notes, group_name) VALUES (?1, ?2, ?3)",
-        rusqlite::params![input.name, input.notes.unwrap_or_default(), input.group_name],
+        "INSERT INTO crafting_projects (name, notes, group_name, fee_config) VALUES (?1, ?2, ?3, ?4)",
+        rusqlite::params![input.name, input.notes.unwrap_or_default(), input.group_name, fee_config],
     )
     .map_err(|e| format!("Failed to create crafting project: {e}"))?;
 
@@ -148,7 +156,7 @@ pub fn get_crafting_project(
 
     let project = conn
         .query_row(
-            "SELECT id, name, notes, group_name, datetime(created_at), datetime(updated_at)
+            "SELECT id, name, notes, group_name, fee_config, customer_provides, datetime(created_at), datetime(updated_at)
          FROM crafting_projects WHERE id = ?1",
             [project_id],
             |row| {
@@ -157,8 +165,10 @@ pub fn get_crafting_project(
                     name: row.get(1)?,
                     notes: row.get(2)?,
                     group_name: row.get(3)?,
-                    created_at: row.get(4)?,
-                    updated_at: row.get(5)?,
+                    fee_config: row.get(4)?,
+                    customer_provides: row.get(5)?,
+                    created_at: row.get(6)?,
+                    updated_at: row.get(7)?,
                     entries: Vec::new(),
                 })
             },
@@ -209,9 +219,9 @@ pub fn update_crafting_project(
         .map_err(|e| format!("Database connection error: {e}"))?;
 
     conn.execute(
-        "UPDATE crafting_projects SET name = ?1, notes = ?2, group_name = ?3, updated_at = CURRENT_TIMESTAMP
-         WHERE id = ?4",
-        rusqlite::params![input.name, input.notes, input.group_name, input.id],
+        "UPDATE crafting_projects SET name = ?1, notes = ?2, group_name = ?3, fee_config = COALESCE(?4, fee_config), customer_provides = COALESCE(?5, customer_provides), updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?6",
+        rusqlite::params![input.name, input.notes, input.group_name, input.fee_config, input.customer_provides, input.id],
     )
     .map_err(|e| format!("Failed to update project: {e}"))?;
 
@@ -348,18 +358,18 @@ pub fn duplicate_crafting_project(db: State<'_, DbPool>, project_id: i64) -> Res
         .map_err(|e| format!("Database connection error: {e}"))?;
 
     // Get original project
-    let (name, notes, group_name): (String, String, Option<String>) = conn
+    let (name, notes, group_name, fee_config, customer_provides): (String, String, Option<String>, String, String) = conn
         .query_row(
-            "SELECT name, notes, group_name FROM crafting_projects WHERE id = ?1",
+            "SELECT name, notes, group_name, fee_config, customer_provides FROM crafting_projects WHERE id = ?1",
             [project_id],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
         )
         .map_err(|e| format!("Project not found: {e}"))?;
 
     // Create copy
     conn.execute(
-        "INSERT INTO crafting_projects (name, notes, group_name) VALUES (?1, ?2, ?3)",
-        rusqlite::params![format!("{name} (copy)"), notes, group_name],
+        "INSERT INTO crafting_projects (name, notes, group_name, fee_config, customer_provides) VALUES (?1, ?2, ?3, ?4, ?5)",
+        rusqlite::params![format!("{name} (copy)"), notes, group_name, fee_config, customer_provides],
     )
     .map_err(|e| format!("Failed to duplicate project: {e}"))?;
 

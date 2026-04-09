@@ -1,5 +1,5 @@
 <template>
-  <div class="shrink-0 overflow-y-auto border border-surface-elevated rounded p-4">
+  <div class="flex flex-col gap-4 px-4 py-3">
     <EmptyState v-if="!activeProject" variant="panel" primary="No project selected" secondary="Select or create a project to see recipes." />
 
     <div v-else class="flex flex-col gap-4">
@@ -51,6 +51,16 @@
           &#10005;
         </button>
       </div>
+
+      <!-- Pricing mode toggle -->
+      <button
+        class="text-xs cursor-pointer border rounded px-2 py-1 transition-colors self-start"
+        :class="pricingMode
+          ? 'text-accent-gold border-accent-gold/40 bg-accent-gold/10 hover:bg-transparent hover:text-text-muted'
+          : 'text-text-muted bg-transparent border-border-light hover:text-accent-gold hover:border-accent-gold/30'"
+        @click="$emit('toggle-pricing')">
+        {{ pricingMode ? 'Pricing On' : 'Enable Pricing' }}
+      </button>
 
       <!-- Add recipe search -->
       <div class="flex gap-2">
@@ -118,6 +128,73 @@
           @toggle-intermediate="(entryId, itemId) => $emit('toggle-intermediate', entryId, itemId)"
           @update-target-stock="(entryId, ts) => $emit('update-target-stock', entryId, ts)" />
       </div>
+
+      <!-- Fee Configuration (pricing mode only) -->
+      <div v-if="pricingMode" class="flex flex-col gap-2 border-t border-surface-elevated pt-3">
+        <div class="flex items-center justify-between">
+          <h4 class="text-text-secondary text-xs font-semibold uppercase tracking-wide m-0">Crafting Fee</h4>
+          <div class="flex gap-1">
+            <button
+              class="text-text-muted text-[0.65rem] cursor-pointer bg-transparent border-none hover:text-accent-gold"
+              title="Save current fee config as default for new projects"
+              @click="$emit('save-defaults')">
+              Save as Default
+            </button>
+            <span class="text-text-muted/40 text-[0.65rem]">|</span>
+            <button
+              class="text-text-muted text-[0.65rem] cursor-pointer bg-transparent border-none hover:text-text-primary"
+              title="Reset fee config to defaults"
+              @click="$emit('reset-defaults')">
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <!-- Per-craft fee -->
+        <div class="flex items-center gap-2">
+          <label class="text-text-muted text-[0.65rem] w-24 shrink-0">Per craft</label>
+          <input
+            :value="feeConfig.per_craft_fee"
+            type="number"
+            min="0"
+            class="input flex-1 text-xs"
+            @change="onFeeFieldChange('per_craft_fee', $event)" />
+          <span class="text-text-dim text-[0.65rem]">gold each</span>
+        </div>
+
+        <!-- Material percentage -->
+        <div class="flex items-center gap-2">
+          <label class="text-text-muted text-[0.65rem] w-24 shrink-0">Material %</label>
+          <input
+            :value="feeConfig.material_pct"
+            type="number"
+            min="0"
+            max="100"
+            class="input w-16 text-xs"
+            @change="onFeeFieldChange('material_pct', $event)" />
+          <span class="text-text-dim text-[0.65rem]">% of</span>
+          <select
+            :value="feeConfig.material_pct_basis"
+            class="px-1.5 py-0.5 bg-surface-base border border-border-default rounded text-[0.65rem] text-text-muted cursor-pointer"
+            @change="onBasisChange($event)">
+            <option value="total">total materials</option>
+            <option value="yours">your materials</option>
+            <option value="theirs">their materials</option>
+          </select>
+        </div>
+
+        <!-- Flat fee -->
+        <div class="flex items-center gap-2">
+          <label class="text-text-muted text-[0.65rem] w-24 shrink-0">Flat fee</label>
+          <input
+            :value="feeConfig.flat_fee"
+            type="number"
+            min="0"
+            class="input flex-1 text-xs"
+            @change="onFeeFieldChange('flat_fee', $event)" />
+          <span class="text-text-dim text-[0.65rem]">gold total</span>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -126,7 +203,7 @@
 import { ref, computed, watch } from "vue";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useCraftingStore } from "../../stores/craftingStore";
-import type { CraftingProject } from "../../types/crafting";
+import type { CraftingProject, FeeConfig, MaterialPctBasis } from "../../types/crafting";
 import type { RecipeInfo } from "../../types/gameData/recipes";
 import EmptyState from "../Shared/EmptyState.vue";
 import ProjectEntryCard from "./ProjectEntryCard.vue";
@@ -135,15 +212,21 @@ const props = defineProps<{
   activeProject: CraftingProject | null
   intermediateExpansions: Map<string, boolean>
   stockTargets: Map<number, { effectiveQty: number; currentStock: number }>
+  pricingMode: boolean
+  feeConfig: FeeConfig
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   'duplicate': []
   'delete': []
   'update-qty': [entryId: number, qty: number]
   'remove': [entryId: number]
   'toggle-intermediate': [entryId: number, itemId: number | null]
   'update-target-stock': [entryId: number, targetStock: number | null]
+  'toggle-pricing': []
+  'update-fee': [feeConfig: FeeConfig]
+  'save-defaults': []
+  'reset-defaults': []
 }>();
 
 const gameData = useGameDataStore();
@@ -158,12 +241,10 @@ let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const groupInput = ref("");
 
-// Sync groupInput when active project changes
 watch(() => props.activeProject, (p) => {
   groupInput.value = p?.group_name ?? "";
 }, { immediate: true });
 
-// Collect existing group names for autocomplete
 const existingGroupNames = computed(() => {
   const names = new Set<string>();
   for (const p of store.projects) {
@@ -172,9 +253,7 @@ const existingGroupNames = computed(() => {
   return Array.from(names).sort();
 });
 
-function onGroupInput() {
-  // Just let the input update reactively; commit on blur/enter
-}
+function onGroupInput() {}
 
 function commitGroup() {
   if (!props.activeProject) return;
@@ -231,5 +310,19 @@ function collapseAll() {
   for (const card of entryCards.value) {
     card.expanded = false;
   }
+}
+
+function onFeeFieldChange(field: keyof FeeConfig, event: Event) {
+  const target = event.target as HTMLInputElement;
+  const value = Math.max(0, parseFloat(target.value) || 0);
+  emit('update-fee', { ...props.feeConfig, [field]: value });
+}
+
+function onBasisChange(event: Event) {
+  const target = event.target as HTMLSelectElement;
+  emit('update-fee', {
+    ...props.feeConfig,
+    material_pct_basis: target.value as MaterialPctBasis,
+  });
 }
 </script>

@@ -1,5 +1,5 @@
 <template>
-  <div class="flex-1 min-w-0 overflow-y-auto border border-surface-elevated rounded p-4 flex flex-col gap-3">
+  <div class="h-full overflow-y-auto p-4 flex flex-col gap-3">
     <!-- Empty state -->
     <template v-if="!activeProject && !activeGroupName">
       <EmptyState variant="compact" primary="No project selected" secondary="Select a project to see materials." />
@@ -58,7 +58,12 @@
                 <span v-if="missingCount > 0"><span class="text-accent-red">{{ missingCount }}</span> missing</span>
               </div>
             </template>
-            <MaterialSummary :needs="materialNeeds" :bare="true" />
+            <MaterialSummary
+              :needs="materialNeeds"
+              :bare="true"
+              :pricing-mode="pricingMode"
+              :customer-provides="customerProvides"
+              @update-customer-provides="(key, qty) => $emit('update-customer-provides', key, qty)" />
           </AccordionSection>
 
           <!-- Fallback: raw materials table when availability hasn't been checked yet -->
@@ -72,13 +77,15 @@
                 <tr class="text-text-dim border-b border-border-light">
                   <th class="text-left py-1 font-medium">Item</th>
                   <th class="text-right py-1 font-medium w-20">Qty</th>
+                  <th v-if="pricingMode" class="text-right py-1 font-medium w-20">They Give</th>
                 </tr>
               </thead>
               <tbody>
                 <tr
                   v-for="mat in sortedMaterials"
                   :key="mat.key"
-                  class="border-b border-surface-dark">
+                  class="border-b border-surface-dark"
+                  :class="{ 'bg-accent-green/5': pricingMode && (customerProvides[mat.key] ?? 0) > 0 }">
                   <td class="py-1">
                     <template v-if="mat.is_dynamic">
                       <span class="text-accent-gold/60 text-[0.65rem] mr-1">&#9670;</span>
@@ -95,6 +102,15 @@
                       :title="`~${Math.round(mat.chance_to_consume * 100)}% chance to consume per use. Raw quantity: ${mat.quantity}`">
                       *
                     </span>
+                  </td>
+                  <td v-if="pricingMode" class="text-right py-1">
+                    <input
+                      :value="customerProvides[mat.key] ?? 0"
+                      type="number"
+                      min="0"
+                      :max="Math.ceil(mat.expected_quantity)"
+                      class="input w-14 text-xs text-right py-0"
+                      @change="onCustomerProvidesChange(mat.key, mat.expected_quantity, $event)" />
                   </td>
                 </tr>
               </tbody>
@@ -191,6 +207,50 @@
         </button>
       </div>
 
+      <!-- Pricing Summary (pricing mode only) -->
+      <div v-if="pricingMode && pricingCalculation && pricingCalculation.materials.length > 0" class="flex flex-col gap-2 border-t border-surface-elevated pt-3">
+        <h4 class="text-text-secondary text-xs font-semibold uppercase tracking-wide m-0">Pricing Summary</h4>
+
+        <div class="flex flex-col gap-1 text-xs">
+          <div class="flex justify-between">
+            <span class="text-text-muted">Your material cost</span>
+            <span class="text-text-primary">{{ formatGold(pricingCalculation.yourMaterialCost) }}</span>
+          </div>
+          <div v-if="pricingCalculation.theirMaterialValue > 0" class="flex justify-between">
+            <span class="text-text-muted">Customer-supplied value</span>
+            <span class="text-text-dim">{{ formatGold(pricingCalculation.theirMaterialValue) }}</span>
+          </div>
+
+          <div v-if="pricingCalculation.perCraftTotal > 0" class="flex justify-between">
+            <span class="text-text-muted">Per-craft fee ({{ pricingCalculation.totalCrafts }}x)</span>
+            <span class="text-accent-gold">{{ formatGold(pricingCalculation.perCraftTotal) }}</span>
+          </div>
+          <div v-if="pricingCalculation.materialPctFee > 0" class="flex justify-between">
+            <span class="text-text-muted">Material % fee</span>
+            <span class="text-accent-gold">{{ formatGold(pricingCalculation.materialPctFee) }}</span>
+          </div>
+          <div v-if="pricingCalculation.flatFee > 0" class="flex justify-between">
+            <span class="text-text-muted">Flat fee</span>
+            <span class="text-accent-gold">{{ formatGold(pricingCalculation.flatFee) }}</span>
+          </div>
+
+          <div v-if="pricingCalculation.totalFee > 0" class="flex justify-between border-t border-surface-dark pt-1">
+            <span class="text-text-muted">Total fee</span>
+            <span class="text-accent-gold font-medium">{{ formatGold(pricingCalculation.totalFee) }}</span>
+          </div>
+        </div>
+
+        <!-- Bottom line -->
+        <div class="flex justify-between items-baseline bg-surface-dark/60 rounded px-3 py-2 mt-1">
+          <span class="text-text-secondary text-sm font-semibold">Charge Customer</span>
+          <span class="text-accent-gold text-lg font-bold">{{ formatGold(pricingCalculation.chargeCustomer) }}</span>
+        </div>
+
+        <div v-if="pricingCalculation.hasUnknownPrices" class="text-text-dim text-[0.65rem] italic">
+          * Some material prices are unknown — total may be incomplete.
+        </div>
+      </div>
+
       <!-- Live crafting panel (project only) -->
       <LiveCraftingPanel v-if="activeProject && !activeGroupName" />
     </template>
@@ -201,6 +261,8 @@
 import { computed } from "vue";
 import { useCraftingStore } from "../../stores/craftingStore";
 import type { CraftingProject, CraftingProjectEntry, FlattenedMaterial, IntermediateCraft, MaterialNeed } from "../../types/crafting";
+import type { PriceCalculation } from "../../composables/usePriceCalculator";
+import { formatGold } from "../../composables/useRecipeCost";
 import EmptyState from "../Shared/EmptyState.vue";
 import AccordionSection from "../Shared/AccordionSection.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
@@ -223,12 +285,22 @@ const props = defineProps<{
   materialNeeds: MaterialNeed[]
   resolving: boolean
   checkingAvailability: boolean
+  pricingMode: boolean
+  customerProvides: Record<string, number>
+  pricingCalculation: PriceCalculation | null
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   'resolve': []
   'toggle-intermediate': [itemId: number]
+  'update-customer-provides': [key: string, quantity: number]
 }>();
+
+function onCustomerProvidesChange(key: string, maxQty: number, event: Event) {
+  const target = event.target as HTMLInputElement;
+  const qty = Math.max(0, Math.min(Math.ceil(maxQty), parseFloat(target.value) || 0));
+  emit('update-customer-provides', key, qty);
+}
 
 const craftingStore = useCraftingStore();
 const tracker = computed(() => craftingStore.tracker);

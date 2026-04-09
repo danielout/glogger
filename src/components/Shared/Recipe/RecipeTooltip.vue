@@ -52,6 +52,16 @@
     </span>
   </div>
 
+  <div v-if="costBreakdown" class="text-text-muted text-[0.7rem] mt-2 pt-2 border-t border-[#2a2a3e] flex items-center gap-2">
+    <span>Cost:</span>
+    <span v-if="costBreakdown.total_cost !== null" class="text-accent-gold">{{ formatGold(costBreakdown.total_cost) }}</span>
+    <span v-else class="text-text-dim italic">unknown</span>
+    <span v-if="costBreakdown.cost_per_unit !== null && (recipe.result_items[0]?.stack_size ?? 1) > 1" class="text-text-dim">
+      ({{ formatGold(costBreakdown.cost_per_unit) }}/ea)
+    </span>
+    <span v-if="costBreakdown.has_unknown_prices" class="text-text-dim text-[0.6rem]">*partial</span>
+  </div>
+
   <div v-if="recipe.keywords?.length" class="flex flex-wrap gap-1 mt-2">
     <span
       v-for="keyword in recipe.keywords"
@@ -67,6 +77,7 @@
 import { ref, onMounted } from "vue";
 import { useGameDataStore } from "../../../stores/gameDataStore";
 import type { RecipeInfo, RecipeIngredient, RecipeResultItem } from "../../../types/gameData/recipes";
+import { useRecipeCost, formatGold } from "../../../composables/useRecipeCost";
 
 const props = defineProps<{
   recipe: RecipeInfo;
@@ -75,8 +86,10 @@ const props = defineProps<{
 
 const store = useGameDataStore();
 const itemNames = ref<Record<string, string>>({});
+const { calculate, breakdown: costBreakdown } = useRecipeCost();
 
 onMounted(async () => {
+  calculate(props.recipe);
   const ids = [
     ...props.recipe.ingredient_item_ids,
     ...props.recipe.result_item_ids,

@@ -1,12 +1,14 @@
 <template>
-  <PaneLayout screen-key="crafting-projects">
-  <div class="flex h-full">
-    <!-- Left: project sidebar (collapsible) -->
-    <ProjectSidebar />
+  <PaneLayout
+    screen-key="crafting-projects"
+    :left-pane="{ title: 'Projects', defaultWidth: 220, minWidth: 180, maxWidth: 350 }"
+    :right-pane="rightPaneConfig">
+    <template #left>
+      <ProjectSidebar />
+    </template>
 
-    <!-- Middle: materials panel (flex, gets most space) -->
+    <!-- Center: materials panel -->
     <ProjectMaterialsPanel
-      class="mx-3"
       :active-project="store.activeProject"
       :active-group-name="store.activeGroupName"
       :group-project-names="groupProjectNames"
@@ -19,49 +21,65 @@
       :material-needs="materialNeeds"
       :resolving="resolvingAll"
       :checking-availability="checkingAvailability"
+      :pricing-mode="pricingMode"
+      :customer-provides="localCustomerProvides"
+      :pricing-calculation="pricingCalculation"
       @resolve="onResolve"
-      @toggle-intermediate="toggleIntermediateGlobal" />
+      @toggle-intermediate="toggleIntermediateGlobal"
+      @update-customer-provides="onCustomerProvidesChange" />
 
-    <!-- Resize handle (hidden in group view) -->
-    <template v-if="!store.activeGroupName">
-      <div
-        class="w-1.5 shrink-0 cursor-col-resize flex items-center justify-center hover:bg-accent-gold/20 rounded transition-colors"
-        :class="{ 'bg-accent-gold/30': isResizing }"
-        @mousedown="startResize">
-        <div class="w-px h-8 bg-border-default rounded-full" />
-      </div>
-
-      <!-- Right: recipe list (resizable width) -->
+    <template v-if="!store.activeGroupName" #right>
       <ProjectRecipePanel
-        :style="{ width: `${recipePanelWidth}px` }"
         :active-project="store.activeProject"
         :intermediate-expansions="intermediateExpansions"
         :stock-targets="stockTargets"
+        :pricing-mode="pricingMode"
+        :fee-config="localFeeConfig"
         @duplicate="duplicateProject"
         @delete="deleteProject"
         @update-qty="updateEntryQty"
         @remove="(entryId) => store.removeEntry(entryId)"
         @toggle-intermediate="toggleIntermediate"
-        @update-target-stock="updateEntryTargetStock" />
+        @update-target-stock="updateEntryTargetStock"
+        @toggle-pricing="pricingMode = !pricingMode"
+        @update-fee="onFeeChange"
+        @save-defaults="onSaveDefaults"
+        @reset-defaults="onResetDefaults" />
     </template>
-  </div>
   </PaneLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount } from "vue";
+import { ref, computed, watch } from "vue";
 import PaneLayout from "../Shared/PaneLayout.vue";
 import { invoke } from "@tauri-apps/api/core";
 import { confirm } from "@tauri-apps/plugin-dialog";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useCraftingStore } from "../../stores/craftingStore";
-import type { FlattenedMaterial, IntermediateCraft, MaterialNeed } from "../../types/crafting";
+import { useMarketStore } from "../../stores/marketStore";
+import { useViewPrefs } from "../../composables/useViewPrefs";
+import { usePriceCalculator } from "../../composables/usePriceCalculator";
+import type { FlattenedMaterial, IntermediateCraft, MaterialNeed, FeeConfig } from "../../types/crafting";
+import { DEFAULT_FEE_CONFIG } from "../../types/crafting";
 import ProjectSidebar from "./ProjectSidebar.vue";
 import ProjectRecipePanel from "./ProjectRecipePanel.vue";
 import ProjectMaterialsPanel from "./ProjectMaterialsPanel.vue";
 
 const gameData = useGameDataStore();
 const store = useCraftingStore();
+const marketStore = useMarketStore();
+
+const { prefs: defaultFeePrefs, update: updateDefaultFeePrefs } = useViewPrefs(
+  "price-helper-defaults",
+  { fee_config: DEFAULT_FEE_CONFIG as FeeConfig },
+);
+
+// ── Right pane config (hidden in group view) ────────────────────────────────
+
+const rightPaneConfig = computed(() => {
+  if (store.activeGroupName) return undefined;
+  return { title: 'Configuration', defaultWidth: 420, minWidth: 320, maxWidth: 700 };
+});
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -71,25 +89,16 @@ const projectIntermediates = ref<IntermediateCraft[]>([]);
 const checkingAvailability = ref(false);
 const materialNeeds = ref<MaterialNeed[]>([]);
 
-/** Stock on hand for expanded intermediate items. Maps item_id → quantity */
 const intermediateStockMap = ref(new Map<number, number>());
-
-/** Stock target resolution results. Maps entry.id → { effectiveQty, currentStock } */
 const stockTargets = ref(new Map<number, { effectiveQty: number; currentStock: number }>());
-
-/** Combined entries when viewing a group summary */
 const groupEntries = ref<import("../../types/crafting").CraftingProjectEntry[]>([]);
-
-/** Tracks which ingredients are marked "also craft this". Key: "{entryId}:{itemId}" */
 const intermediateExpansions = ref(new Map<string, boolean>());
 
-/** Project names in the active group (for display in materials panel header) */
 const groupProjectNames = computed(() => {
   if (!store.activeGroupName) return [];
   return store.getProjectsInGroup(store.activeGroupName).map((p) => p.name);
 });
 
-/** Set of item IDs currently marked for intermediate crafting (project-wide) */
 const expandedItemIds = computed(() => {
   const ids = new Set<number>();
   for (const [key, value] of intermediateExpansions.value) {
@@ -101,7 +110,35 @@ const expandedItemIds = computed(() => {
   return ids;
 });
 
-// Rebuild intermediateExpansions from persisted entry data when project loads, then auto-resolve
+// ── Pricing state ─────────────────────────────────────────────────────────────
+
+const pricingMode = ref(false);
+const localFeeConfig = ref<FeeConfig>({ ...DEFAULT_FEE_CONFIG });
+const localCustomerProvides = ref<Record<string, number>>({});
+const materialPrices = ref(
+  new Map<string, { unitPrice: number | null; source: "market" | "craft" | "vendor" | null }>(),
+);
+
+const totalCrafts = computed(() => {
+  if (!store.activeProject) return 0;
+  return store.activeProject.entries.reduce((sum, e) => sum + e.quantity, 0);
+});
+
+const { calculation: pricingCalcRaw } = usePriceCalculator(
+  projectMaterials,
+  materialPrices,
+  localCustomerProvides,
+  localFeeConfig,
+  totalCrafts,
+);
+
+const pricingCalculation = computed(() => {
+  if (!pricingMode.value) return null;
+  return pricingCalcRaw.value;
+});
+
+// ── Watchers ──────────────────────────────────────────────────────────────────
+
 watch(() => store.activeProject, (project) => {
   const map = new Map<string, boolean>();
   if (project) {
@@ -110,72 +147,39 @@ watch(() => store.activeProject, (project) => {
         map.set(`${entry.id}:${itemId}`, true);
       }
     }
+    // Load pricing data from project
+    localFeeConfig.value = { ...project.fee_config };
+    localCustomerProvides.value = { ...project.customer_provides };
+    // Auto-enable pricing mode if project has pricing data configured
+    const hasFeeConfig = project.fee_config.per_craft_fee > 0
+      || project.fee_config.material_pct > 0
+      || project.fee_config.flat_fee > 0;
+    const hasCustomerProvides = Object.keys(project.customer_provides).length > 0;
+    pricingMode.value = hasFeeConfig || hasCustomerProvides;
+  } else {
+    localFeeConfig.value = { ...DEFAULT_FEE_CONFIG };
+    localCustomerProvides.value = {};
+    pricingMode.value = false;
   }
   intermediateExpansions.value = map;
 
-  // Auto-resolve materials when a project with entries is loaded
   if (project && project.entries.length > 0) {
     resolveProject();
   } else {
-    // Clear stale data when switching to empty/null project
     projectMaterials.value = new Map();
     projectIntermediates.value = [];
     materialNeeds.value = [];
+    materialPrices.value = new Map();
   }
 }, { immediate: true });
 
-// ── Group summary watcher ─────────────────────────────────────────────────────
-
 watch(() => store.activeGroupName, async (groupName) => {
   if (!groupName) return;
-
-  // Clear single-project state
   intermediateExpansions.value = new Map();
   stockTargets.value = new Map();
-
+  pricingMode.value = false;
   await resolveGroup(groupName);
 }, { immediate: false });
-
-// ── Resize logic ──────────────────────────────────────────────────────────────
-
-const MIN_PANEL_WIDTH = 320;
-const MAX_PANEL_WIDTH = 700;
-const DEFAULT_PANEL_WIDTH = 420;
-
-const recipePanelWidth = ref(DEFAULT_PANEL_WIDTH);
-const isResizing = ref(false);
-let startX = 0;
-let startWidth = 0;
-
-function startResize(e: MouseEvent) {
-  isResizing.value = true;
-  startX = e.clientX;
-  startWidth = recipePanelWidth.value;
-  document.addEventListener("mousemove", onResize);
-  document.addEventListener("mouseup", stopResize);
-  document.body.style.cursor = "col-resize";
-  document.body.style.userSelect = "none";
-}
-
-function onResize(e: MouseEvent) {
-  // Dragging left increases width (panel is on the right)
-  const delta = startX - e.clientX;
-  const newWidth = Math.min(MAX_PANEL_WIDTH, Math.max(MIN_PANEL_WIDTH, startWidth + delta));
-  recipePanelWidth.value = newWidth;
-}
-
-function stopResize() {
-  isResizing.value = false;
-  document.removeEventListener("mousemove", onResize);
-  document.removeEventListener("mouseup", stopResize);
-  document.body.style.cursor = "";
-  document.body.style.userSelect = "";
-}
-
-onBeforeUnmount(() => {
-  document.removeEventListener("mousemove", onResize);
-  document.removeEventListener("mouseup", stopResize);
-});
 
 function onResolve() {
   if (store.activeGroupName) {
@@ -213,23 +217,17 @@ async function updateEntryTargetStock(entryId: number, targetStock: number | nul
   const entry = store.activeProject?.entries.find((e) => e.id === entryId);
   if (!entry) return;
   await store.updateEntry(entryId, entry.quantity, entry.expanded_ingredient_ids, targetStock);
-  // Re-resolve to recalculate materials with new target
   if (projectMaterials.value.size > 0 || targetStock !== null) {
     resolveProject();
   }
 }
 
-/**
- * Toggle an intermediate craft globally across all entries in the active project.
- * Called from the materials panel's centralized intermediate management.
- */
 async function toggleIntermediateGlobal(itemId: number) {
   const entries = store.activeProject?.entries;
   if (!entries) return;
 
   const isCurrentlyExpanded = expandedItemIds.value.has(itemId);
 
-  // Apply to ALL entries — toggle the item ID in every entry's expansion map
   for (const entry of entries) {
     const key = `${entry.id}:${itemId}`;
     if (isCurrentlyExpanded) {
@@ -238,7 +236,6 @@ async function toggleIntermediateGlobal(itemId: number) {
       intermediateExpansions.value.set(key, true);
     }
 
-    // Persist for this entry
     const ids: number[] = [];
     for (const [k, v] of intermediateExpansions.value) {
       if (v && k.startsWith(`${entry.id}:`)) {
@@ -255,10 +252,94 @@ async function toggleIntermediateGlobal(itemId: number) {
 }
 
 async function toggleIntermediate(_entryId: number, itemId: number | null) {
-  // Delegate to the global toggle — intermediates apply project-wide
   if (itemId === null) return;
   await toggleIntermediateGlobal(itemId);
 }
+
+// ── Pricing actions ───────────────────────────────────────────────────────────
+
+let pricingSaveTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function savePricingDebounced() {
+  if (pricingSaveTimeout) clearTimeout(pricingSaveTimeout);
+  pricingSaveTimeout = setTimeout(() => savePricing(), 500);
+}
+
+async function savePricing() {
+  const project = store.activeProject;
+  if (!project) return;
+  await store.updateProject(
+    project.id,
+    project.name,
+    project.notes,
+    project.group_name,
+    localFeeConfig.value,
+    localCustomerProvides.value,
+  );
+}
+
+function onFeeChange(feeConfig: FeeConfig) {
+  localFeeConfig.value = feeConfig;
+  savePricingDebounced();
+}
+
+function onCustomerProvidesChange(key: string, quantity: number) {
+  if (quantity <= 0) {
+    const { [key]: _, ...rest } = localCustomerProvides.value;
+    localCustomerProvides.value = rest;
+  } else {
+    localCustomerProvides.value = { ...localCustomerProvides.value, [key]: quantity };
+  }
+  savePricingDebounced();
+}
+
+function onSaveDefaults() {
+  updateDefaultFeePrefs({ fee_config: { ...localFeeConfig.value } });
+}
+
+function onResetDefaults() {
+  localFeeConfig.value = { ...defaultFeePrefs.value.fee_config };
+  savePricingDebounced();
+}
+
+// ── Material price resolution (for pricing mode) ─────────────────────────────
+
+async function resolvePrices(materials: Map<string, FlattenedMaterial>, gen: number) {
+  const prices = new Map<string, { unitPrice: number | null; source: "market" | "craft" | "vendor" | null }>();
+
+  const itemIds = [...materials.values()].filter((m) => m.item_id !== null).map((m) => m.item_id!);
+  const items = itemIds.length > 0 ? await gameData.resolveItemsBatch(itemIds.map(String)) : {};
+
+  if (gen !== resolveGeneration) return;
+
+  for (const [key, mat] of materials) {
+    if (mat.item_id === null) {
+      prices.set(key, { unitPrice: null, source: null });
+      continue;
+    }
+
+    const item = items[String(mat.item_id)];
+    const marketVal = marketStore.valuesByItemId[mat.item_id];
+    const marketPrice = marketVal ? marketVal.market_value : null;
+    const vendorPrice = item?.value ? item.value * 1.5 : null;
+
+    const candidates: { price: number; source: "market" | "vendor" }[] = [];
+    if (marketPrice !== null) candidates.push({ price: marketPrice, source: "market" });
+    if (vendorPrice !== null) candidates.push({ price: vendorPrice, source: "vendor" });
+
+    if (candidates.length > 0) {
+      const best = candidates.reduce((a, b) => (a.price <= b.price ? a : b));
+      prices.set(key, { unitPrice: best.price, source: best.source });
+    } else {
+      prices.set(key, { unitPrice: null, source: null });
+    }
+  }
+
+  if (gen !== resolveGeneration) return;
+  materialPrices.value = prices;
+}
+
+// ── Resolve logic ─────────────────────────────────────────────────────────────
 
 let resolveGeneration = 0;
 
@@ -274,18 +355,20 @@ async function resolveGroup(groupName: string) {
     const groupProjects = store.getProjectsInGroup(groupName);
     const projectIds = groupProjects.map((p) => p.id);
 
-    // Load full project data for each project in the group
     const fullProjects: import("../../types/crafting").CraftingProject[] = [];
     for (const pid of projectIds) {
-      const project = await invoke<import("../../types/crafting").CraftingProject>("get_crafting_project", { projectId: pid });
+      const raw = await invoke<any>("get_crafting_project", { projectId: pid });
       if (gen !== resolveGeneration) return;
-      fullProjects.push(project);
+      fullProjects.push({
+        ...raw,
+        fee_config: typeof raw.fee_config === 'string' ? JSON.parse(raw.fee_config) : raw.fee_config,
+        customer_provides: typeof raw.customer_provides === 'string' ? JSON.parse(raw.customer_provides) : raw.customer_provides,
+      });
     }
 
     const allEntries = fullProjects.flatMap((p) => p.entries);
     groupEntries.value = allEntries;
 
-    // Rebuild intermediateExpansions from all group entries
     const map = new Map<string, boolean>();
     for (const entry of allEntries) {
       for (const itemId of entry.expanded_ingredient_ids) {
@@ -294,7 +377,6 @@ async function resolveGroup(groupName: string) {
     }
     intermediateExpansions.value = map;
 
-    // Resolve stock targets across all entries
     const targets = await store.resolveStockTargets(allEntries);
     if (gen !== resolveGeneration) return;
     stockTargets.value = targets;
@@ -302,7 +384,6 @@ async function resolveGroup(groupName: string) {
     const combinedMaterials = new Map<string, FlattenedMaterial>();
     const allIntermediates: IntermediateCraft[] = [];
 
-    // Collect intermediate expansions from all entries
     const expandItemIds = new Set<number>();
     for (const project of fullProjects) {
       for (const entry of project.entries) {
@@ -312,7 +393,6 @@ async function resolveGroup(groupName: string) {
       }
     }
 
-    // Pre-fetch stock for expanded intermediates
     let intermediateStock: Map<number, number> | undefined;
     if (expandItemIds.size > 0) {
       intermediateStock = await store.queryItemStock(Array.from(expandItemIds));
@@ -384,7 +464,6 @@ async function resolveProject() {
   projectIntermediates.value = [];
 
   try {
-    // Resolve stock targets first (for entries in target mode)
     const targets = await store.resolveStockTargets(store.activeProject.entries);
     if (gen !== resolveGeneration) return;
     stockTargets.value = targets;
@@ -400,7 +479,6 @@ async function resolveProject() {
       }
     }
 
-    // Pre-fetch stock for expanded intermediates so resolver can subtract on-hand
     let intermediateStock: Map<number, number> | undefined;
     if (expandItemIds.size > 0) {
       intermediateStock = await store.queryItemStock(Array.from(expandItemIds));
@@ -411,12 +489,11 @@ async function resolveProject() {
     }
 
     for (const entry of store.activeProject.entries) {
-      if (gen !== resolveGeneration) return; // project changed, abort
+      if (gen !== resolveGeneration) return;
 
-      // Use effective quantity from stock target if available, else entry.quantity
       const targetInfo = targets.get(entry.id);
       const quantity = targetInfo ? targetInfo.effectiveQty : entry.quantity;
-      if (quantity <= 0) continue; // target met, no materials needed
+      if (quantity <= 0) continue;
 
       const recipe = await gameData.resolveRecipe(entry.recipe_name);
       if (!recipe) continue;
@@ -445,16 +522,16 @@ async function resolveProject() {
       }
     }
 
-    // Guard: don't apply stale results if project changed during resolve
     if (gen !== resolveGeneration || store.activeProject?.id !== projectId) return;
 
     projectMaterials.value = combinedMaterials;
     projectIntermediates.value = allIntermediates;
     materialNeeds.value = [];
 
-    // Auto-check availability after resolve
     if (combinedMaterials.size > 0) {
       await checkProjectAvailability();
+      // Resolve prices for pricing mode
+      await resolvePrices(combinedMaterials, gen);
     }
   } catch (e) {
     console.error("[crafting] Project resolve failed:", e);

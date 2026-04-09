@@ -173,6 +173,44 @@
             </div>
           </div>
 
+          <!-- Material Cost -->
+          <div v-if="recipeCost.breakdown.value" class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Estimated Cost</div>
+            <div class="flex flex-col gap-1">
+              <div
+                v-for="(ic, idx) in recipeCost.breakdown.value.ingredients"
+                :key="idx"
+                class="flex gap-2 items-center text-xs px-1.5 py-0.5 bg-[#151515] border-l-2"
+                :class="ic.total_price !== null ? 'border-l-[#2a3a4a]' : 'border-l-[#3a2a2a]'">
+                <span class="text-text-muted min-w-10 shrink-0 text-[0.72rem]">{{ ic.stack_size }}x</span>
+                <span class="flex-1 text-text-secondary truncate">{{ ic.item_name }}</span>
+                <span v-if="ic.total_price !== null" class="text-accent-gold text-[0.72rem] shrink-0">
+                  {{ formatGold(ic.total_price) }}
+                </span>
+                <span v-else class="text-text-dim text-[0.72rem] italic shrink-0">—</span>
+                <span v-if="ic.price_source === 'craft'" class="text-[0.6rem] text-[#7a9a7a] shrink-0" :title="'Craft cost via ' + ic.craft_recipe_name">craft</span>
+                <span v-else-if="ic.price_source === 'market'" class="text-[0.6rem] text-[#7a7aaa] shrink-0">market</span>
+                <span v-else-if="ic.price_source === 'vendor'" class="text-[0.6rem] text-text-dim shrink-0">vendor</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 text-xs px-1.5 pt-1 border-t border-surface-card">
+              <span class="text-text-muted">Total:</span>
+              <span v-if="recipeCost.breakdown.value.total_cost !== null" class="text-accent-gold font-bold">
+                {{ formatGold(recipeCost.breakdown.value.total_cost) }}
+              </span>
+              <span v-else class="text-text-dim italic">Unknown</span>
+              <span v-if="recipeCost.breakdown.value.cost_per_unit !== null && (selected.result_items[0]?.stack_size ?? 1) > 1" class="text-text-muted text-[0.72rem]">
+                ({{ formatGold(recipeCost.breakdown.value.cost_per_unit) }}/ea)
+              </span>
+              <span v-if="recipeCost.breakdown.value.has_unknown_prices" class="text-text-dim text-[0.65rem] italic ml-auto">
+                * some prices unknown
+              </span>
+            </div>
+          </div>
+          <div v-else-if="recipeCost.loading.value" class="text-text-dim text-xs italic">
+            Calculating cost…
+          </div>
+
           <!-- XP Rewards -->
           <div v-if="selected.reward_skill" class="flex flex-col gap-1.5">
             <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">XP Rewards</div>
@@ -270,6 +308,7 @@ import ItemInline from "../Shared/Item/ItemInline.vue";
 import SkillInline from "../Shared/Skill/SkillInline.vue";
 import RecipeInline from "../Shared/Recipe/RecipeInline.vue";
 import SourcesPanel from "../Shared/SourcesPanel.vue";
+import { useRecipeCost, formatGold } from "../../composables/useRecipeCost";
 
 const props = defineProps<{
   navTarget?: EntityNavigationTarget | null;
@@ -277,6 +316,7 @@ const props = defineProps<{
 
 const store = useGameDataStore();
 const settingsStore = useSettingsStore();
+const recipeCost = useRecipeCost();
 
 const allSkills = ref<SkillInfo[]>([]);
 const skillRecipeCounts = ref<Record<string, number>>({});
@@ -404,6 +444,9 @@ async function selectRecipe(recipe: RecipeInfo) {
   sources.value = null;
   ingredientItems.value = {};
   resultItems.value = {};
+
+  // Load cost breakdown
+  recipeCost.calculate(recipe);
 
   // Load sources
   sourcesLoading.value = true;

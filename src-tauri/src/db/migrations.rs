@@ -117,6 +117,16 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 18)?;
     }
 
+    if current_version < 19 {
+        migration_v19_price_helper(conn)?;
+        super::record_migration(conn, 19)?;
+    }
+
+    if current_version < 20 {
+        migration_v20_project_pricing(conn)?;
+        super::record_migration(conn, 20)?;
+    }
+
     Ok(())
 }
 
@@ -1404,6 +1414,45 @@ fn migration_v18_fix_timestamps(conn: &Connection, tz_offset_seconds: Option<i32
         "[migration_v18] Fixed timestamps: Player.log correction={}, Chat.log correction={}",
         player_modifier, chat_modifier
     );
+
+    Ok(())
+}
+
+/// Migration V19: Price Helper — persistent crafting price quotes.
+fn migration_v19_price_helper(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE price_helper_quotes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            notes TEXT NOT NULL DEFAULT '',
+            fee_config TEXT NOT NULL DEFAULT '{\"per_craft_fee\":0,\"material_pct\":0,\"material_pct_basis\":\"total\",\"flat_fee\":0}',
+            customer_provides TEXT NOT NULL DEFAULT '{}',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE price_helper_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            quote_id INTEGER NOT NULL REFERENCES price_helper_quotes(id) ON DELETE CASCADE,
+            recipe_id INTEGER NOT NULL,
+            recipe_name TEXT NOT NULL,
+            quantity INTEGER NOT NULL DEFAULT 1,
+            sort_order INTEGER NOT NULL DEFAULT 0
+        );
+
+        CREATE INDEX idx_price_helper_entries_quote ON price_helper_entries(quote_id);
+        "
+    )?;
+
+    Ok(())
+}
+
+/// Migration V20: Add pricing fields to crafting projects (integrated price helper).
+fn migration_v20_project_pricing(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "ALTER TABLE crafting_projects ADD COLUMN fee_config TEXT NOT NULL DEFAULT '{\"per_craft_fee\":0,\"material_pct\":0,\"material_pct_basis\":\"total\",\"flat_fee\":0}';
+         ALTER TABLE crafting_projects ADD COLUMN customer_provides TEXT NOT NULL DEFAULT '{}';"
+    )?;
 
     Ok(())
 }

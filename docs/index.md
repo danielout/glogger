@@ -80,6 +80,7 @@ Per-screen documentation organized by view.
 - [crafting.md](features/screens/crafting.md) — Crafting screen: architecture, component hierarchy, shared commands, design decisions.
   - [crafting-quickcalc.md](features/screens/crafting/crafting-quickcalc.md) — Quick Calculator tab.
   - [crafting-projects.md](features/screens/crafting/crafting-projects.md) — Projects tab: material breakdown, pickup list, shopping list, live crafting detection.
+  - [crafting-price-helper.md](features/screens/crafting/crafting-price-helper.md) — Price Helper: integrated into Projects tab as a pricing mode with customer-provides and fee configuration.
   - [crafting-leveling.md](features/screens/crafting/crafting-leveling.md) — XP Leveling Optimizer tab.
   - [crafting-history.md](features/screens/crafting/crafting-history.md) — Crafting History tab.
   - [crafting-workorders.md](features/screens/crafting/crafting-workorders.md) — Work Orders tab.

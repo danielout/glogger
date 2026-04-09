@@ -13,6 +13,7 @@ import type {
   CraftingProject,
   CraftingProjectEntry,
   CraftingProjectSummary,
+  FeeConfig,
   CraftingTracker,
   DynamicItemBreakdown,
   FlattenedMaterial,
@@ -79,7 +80,12 @@ export const useCraftingStore = defineStore("crafting", () => {
 
   async function loadProject(id: number) {
     activeGroupName.value = null;
-    activeProject.value = await invoke<CraftingProject>("get_crafting_project", { projectId: id });
+    const raw = await invoke<any>("get_crafting_project", { projectId: id });
+    activeProject.value = {
+      ...raw,
+      fee_config: typeof raw.fee_config === 'string' ? JSON.parse(raw.fee_config) : raw.fee_config,
+      customer_provides: typeof raw.customer_provides === 'string' ? JSON.parse(raw.customer_provides) : raw.customer_provides,
+    } as CraftingProject;
   }
 
   function selectGroup(groupName: string) {
@@ -96,21 +102,44 @@ export const useCraftingStore = defineStore("crafting", () => {
     return projects.value.filter((p) => p.group_name === groupName);
   }
 
-  async function createProject(name: string, notes?: string, groupName?: string) {
+  async function createProject(name: string, notes?: string, groupName?: string, feeConfig?: FeeConfig) {
     const id = await invoke<number>("create_crafting_project", {
-      input: { name, notes, group_name: groupName ?? null },
+      input: {
+        name,
+        notes,
+        group_name: groupName ?? null,
+        fee_config: feeConfig ? JSON.stringify(feeConfig) : null,
+      },
     });
     await loadProjects();
     return id;
   }
 
-  async function updateProject(id: number, name: string, notes: string, groupName?: string | null) {
-    await invoke("update_crafting_project", { input: { id, name, notes, group_name: groupName ?? null } });
+  async function updateProject(
+    id: number,
+    name: string,
+    notes: string,
+    groupName?: string | null,
+    feeConfig?: FeeConfig | null,
+    customerProvides?: Record<string, number> | null,
+  ) {
+    await invoke("update_crafting_project", {
+      input: {
+        id,
+        name,
+        notes,
+        group_name: groupName ?? null,
+        fee_config: feeConfig ? JSON.stringify(feeConfig) : null,
+        customer_provides: customerProvides ? JSON.stringify(customerProvides) : null,
+      },
+    });
     await loadProjects();
     if (activeProject.value?.id === id) {
       activeProject.value.name = name;
       activeProject.value.notes = notes;
       activeProject.value.group_name = groupName ?? null;
+      if (feeConfig) activeProject.value.fee_config = feeConfig;
+      if (customerProvides) activeProject.value.customer_provides = customerProvides;
     }
   }
 

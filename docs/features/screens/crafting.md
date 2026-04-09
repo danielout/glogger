@@ -10,7 +10,7 @@ A full-featured crafting assistant for Project Gorgon. Helps players plan crafti
 
 **Backend (Rust):**
 - `src-tauri/src/db/crafting_commands.rs` — all Tauri commands (project CRUD, material checks, work orders, skill levels)
-- `src-tauri/src/db/migrations.rs` — `migration_v6_crafting` (2 tables)
+- `src-tauri/src/db/migrations.rs` — `migration_v6_crafting` (2 tables), `migration_v20_project_pricing` (adds fee_config/customer_provides to projects)
 
 **Frontend (Vue/TS):**
 - `src/types/crafting.ts` — all TypeScript interfaces
@@ -23,12 +23,12 @@ A full-featured crafting assistant for Project Gorgon. Helps players plan crafti
 - **`crafting_projects`** — id, name, notes, created_at, updated_at
 - **`crafting_project_entries`** — project_id (FK), recipe_id (FK→recipes), recipe_name, quantity, sort_order, expand_intermediates
 
-Both cascade on delete from `crafting_projects`.
+Entries cascade on delete from `crafting_projects`. The projects table also includes `fee_config` (JSON) and `customer_provides` (JSON) columns for the integrated Price Helper.
 
 ### Component Hierarchy
 
 ```
-CraftingView.vue                    — 7-tab container
+CraftingView.vue                    — 7-tab container (Projects tab includes integrated Price Helper)
 ├── QuickCalcTab.vue                — single-recipe calculator
 │   └── IngredientTreeNode.vue      — recursive ingredient display
 ├── ProjectsTab.vue                 — project list + active project detail
@@ -63,6 +63,7 @@ The core resolver (`resolveRecipeIngredients` in the store) handles:
 - [crafting-history.md](crafting/crafting-history.md) — Crafting History
 - [crafting-workorders.md](crafting/crafting-workorders.md) — Work Orders
 - [crafting-cookshelper.md](crafting/crafting-cookshelper.md) — Cook's Helper
+- [crafting-price-helper.md](crafting/crafting-price-helper.md) — Price Helper (integrated into Projects)
 - [crafting-skills.md](crafting/crafting-skills.md) — Skills
 
 ## Tauri Commands

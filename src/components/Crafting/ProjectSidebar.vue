@@ -1,27 +1,6 @@
 <template>
-  <!-- Collapsed state -->
-  <div v-if="collapsed" class="shrink-0 flex flex-col items-center py-2 gap-2">
-    <button
-      class="text-text-muted text-xs cursor-pointer bg-transparent border border-surface-elevated rounded px-1.5 py-1 hover:text-text-primary hover:border-border-default"
-      title="Show project list"
-      @click="collapsed = false">
-      &#9656;
-    </button>
-    <span class="text-text-muted text-[0.6rem] [writing-mode:vertical-lr] select-none">Projects</span>
-  </div>
-
-  <!-- Expanded state -->
-  <div v-else class="w-56 shrink-0 flex flex-col gap-2">
+  <div class="flex flex-col gap-2 px-2">
     <div class="flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <button
-          class="text-text-muted text-xs cursor-pointer bg-transparent border-none hover:text-text-primary"
-          title="Collapse project list"
-          @click="collapsed = true">
-          &#9666;
-        </button>
-        <h3 class="text-text-primary text-sm font-semibold m-0">Projects</h3>
-      </div>
       <button
         class="text-accent-gold text-xs cursor-pointer bg-transparent border border-accent-gold/30 rounded px-2 py-0.5 hover:bg-accent-gold/10"
         @click="showNewProject = true">
@@ -110,26 +89,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from "vue";
+import { ref, reactive, computed, onMounted, nextTick, watch } from "vue";
 import { useCraftingStore } from "../../stores/craftingStore";
 import type { CraftingProjectSummary } from "../../types/crafting";
 import EmptyState from "../Shared/EmptyState.vue";
 
 const store = useCraftingStore();
 
-const collapsed = ref(false);
 const showNewProject = ref(false);
 const newProjectName = ref("");
 const newProjectInput = ref<HTMLInputElement | null>(null);
 const sortMode = ref<'recent' | 'az' | 'za'>('recent');
 const collapsedGroups = reactive(new Set<string>());
 
+watch(showNewProject, (v) => {
+  if (v) nextTick(() => newProjectInput.value?.focus());
+});
+
 const sortedProjects = computed(() => {
   const list = [...store.projects];
   switch (sortMode.value) {
     case 'az': return list.sort((a, b) => a.name.localeCompare(b.name));
     case 'za': return list.sort((a, b) => b.name.localeCompare(a.name));
-    default: return list; // backend returns updated_at DESC
+    default: return list;
   }
 });
 
@@ -147,7 +129,6 @@ const groupedProjects = computed(() => {
     }
   }
 
-  // Sort group names alphabetically
   const groups = Array.from(groupMap.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([name, projects]) => ({ name, projects }));

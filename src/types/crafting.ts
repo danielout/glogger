@@ -26,6 +26,8 @@ export interface CraftingProject {
   name: string
   notes: string
   group_name: string | null
+  fee_config: FeeConfig
+  customer_provides: Record<string, number>
   created_at: string
   updated_at: string
   entries: CraftingProjectEntry[]
@@ -257,6 +259,53 @@ export interface CraftDetectionEvent {
   recipe_name: string
   item_name: string
   quantity: number
+}
+
+// ── Price Helper types ─────────────────────────────────────────────────────
+
+export type MaterialPctBasis = "yours" | "theirs" | "total";
+
+export interface FeeConfig {
+  per_craft_fee: number;
+  material_pct: number;
+  material_pct_basis: MaterialPctBasis;
+  flat_fee: number;
+}
+
+export const DEFAULT_FEE_CONFIG: FeeConfig = {
+  per_craft_fee: 0,
+  material_pct: 0,
+  material_pct_basis: "total",
+  flat_fee: 0,
+};
+
+export interface PriceHelperQuoteSummary {
+  id: number;
+  name: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+  entry_count: number;
+}
+
+export interface PriceHelperQuoteEntry {
+  id: number;
+  quote_id: number;
+  recipe_id: number;
+  recipe_name: string;
+  quantity: number;
+  sort_order: number;
+}
+
+export interface PriceHelperQuote {
+  id: number;
+  name: string;
+  notes: string;
+  fee_config: FeeConfig;
+  customer_provides: Record<string, number>;
+  created_at: string;
+  updated_at: string;
+  entries: PriceHelperQuoteEntry[];
 }
 
 // ── Work order types ────────────────────────────────────────────────────────
