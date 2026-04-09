@@ -1,52 +1,53 @@
 <template>
   <div class="flex flex-col gap-2 text-sm">
-    <!-- Row 1: Time displays & Moon -->
-    <div v-if="prefs.showTime || prefs.showMoon" class="flex items-center gap-3 flex-wrap">
-      <!-- Server & Game Time -->
-      <template v-if="prefs.showTime">
-        <div class="flex items-center gap-1.5">
-          <span class="text-text-muted text-xs uppercase tracking-wide">Server</span>
-          <span class="text-text-primary font-mono text-xs">{{ store.serverTime }}</span>
+    <!-- Top section: Times + Moon side by side -->
+    <div v-if="showAnyTime || prefs.showMoon" class="flex gap-4">
+      <!-- Left: Times stacked -->
+      <div v-if="showAnyTime" class="flex flex-col gap-0.5">
+        <div v-if="prefs.showGameTime" class="flex items-center gap-2">
+          <span class="text-text-muted text-xs uppercase tracking-wide w-14">Game</span>
+          <span class="text-text-primary font-mono text-xs">{{ formattedGameTime }}</span>
         </div>
-        <div class="w-px h-4 bg-border-default" />
-        <div class="flex items-center gap-1.5">
-          <span class="text-text-muted text-xs uppercase tracking-wide">Game</span>
-          <span class="text-text-primary font-mono text-xs">{{ store.gameTime }}</span>
+        <div v-if="prefs.showServerTime" class="flex items-center gap-2">
+          <span class="text-text-muted text-xs uppercase tracking-wide w-14">Server</span>
+          <span class="text-text-primary font-mono text-xs">{{ formattedServerTime }}</span>
         </div>
-        <template v-if="prefs.showLocalTime">
-          <div class="w-px h-4 bg-border-default" />
-          <div class="flex items-center gap-1.5">
-            <span class="text-text-muted text-xs uppercase tracking-wide">Local</span>
-            <span class="text-text-primary font-mono text-xs">{{ localTime }}</span>
-          </div>
-        </template>
-      </template>
+        <div v-if="prefs.showLocalTime" class="flex items-center gap-2">
+          <span class="text-text-muted text-xs uppercase tracking-wide w-14">Local</span>
+          <span class="text-text-primary font-mono text-xs">{{ formattedLocalTime }}</span>
+        </div>
+      </div>
 
-      <!-- Moon Phase (compact) -->
+      <!-- Right: Moon phase -->
       <template v-if="prefs.showMoon && phase">
-        <div v-if="prefs.showTime" class="w-px h-4 bg-border-default" />
-        <div class="flex items-center gap-1.5">
-          <span class="text-base leading-none">{{ phase.emoji }}</span>
-          <span class="text-text-primary text-xs">{{ phase.label }}</span>
-          <span v-if="nextPhaseText" class="text-text-dim text-xs">({{ nextPhaseText }})</span>
+        <div v-if="showAnyTime" class="w-px bg-border-default" />
+        <div class="flex flex-col items-center gap-0.5 min-w-20">
+          <span class="text-3xl leading-none">{{ phase.emoji }}</span>
+          <span class="text-text-primary text-xs font-medium">{{ phase.label }}</span>
+          <span v-if="nextPhaseText" class="text-text-dim text-[10px]">{{ nextPhaseText }}</span>
+          <span v-if="fullMoonText" class="text-text-dim text-[10px]">{{ fullMoonText }}</span>
         </div>
       </template>
     </div>
 
-    <!-- Row 2: Weather / Combat / Effects -->
+    <!-- Divider -->
+    <div
+      v-if="(showAnyTime || prefs.showMoon) && (prefs.showWeather || prefs.showCombat)"
+      class="border-t border-border-default" />
+
+    <!-- Weather & Status row -->
     <div v-if="prefs.showWeather || prefs.showCombat" class="flex items-center gap-4">
-      <!-- Weather -->
       <div v-if="prefs.showWeather" class="flex items-center gap-1.5">
         <span class="text-text-muted text-xs uppercase tracking-wide">Weather</span>
-        <span v-if="weather" class="text-text-primary">{{ weather }}</span>
-        <span v-else class="text-text-dim italic">Unknown</span>
+        <span v-if="weather" class="text-text-primary text-xs">{{ weather }}</span>
+        <span v-else class="text-text-dim italic text-xs">Unknown</span>
       </div>
 
       <template v-if="prefs.showCombat">
         <div v-if="prefs.showWeather" class="w-px h-4 bg-border-default" />
 
-        <!-- Combat / Mount status -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5">
+          <span class="text-text-muted text-xs uppercase tracking-wide">Status</span>
           <span
             v-if="inCombat"
             class="px-2 py-0.5 rounded text-xs font-bold bg-red-900/40 text-red-400 border border-red-800/50">
@@ -64,33 +65,37 @@
           </span>
         </div>
 
-        <!-- Active Effects count (if any) -->
         <template v-if="store.namedEffects.length > 0">
           <div class="w-px h-4 bg-border-default" />
           <div class="flex items-center gap-1.5">
             <span class="text-text-muted text-xs uppercase tracking-wide">Effects</span>
-            <span class="text-accent-gold font-bold">{{ store.namedEffects.length }}</span>
+            <span class="text-accent-gold font-bold text-xs">{{ store.namedEffects.length }}</span>
           </div>
         </template>
       </template>
     </div>
 
-    <!-- Row 3: Currencies (only non-zero, wrapped) -->
+    <!-- Divider -->
     <div
-      v-if="prefs.showCurrencies && visibleCurrencies.length > 0"
-      class="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border-default pt-2">
-      <span
-        v-for="c in visibleCurrencies"
+      v-if="(prefs.showWeather || prefs.showCombat) && displayedCurrencies.length > 0"
+      class="border-t border-border-default" />
+
+    <!-- Currencies -->
+    <div
+      v-if="displayedCurrencies.length > 0"
+      class="flex flex-col gap-0.5">
+      <div
+        v-for="c in displayedCurrencies"
         :key="c.currency_name"
-        class="text-xs whitespace-nowrap">
-        <span class="text-accent-gold font-bold">{{ c.amount.toLocaleString() }}</span>
-        <span class="text-text-muted ml-1">{{ formatCurrencyName(c.currency_name) }}</span>
-      </span>
+        class="flex items-center justify-between text-xs">
+        <span class="text-text-muted">{{ formatCurrencyName(c.currency_name) }}</span>
+        <span class="text-accent-gold font-bold font-mono">{{ c.amount.toLocaleString() }}</span>
+      </div>
     </div>
 
-    <!-- Empty state when everything is hidden -->
+    <!-- Empty state -->
     <div
-      v-if="!prefs.showTime && !prefs.showMoon && !prefs.showWeather && !prefs.showCombat && !prefs.showCurrencies"
+      v-if="!showAnyTime && !prefs.showMoon && !prefs.showWeather && !prefs.showCombat && displayedCurrencies.length === 0"
       class="text-text-dim text-xs italic">
       All sections hidden — use the gear icon to configure.
     </div>
@@ -102,32 +107,54 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useGameStateStore } from '../../stores/gameStateStore'
 import { useMoonPhase } from '../../composables/useMoonPhase'
 import { useViewPrefs } from '../../composables/useViewPrefs'
+import { CURRENCY_DISPLAY_ORDER, CURRENCY_DISPLAY_NAMES, CONTEXT_BAR_DEFAULTS, type ContextBarPrefs } from './contextBarPrefs'
 
 const store = useGameStateStore()
 const { phase, daysUntil } = useMoonPhase()
 
-const { prefs, update } = useViewPrefs('widget.context-bar', {
-  showTime: true,
-  showLocalTime: false,
-  showMoon: true,
-  showWeather: true,
-  showCombat: true,
-  showCurrencies: true,
-})
+const { prefs, update } = useViewPrefs<ContextBarPrefs>('widget.context-bar', CONTEXT_BAR_DEFAULTS)
 
 defineExpose({ prefs, update })
 
-// --- Local time (only used when showLocalTime is on) ---
-const localTime = ref(formatLocalTime())
+// --- Time helpers ---
+
+const showAnyTime = computed(() =>
+  prefs.value.showGameTime || prefs.value.showServerTime || prefs.value.showLocalTime
+)
+
+function formatTo12h(time24: string): string {
+  if (time24 === '--:--') return time24
+  const [hStr, mStr] = time24.split(':')
+  const h = parseInt(hStr, 10)
+  const period = h >= 12 ? 'PM' : 'AM'
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
+  return `${h12}:${mStr} ${period}`
+}
+
+const formattedServerTime = computed(() =>
+  prefs.value.use24h ? store.serverTime : formatTo12h(store.serverTime)
+)
+
+const formattedGameTime = computed(() =>
+  prefs.value.use24h ? store.gameTime : formatTo12h(store.gameTime)
+)
+
+// --- Local time ---
+const localTime24 = ref(formatLocalTime24())
 let clockInterval: ReturnType<typeof setInterval> | null = null
 
-function formatLocalTime(): string {
-  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+function formatLocalTime24(): string {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
 }
+
+const formattedLocalTime = computed(() => {
+  if (prefs.value.use24h) return localTime24.value
+  return formatTo12h(localTime24.value)
+})
 
 onMounted(() => {
   clockInterval = setInterval(() => {
-    localTime.value = formatLocalTime()
+    localTime24.value = formatLocalTime24()
   }, 1000)
 })
 
@@ -142,6 +169,14 @@ const nextPhaseText = computed(() => {
   return `${next.label} in ${next.days}d`
 })
 
+const fullMoonText = computed(() => {
+  if (!phase.value) return null
+  if (phase.value.name === 'FullMoon') return null
+  const fullMoonEntry = daysUntil.value.find(d => d.game_phase === 'FullMoon')
+  if (!fullMoonEntry) return null
+  return `Full Moon in ${fullMoonEntry.days}d`
+})
+
 // --- Weather / Combat ---
 const weather = computed(() => {
   const w = store.world.weather
@@ -153,11 +188,33 @@ const inCombat = computed(() => store.world.combat?.in_combat ?? false)
 const isMounted = computed(() => store.world.mount?.is_mounted ?? false)
 
 // --- Currencies ---
-const visibleCurrencies = computed(() =>
-  store.currencies.filter(c => c.amount > 0)
-)
+
+/** Currencies filtered by per-currency toggle, sorted in display order */
+const displayedCurrencies = computed(() => {
+  const visible = store.currencies.filter(c => {
+    if (c.amount <= 0) return false
+    const prefKey = currencyPrefKey(c.currency_name)
+    // Default to true for unknown currencies (unless explicitly hidden)
+    return prefs.value[prefKey] !== false
+  })
+
+  // Sort by CURRENCY_DISPLAY_ORDER, unknowns go to end
+  return visible.sort((a, b) => {
+    const aIdx = CURRENCY_DISPLAY_ORDER.indexOf(a.currency_name.toLowerCase())
+    const bIdx = CURRENCY_DISPLAY_ORDER.indexOf(b.currency_name.toLowerCase())
+    const aOrder = aIdx === -1 ? 999 : aIdx
+    const bOrder = bIdx === -1 ? 999 : bIdx
+    return aOrder - bOrder
+  })
+})
+
+function currencyPrefKey(name: string): string {
+  return `currency_${name.toLowerCase()}`
+}
 
 function formatCurrencyName(name: string): string {
+  const lower = name.toLowerCase()
+  if (CURRENCY_DISPLAY_NAMES[lower]) return CURRENCY_DISPLAY_NAMES[lower]
   return name
     .split('_')
     .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
