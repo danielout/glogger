@@ -8,6 +8,8 @@
       item-key="id"
       handle=".dashboard-card-handle"
       ghost-class="opacity-30"
+      :force-fallback="true"
+      :animation="200"
       class="grid gap-4"
       style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))">
       <template #item="{ element: widget }">
