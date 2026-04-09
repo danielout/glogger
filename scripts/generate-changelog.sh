@@ -31,6 +31,7 @@ fi
 
 # Categorize commits
 declare -a features=()
+declare -a improvements=()
 declare -a fixes=()
 declare -a other=()
 
@@ -42,13 +43,16 @@ while IFS= read -r line; do
   MSG="${line#* }"
 
   case "$MSG" in
-    feat:*|feat\(*|feature:*|add:*|add\ *)
+    feat:*|feat\(*)
       features+=("- ${MSG} (\`${HASH}\`)")
       ;;
-    fix:*|fix\(*|bugfix:*)
+    fix:*|fix\(*)
       fixes+=("- ${MSG} (\`${HASH}\`)")
       ;;
-    release:*|bump\ version*|Merge\ *)
+    impv:*|impv\(*)
+      improvements+=("- ${MSG} (\`${HASH}\`)")
+      ;;
+    release:*|Merge\ *)
       # Skip release/merge commits
       ;;
     *)
@@ -60,6 +64,12 @@ done < <(git log --oneline --no-decorate "$RANGE" 2>/dev/null)
 if [ ${#features[@]} -gt 0 ]; then
   echo "### Features"
   printf '%s\n' "${features[@]}"
+  echo ""
+fi
+
+if [ ${#improvements[@]} -gt 0 ]; then
+  echo "### Improvements"
+  printf '%s\n' "${improvements[@]}"
   echo ""
 fi
 
