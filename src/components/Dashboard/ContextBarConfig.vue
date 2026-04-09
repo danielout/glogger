@@ -42,6 +42,9 @@ const { prefs, update } = useViewPrefs<ContextBarPrefs>('widget.context-bar', CO
 type PrefKey = keyof ContextBarPrefs
 
 const sectionOptions: { key: PrefKey; label: string; parent?: PrefKey }[] = [
+  { key: 'showCharacter', label: 'Character Name' },
+  { key: 'showServer', label: 'Server Name' },
+  { key: 'showZone', label: 'Current Zone' },
   { key: 'showGameTime', label: 'Game Time' },
   { key: 'showServerTime', label: 'Server Time' },
   { key: 'showLocalTime', label: 'Local Time' },

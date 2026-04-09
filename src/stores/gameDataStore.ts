@@ -133,6 +133,15 @@ export const useGameDataStore = defineStore("gameData", () => {
     return invoke<AbilityInfo | null>("resolve_ability", { reference: String(reference) });
   }
 
+  interface AreaInfo {
+    friendly_name: string | null
+    short_friendly_name: string | null
+  }
+
+  async function resolveArea(reference: string): Promise<AreaInfo | null> {
+    return invoke<AreaInfo | null>("resolve_area", { reference });
+  }
+
   // ── Query/filter commands (not replaced by resolvers) ───────────────────
 
   async function searchItems(
@@ -349,6 +358,7 @@ export const useGameDataStore = defineStore("gameData", () => {
     resolveNpcSync,
     resolveNpc,
     resolveAbility,
+    resolveArea,
     // Query/filter actions
     refreshCacheStatus,
     forceRefreshCdn,

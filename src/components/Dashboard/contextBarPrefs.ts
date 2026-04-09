@@ -34,6 +34,9 @@ export const CURRENCY_DEFAULTS: Record<string, boolean> = {
 }
 
 export interface ContextBarPrefs extends Record<string, unknown> {
+  showCharacter: boolean
+  showServer: boolean
+  showZone: boolean
   showGameTime: boolean
   showServerTime: boolean
   showLocalTime: boolean
@@ -46,6 +49,9 @@ export interface ContextBarPrefs extends Record<string, unknown> {
 }
 
 export const CONTEXT_BAR_DEFAULTS: ContextBarPrefs = {
+  showCharacter: true,
+  showServer: true,
+  showZone: true,
   showGameTime: true,
   showServerTime: true,
   showLocalTime: false,

@@ -1,6 +1,25 @@
 <template>
   <div class="flex flex-col gap-2 text-sm">
-    <!-- Top section: Times + Moon side by side -->
+    <!-- Identity section: Character / Server / Zone -->
+    <div v-if="showAnyIdentity" class="flex flex-col gap-0.5">
+      <div v-if="prefs.showCharacter && characterName" class="flex items-center gap-2">
+        <span class="text-text-primary text-xs font-medium">{{ characterName }}</span>
+        <span class="text-text-muted text-xs uppercase ">on</span>
+        <span class="text-text-primary text-xs font-medium">{{ serverName }}</span>
+      </div>
+      <div v-if="prefs.showZone" class="flex items-center gap-2">
+        <span class="text-text-muted text-xs uppercase tracking-wide ">In</span>
+        <span v-if="zoneName" class="text-text-primary text-xs font-medium">{{ zoneName }}</span>
+        <span v-else class="text-text-dim italic text-xs">Unknown</span>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div
+      v-if="showAnyIdentity && (showAnyTime || prefs.showMoon)"
+      class="border-t border-border-default" />
+
+    <!-- Times + Moon side by side -->
     <div v-if="showAnyTime || prefs.showMoon" class="flex gap-4">
       <!-- Left: Times stacked -->
       <div v-if="showAnyTime" class="flex flex-col gap-0.5">
@@ -38,7 +57,6 @@
     <!-- Weather & Status row -->
     <div v-if="prefs.showWeather || prefs.showCombat" class="flex items-center gap-4">
       <div v-if="prefs.showWeather" class="flex items-center gap-1.5">
-        <span class="text-text-muted text-xs uppercase tracking-wide">Weather</span>
         <span v-if="weather" class="text-text-primary text-xs">{{ weather }}</span>
         <span v-else class="text-text-dim italic text-xs">Unknown</span>
       </div>
@@ -95,7 +113,7 @@
 
     <!-- Empty state -->
     <div
-      v-if="!showAnyTime && !prefs.showMoon && !prefs.showWeather && !prefs.showCombat && displayedCurrencies.length === 0"
+      v-if="!showAnyIdentity && !showAnyTime && !prefs.showMoon && !prefs.showWeather && !prefs.showCombat && displayedCurrencies.length === 0"
       class="text-text-dim text-xs italic">
       All sections hidden — use the gear icon to configure.
     </div>
@@ -103,18 +121,42 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useGameStateStore } from '../../stores/gameStateStore'
+import { useGameDataStore } from '../../stores/gameDataStore'
+import { useSettingsStore } from '../../stores/settingsStore'
 import { useMoonPhase } from '../../composables/useMoonPhase'
 import { useViewPrefs } from '../../composables/useViewPrefs'
 import { CURRENCY_DISPLAY_ORDER, CURRENCY_DISPLAY_NAMES, CONTEXT_BAR_DEFAULTS, type ContextBarPrefs } from './contextBarPrefs'
 
 const store = useGameStateStore()
+const gameData = useGameDataStore()
+const settings = useSettingsStore()
 const { phase, daysUntil } = useMoonPhase()
 
 const { prefs, update } = useViewPrefs<ContextBarPrefs>('widget.context-bar', CONTEXT_BAR_DEFAULTS)
 
 defineExpose({ prefs, update })
+
+// --- Identity helpers ---
+
+const characterName = computed(() => settings.settings.activeCharacterName)
+const serverName = computed(() => settings.settings.activeServerName)
+
+const areaKey = computed(() => store.world.area?.area_name ?? null)
+const zoneName = ref<string | null>(null)
+
+watch(areaKey, async (key) => {
+  if (!key) { zoneName.value = null; return }
+  const area = await gameData.resolveArea(key)
+  zoneName.value = area?.short_friendly_name ?? area?.friendly_name ?? key
+}, { immediate: true })
+
+const showAnyIdentity = computed(() =>
+  (prefs.value.showCharacter && !!characterName.value)
+  || (prefs.value.showServer && !!serverName.value)
+  || prefs.value.showZone
+)
 
 // --- Time helpers ---
 

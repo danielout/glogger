@@ -6,7 +6,9 @@ Compact at-a-glance card combining time, environment, and economy info in an org
 
 ## Layout
 
-**Top section** — two columns side by side:
+**Identity section** — character name, server name, and current zone stacked vertically (each independently toggleable). Zone displays the `ShortFriendlyName` from `areas.json` CDN data (falls back to `FriendlyName`, then raw area key). Resolved via `gameDataStore.resolveArea()`.
+
+**Time + Moon section** — two columns side by side:
 - **Left column: Times** — Game time, Server time, and Local time stacked vertically (each independently toggleable)
 - **Right column: Moon phase** — large phase emoji, phase label, days until next phase, and days until full moon (hidden when already full moon)
 
@@ -21,6 +23,9 @@ Sections are separated by horizontal dividers that only render when both adjacen
 
 ## Data sources
 
+- **Character name** — from `settingsStore.settings.activeCharacterName`
+- **Server name** — from `settingsStore.settings.activeServerName`
+- **Current zone** — area key from `gameStateStore.world.area.area_name`, resolved to friendly name via `gameDataStore.resolveArea()` (prefers `short_friendly_name`, falls back to `friendly_name`, then raw key)
 - **Game time** — 12 game days per real day (1 game hour = 5 real minutes), anchored to Eastern midnight, from `gameStateStore.gameTime`
 - **Server time** — US Eastern (where servers are hosted), from `gameStateStore.serverTime`
 - **Local time** — optional, off by default (useful when player isn't in Eastern)
@@ -38,6 +43,9 @@ All toggles are in the gear icon config popover. Preferences persist via `useVie
 
 | Option | Key | Default |
 |---|---|---|
+| Character Name | `showCharacter` | on |
+| Server Name | `showServer` | on |
+| Current Zone | `showZone` | on |
 | Game Time | `showGameTime` | on |
 | Server Time | `showServerTime` | on |
 | Local Time | `showLocalTime` | off |
