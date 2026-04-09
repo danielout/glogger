@@ -216,11 +216,12 @@ pub fn import_character_report_internal(
         ).map_err(|e| format!("Failed to prepare skill insert: {e}"))?;
 
         for (skill_name, skill_data) in &report.skills {
+            let base_level = skill_data.level - skill_data.bonus_levels;
             skill_stmt
                 .execute(rusqlite::params![
                     snapshot_id,
                     skill_name,
-                    skill_data.level,
+                    base_level,
                     skill_data.bonus_levels,
                     skill_data.xp_toward_next_level,
                     skill_data.xp_needed_for_next_level,
@@ -718,15 +719,15 @@ fn seed_game_state_from_snapshot(
             Some(info) => (info.id as i64, info.name.clone()),
             None => (0i64, skill_name.clone()),
         };
-        let total_level = skill_data.level + skill_data.bonus_levels;
+        let base_level = skill_data.level - skill_data.bonus_levels;
         skill_stmt
             .execute(rusqlite::params![
                 character,
                 server,
                 skill_id,
                 display_name,
-                total_level,      // level (total = base + bonus)
-                skill_data.level, // base_level (without bonuses)
+                skill_data.level, // level (total — JSON's "Level" already includes bonuses)
+                base_level,       // base_level (total minus bonuses)
                 skill_data.bonus_levels,
                 skill_data.xp_toward_next_level,
                 skill_data.xp_needed_for_next_level,
