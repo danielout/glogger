@@ -37,7 +37,7 @@
     <!-- Crafting points overview -->
     <div v-if="totalCPBudget > 0">
       <h3 class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Crafting Points</h3>
-      <CpProgressBar :used="totalCPUsedByAugments" :budget="totalCPBudget" label="Augments" size="sm" />
+      <CpProgressBar :used="totalCPUsed" :budget="totalCPBudget" label="Total" size="sm" />
     </div>
 
     <!-- Per-slot breakdown cards -->
@@ -53,7 +53,8 @@
         <SummarySlotCard
           v-for="slot in slotsWithMods"
           :key="slot.id"
-          :slot="slot" />
+          :slot="slot"
+          :resolved-names="resolvedNames" />
       </div>
     </div>
 
@@ -171,7 +172,6 @@ import { invoke } from '@tauri-apps/api/core'
 import { useBuildPlannerStore } from '../../../stores/buildPlannerStore'
 import {
   EQUIPMENT_SLOTS,
-  AUGMENT_CP_COST,
   getSlotCraftingPoints,
 } from '../../../types/buildPlanner'
 import type { BuildPresetMod } from '../../../types/buildPlanner'
@@ -229,12 +229,10 @@ const totalCPBudget = computed(() => {
   return total
 })
 
-const totalCPUsedByAugments = computed(() => {
+const totalCPUsed = computed(() => {
   let used = 0
   for (const slot of EQUIPMENT_SLOTS) {
-    if (store.slotHasAugment[slot.id]) {
-      used += AUGMENT_CP_COST
-    }
+    used += store.getSlotCpUsed(slot.id)
   }
   return used
 })

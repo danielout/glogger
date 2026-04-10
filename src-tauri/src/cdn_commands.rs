@@ -249,9 +249,12 @@ pub async fn search_items(
     equip_slot: Option<String>,
     level_min: Option<u32>,
     level_max: Option<u32>,
+    armor_type: Option<String>,
+    effect_text: Option<String>,
     state: State<'_, GameDataState>,
 ) -> Result<Vec<ItemInfo>, String> {
     let q = query.to_lowercase();
+    let effect_q = effect_text.as_ref().map(|s| s.to_lowercase());
     let data = state.read().await;
     let mut results: Vec<ItemInfo> = data
         .items
@@ -288,6 +291,37 @@ pub async fn search_items(
                 match item.crafting_target_level {
                     Some(lvl) if lvl <= max => {}
                     _ => return false,
+                }
+            }
+            // Armor type filter (keyword-based: ClothArmor, LeatherArmor, MetalArmor, OrganicArmor)
+            if let Some(ref at) = armor_type {
+                let keyword = match at.as_str() {
+                    "Cloth" => "ClothArmor",
+                    "Leather" => "LeatherArmor",
+                    "Metal" => "MetalArmor",
+                    "Organic" => "OrganicArmor",
+                    _ => return false,
+                };
+                if !item.keywords.iter().any(|k| k == keyword) {
+                    return false;
+                }
+            }
+            // Effect text filter (search within resolved effect descriptions)
+            if let Some(ref eq) = effect_q {
+                if !eq.is_empty() {
+                    let has_match = item.effect_descs.iter().any(|desc| {
+                        // Check raw effect desc and also try to match against resolved text
+                        desc.to_lowercase().contains(eq)
+                    });
+                    if !has_match {
+                        // Also check the item name and description as fallback
+                        let desc_match = item.description.as_ref()
+                            .map(|d| d.to_lowercase().contains(eq))
+                            .unwrap_or(false);
+                        if !desc_match {
+                            return false;
+                        }
+                    }
                 }
             }
             true
@@ -2335,5 +2369,137 @@ pub async fn get_recipes_for_keyword(
         .iter()
         .filter_map(|id| data.recipes.get(id).cloned())
         .collect();
+    Ok(results)
+}
+
+// ── CP-consuming recipe queries ───────────────────────────────────────────
+
+#[derive(serde::Serialize)]
+pub struct CpRecipeOption {
+    pub recipe_id: u32,
+    pub recipe_name: String,
+    pub icon_id: Option<u32>,
+    pub skill: Option<String>,
+    pub skill_level_req: Option<f32>,
+    pub cp_cost: u32,
+    /// "shamanic_infusion" or "crafting_enhancement"
+    pub effect_type: String,
+    /// For shamanic: TSys power name; for enhancements: the enhancement function name
+    pub effect_key: String,
+    /// Human-readable description of the effect
+    pub effect_description: String,
+}
+
+/// Get all CP-consuming recipes (shamanic infusion + crafting enhancements) applicable to a slot.
+#[tauri::command]
+pub async fn get_cp_recipes_for_slot(
+    equip_slot: String,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<CpRecipeOption>, String> {
+    let data = state.read().await;
+    let mut results = Vec::new();
+
+    // Map frontend slot name to CDN slot name
+    let cdn_slot = match equip_slot.as_str() {
+        "Belt" => "Waist",
+        "OffHand" => "OffHand",
+        _ => &equip_slot,
+    };
+
+    for recipe in data.recipes.values() {
+        for effect in &recipe.result_effects {
+            // Shamanic Infusion: "AddItemTSysPower(PowerName,Tier)"
+            if let Some(inner) = effect.strip_prefix("AddItemTSysPower(").and_then(|s| s.strip_suffix(')')) {
+                let parts: Vec<&str> = inner.split(',').collect();
+                if parts.len() != 2 { continue; }
+                let power_name = parts[0].trim();
+
+                // Look up the TSys power to check skill and slot compatibility
+                let tsys_entry = data.tsys.client_info.values()
+                    .find(|info| info.internal_name.as_deref() == Some(power_name));
+
+                let Some(tsys_info) = tsys_entry else { continue };
+
+                // Must be a ShamanicInfusion power
+                if tsys_info.skill.as_deref() != Some("ShamanicInfusion") { continue; }
+
+                // Must be compatible with this equipment slot
+                let slot_matches = tsys_info.slots.iter().any(|s| {
+                    match cdn_slot {
+                        "OffHand" => s == "OffHand" || s == "OffHandShield",
+                        _ => s == cdn_slot,
+                    }
+                });
+                if !slot_matches { continue; }
+
+                // Resolve effect description from the power's tier data
+                let tier_str = parts[1].trim();
+                let tier_key = format!("id_{}", tier_str);
+                let description = tsys_info.tiers.as_ref()
+                    .and_then(|tiers| tiers.get(&tier_key))
+                    .and_then(|t| t.get("EffectDescs"))
+                    .and_then(|descs| descs.as_array())
+                    .map(|descs| {
+                        descs.iter()
+                            .filter_map(|d| d.as_str())
+                            .filter_map(|desc| resolve_single_effect(desc, &data))
+                            .map(|r| r.formatted)
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    })
+                    .unwrap_or_else(|| recipe.description.clone().unwrap_or_default());
+
+                results.push(CpRecipeOption {
+                    recipe_id: recipe.id,
+                    recipe_name: recipe.name.clone(),
+                    icon_id: recipe.icon_id,
+                    skill: recipe.skill.clone(),
+                    skill_level_req: recipe.skill_level_req,
+                    cp_cost: 100, // All shamanic infusions cost 100 CP
+                    effect_type: "shamanic_infusion".to_string(),
+                    effect_key: power_name.to_string(),
+                    effect_description: description,
+                });
+            }
+
+            // Crafting Enhancement: "CraftingEnhanceItemXxx(value,cpCost)"
+            if effect.starts_with("CraftingEnhanceItem") {
+                if let Some(inner) = effect.find('(').and_then(|start| {
+                    effect.strip_suffix(')').map(|s| &s[start + 1..])
+                }) {
+                    let parts: Vec<&str> = inner.split(',').collect();
+                    if parts.len() != 2 { continue; }
+                    let cp_cost: u32 = match parts[1].trim().parse() {
+                        Ok(v) => v,
+                        Err(_) => continue,
+                    };
+
+                    // Check if this recipe applies to this slot type
+                    // Crafting enhancements apply to armor slots only
+                    let armor_slots = ["Head", "Chest", "Legs", "Hands", "Feet"];
+                    if !armor_slots.contains(&cdn_slot) { continue; }
+
+                    // Use recipe description as the effect description
+                    let description = recipe.description.clone().unwrap_or_else(|| recipe.name.clone());
+
+                    results.push(CpRecipeOption {
+                        recipe_id: recipe.id,
+                        recipe_name: recipe.name.clone(),
+                        icon_id: recipe.icon_id,
+                        skill: recipe.skill.clone(),
+                        skill_level_req: recipe.skill_level_req,
+                        cp_cost,
+                        effect_type: "crafting_enhancement".to_string(),
+                        effect_key: effect.clone(),
+                        effect_description: description,
+                    });
+                }
+            }
+        }
+    }
+
+    // Sort by effect_type (shamanic first), then by name
+    results.sort_by(|a, b| a.effect_type.cmp(&b.effect_type).then(a.recipe_name.cmp(&b.recipe_name)));
+
     Ok(results)
 }

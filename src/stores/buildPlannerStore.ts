@@ -9,11 +9,14 @@ import type {
   BuildPresetSlotItem,
   BuildPresetAbility,
   BuildPresetAbilityInput,
+  BuildPresetCpRecipe,
+  CpRecipeOption,
   SlotTsysPower,
 } from "../types/buildPlanner"
 import {
   EQUIPMENT_SLOTS,
   ARMOR_SET_SLOTS,
+  AUGMENT_CP_COST,
   getRarityDef,
   getArmorTypeFromKeywords,
 } from "../types/buildPlanner"
@@ -37,6 +40,11 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
   const activeBar = ref<'primary' | 'secondary' | 'sidebar' | null>(null)
   /** Resolved full item data for slot items (for keyword/armor type detection) */
   const resolvedSlotItems = ref<Record<string, ItemInfo>>({})
+  /** CP-consuming recipes assigned to slots in the active preset */
+  const slotCpRecipes = ref<BuildPresetCpRecipe[]>([])
+  /** Available CP recipes for the currently selected slot */
+  const availableCpRecipes = ref<CpRecipeOption[]>([])
+  const loadingCpRecipes = ref(false)
 
   // ── Computed ──────────────────────────────────────────────────────────────
 
@@ -69,6 +77,22 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
     return aug
   })
 
+  /** CP recipes assigned to the currently selected slot */
+  const selectedSlotCpRecipes = computed(() => {
+    if (!selectedSlot.value) return []
+    return slotCpRecipes.value.filter(r => r.equip_slot === selectedSlot.value)
+  })
+
+  /** Total CP used on a specific slot (augment + cp recipes) */
+  function getSlotCpUsed(slotId: string): number {
+    let used = 0
+    if (slotHasAugment.value[slotId]) used += AUGMENT_CP_COST
+    used += slotCpRecipes.value
+      .filter(r => r.equip_slot === slotId)
+      .reduce((sum, r) => sum + r.cp_cost, 0)
+    return used
+  }
+
   /** Max mods for a specific slot based on its rarity (per-slot) */
   function getMaxModsForSlot(slotId: string): number {
     const item = getSlotItem(slotId)
@@ -94,7 +118,11 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
   /** Get the rarity for a specific slot */
   function getSlotRarity(slotId: string): string {
     const item = getSlotItem(slotId)
-    return item?.slot_rarity ?? activePreset.value?.target_rarity ?? "Epic"
+    if (item?.slot_rarity) return item.slot_rarity
+    // Use slot-specific default (e.g., Uncommon for Belt) or preset target
+    const slotDef = EQUIPMENT_SLOTS.find(s => s.id === slotId)
+    if (slotDef?.defaultRarity) return slotDef.defaultRarity
+    return activePreset.value?.target_rarity ?? "Epic"
   }
 
   /** Get the primary skill for a specific slot (per-slot override or preset default) */
@@ -217,14 +245,16 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
     selectedSlot.value = null
     activeBar.value = null
     slotPowers.value = []
-    const [mods, items, abilities] = await Promise.all([
+    const [mods, items, abilities, cpRecipes] = await Promise.all([
       invoke<BuildPresetMod[]>("get_build_preset_mods", { presetId: preset.id }),
       invoke<BuildPresetSlotItem[]>("get_build_preset_slot_items", { presetId: preset.id }),
       invoke<BuildPresetAbility[]>("get_build_preset_abilities", { presetId: preset.id }),
+      invoke<BuildPresetCpRecipe[]>("get_build_preset_cp_recipes", { presetId: preset.id }),
     ])
     presetMods.value = mods
     slotItems.value = items
     presetAbilities.value = abilities
+    slotCpRecipes.value = cpRecipes
   }
 
   async function updatePreset(updates: Partial<BuildPreset>) {
@@ -262,7 +292,7 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
     selectedSlot.value = slotId
     activeBar.value = null
     modFilter.value = ""
-    await loadSlotPowers()
+    await Promise.all([loadSlotPowers(), loadAvailableCpRecipes()])
   }
 
   async function loadSlotPowers() {
@@ -448,7 +478,7 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
           item_id: 0,
           item_name: null,
           slot_level: props.slot_level ?? activePreset.value.target_level ?? 90,
-          slot_rarity: props.slot_rarity ?? activePreset.value.target_rarity ?? "Epic",
+          slot_rarity: props.slot_rarity ?? getSlotRarity(slotId),
           is_crafted: props.is_crafted ?? false,
           is_masterwork: props.is_masterwork ?? false,
         },
@@ -566,6 +596,73 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
     })
   }
 
+  // ── CP Recipe Actions ───────────────────────────────────────────────────
+
+  async function loadAvailableCpRecipes() {
+    if (!selectedSlot.value) {
+      availableCpRecipes.value = []
+      return
+    }
+    loadingCpRecipes.value = true
+    try {
+      availableCpRecipes.value = await invoke<CpRecipeOption[]>("get_cp_recipes_for_slot", {
+        equipSlot: selectedSlot.value,
+      })
+    } finally {
+      loadingCpRecipes.value = false
+    }
+  }
+
+  async function addCpRecipe(recipe: CpRecipeOption) {
+    if (!activePreset.value || !selectedSlot.value) return
+    // Check for duplicate
+    if (slotCpRecipes.value.some(r => r.equip_slot === selectedSlot.value && r.recipe_id === recipe.recipe_id)) return
+
+    slotCpRecipes.value.push({
+      id: 0, // placeholder, server assigns
+      preset_id: activePreset.value.id,
+      equip_slot: selectedSlot.value,
+      recipe_id: recipe.recipe_id,
+      recipe_name: recipe.recipe_name,
+      cp_cost: recipe.cp_cost,
+      effect_type: recipe.effect_type,
+      effect_key: recipe.effect_key,
+      sort_order: selectedSlotCpRecipes.value.length,
+    })
+    await saveCpRecipes()
+  }
+
+  async function removeCpRecipe(recipe: BuildPresetCpRecipe) {
+    slotCpRecipes.value = slotCpRecipes.value.filter(r => r !== recipe)
+    await saveCpRecipes()
+  }
+
+  async function saveCpRecipes() {
+    if (!activePreset.value || !selectedSlot.value) return
+    const slotRecipes = slotCpRecipes.value
+      .filter(r => r.equip_slot === selectedSlot.value)
+      .map((r, i) => ({
+        equip_slot: r.equip_slot,
+        recipe_id: r.recipe_id,
+        recipe_name: r.recipe_name,
+        cp_cost: r.cp_cost,
+        effect_type: r.effect_type,
+        effect_key: r.effect_key,
+        sort_order: i,
+      }))
+
+    await invoke("set_build_preset_cp_recipes", {
+      presetId: activePreset.value.id,
+      equipSlot: selectedSlot.value,
+      recipes: slotRecipes,
+    })
+
+    // Reload to get server-assigned IDs
+    slotCpRecipes.value = await invoke<BuildPresetCpRecipe[]>("get_build_preset_cp_recipes", {
+      presetId: activePreset.value.id,
+    })
+  }
+
   return {
     // State
     presets,
@@ -580,8 +677,12 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
     presetAbilities,
     activeBar,
     resolvedSlotItems,
+    slotCpRecipes,
+    availableCpRecipes,
+    loadingCpRecipes,
     // Computed
     selectedSlotMods,
+    selectedSlotCpRecipes,
     slotModCounts,
     slotHasAugment,
     maxModsPerSlot,
@@ -617,5 +718,9 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
     selectBar,
     addAbility,
     removeAbility,
+    getSlotCpUsed,
+    loadAvailableCpRecipes,
+    addCpRecipe,
+    removeCpRecipe,
   }
 })

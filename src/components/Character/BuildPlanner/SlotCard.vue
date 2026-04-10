@@ -4,9 +4,8 @@
     :class="slotClasses"
     @click="store.selectSlot(slot.id)">
 
-    <!-- Top row: icon, slot name, rarity, level, mod count, CP -->
-    <div class="flex items-center gap-1.5 px-2 py-1.5">
-      <!-- Item icon -->
+    <!-- Main row: icon, slot name, rarity, level, mod count, CP -->
+    <div class="flex items-center gap-1.5 px-2 py-1">
       <GameIcon
         v-if="itemIconId"
         :icon-id="itemIconId"
@@ -16,106 +15,94 @@
         v-else
         class="w-5 h-5 rounded bg-surface-hover border border-border-default/50 shrink-0" />
 
-      <span class="text-xs font-semibold shrink-0">{{ slot.label }}</span>
-
-      <!-- Per-slot rarity -->
-      <div @click.stop>
-        <StyledSelect
-          :model-value="store.getSlotRarity(slot.id)"
-          :options="rarityOptions"
-          size="xs"
-          :color-class="rarityColor(store.getSlotRarity(slot.id))"
-          @update:model-value="onSlotRarityChange" />
+      <div class="flex flex-col min-w-0 flex-1">
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs font-semibold shrink-0">{{ slot.label }}</span>
+          <div @click.stop>
+            <StyledSelect
+              :model-value="store.getSlotRarity(slot.id)"
+              :options="rarityOptions"
+              size="xs"
+              :color-class="rarityColor(store.getSlotRarity(slot.id))"
+              @update:model-value="onSlotRarityChange" />
+          </div>
+          <input
+            type="number"
+            :value="store.getSlotLevel(slot.id)"
+            min="1"
+            max="125"
+            class="bg-transparent border border-border-default/50 rounded px-1 py-0 text-[10px] text-text-primary w-8 text-center"
+            @click.stop
+            @change="onSlotLevelChange" />
+          <span class="flex-1" />
+          <span class="text-[10px]" :class="fillColor">
+            {{ store.slotModCounts[slot.id] ?? 0 }}/{{ store.getMaxModsForSlot(slot.id) }}
+            <span v-if="store.slotHasAugment[slot.id]" class="text-purple-400">+A</span>
+          </span>
+          <CpProgressBar
+            v-if="cpBudget > 0"
+            :used="store.getSlotCpUsed(slot.id)"
+            :budget="cpBudget"
+            class="w-14" />
+        </div>
+        <!-- Item name + toggles (compact sub-row) -->
+        <div class="flex items-center gap-1 -mt-0.5">
+          <span
+            v-if="store.slotArmorTypes[slot.id]"
+            class="text-[9px] px-0.5 rounded shrink-0"
+            :class="armorTypeBadge(store.slotArmorTypes[slot.id]!)">
+            {{ store.slotArmorTypes[slot.id] }}
+          </span>
+          <span
+            v-if="slotItem && slotItem.item_id !== 0"
+            class="text-[10px] truncate text-entity-item"
+            @click.stop>
+            <ItemInline :reference="String(slotItem.item_id)" />
+          </span>
+          <span v-else class="text-[10px] text-text-dim italic">No item</span>
+          <span class="flex-1" />
+          <label class="flex items-center gap-0.5 text-[9px] text-text-dim cursor-pointer" @click.stop>
+            <input type="checkbox" :checked="slotItem?.is_crafted ?? false" class="w-2 h-2 cursor-pointer" @change="onCraftedChange" />
+            Crafted
+          </label>
+          <label v-if="store.getSlotRarity(slot.id) === 'Legendary'" class="flex items-center gap-0.5 text-[9px] text-text-dim cursor-pointer" @click.stop>
+            <input type="checkbox" :checked="slotItem?.is_masterwork ?? false" class="w-2 h-2 cursor-pointer" @change="onMasterworkChange" />
+            MW
+          </label>
+        </div>
       </div>
-
-      <!-- Per-slot level -->
-      <input
-        type="number"
-        :value="store.getSlotLevel(slot.id)"
-        min="1"
-        max="125"
-        class="bg-transparent border border-border-default/50 rounded px-1 py-0 text-xs text-text-primary w-10 text-center"
-        @click.stop
-        @change="onSlotLevelChange" />
-
-      <span class="flex-1" />
-
-      <!-- Mod count -->
-      <span class="text-xs" :class="fillColor">
-        {{ store.slotModCounts[slot.id] ?? 0 }}/{{ store.getMaxModsForSlot(slot.id) }}
-        <span v-if="store.slotHasAugment[slot.id]" class="text-purple-400">+A</span>
-      </span>
-
-      <!-- Crafting points -->
-      <CpProgressBar
-        v-if="cpBudget > 0"
-        :used="store.slotHasAugment[slot.id] ? AUGMENT_CP_COST : 0"
-        :budget="cpBudget"
-        class="w-16" />
-    </div>
-
-    <!-- Bottom row: armor type, item name, crafted/MW toggles -->
-    <div class="flex items-center gap-1.5 px-2 pb-1.5 -mt-0.5">
-      <span
-        v-if="store.slotArmorTypes[slot.id]"
-        class="text-[11px] px-1 rounded shrink-0"
-        :class="armorTypeBadge(store.slotArmorTypes[slot.id]!)">
-        {{ store.slotArmorTypes[slot.id] }}
-      </span>
-
-      <span
-        v-if="slotItem && slotItem.item_id !== 0"
-        class="text-[11px] truncate"
-        @click.stop>
-        <ItemInline :reference="String(slotItem.item_id)" />
-      </span>
-      <span v-else class="text-[11px] text-text-muted italic">No item selected</span>
-
-      <span class="flex-1" />
-
-      <label
-        class="flex items-center gap-0.5 text-[11px] text-text-secondary cursor-pointer"
-        @click.stop>
-        <input
-          type="checkbox"
-          :checked="slotItem?.is_crafted ?? false"
-          class="w-2.5 h-2.5 cursor-pointer"
-          @change="onCraftedChange" />
-        <span>Crafted</span>
-      </label>
-
-      <label
-        v-if="store.getSlotRarity(slot.id) === 'Legendary'"
-        class="flex items-center gap-0.5 text-[11px] text-text-secondary cursor-pointer"
-        @click.stop>
-        <input
-          type="checkbox"
-          :checked="slotItem?.is_masterwork ?? false"
-          class="w-2.5 h-2.5 cursor-pointer"
-          @change="onMasterworkChange" />
-        <span>MW</span>
-      </label>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useBuildPlannerStore } from '../../../stores/buildPlannerStore'
-import { RARITY_DEFS, AUGMENT_CP_COST, getSlotCraftingPoints } from '../../../types/buildPlanner'
+import { getSlotCraftingPoints, getAllowedRarities, getDefaultRarityForSlot } from '../../../types/buildPlanner'
 import type { EquipSlotDef } from '../../../types/buildPlanner'
 import GameIcon from '../../Shared/GameIcon.vue'
 import ItemInline from '../../Shared/Item/ItemInline.vue'
 import StyledSelect from '../../Shared/StyledSelect.vue'
 import CpProgressBar from './CpProgressBar.vue'
 
-const rarityOptions = RARITY_DEFS.map(r => ({ value: r.id, label: r.label }))
-
 const props = defineProps<{
   slot: EquipSlotDef
 }>()
 
 const store = useBuildPlannerStore()
+
+const rarityOptions = computed(() =>
+  getAllowedRarities(props.slot).map(r => ({ value: r.id, label: r.label }))
+)
+
+// Auto-correct legacy data where belt was saved with an invalid rarity
+onMounted(async () => {
+  const currentRarity = store.getSlotRarity(props.slot.id)
+  const allowed = getAllowedRarities(props.slot).map(r => r.id)
+  if (!allowed.includes(currentRarity)) {
+    await store.updateSlotProps(props.slot.id, { slot_rarity: getDefaultRarityForSlot(props.slot) })
+  }
+})
 
 const slotItem = computed(() => store.getSlotItem(props.slot.id))
 const itemIconId = computed(() => store.resolvedSlotItems[props.slot.id]?.icon_id ?? null)
@@ -153,6 +140,7 @@ function rarityColor(rarity: string): string {
     case 'Exceptional': return 'text-blue-400'
     case 'Rare': return 'text-emerald-400'
     case 'Uncommon': return 'text-text-primary'
+    case 'Common': return 'text-text-dim'
     default: return 'text-text-muted'
   }
 }
@@ -175,6 +163,8 @@ async function onSlotLevelChange(e: Event) {
 }
 
 async function onSlotRarityChange(val: string) {
+  const allowed = getAllowedRarities(props.slot).map(r => r.id)
+  if (!allowed.includes(val)) return
   if (val !== 'Legendary' && slotItem.value?.is_masterwork) {
     await store.updateSlotProps(props.slot.id, { slot_rarity: val, is_masterwork: false })
   } else {

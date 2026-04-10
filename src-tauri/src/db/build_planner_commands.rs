@@ -55,6 +55,17 @@ pub struct BuildPresetAbilityInput {
     pub ability_name: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct BuildPresetCpRecipeInput {
+    pub equip_slot: String,
+    pub recipe_id: i64,
+    pub recipe_name: Option<String>,
+    pub cp_cost: i32,
+    pub effect_type: String,
+    pub effect_key: String,
+    pub sort_order: i32,
+}
+
 // ── Output types ────────────────────────────────────────────────────────────
 
 #[derive(Serialize)]
@@ -103,6 +114,19 @@ pub struct BuildPresetMod {
     pub power_name: String,
     pub tier: Option<i32>,
     pub is_augment: bool,
+    pub sort_order: i32,
+}
+
+#[derive(Serialize)]
+pub struct BuildPresetCpRecipe {
+    pub id: i64,
+    pub preset_id: i64,
+    pub equip_slot: String,
+    pub recipe_id: i64,
+    pub recipe_name: Option<String>,
+    pub cp_cost: i32,
+    pub effect_type: String,
+    pub effect_key: String,
     pub sort_order: i32,
 }
 
@@ -558,4 +582,95 @@ pub fn get_build_preset_abilities(
         abilities.push(row.map_err(|e| format!("Row parse error: {e}"))?);
     }
     Ok(abilities)
+}
+
+// ── CP Recipe Commands ─────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_build_preset_cp_recipes(
+    db: State<'_, DbPool>,
+    preset_id: i64,
+) -> Result<Vec<BuildPresetCpRecipe>, String> {
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, preset_id, equip_slot, recipe_id, recipe_name, cp_cost, effect_type, effect_key, sort_order
+             FROM build_preset_cp_recipes
+             WHERE preset_id = ?1
+             ORDER BY equip_slot, sort_order",
+        )
+        .map_err(|e| format!("Failed to prepare query: {e}"))?;
+
+    let rows = stmt
+        .query_map([preset_id], |row| {
+            Ok(BuildPresetCpRecipe {
+                id: row.get(0)?,
+                preset_id: row.get(1)?,
+                equip_slot: row.get(2)?,
+                recipe_id: row.get(3)?,
+                recipe_name: row.get(4)?,
+                cp_cost: row.get(5)?,
+                effect_type: row.get(6)?,
+                effect_key: row.get(7)?,
+                sort_order: row.get(8)?,
+            })
+        })
+        .map_err(|e| format!("Query failed: {e}"))?;
+
+    let mut recipes = Vec::new();
+    for row in rows {
+        recipes.push(row.map_err(|e| format!("Row parse error: {e}"))?);
+    }
+    Ok(recipes)
+}
+
+#[tauri::command]
+pub fn set_build_preset_cp_recipes(
+    db: State<'_, DbPool>,
+    preset_id: i64,
+    equip_slot: String,
+    recipes: Vec<BuildPresetCpRecipeInput>,
+) -> Result<(), String> {
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
+
+    // Delete existing CP recipes for this slot
+    conn.execute(
+        "DELETE FROM build_preset_cp_recipes WHERE preset_id = ?1 AND equip_slot = ?2",
+        rusqlite::params![preset_id, equip_slot],
+    )
+    .map_err(|e| format!("Failed to clear existing CP recipes: {e}"))?;
+
+    // Insert new CP recipes
+    let mut stmt = conn.prepare(
+        "INSERT INTO build_preset_cp_recipes (preset_id, equip_slot, recipe_id, recipe_name, cp_cost, effect_type, effect_key, sort_order)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)"
+    ).map_err(|e| format!("Failed to prepare insert: {e}"))?;
+
+    for r in &recipes {
+        stmt.execute(rusqlite::params![
+            preset_id,
+            r.equip_slot,
+            r.recipe_id,
+            r.recipe_name,
+            r.cp_cost,
+            r.effect_type,
+            r.effect_key,
+            r.sort_order,
+        ])
+        .map_err(|e| format!("Failed to insert CP recipe: {e}"))?;
+    }
+
+    // Touch preset updated_at
+    conn.execute(
+        "UPDATE build_presets SET updated_at = datetime('now') WHERE id = ?1",
+        [preset_id],
+    )
+    .ok();
+
+    Ok(())
 }

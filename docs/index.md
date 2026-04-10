@@ -67,7 +67,7 @@ Per-screen documentation organized by view.
   - [character-quests.md](features/screens/character/character-quests.md) — Quests tab: personalized quest reference with requirement eligibility.
   - [character-gourmand.md](features/screens/character/character-gourmand.md) — Gourmand tab.
   - [character-statehelm.md](features/screens/character/character-statehelm.md) — Statehelm tab: weekly gift tracker with NPC services and filters.
-  - [character-buildplanner.md](features/screens/character/character-buildplanner.md) — Build Planner tab (stub).
+  - [character-buildplanner.md](features/screens/character/character-buildplanner.md) — Build Planner tab: combat build planning with mod/ability/CP management.
   - Account tab: server-wide aggregate view (wealth, inventory, skills across all characters). Uses `AggregateView.vue` from Dashboard components.
 
 ### Inventory
@@ -122,7 +122,6 @@ Per-screen documentation organized by view.
 
 ## Plans
 
-- [build-planner-improvements.md](plans/build-planner-improvements.md) — Build planner polish and accuracy improvements.
 - [dashboard-improvements.md](plans/dashboard-improvements.md) — Dashboard cards, layout polish, and new tracker features.
 - [quick-reference-system.md](plans/quick-reference-system.md) — Reference Shelf: pinnable entity tooltips in a bottom tray (Phase 1 complete).
 - [unified-event-stream.md](plans/unified-event-stream.md) — Unifying Player.log and Chat.log into a single event stream (Phase 0+1 complete, Phase 2+ remaining).

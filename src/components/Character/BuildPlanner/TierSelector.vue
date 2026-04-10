@@ -1,5 +1,16 @@
 <template>
-  <div class="inline-flex items-center rounded border border-border-default overflow-hidden shrink-0" @click.stop>
+  <!-- Compact mode for many tiers: show selected + dropdown -->
+  <div v-if="tiers.length > 5" class="inline-flex items-center shrink-0" @click.stop>
+    <StyledSelect
+      :model-value="modelValue"
+      :options="tierOptions"
+      size="xs"
+      color-class="text-accent-gold"
+      @update:model-value="emit('update:modelValue', $event)" />
+  </div>
+
+  <!-- Segmented control for few tiers -->
+  <div v-else class="inline-flex items-center rounded border border-border-default overflow-hidden shrink-0" @click.stop>
     <button
       v-for="tier in tiers"
       :key="tier.tier_id"
@@ -16,9 +27,11 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { TsysTierSummary } from '../../../types/buildPlanner'
+import StyledSelect from '../../Shared/StyledSelect.vue'
 
-defineProps<{
+const props = defineProps<{
   tiers: TsysTierSummary[]
   modelValue: string
 }>()
@@ -26,4 +39,11 @@ defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [tierId: string]
 }>()
+
+const tierOptions = computed(() =>
+  props.tiers.map(t => ({
+    value: t.tier_id,
+    label: `Lv ${t.min_level}–${t.max_level}`,
+  }))
+)
 </script>

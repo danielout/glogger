@@ -37,6 +37,7 @@ use cdn_commands::{
     get_all_skills,
     get_cache_status,
     get_combat_skills,
+    get_cp_recipes_for_slot,
     get_effect,
     get_equip_slots,
     get_icon_path,
@@ -104,9 +105,10 @@ use db::admin_commands::{force_rebuild_cdn_tables, get_database_stats, purge_pla
 use db::aggregate_commands::{get_aggregate_inventory, get_aggregate_skills, get_aggregate_wealth};
 use db::build_planner_commands::{
     clear_build_preset_slot_item, create_build_preset, delete_build_preset,
-    get_build_preset_abilities, get_build_preset_mods, get_build_preset_slot_items,
-    get_build_presets, set_build_preset_abilities, set_build_preset_mods,
-    set_build_preset_slot_item, update_build_preset, update_build_preset_slot_props,
+    get_build_preset_abilities, get_build_preset_cp_recipes, get_build_preset_mods,
+    get_build_preset_slot_items, get_build_presets, set_build_preset_abilities,
+    set_build_preset_cp_recipes, set_build_preset_mods, set_build_preset_slot_item,
+    update_build_preset, update_build_preset_slot_props,
 };
 use db::character_commands::{
     compare_snapshots, get_character_snapshots, get_characters, get_snapshot_active_quests,
@@ -493,6 +495,7 @@ pub fn run() {
             // CDN - Build planner queries
             get_combat_skills,
             get_tsys_powers_for_slot,
+            get_cp_recipes_for_slot,
             // Build planner persistence
             create_build_preset,
             get_build_presets,
@@ -506,6 +509,8 @@ pub fn run() {
             update_build_preset_slot_props,
             set_build_preset_abilities,
             get_build_preset_abilities,
+            get_build_preset_cp_recipes,
+            set_build_preset_cp_recipes,
             // Game state queries
             get_game_state_skills,
             get_game_state_attributes,

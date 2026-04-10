@@ -146,13 +146,21 @@ export const useGameDataStore = defineStore("gameData", () => {
 
   async function searchItems(
     query: string,
-    filters?: { equipSlot?: string; levelMin?: number; levelMax?: number },
+    filters?: {
+      equipSlot?: string
+      levelMin?: number
+      levelMax?: number
+      armorType?: string
+      effectText?: string
+    },
   ): Promise<ItemInfo[]> {
     return invoke<ItemInfo[]>("search_items", {
       query,
       equipSlot: filters?.equipSlot ?? null,
       levelMin: filters?.levelMin ?? null,
       levelMax: filters?.levelMax ?? null,
+      armorType: filters?.armorType ?? null,
+      effectText: filters?.effectText ?? null,
     });
   }
 

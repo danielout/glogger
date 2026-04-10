@@ -15,7 +15,7 @@
       <span class="flex-1" />
       <CpProgressBar
         v-if="cpBudget > 0"
-        :used="hasAug ? AUGMENT_CP_COST : 0"
+        :used="store.getSlotCpUsed(slot.id)"
         :budget="cpBudget"
         class="w-14" />
     </div>
@@ -27,7 +27,7 @@
         :key="mod.id"
         class="flex items-center gap-1.5 text-[10px]">
         <span v-if="mod.is_augment" class="text-purple-400 font-semibold shrink-0">AUG</span>
-        <span class="text-text-secondary truncate">{{ mod.power_name }}</span>
+        <span class="text-text-secondary truncate">{{ displayName(mod) }}</span>
       </div>
     </div>
     <div v-else class="text-[10px] text-text-dim italic">No mods</div>
@@ -37,13 +37,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useBuildPlannerStore } from '../../../stores/buildPlannerStore'
-import { AUGMENT_CP_COST, getSlotCraftingPoints } from '../../../types/buildPlanner'
-import type { EquipSlotDef } from '../../../types/buildPlanner'
+import { getSlotCraftingPoints } from '../../../types/buildPlanner'
+import type { EquipSlotDef, BuildPresetMod } from '../../../types/buildPlanner'
 import GameIcon from '../../Shared/GameIcon.vue'
 import CpProgressBar from './CpProgressBar.vue'
 
 const props = defineProps<{
   slot: EquipSlotDef
+  resolvedNames: Record<string, string>
 }>()
 
 const store = useBuildPlannerStore()
@@ -66,4 +67,9 @@ const fillColor = computed(() => {
   if (modCount.value > 0) return 'text-yellow-400'
   return 'text-text-dim'
 })
+
+function displayName(mod: BuildPresetMod): string {
+  const key = `${mod.power_name}:${mod.tier ?? 0}`
+  return props.resolvedNames[key] ?? mod.power_name
+}
 </script>

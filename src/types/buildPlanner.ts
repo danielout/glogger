@@ -66,6 +66,32 @@ export interface BuildPresetModInput {
   sort_order: number
 }
 
+/** A CP-consuming recipe option returned from CDN query */
+export interface CpRecipeOption {
+  recipe_id: number
+  recipe_name: string
+  icon_id: number | null
+  skill: string | null
+  skill_level_req: number | null
+  cp_cost: number
+  effect_type: 'shamanic_infusion' | 'crafting_enhancement'
+  effect_key: string
+  effect_description: string
+}
+
+/** A CP recipe assigned to a slot in a saved build */
+export interface BuildPresetCpRecipe {
+  id: number
+  preset_id: number
+  equip_slot: string
+  recipe_id: number
+  recipe_name: string | null
+  cp_cost: number
+  effect_type: string
+  effect_key: string
+  sort_order: number
+}
+
 /** A TSys power eligible for a slot, returned from the backend query */
 export interface TsysTierSummary {
   tier_id: string
@@ -97,6 +123,10 @@ export interface EquipSlotDef {
   id: string
   label: string
   group: 'armor' | 'weapon' | 'jewelry' | 'extra'
+  /** Index into RARITY_DEFS for the highest allowed rarity. Undefined = no cap. */
+  maxRarityIndex?: number
+  /** Default rarity for this slot (overrides the preset's target rarity). */
+  defaultRarity?: string
 }
 
 /** Rarity levels with their mod slot distributions.
@@ -124,10 +154,11 @@ export const EQUIPMENT_SLOTS: EquipSlotDef[] = [
   { id: 'OffHand', label: 'Off Hand', group: 'weapon' },
   { id: 'Ring', label: 'Ring', group: 'jewelry' },
   { id: 'Necklace', label: 'Necklace', group: 'jewelry' },
-  { id: 'Belt', label: 'Belt', group: 'extra' },
+  { id: 'Belt', label: 'Belt', group: 'extra', maxRarityIndex: 1, defaultRarity: 'Uncommon' },
 ]
 
 export const RARITY_DEFS: RarityDef[] = [
+  { id: 'Common', label: 'Common', totalMods: 0, primarySlots: 0, secondarySlots: 0 },
   { id: 'Uncommon', label: 'Uncommon', totalMods: 3, primarySlots: 1, secondarySlots: 0 },
   { id: 'Rare', label: 'Rare', totalMods: 3, primarySlots: 1, secondarySlots: 1 },
   { id: 'Exceptional', label: 'Exceptional', totalMods: 3, primarySlots: 2, secondarySlots: 1 },
@@ -142,7 +173,21 @@ export const ABILITY_BARS = [
 ]
 
 export function getRarityDef(rarity: string): RarityDef {
-  return RARITY_DEFS.find(r => r.id === rarity) ?? RARITY_DEFS[3] // default to Epic
+  return RARITY_DEFS.find(r => r.id === rarity) ?? RARITY_DEFS[4] // default to Epic
+}
+
+/** Get the allowed rarities for a specific slot (belt is limited to Common/Uncommon) */
+export function getAllowedRarities(slot: EquipSlotDef): RarityDef[] {
+  if (slot.maxRarityIndex != null) {
+    return RARITY_DEFS.slice(0, slot.maxRarityIndex + 1)
+  }
+  // Non-belt slots: skip Common (index 0) since regular equipment can't be Common in the planner
+  return RARITY_DEFS.slice(1)
+}
+
+/** Get the default rarity for a slot (belt defaults to Uncommon, others use preset target) */
+export function getDefaultRarityForSlot(slot: EquipSlotDef): string {
+  return slot.defaultRarity ?? 'Epic'
 }
 
 /** Cost in crafting points to apply an augment */

@@ -89,9 +89,91 @@
       Loading mods...
     </div>
 
-    <!-- 3-column mod layout -->
+    <!-- No mod slots (Common belt) -->
+    <div v-else-if="rarityDef.totalMods === 0" class="flex-1 flex items-center justify-center text-text-muted text-sm">
+      Common items have no mod slots.
+    </div>
+
+    <!-- Generic-only mod layout (Uncommon belt: 1 generic slot, no skill columns) -->
+    <div v-else-if="genericOnlySlots > 0 && rarityDef.primarySlots === 0" class="flex-1 flex gap-3 min-h-0">
+      <ModColumn
+        v-model:column-skill="colGenericSkill"
+        :available-skills="columnSkillOptions"
+        :powers="genericColumnPowers"
+        :assigned-mods="genericColumnMods"
+        :compact="compactMode"
+        label-class="text-text-muted"
+        :slot-count="genericOnlySlots"
+        column-label="Generic"
+        @add="(power, tierId) => store.addMod(power, false, tierId)"
+        @remove="(mod) => store.removeMod(mod)" />
+
+      <!-- Craft Points Column (belt) -->
+      <div class="flex-1 flex flex-col gap-1.5 min-h-0 border-l border-border-default/50 pl-3">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-semibold text-amber-400 uppercase tracking-wider">Craft Points</h4>
+          <span class="text-xs" :class="cpRemaining < 0 ? 'text-red-400 font-semibold' : 'text-text-muted'">
+            {{ cpRemaining }}/{{ cpBudget }} CP
+          </span>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <span class="text-[10px] text-text-muted uppercase tracking-wider">Augment ({{ AUGMENT_CP_COST }} CP)</span>
+          <div v-if="currentAugment">
+            <ModAssignment :mod="currentAugment" @remove="store.removeMod(currentAugment!)" />
+          </div>
+          <div v-else class="text-xs text-text-secondary py-1">
+            No augment assigned.
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <StyledSelect
+            v-model="augmentSkillFilter"
+            :options="augmentSkillOptions"
+            size="xs"
+            full-width />
+        </div>
+
+        <div class="overflow-y-auto flex flex-col gap-1" :class="hasCpRecipes ? 'max-h-32' : 'flex-1'">
+          <ModOption
+            v-for="power in augmentPowers"
+            :key="power.key"
+            :power="power"
+            :augment-only="true"
+            @add="(_isAugment: boolean, tierId?: string) => store.addMod(power, true, tierId)" />
+        </div>
+
+        <!-- CP recipes (belt) -->
+        <template v-if="hasCpRecipes">
+          <div v-if="store.selectedSlotCpRecipes.length > 0" class="flex flex-col gap-1">
+            <span class="text-[10px] text-text-muted uppercase tracking-wider">Applied Recipes</span>
+            <CpRecipeAssignment
+              v-for="recipe in store.selectedSlotCpRecipes"
+              :key="recipe.id"
+              :recipe="recipe"
+              @remove="store.removeCpRecipe(recipe)" />
+          </div>
+          <div v-if="!store.loadingCpRecipes" class="flex flex-col gap-1">
+            <span class="text-[10px] text-text-muted uppercase tracking-wider">
+              Available Enhancements ({{ availableCpRecipeOptions.length }})
+            </span>
+          </div>
+          <div v-else class="text-[10px] text-text-muted py-1 text-center">Loading recipes...</div>
+          <div class="flex-1 overflow-y-auto flex flex-col gap-1">
+            <CpRecipeOption
+              v-for="recipe in availableCpRecipeOptions"
+              :key="recipe.recipe_id"
+              :recipe="recipe"
+              :is-assigned="isCpRecipeAssigned(recipe.recipe_id)"
+              @add="store.addCpRecipe(recipe)" />
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Standard 3-column mod layout (Primary Skill, Secondary Skill, Craft Points) -->
     <div v-else class="flex-1 flex gap-3 min-h-0">
-      <!-- Primary Skill Column -->
       <ModColumn
         v-model:column-skill="colPrimarySkill"
         :available-skills="columnSkillOptions"
@@ -104,7 +186,6 @@
         @add="(power, tierId) => store.addMod(power, false, tierId)"
         @remove="(mod) => store.removeMod(mod)" />
 
-      <!-- Secondary Skill Column -->
       <ModColumn
         v-model:column-skill="colSecondarySkill"
         :available-skills="columnSkillOptions"
@@ -126,13 +207,8 @@
           </span>
         </div>
 
-        <!-- Augment section -->
         <div class="flex flex-col gap-1">
-          <div class="flex items-center gap-2">
-            <span class="text-[10px] text-text-muted uppercase tracking-wider">Augment ({{ AUGMENT_CP_COST }} CP)</span>
-          </div>
-
-          <!-- Current augment -->
+          <span class="text-[10px] text-text-muted uppercase tracking-wider">Augment ({{ AUGMENT_CP_COST }} CP)</span>
           <div v-if="currentAugment">
             <ModAssignment :mod="currentAugment" @remove="store.removeMod(currentAugment!)" />
           </div>
@@ -141,7 +217,6 @@
           </div>
         </div>
 
-        <!-- Augment skill filter -->
         <div class="flex items-center gap-2">
           <StyledSelect
             v-model="augmentSkillFilter"
@@ -150,8 +225,7 @@
             full-width />
         </div>
 
-        <!-- Available mods for augmenting -->
-        <div class="flex-1 overflow-y-auto flex flex-col gap-1">
+        <div class="overflow-y-auto flex flex-col gap-1" :class="hasCpRecipes ? 'max-h-40' : 'flex-1'">
           <ModOption
             v-for="power in augmentPowers"
             :key="power.key"
@@ -159,6 +233,37 @@
             :augment-only="true"
             @add="(_isAugment: boolean, tierId?: string) => store.addMod(power, true, tierId)" />
         </div>
+
+        <!-- Shamanic Infusion + Crafting Enhancements -->
+        <template v-if="hasCpRecipes">
+          <!-- Assigned CP recipes -->
+          <div v-if="store.selectedSlotCpRecipes.length > 0" class="flex flex-col gap-1">
+            <span class="text-[10px] text-text-muted uppercase tracking-wider">Applied Recipes</span>
+            <CpRecipeAssignment
+              v-for="recipe in store.selectedSlotCpRecipes"
+              :key="recipe.id"
+              :recipe="recipe"
+              @remove="store.removeCpRecipe(recipe)" />
+          </div>
+
+          <!-- Available CP recipes -->
+          <div v-if="!store.loadingCpRecipes" class="flex flex-col gap-1">
+            <span class="text-[10px] text-text-muted uppercase tracking-wider">
+              Available Enhancements ({{ availableCpRecipeOptions.length }})
+            </span>
+          </div>
+          <div v-if="store.loadingCpRecipes" class="text-[10px] text-text-muted py-1 text-center">
+            Loading recipes...
+          </div>
+          <div v-else class="flex-1 overflow-y-auto flex flex-col gap-1">
+            <CpRecipeOption
+              v-for="recipe in availableCpRecipeOptions"
+              :key="recipe.recipe_id"
+              :recipe="recipe"
+              :is-assigned="isCpRecipeAssigned(recipe.recipe_id)"
+              @add="store.addCpRecipe(recipe)" />
+          </div>
+        </template>
       </div>
     </div>
   </div>
@@ -173,6 +278,8 @@ import ModOption from './ModOption.vue'
 import ModColumn from './ModColumn.vue'
 import SlotItemPicker from './SlotItemPicker.vue'
 import StyledSelect from '../../Shared/StyledSelect.vue'
+import CpRecipeOption from './CpRecipeOption.vue'
+import CpRecipeAssignment from './CpRecipeAssignment.vue'
 import { useBuildCrossRef } from '../../../composables/useBuildCrossRef'
 
 const store = useBuildPlannerStore()
@@ -188,6 +295,7 @@ const compactMode = ref(false)
 // These are browsing filters, NOT persisted. Use '__generic__' for generic mods.
 const colPrimarySkill = ref('')
 const colSecondarySkill = ref('')
+const colGenericSkill = ref('__generic__')
 
 const slotLabel = computed(() => {
   return EQUIPMENT_SLOTS.find(s => s.id === store.selectedSlot)?.label ?? store.selectedSlot ?? ''
@@ -288,8 +396,14 @@ function applyAbilityFilter(powers: typeof store.slotPowers) {
   })
 }
 
+const genericOnlySlots = computed(() => {
+  const r = rarityDef.value
+  return Math.max(0, r.totalMods - r.primarySlots - r.secondarySlots)
+})
+
 const primaryColumnPowers = computed(() => applyAbilityFilter(powersForSkill(colPrimarySkill.value)))
 const secondaryColumnPowers = computed(() => applyAbilityFilter(powersForSkill(colSecondarySkill.value)))
+const genericColumnPowers = computed(() => applyAbilityFilter(powersForSkill('__generic__')))
 
 /** Match assigned mods to columns by checking which skill the power belongs to */
 function modsForSkill(skill: string) {
@@ -306,6 +420,7 @@ function modsForSkill(skill: string) {
 
 const primaryColumnMods = computed(() => modsForSkill(colPrimarySkill.value))
 const secondaryColumnMods = computed(() => modsForSkill(colSecondarySkill.value))
+const genericColumnMods = computed(() => modsForSkill('__generic__'))
 
 /** Current augment on this slot */
 const currentAugment = computed(() => {
@@ -319,10 +434,17 @@ const cpBudget = computed(() => {
 })
 
 const cpRemaining = computed(() => {
-  let used = 0
-  if (currentAugment.value) used += AUGMENT_CP_COST
-  return cpBudget.value - used
+  if (!store.selectedSlot) return 0
+  return cpBudget.value - store.getSlotCpUsed(store.selectedSlot)
 })
+
+const hasCpRecipes = computed(() => store.availableCpRecipes.length > 0)
+
+const availableCpRecipeOptions = computed(() => store.availableCpRecipes)
+
+function isCpRecipeAssigned(recipeId: number): boolean {
+  return store.selectedSlotCpRecipes.some(r => r.recipe_id === recipeId)
+}
 
 /** Powers available for augmenting, filtered by the augment skill dropdown */
 const augmentPowers = computed(() => {

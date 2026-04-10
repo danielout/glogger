@@ -50,7 +50,7 @@ CharacterView.vue                   — 8-tab container
 │       └── QuestRewardsSection.vue
 ├── Gourmand tab                    — food tracking for Gourmand skill
 ├── StatehelmView.vue               — Statehelm weekly gift tracker
-└── Build Planner tab               — combat build planning (stub)
+└── Build Planner tab               — combat build planning (mods, abilities, CP budget)
 ```
 
 ## Per-Tab Documentation
@@ -61,7 +61,7 @@ CharacterView.vue                   — 8-tab container
 - [character-quests.md](character/character-quests.md) — Quests: personalized quest reference with requirement eligibility
 - [character-gourmand.md](character/character-gourmand.md) — Gourmand: food tracking and progress
 - [character-statehelm.md](character/character-statehelm.md) — Statehelm: weekly gift tracking and NPC services
-- [character-buildplanner.md](character/character-buildplanner.md) — Build Planner (stub)
+- [character-buildplanner.md](character/character-buildplanner.md) — Build Planner: combat build planning with mod/ability/CP management
 
 ## Data Sources
 
