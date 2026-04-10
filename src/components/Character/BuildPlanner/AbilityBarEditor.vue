@@ -64,6 +64,7 @@
               :key="ability.id"
               :ability="ability"
               :is-assigned="isAssigned(ability.id)"
+              :mod-boost-count="getModBoostCount(ability.name)"
               @add="handleAdd(ability)" />
           </template>
 
@@ -79,6 +80,7 @@
               :key="ability.id"
               :ability="ability"
               :is-assigned="isAssigned(ability.id)"
+              :mod-boost-count="getModBoostCount(ability.name)"
               @add="handleAdd(ability)" />
           </template>
         </div>
@@ -152,6 +154,15 @@ const filteredSidebarAbilities = computed(() => {
 
 function isAssigned(abilityId: number): boolean {
   return barAbilities.value.some(a => a.ability_id === abilityId)
+}
+
+/** Count how many assigned mods reference an ability by name (case-insensitive substring match on power_name) */
+function getModBoostCount(abilityName: string): number {
+  const baseName = abilityName.replace(/\s+\d+$/, '').toLowerCase()
+  if (!baseName) return 0
+  return store.presetMods.filter(m =>
+    m.power_name.toLowerCase().includes(baseName)
+  ).length
 }
 
 async function handleAdd(ability: AbilityInfo) {

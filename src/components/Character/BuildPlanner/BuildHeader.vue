@@ -3,15 +3,12 @@
     <!-- Build selector -->
     <div class="flex items-center gap-2">
       <label class="text-xs text-text-muted">Build:</label>
-      <select
-        class="bg-surface-elevated border border-border-default rounded px-2 py-1 text-sm text-text-primary cursor-pointer min-w-40"
-        :value="store.activePreset?.id ?? ''"
-        @change="onPresetChange">
-        <option value="" disabled>Select a build...</option>
-        <option v-for="preset in store.presets" :key="preset.id" :value="preset.id">
-          {{ preset.name }}
-        </option>
-      </select>
+      <StyledSelect
+        :model-value="String(store.activePreset?.id ?? '')"
+        :options="presetOptions"
+        placeholder="Select a build..."
+        size="sm"
+        @update:model-value="onPresetChange" />
 
       <button
         class="px-2 py-1 text-xs bg-accent-gold/20 border border-accent-gold/40 text-accent-gold rounded cursor-pointer hover:bg-accent-gold/30"
@@ -37,25 +34,21 @@
     <template v-if="store.activePreset">
       <div class="flex items-center gap-2 ml-2">
         <label class="text-xs text-text-muted">Skills:</label>
-        <select
-          class="bg-surface-elevated border border-border-default rounded px-2 py-1 text-sm text-text-primary cursor-pointer"
-          :value="store.activePreset.skill_primary ?? ''"
-          @change="onPrimarySkillChange">
-          <option value="">Primary...</option>
-          <option v-for="skill in store.combatSkills" :key="skill.name" :value="skill.name">
-            {{ skill.name }}
-          </option>
-        </select>
+        <StyledSelect
+          :model-value="store.activePreset.skill_primary ?? ''"
+          :options="skillOptions('Primary...')"
+          placeholder="Primary..."
+          size="sm"
+          color-class="text-blue-400"
+          @update:model-value="onPrimarySkillChange" />
         <span class="text-text-muted text-xs">+</span>
-        <select
-          class="bg-surface-elevated border border-border-default rounded px-2 py-1 text-sm text-text-primary cursor-pointer"
-          :value="store.activePreset.skill_secondary ?? ''"
-          @change="onSecondarySkillChange">
-          <option value="">Secondary...</option>
-          <option v-for="skill in store.combatSkills" :key="skill.name" :value="skill.name">
-            {{ skill.name }}
-          </option>
-        </select>
+        <StyledSelect
+          :model-value="store.activePreset.skill_secondary ?? ''"
+          :options="skillOptions('Secondary...')"
+          placeholder="Secondary..."
+          size="sm"
+          color-class="text-emerald-400"
+          @update:model-value="onSecondarySkillChange" />
       </div>
 
       <!-- Default level + rarity (used as starting values for new slots) -->
@@ -69,12 +62,11 @@
           max="125"
           class="bg-surface-elevated border border-border-default rounded px-2 py-1 text-sm text-text-primary w-14 text-center"
           @change="onLevelChange" />
-        <select
-          class="bg-surface-elevated border border-border-default rounded px-2 py-1 text-sm text-text-primary cursor-pointer"
-          :value="store.activePreset.target_rarity"
-          @change="onRarityChange">
-          <option v-for="r in rarities" :key="r.id" :value="r.id">{{ r.label }}</option>
-        </select>
+        <StyledSelect
+          :model-value="store.activePreset.target_rarity"
+          :options="rarityOptions"
+          size="sm"
+          @update:model-value="onRarityChange" />
       </div>
     </template>
 
@@ -109,20 +101,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useBuildPlannerStore } from '../../../stores/buildPlannerStore'
 import { RARITY_DEFS } from '../../../types/buildPlanner'
 import ModalDialog from '../../Shared/ModalDialog.vue'
+import StyledSelect from '../../Shared/StyledSelect.vue'
 
 const store = useBuildPlannerStore()
-const rarities = RARITY_DEFS
+
+const presetOptions = computed(() =>
+  store.presets.map(p => ({ value: String(p.id), label: p.name }))
+)
+
+function skillOptions(placeholder: string) {
+  return [
+    { value: '', label: placeholder },
+    ...store.combatSkills.map(s => ({ value: s.name, label: s.name })),
+  ]
+}
+
+const rarityOptions = RARITY_DEFS.map(r => ({ value: r.id, label: r.label }))
 
 const showCreate = ref(false)
 const showRename = ref(false)
 const showDelete = ref(false)
 
-function onPresetChange(e: Event) {
-  const id = Number((e.target as HTMLSelectElement).value)
+function onPresetChange(val: string) {
+  const id = Number(val)
   const preset = store.presets.find(p => p.id === id)
   if (preset) store.selectPreset(preset)
 }
@@ -142,15 +147,13 @@ async function handleDelete() {
   await store.deletePreset(store.activePreset.id)
 }
 
-async function onPrimarySkillChange(e: Event) {
-  const val = (e.target as HTMLSelectElement).value || null
-  await store.updatePreset({ skill_primary: val })
+async function onPrimarySkillChange(val: string) {
+  await store.updatePreset({ skill_primary: val || null })
   await store.onBuildParamsChanged()
 }
 
-async function onSecondarySkillChange(e: Event) {
-  const val = (e.target as HTMLSelectElement).value || null
-  await store.updatePreset({ skill_secondary: val })
+async function onSecondarySkillChange(val: string) {
+  await store.updatePreset({ skill_secondary: val || null })
   await store.onBuildParamsChanged()
 }
 
@@ -162,8 +165,7 @@ async function onLevelChange(e: Event) {
   }
 }
 
-async function onRarityChange(e: Event) {
-  const val = (e.target as HTMLSelectElement).value
+async function onRarityChange(val: string) {
   await store.updatePreset({ target_rarity: val })
 }
 </script>

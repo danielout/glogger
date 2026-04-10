@@ -12,13 +12,13 @@
       </span>
     </div>
 
-    <select
-      :value="columnSkill"
-      class="bg-surface-elevated border border-border-default rounded px-1.5 py-0.5 text-xs min-w-0"
-      :class="labelClass"
-      @change="onSkillChange">
-      <option v-for="opt in availableSkills" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-    </select>
+    <StyledSelect
+      :model-value="columnSkill"
+      :options="availableSkills"
+      size="xs"
+      :color-class="labelClass"
+      full-width
+      @update:model-value="(val: string) => emit('update:columnSkill', val)" />
 
     <!-- Assigned mods (pinned to top with distinct styling) -->
     <div v-if="assignedMods.length > 0" class="flex flex-col gap-1">
@@ -50,6 +50,7 @@
           v-for="power in availablePowers"
           :key="power.key"
           :power="power"
+          :compact="compact"
           :disabled="isModBlocked(power)"
           :disabled-reason="getModBlockedReason(power)"
           @add="(_isAugment: boolean, tierId?: string) => emit('add', power, tierId)" />
@@ -78,6 +79,7 @@ import { useBuildPlannerStore } from '../../../stores/buildPlannerStore'
 import ModAssignment from './ModAssignment.vue'
 import ModOption from './ModOption.vue'
 import GameIcon from '../../Shared/GameIcon.vue'
+import StyledSelect from '../../Shared/StyledSelect.vue'
 
 const props = defineProps<{
   columnLabel: string
@@ -87,6 +89,7 @@ const props = defineProps<{
   assignedMods: BuildPresetMod[]
   labelClass: string
   slotCount: number
+  compact?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -127,7 +130,4 @@ function getModBlockedReason(power: SlotTsysPower): string | undefined {
   return undefined
 }
 
-function onSkillChange(e: Event) {
-  emit('update:columnSkill', (e.target as HTMLSelectElement).value)
-}
 </script>

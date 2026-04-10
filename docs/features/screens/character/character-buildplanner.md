@@ -100,14 +100,22 @@ The full mod planning system is implemented and functional:
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| `BuildPlannerScreen.vue` | Done | Two-panel layout, auto-selects first preset |
-| `BuildHeader.vue` | Done | Build selector, skill pickers, default level/rarity |
-| `SlotGrid.vue` | Done | Vertical equipment slot list with per-slot level/rarity/crafted/masterwork controls |
-| `SlotModPicker.vue` | Done | 3-column layout (Primary Skill, Secondary Skill, Craft Points) with per-slot skill pickers |
-| `ModColumn.vue` | Done | Reusable mod column with skill dropdown, assigned mods pinned to top, available mods below |
-| `ModOption.vue` | Done | Available mod with icon, skill badge, effects, tier selector for multi-tier powers, +/+A buttons |
-| `ModAssignment.vue` | Done | Assigned mod with icon, resolved display name, effects, and tier selector for multi-tier powers |
-| `BuildSummary.vue` | Done | Slide-out panel with armor sets, CP overview, slot breakdown, and tabbed effect views (By Skill, Effect Totals, By Ability) |
+| `BuildPlannerScreen.vue` | Done | Three-panel PaneLayout (left: Equipment/Abilities tabs, center: mod picker, right: Build Summary). Auto-selects first preset. |
+| `BuildHeader.vue` | Done | Build selector, skill pickers, default level/rarity. All styled dropdowns. |
+| `BuildCompleteness.vue` | Done | Header progress indicator: "X/10 slots, X/Y mods, X/3 bars" |
+| `SlotGrid.vue` | Done | Equipment slots organized by group (Armor, Weapons, Jewelry, Other) |
+| `SlotCard.vue` | Done | Per-slot card with item icon, rarity dropdown, level input, mod count, CP progress bar |
+| `SlotModPicker.vue` | Done | 3-column layout with per-slot skill pickers, compact mode toggle, "My abilities" filter |
+| `ModColumn.vue` | Done | Reusable mod column with styled skill dropdown, compact mode support |
+| `ModOption.vue` | Done | Available mod with icon, skill badge, color-coded effects, tier segmented control, ability cross-ref labels |
+| `ModAssignment.vue` | Done | Assigned mod with icon, resolved display name, color-coded effects, tier segmented control |
+| `BuildSummary.vue` | Done | Persistent right pane with armor sets, CP progress bar, slot breakdown cards, and tabbed effect views |
+| `SummarySlotCard.vue` | Done | Per-slot summary card with item icon, mod list, CP bar |
+| `AbilityDamageCard.vue` | Done | Per-ability effect card for "By Ability" summary view |
+| `EffectLine.vue` | Done | Color-coded effect rendering (green positive, red negative) in raw string or structured mode |
+| `CpProgressBar.vue` | Done | Visual progress bar for crafting points |
+| `TierSelector.vue` | Done | Segmented control for tier level ranges (replaces native select) |
+| `GlobalModSearch.vue` | Done | Search across all assigned mods in the build, grouped by slot |
 
 **Working features:**
 - Build CRUD (create, rename, delete, select)
@@ -150,9 +158,9 @@ Ability bar planning for primary, secondary, and sidebar bars.
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| `AbilityBarEditor.vue` | Done | Two-column: assigned bar + available abilities browser |
-| `AbilityOption.vue` | Done | Ability display with icon, level, cooldown, damage type, costs |
-| `AbilityBarSummary.vue` | Done | Accordion-style bar buttons with fill counts and ability icons |
+| `AbilityBarEditor.vue` | Done | Two-column: assigned bar + available abilities browser, with mod boost indicators |
+| `AbilityOption.vue` | Done | Ability display with icon, level, cooldown, damage type, costs, and "X mods boost this" indicator |
+| `AbilityBarSummary.vue` | Done | Card-style bars with skill names, fill counts, and always-visible ability icon strips |
 
 **Working features:**
 - Primary (6 slots), secondary (6 slots), and sidebar (10 slots) ability bars
@@ -165,7 +173,6 @@ Ability bar planning for primary, secondary, and sidebar bars.
 - Assigned abilities displayed with `AbilityInline` (tooltip + navigation)
 
 **Not yet implemented from Phase 2 design:**
-- Cross-referencing between mods and abilities (highlighting which mods boost selected abilities)
 - Drag-to-reorder abilities within a bar
 
 ### Phase 3: Base Item Selection — Complete
@@ -463,8 +470,10 @@ Per-slot item selection so users can choose which base item they want for each e
 | Backend | `src-tauri/src/db/migrations.rs` | v5: build tables, v6: slot items, v7: abilities, v8: per-slot level/rarity, v9: per-slot skills |
 | Store | `src/stores/buildPlannerStore.ts` | Pinia store for build state + CRUD |
 | Types | `src/types/buildPlanner.ts` | TypeScript interfaces for builds, mods, slot items, abilities |
+| Composable | `src/composables/useBuildCrossRef.ts` | Mod-to-ability cross-referencing logic |
+| Shared | `src/components/Shared/StyledSelect.vue` | Custom styled dropdown (replaces native selects) |
 | Screen | `src/components/Character/BuildPlanner/BuildPlannerScreen.vue` | Top-level screen |
-| Components | `src/components/Character/BuildPlanner/*.vue` | All sub-components (10 files) |
+| Components | `src/components/Character/BuildPlanner/*.vue` | All sub-components (18 files) |
 
 ### Data Flow
 
