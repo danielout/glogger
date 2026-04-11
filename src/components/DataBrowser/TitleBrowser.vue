@@ -79,6 +79,12 @@
               </div>
             </div>
 
+            <button
+              class="bg-transparent border-none cursor-pointer px-1 py-0 text-sm shrink-0 transition-colors"
+              :class="isFav ? 'text-accent-gold' : 'text-text-dim hover:text-accent-gold'"
+              :title="isFav ? 'Remove from favorites' : 'Add to favorites'"
+              @click="dataBrowserStore.toggleFavorite({ type: 'title', reference: String(selected.id), label: parseColorTag(selected.title).text || 'Untitled' })"
+            >&#x2605;</button>
             <button class="bg-transparent border-none text-text-dim cursor-pointer px-1 py-0 text-sm shrink-0 hover:text-accent-red" @click="clearSelection">✕</button>
           </div>
 
@@ -116,9 +122,10 @@
 
 <script setup lang="ts">
 import PaneLayout from "../Shared/PaneLayout.vue";
-import { ref, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import { useKeyboard } from "../../composables/useKeyboard";
 import type { PlayerTitleInfo } from "../../types/gameData";
 
@@ -134,6 +141,11 @@ function parseColorTag(raw: string | null): { text: string; color: string | null
 
 const store = useGameDataStore();
 const settingsStore = useSettingsStore();
+const dataBrowserStore = useDataBrowserStore();
+
+const isFav = computed(() =>
+  selected.value ? dataBrowserStore.isFavorite("title", String(selected.value.id)) : false
+);
 
 const query = ref("");
 const allTitles = ref<PlayerTitleInfo[]>([]);
@@ -195,6 +207,7 @@ useKeyboard({
 
 function selectTitle(title: PlayerTitleInfo) {
   selected.value = title;
+  dataBrowserStore.addToHistory({ type: "title", reference: String(title.id), label: parseColorTag(title.title).text || "Untitled" });
 }
 
 function clearSelection() {

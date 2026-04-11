@@ -95,6 +95,12 @@
               </div>
             </div>
 
+            <button
+              class="bg-transparent border-none cursor-pointer px-1 py-0 text-sm shrink-0 transition-colors"
+              :class="isFav ? 'text-accent-gold' : 'text-text-dim hover:text-accent-gold'"
+              :title="isFav ? 'Remove from favorites' : 'Add to favorites'"
+              @click="dataBrowserStore.toggleFavorite({ type: 'skill', reference: selected.name, label: selected.name })"
+            >&#x2605;</button>
             <button class="bg-transparent border-none text-text-dim cursor-pointer px-1 py-0 text-sm shrink-0 hover:text-accent-red" @click="clearSelection">✕</button>
           </div>
 
@@ -218,11 +224,12 @@
 
 <script setup lang="ts">
 import PaneLayout from "../Shared/PaneLayout.vue";
-import { ref, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useKeyboard } from "../../composables/useKeyboard";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { SkillInfo, AbilityInfo, RecipeInfo, NpcInfo, QuestInfo } from "../../types/gameData";
 import RecipeInline from "../Shared/Recipe/RecipeInline.vue";
@@ -235,6 +242,11 @@ const props = defineProps<{
 
 const store = useGameDataStore();
 const settingsStore = useSettingsStore();
+const dataBrowserStore = useDataBrowserStore();
+
+const isFav = computed(() =>
+  selected.value ? dataBrowserStore.isFavorite("skill", selected.value.name) : false
+);
 
 const query = ref("");
 const allSkills = ref<SkillInfo[]>([]);
@@ -301,6 +313,7 @@ useKeyboard({
 async function selectSkill(skill: SkillInfo) {
   selected.value = skill;
   iconSrc.value = null;
+  dataBrowserStore.addToHistory({ type: "skill", reference: skill.name, label: skill.name });
   relatedAbilities.value = [];
   relatedRecipes.value = [];
   npcsTraining.value = [];

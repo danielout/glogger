@@ -1,11 +1,11 @@
 <template>
-  <div class="flex flex-col gap-1.5">
+  <div class="flex flex-col gap-1.5 h-full min-h-0">
     <div class="flex items-center gap-2">
       <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wider">Base Item</h4>
     </div>
 
-    <!-- Currently selected item -->
-    <div v-if="currentItem && currentItem.item_id !== 0" class="flex items-center gap-2 px-2 py-1.5 bg-surface-elevated border border-border-default rounded text-sm group">
+    <!-- Currently selected item (hidden in preview mode, dialog handles it) -->
+    <div v-if="!previewMode && currentItem && currentItem.item_id !== 0" class="flex items-center gap-2 px-2 py-1.5 bg-surface-elevated border border-border-default rounded text-sm group">
       <ItemInline :reference="String(currentItem.item_id)" :show-icon="true" />
       <span class="flex-1" />
       <button
@@ -87,7 +87,7 @@
     </div>
 
     <!-- Results list -->
-    <div class="flex-1 overflow-y-auto max-h-80 border border-border-default rounded">
+    <div class="flex-1 overflow-y-auto border border-border-default rounded" :class="previewMode ? '' : 'max-h-80'">
       <div v-if="loading" class="px-2 py-3 text-xs text-text-muted text-center">
         Loading items...
       </div>
@@ -140,6 +140,18 @@ import type { ItemInfo } from '../../../types/gameData'
 import ItemInline from '../../Shared/Item/ItemInline.vue'
 import GameIcon from '../../Shared/GameIcon.vue'
 import StyledSelect from '../../Shared/StyledSelect.vue'
+
+const props = withDefaults(defineProps<{
+  /** If true, clicking an item previews it instead of selecting immediately */
+  previewMode?: boolean
+}>(), {
+  previewMode: false,
+})
+
+const emit = defineEmits<{
+  selected: []
+  preview: [item: ItemInfo]
+}>()
 
 const store = useBuildPlannerStore()
 const gameData = useGameDataStore()
@@ -265,7 +277,12 @@ async function loadItems() {
 }
 
 async function selectItem(item: ItemInfo) {
+  if (props.previewMode) {
+    emit('preview', item)
+    return
+  }
   if (!store.selectedSlot) return
   await store.setSlotItem(store.selectedSlot, item.id, item.name)
+  emit('selected')
 }
 </script>

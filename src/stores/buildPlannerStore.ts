@@ -45,6 +45,8 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
   /** Available CP recipes for the currently selected slot */
   const availableCpRecipes = ref<CpRecipeOption[]>([])
   const loadingCpRecipes = ref(false)
+  /** Configurable sidebar slot count (default 6, max 12) */
+  const sidebarSlotCount = ref(6)
 
   // ── Computed ──────────────────────────────────────────────────────────────
 
@@ -255,6 +257,8 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
     slotItems.value = items
     presetAbilities.value = abilities
     slotCpRecipes.value = cpRecipes
+    // Resolve full item data (icons, keywords, etc.) in background
+    resolveSlotItemData()
   }
 
   async function updatePreset(updates: Partial<BuildPreset>) {
@@ -536,32 +540,47 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
     slotPowers.value = []
   }
 
-  /** Add an ability to the active bar */
-  async function addAbility(abilityId: number, abilityName: string | null) {
-    if (!activePreset.value || !activeBar.value) return
+  /** Set an ability at a specific slot position on the active bar.
+   *  Replaces whatever was in that slot (if anything). */
+  async function setAbilityAtSlot(bar: 'primary' | 'secondary' | 'sidebar', slotPosition: number, abilityId: number, abilityName: string | null) {
+    if (!activePreset.value) return
 
-    // Check if ability is already on this bar
-    const barAbilities = getBarAbilities(activeBar.value)
-    if (barAbilities.some(a => a.ability_id === abilityId)) return
+    // Remove any existing ability at this slot position
+    presetAbilities.value = presetAbilities.value.filter(
+      a => !(a.bar === bar && a.slot_position === slotPosition)
+    )
 
-    // Check slot limit
-    const maxSlots = activeBar.value === 'sidebar' ? 10 : 6
-    if (barAbilities.length >= maxSlots) return
-
-    const nextPosition = barAbilities.length > 0
-      ? Math.max(...barAbilities.map(a => a.slot_position)) + 1
-      : 0
+    // Also remove this exact ability if it's elsewhere on the same bar (no duplicates)
+    presetAbilities.value = presetAbilities.value.filter(
+      a => !(a.bar === bar && a.ability_id === abilityId)
+    )
 
     presetAbilities.value.push({
       id: -Date.now(),
       preset_id: activePreset.value.id,
-      bar: activeBar.value,
-      slot_position: nextPosition,
+      bar,
+      slot_position: slotPosition,
       ability_id: abilityId,
       ability_name: abilityName,
     })
 
-    await saveBarAbilities(activeBar.value)
+    await saveBarAbilities(bar)
+  }
+
+  /** Clear a specific slot on a bar */
+  async function clearAbilitySlot(bar: 'primary' | 'secondary' | 'sidebar', slotPosition: number) {
+    if (!activePreset.value) return
+    presetAbilities.value = presetAbilities.value.filter(
+      a => !(a.bar === bar && a.slot_position === slotPosition)
+    )
+    await saveBarAbilities(bar)
+  }
+
+  /** Clear all abilities from a bar */
+  async function clearBar(bar: 'primary' | 'secondary' | 'sidebar') {
+    if (!activePreset.value) return
+    presetAbilities.value = presetAbilities.value.filter(a => a.bar !== bar)
+    await saveBarAbilities(bar)
   }
 
   /** Remove an ability from a bar */
@@ -570,16 +589,16 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
     await saveBarAbilities(ability.bar)
   }
 
-  /** Persist abilities for a specific bar */
+  /** Persist abilities for a specific bar (preserves slot_position values) */
   async function saveBarAbilities(bar: string) {
     if (!activePreset.value) return
     const barAbilities = presetAbilities.value
       .filter(a => a.bar === bar)
       .sort((a, b) => a.slot_position - b.slot_position)
 
-    const input: BuildPresetAbilityInput[] = barAbilities.map((a, i) => ({
+    const input: BuildPresetAbilityInput[] = barAbilities.map(a => ({
       bar: a.bar,
-      slot_position: i,
+      slot_position: a.slot_position,
       ability_id: a.ability_id,
       ability_name: a.ability_name,
     }))
@@ -615,8 +634,6 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
 
   async function addCpRecipe(recipe: CpRecipeOption) {
     if (!activePreset.value || !selectedSlot.value) return
-    // Check for duplicate
-    if (slotCpRecipes.value.some(r => r.equip_slot === selectedSlot.value && r.recipe_id === recipe.recipe_id)) return
 
     slotCpRecipes.value.push({
       id: 0, // placeholder, server assigns
@@ -680,6 +697,7 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
     slotCpRecipes,
     availableCpRecipes,
     loadingCpRecipes,
+    sidebarSlotCount,
     // Computed
     selectedSlotMods,
     selectedSlotCpRecipes,
@@ -716,7 +734,9 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
     clearSlotItem,
     getBarAbilities,
     selectBar,
-    addAbility,
+    setAbilityAtSlot,
+    clearAbilitySlot,
+    clearBar,
     removeAbility,
     getSlotCpUsed,
     loadAvailableCpRecipes,

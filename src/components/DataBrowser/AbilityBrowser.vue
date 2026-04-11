@@ -21,7 +21,7 @@
             <option value="All">All Skills</option>
             <option
               v-for="skill in skillsWithAbilities"
-              :key="skill.id"
+              :key="skill.name"
               :value="skill.name">
               {{ skill.name }}
             </option>
@@ -35,39 +35,46 @@
             class="input flex-1"
             placeholder="Search abilities…" />
           <span v-if="loading" class="text-accent-gold text-sm animate-spin">⟳</span>
-          <span v-else-if="filteredAbilities.length" class="text-text-dim text-xs min-w-6 text-right">{{
-            filteredAbilities.length
+          <span v-else-if="filteredFamilies.length" class="text-text-dim text-xs min-w-6 text-right">{{
+            filteredFamilies.length
           }}</span>
         </div>
+
+        <!-- Monster abilities toggle -->
+        <label class="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer select-none">
+          <input type="checkbox" v-model="showMonsterAbilities" class="accent-accent-gold" />
+          Show monster abilities
+        </label>
 
         <div v-if="selectedSkillFilter === 'All' && !query" class="text-text-dim text-xs italic py-1">
           Select a skill or start typing to search abilities
         </div>
 
-        <div v-else-if="filteredAbilities.length === 0 && !loading && query" class="text-text-dim text-xs italic py-1">
+        <div v-else-if="filteredFamilies.length === 0 && !loading && query" class="text-text-dim text-xs italic py-1">
           No abilities found for "{{ query }}"
         </div>
 
-        <div v-else-if="allAbilities.length === 0 && !loading" class="text-text-dim text-xs italic py-1">
+        <div v-else-if="allFamilies.length === 0 && !loading" class="text-text-dim text-xs italic py-1">
           No abilities for {{ selectedSkillFilter }}
         </div>
 
         <ul ref="listRef" v-else class="list-none m-0 p-0 overflow-y-auto flex-1 border border-surface-elevated">
           <li
-            v-for="(ability, idx) in filteredAbilities"
-            :key="ability.id"
+            v-for="(family, idx) in filteredFamilies"
+            :key="family.base_internal_name"
             class="flex items-baseline gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
-            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === ability.id, 'bg-surface-elevated': selectedIndex === idx && selected?.id !== ability.id }"
-            @click="selectAbility(ability)">
-            <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ ability.level || 0 }}]</span>
-            <span class="text-text-primary/75 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ ability.name }}</span>
+            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.base_internal_name === family.base_internal_name, 'bg-surface-elevated': selectedIndex === idx && selected?.base_internal_name !== family.base_internal_name }"
+            @click="selectFamily(family)">
+            <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[{{ levelRange(family) }}]</span>
+            <span class="text-text-primary/75 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ family.base_name }}</span>
+            <span v-if="family.tier_ids.length > 1" class="text-text-dim text-[0.65rem] shrink-0">{{ family.tier_ids.length }}T</span>
           </li>
         </ul>
       </div>
       </template>
     </template>
 
-    <!-- Right panel: ability detail -->
+    <!-- Right panel: family detail -->
     <div
       class="h-full overflow-y-auto border-l border-surface-elevated p-4 flex flex-col gap-4"
       :class="{ 'items-center justify-center': !selected }">
@@ -76,8 +83,8 @@
         </div>
 
         <template v-else>
+          <!-- Header: icon + shared info -->
           <div class="flex gap-3 items-start">
-            <!-- Icon -->
             <div class="shrink-0">
               <img
                 v-if="iconSrc"
@@ -94,139 +101,141 @@
             </div>
 
             <div class="flex-1 min-w-0">
-              <div class="text-accent-gold text-base font-bold mb-1">{{ selected.name }}</div>
+              <div class="text-accent-gold text-base font-bold mb-1">{{ selected.base_name }}</div>
               <div class="text-xs text-text-dim mb-1">
-                ID: <span class="text-text-secondary font-mono">{{ selected.id }}</span>
                 <template v-if="selected.skill">
-                  · Skill:
-                  <SkillInline :reference="selected.skill" /></template
-                >
-                <template v-if="selected.level !== null">
-                  · Level:
-                  <span class="text-text-secondary font-mono">{{ selected.level }}</span></template
-                >
-                <template v-if="selected.icon_id">
-                  · Icon:
-                  <span class="text-text-secondary font-mono">{{ selected.icon_id }}</span></template
-                >
+                  Skill:
+                  <SkillInline :reference="selected.skill" /></template>
+                <template v-if="selected.damage_type">
+                  · Damage:
+                  <span class="text-text-secondary">{{ selected.damage_type }}</span></template>
+                <template v-if="selected.tier_ids.length > 1">
+                  · <span class="text-text-secondary">{{ selected.tier_ids.length }} tiers</span></template>
               </div>
-              <div v-if="selected.description" class="text-xs text-text-secondary italic">
-                {{ selected.description }}
+              <!-- Description from base tier -->
+              <div v-if="baseTierAbility?.description" class="text-xs text-text-secondary italic">
+                {{ baseTierAbility.description }}
               </div>
             </div>
 
+            <button
+              class="bg-transparent border-none cursor-pointer px-1 py-0 text-sm shrink-0 transition-colors"
+              :class="isFav ? 'text-accent-gold' : 'text-text-dim hover:text-accent-gold'"
+              :title="isFav ? 'Remove from favorites' : 'Add to favorites'"
+              @click="dataBrowserStore.toggleFavorite({ type: 'ability', reference: selected.base_internal_name, label: selected.base_name })"
+            >&#x2605;</button>
             <button class="bg-transparent border-none text-text-dim cursor-pointer px-1 py-0 text-sm shrink-0 hover:text-accent-red" @click="clearSelection">✕</button>
           </div>
 
-          <!-- Combat Details -->
-          <div v-if="selected.damage_type || selected.reset_time || selected.target || selected.range" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Combat Details</div>
-            <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-1.5">
-              <div v-if="selected.damage_type" class="text-xs flex gap-2">
-                <span class="text-text-muted min-w-20">Damage:</span>
-                <span class="text-text-secondary">{{ selected.damage_type }}</span>
-              </div>
-              <div v-if="selected.reset_time" class="text-xs flex gap-2">
-                <span class="text-text-muted min-w-20">Cooldown:</span>
-                <span class="text-text-secondary">{{ selected.reset_time }}s</span>
-              </div>
-              <div v-if="selected.target" class="text-xs flex gap-2">
-                <span class="text-text-muted min-w-20">Target:</span>
-                <span class="text-text-secondary">{{ selected.target }}</span>
-              </div>
-              <div v-if="selected.range" class="text-xs flex gap-2">
-                <span class="text-text-muted min-w-20">Range:</span>
-                <span class="text-text-secondary">{{ selected.range }}m</span>
-              </div>
-              <div v-if="selected.mana_cost" class="text-xs flex gap-2">
-                <span class="text-text-muted min-w-20">Mana Cost:</span>
-                <span class="text-text-secondary">{{ selected.mana_cost }}</span>
-              </div>
-              <div v-if="selected.power_cost" class="text-xs flex gap-2">
-                <span class="text-text-muted min-w-20">Power Cost:</span>
-                <span class="text-text-secondary">{{ selected.power_cost }}</span>
-              </div>
-              <div v-if="selected.animation" class="text-xs flex gap-2">
-                <span class="text-text-muted min-w-20">Animation:</span>
-                <span class="text-text-secondary font-mono">{{ selected.animation }}</span>
-              </div>
-            </div>
-          </div>
+          <!-- Loading tiers -->
+          <div v-if="tiersLoading" class="text-accent-gold text-xs animate-spin">⟳ Loading tiers…</div>
 
-          <!-- Special Info -->
-          <div v-if="selected.special_info || selected.prerequisite" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Info</div>
-            <div v-if="selected.prerequisite" class="text-xs text-[#e08060] px-2 py-1 bg-[#151515] border-l-2 border-l-[#4a2a2a]">
-              Requires: {{ selected.prerequisite }}
-            </div>
-            <div v-if="selected.special_info" class="text-xs text-text-secondary italic px-2 py-1">
-              {{ selected.special_info }}
-            </div>
-          </div>
-
-          <!-- Flags from raw_json -->
-          <div v-if="abilityFlags.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Flags</div>
-            <div class="flex flex-wrap gap-1">
-              <span
-                v-for="flag in abilityFlags"
-                :key="flag"
-                class="text-[0.72rem] px-1.5 py-0.5 bg-[#1a2a1a] border border-[#2a4a2a] text-[#8ab88a]">
-                {{ flag }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Upgrade chain from raw_json -->
-          <div v-if="selected.raw_json?.UpgradeOf || selected.raw_json?.SharesResetTimerWith" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Related</div>
-            <div v-if="selected.raw_json?.UpgradeOf" class="text-xs flex gap-2 px-2 py-1 bg-[#151515]">
-              <span class="text-text-muted">Upgrade of:</span>
-              <span class="text-text-secondary">{{ selected.raw_json.UpgradeOf }}</span>
-            </div>
-            <div v-if="selected.raw_json?.SharesResetTimerWith" class="text-xs flex gap-2 px-2 py-1 bg-[#151515]">
-              <span class="text-text-muted">Shares cooldown with:</span>
-              <span class="text-text-secondary">{{ selected.raw_json.SharesResetTimerWith }}</span>
-            </div>
-          </div>
-
-          <!-- Sources -->
-          <SourcesPanel :sources="sources" :loading="sourcesLoading" />
-
-          <!-- PvE/PvP Details -->
-          <div v-if="selected.pve || selected.pvp" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">PvE / PvP</div>
-            <div class="flex gap-4">
-              <div v-if="selected.pve" class="flex-1">
-                <div class="text-[0.65rem] text-text-muted mb-1">PvE</div>
-                <pre class="bg-surface-dark border border-surface-card p-2 text-[0.68rem] text-text-muted overflow-x-auto whitespace-pre m-0">{{ JSON.stringify(selected.pve, null, 2) }}</pre>
-              </div>
-              <div v-if="selected.pvp" class="flex-1">
-                <div class="text-[0.65rem] text-text-muted mb-1">PvP</div>
-                <pre class="bg-surface-dark border border-surface-card p-2 text-[0.68rem] text-text-muted overflow-x-auto whitespace-pre m-0">{{ JSON.stringify(selected.pvp, null, 2) }}</pre>
+          <template v-else-if="resolvedTiers.length">
+            <!-- Combat Details (shared across tiers) -->
+            <div v-if="baseTierAbility && (baseTierAbility.target || sharedCooldown)" class="flex flex-col gap-1.5">
+              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Combat Details</div>
+              <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-1.5">
+                <div v-if="baseTierAbility.target" class="text-xs flex gap-2">
+                  <span class="text-text-muted min-w-20">Target:</span>
+                  <span class="text-text-secondary">{{ baseTierAbility.target }}</span>
+                </div>
+                <div v-if="sharedCooldown" class="text-xs flex gap-2">
+                  <span class="text-text-muted min-w-20">Cooldown:</span>
+                  <span class="text-text-secondary">{{ sharedCooldown }}s</span>
+                </div>
+                <div v-if="baseTierAbility.animation" class="text-xs flex gap-2">
+                  <span class="text-text-muted min-w-20">Animation:</span>
+                  <span class="text-text-secondary font-mono">{{ baseTierAbility.animation }}</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Keywords -->
-          <div v-if="selected.keywords.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
-            <div class="flex flex-wrap gap-1">
-              <span
-                v-for="kw in selected.keywords"
-                :key="kw"
-                class="text-[0.72rem] px-1.5 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-entity-item"
-                :class="{ 'bg-[#1e1a10]! border-[#3a3010]! text-[#887040]!': kw.startsWith('Lint_') }"
-                >{{ kw }}</span
-              >
+            <!-- Tier Progression Table -->
+            <AbilityTierTable :tiers="resolvedTiers" />
+
+            <!-- Flags (from base tier) -->
+            <div v-if="abilityFlags.length" class="flex flex-col gap-1.5">
+              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Flags</div>
+              <div class="flex flex-wrap gap-1">
+                <span
+                  v-for="flag in abilityFlags"
+                  :key="flag"
+                  class="text-[0.72rem] px-1.5 py-0.5 bg-[#1a2a1a] border border-[#2a4a2a] text-[#8ab88a]">
+                  {{ flag }}
+                </span>
+              </div>
             </div>
-          </div>
 
-          <!-- Raw JSON -->
-          <div v-if="settingsStore.settings.showRawJsonInDataBrowser" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
-            <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
-          </div>
+            <!-- Related Treasure Mods (for the base ability) -->
+            <div v-if="relatedTsysLoading || relatedTsys.length" class="flex flex-col gap-1.5">
+              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+                Treasure Mods
+                <span v-if="relatedTsys.length" class="text-text-muted">({{ relatedTsys.length }})</span>
+              </div>
+              <div v-if="relatedTsysLoading" class="text-accent-gold text-xs animate-spin">⟳</div>
+              <div v-else class="flex flex-col gap-1.5">
+                <div
+                  v-for="tsys in relatedTsys"
+                  :key="tsys.key"
+                  class="bg-surface-dark border border-surface-card p-2 text-xs">
+                  <div class="flex items-baseline gap-2 mb-0.5">
+                    <span class="text-entity-item font-medium">{{ tsys.internal_name || tsys.key }}</span>
+                    <span v-if="tsys.skill" class="text-text-muted text-[0.65rem]">{{ tsys.skill }}</span>
+                    <span class="text-text-dim text-[0.65rem]">{{ tsys.tier_count }} tiers</span>
+                  </div>
+                  <div v-if="tsys.slots.length" class="flex gap-1 mb-0.5">
+                    <span
+                      v-for="slot in tsys.slots"
+                      :key="slot"
+                      class="text-[0.65rem] px-1 py-0 bg-[#1a1a2e] border border-[#2a2a4e] text-text-muted">
+                      {{ slot }}
+                    </span>
+                  </div>
+                  <div v-if="tsys.top_tier_effects.length" class="flex flex-col gap-0.5 text-text-secondary text-[0.72rem] font-mono pl-1">
+                    <span v-for="(eff, i) in tsys.top_tier_effects" :key="i">{{ eff }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- PvE/PvP Details (from highest tier) -->
+            <div v-if="highestTier && (highestTier.pve || highestTier.pvp)" class="flex flex-col gap-1.5">
+              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+                PvE / PvP
+                <span class="text-text-muted">(Tier {{ resolvedTiers.length }})</span>
+              </div>
+              <div class="flex gap-4">
+                <div v-if="highestTier.pve" class="flex-1">
+                  <div class="text-[0.65rem] text-text-muted mb-1">PvE</div>
+                  <CombatStatsPanel :stats="highestTier.pve" />
+                </div>
+                <div v-if="highestTier.pvp" class="flex-1">
+                  <div class="text-[0.65rem] text-text-muted mb-1">PvP</div>
+                  <CombatStatsPanel :stats="highestTier.pvp" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Keywords (from base tier) -->
+            <div v-if="baseTierAbility && baseTierAbility.keywords.length" class="flex flex-col gap-1.5">
+              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
+              <div class="flex flex-wrap gap-1">
+                <span
+                  v-for="kw in baseTierAbility.keywords"
+                  :key="kw"
+                  class="text-[0.72rem] px-1.5 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-entity-item"
+                  :class="{ 'bg-[#1e1a10]! border-[#3a3010]! text-[#887040]!': kw.startsWith('Lint_') }"
+                  >{{ kw }}</span
+                >
+              </div>
+            </div>
+
+            <!-- Raw JSON -->
+            <div v-if="settingsStore.settings.showRawJsonInDataBrowser && baseTierAbility" class="flex flex-col gap-1.5">
+              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON (Base Tier)</div>
+              <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(baseTierAbility, null, 2) }}</pre>
+            </div>
+          </template>
         </template>
     </div>
   </PaneLayout>
@@ -239,26 +248,46 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useKeyboard } from "../../composables/useKeyboard";
-import type { SkillInfo, AbilityInfo, EntitySources } from "../../types/gameData";
+import { useDataBrowserStore } from "../../stores/dataBrowserStore";
+import type { AbilityInfo, AbilityFamily, TsysAbilityXref } from "../../types/gameData";
 import SkillInline from "../Shared/Skill/SkillInline.vue";
-import SourcesPanel from "../Shared/SourcesPanel.vue";
+import CombatStatsPanel from "./CombatStatsPanel.vue";
+import AbilityTierTable from "./AbilityTierTable.vue";
 
 const store = useGameDataStore();
 const settingsStore = useSettingsStore();
+const dataBrowserStore = useDataBrowserStore();
 
-const allSkills = ref<SkillInfo[]>([]);
-const skillAbilityCounts = ref<Record<string, number>>({});
+const isFav = computed(() =>
+  selected.value ? dataBrowserStore.isFavorite("ability", selected.value.base_internal_name) : false
+);
+
+const skillsWithCounts = ref<{ name: string; count: number }[]>([]);
 const selectedSkillFilter = ref<string>("All");
 const query = ref("");
-const allAbilities = ref<AbilityInfo[]>([]);
-const selected = ref<AbilityInfo | null>(null);
+const allFamilies = ref<AbilityFamily[]>([]);
+const selected = ref<AbilityFamily | null>(null);
 const selectedIndex = ref(0);
 const listRef = ref<HTMLElement | null>(null);
-const sources = ref<EntitySources | null>(null);
-const sourcesLoading = ref(false);
+const resolvedTiers = ref<AbilityInfo[]>([]);
+const tiersLoading = ref(false);
+const relatedTsys = ref<TsysAbilityXref[]>([]);
+const relatedTsysLoading = ref(false);
 const iconSrc = ref<string | null>(null);
 const iconLoading = ref(false);
 const loading = ref(false);
+const showMonsterAbilities = ref(false);
+
+const baseTierAbility = computed(() => resolvedTiers.value[0] ?? null);
+const highestTier = computed(() => resolvedTiers.value[resolvedTiers.value.length - 1] ?? null);
+
+const sharedCooldown = computed(() => {
+  const base = baseTierAbility.value;
+  if (!base?.reset_time) return null;
+  // If all tiers share the same cooldown, show it once
+  const allSame = resolvedTiers.value.every(t => t.reset_time === base.reset_time);
+  return allSame ? base.reset_time : null;
+});
 
 onMounted(async () => {
   if (store.status === "ready") {
@@ -275,15 +304,22 @@ watch(() => store.status, async (newStatus) => {
 async function loadSkillList() {
   loading.value = true;
   try {
-    allSkills.value = await store.getAllSkills();
-    allSkills.value.sort((a, b) => a.name.localeCompare(b.name));
+    const counts = await store.getSkillsWithAbilityCounts(showMonsterAbilities.value);
+    skillsWithCounts.value = counts
+      .filter(([, count]) => count > 0)
+      .map(([name, count]) => ({ name, count }));
+  } finally {
+    loading.value = false;
+  }
+}
 
-    // Count abilities per skill to filter out empty skills
-    skillAbilityCounts.value = {};
-    for (const skill of allSkills.value) {
-      const abilities = await store.getAbilitiesForSkill(skill.name);
-      skillAbilityCounts.value[skill.name] = abilities.length;
-    }
+async function loadFamiliesForSkill(skillName: string) {
+  loading.value = true;
+  try {
+    allFamilies.value = await store.getAbilityFamiliesForSkill(skillName, showMonsterAbilities.value);
+  } catch (e) {
+    console.warn("Failed to load ability families:", e);
+    allFamilies.value = [];
   } finally {
     loading.value = false;
   }
@@ -291,23 +327,34 @@ async function loadSkillList() {
 
 watch(selectedSkillFilter, async (skillName) => {
   if (skillName === "All") {
-    allAbilities.value = [];
+    // If there's a query active, search across all skills
+    if (query.value.trim()) {
+      searchFamilies(query.value.trim());
+    } else {
+      allFamilies.value = [];
+    }
     return;
   }
-  loading.value = true;
-  try {
-    const abilities = await store.getAbilitiesForSkill(skillName);
-    allAbilities.value = abilities.sort((a, b) => (a.level || 0) - (b.level || 0));
-  } catch (e) {
-    console.warn("Failed to load abilities:", e);
-    allAbilities.value = [];
-  } finally {
-    loading.value = false;
+  // If there's a query, do server-side filtered search; otherwise load all for this skill
+  if (query.value.trim()) {
+    searchFamilies(query.value.trim());
+  } else {
+    loadFamiliesForSkill(skillName);
   }
 });
 
-const skillsWithAbilities = computed(() => {
-  return allSkills.value.filter(skill => (skillAbilityCounts.value[skill.name] || 0) > 0);
+const skillsWithAbilities = computed(() => skillsWithCounts.value);
+
+// When the monster toggle changes, reload the current view
+watch(showMonsterAbilities, async () => {
+  await loadSkillList();
+  if (query.value.trim()) {
+    searchFamilies(query.value.trim());
+  } else if (selectedSkillFilter.value !== "All") {
+    loadFamiliesForSkill(selectedSkillFilter.value);
+  } else {
+    allFamilies.value = [];
+  }
 });
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -315,69 +362,59 @@ let searchTimer: ReturnType<typeof setTimeout> | null = null;
 watch(query, (val) => {
   if (searchTimer) clearTimeout(searchTimer);
   if (!val.trim()) {
-    // If a skill is selected, show that skill's abilities; otherwise clear
-    if (selectedSkillFilter.value !== "All") return;
-    allAbilities.value = [];
+    // When clearing search, reload skill families if a skill is selected, otherwise clear
+    if (selectedSkillFilter.value !== "All") {
+      loadFamiliesForSkill(selectedSkillFilter.value);
+    } else {
+      allFamilies.value = [];
+    }
     return;
   }
-  searchTimer = setTimeout(() => searchAbilities(val.trim()), 250);
+  searchTimer = setTimeout(() => searchFamilies(val.trim()), 250);
 });
 
-async function searchAbilities(q: string) {
-  if (selectedSkillFilter.value !== "All") return; // client-side filter handles it
+async function searchFamilies(q: string) {
   loading.value = true;
   try {
-    // Search across all skills
-    const results = new Map<number, AbilityInfo>();
-    const lower = q.toLowerCase();
-    for (const skill of allSkills.value) {
-      const abilities = await store.getAbilitiesForSkill(skill.name);
-      for (const ability of abilities) {
-        if (ability.name.toLowerCase().includes(lower) || ability.description?.toLowerCase().includes(lower)) {
-          results.set(ability.id, ability);
-        }
-      }
-      if (results.size >= 50) break;
-    }
-    allAbilities.value = Array.from(results.values()).sort((a, b) => a.name.localeCompare(b.name));
+    const skill = selectedSkillFilter.value !== "All" ? selectedSkillFilter.value : undefined;
+    allFamilies.value = await store.searchAbilityFamilies(q, skill, 50, showMonsterAbilities.value);
   } finally {
     loading.value = false;
   }
 }
 
-function isObtainable(ability: AbilityInfo): boolean {
-  return settingsStore.settings.showUnobtainableItems || !ability.keywords.includes('Lint_NotObtainable');
+const filteredFamilies = computed(() => allFamilies.value);
+
+function levelRange(family: AbilityFamily): string {
+  if (family.tier_ids.length === 1) {
+    // Single tier - we'll show the level from resolvedTiers if we have it, otherwise just show "1T"
+    return "1T";
+  }
+  return `${family.tier_ids.length}T`;
 }
 
-const filteredAbilities = computed(() => {
-  let list = allAbilities.value;
-  if (selectedSkillFilter.value !== "All" && query.value.trim()) {
-    const q = query.value.toLowerCase();
-    list = list.filter(ability =>
-      ability.name.toLowerCase().includes(q) ||
-      ability.description?.toLowerCase().includes(q)
-    );
-  }
-  return list.filter(isObtainable);
-});
-
-async function selectAbility(ability: AbilityInfo) {
-  selected.value = ability;
+async function selectFamily(family: AbilityFamily) {
+  selected.value = family;
   iconSrc.value = null;
-  sources.value = null;
+  dataBrowserStore.addToHistory({ type: "ability", reference: family.base_internal_name, label: family.base_name });
+  resolvedTiers.value = [];
+  relatedTsys.value = [];
 
-  // Load sources
-  sourcesLoading.value = true;
-  store.getAbilitySources(ability.id)
-    .then(s => { sources.value = s; })
-    .catch(e => { console.warn("Sources fetch failed:", e); })
-    .finally(() => { sourcesLoading.value = false; });
+  // Resolve all tier abilities in parallel
+  tiersLoading.value = true;
+  try {
+    const tierPromises = family.tier_ids.map(id => store.resolveAbility(id));
+    const tiers = await Promise.all(tierPromises);
+    resolvedTiers.value = tiers.filter((t): t is AbilityInfo => t !== null);
+  } finally {
+    tiersLoading.value = false;
+  }
 
-  // Load icon if present
-  if (ability.icon_id) {
+  // Load icon from base tier
+  if (family.icon_id) {
     iconLoading.value = true;
     try {
-      const path = await store.getIconPath(ability.icon_id);
+      const path = await store.getIconPath(family.icon_id);
       iconSrc.value = convertFileSrc(path);
     } catch (e) {
       console.warn("Icon fetch failed:", e);
@@ -385,16 +422,26 @@ async function selectAbility(ability: AbilityInfo) {
       iconLoading.value = false;
     }
   }
+
+  // Load related treasure mods (from base tier)
+  if (family.tier_ids.length > 0) {
+    relatedTsysLoading.value = true;
+    store.getTsysForAbility(family.tier_ids[0])
+      .then(t => { relatedTsys.value = t; })
+      .catch(e => { console.warn("TSys xref fetch failed:", e); })
+      .finally(() => { relatedTsysLoading.value = false; });
+  }
 }
 
 const abilityFlags = computed(() => {
-  if (!selected.value) return [];
-  const raw = selected.value.raw_json;
+  const base = baseTierAbility.value;
+  if (!base) return [];
+  const raw = base.raw_json;
   if (!raw) return [];
   const flags: string[] = [];
-  if (selected.value.is_harmless) flags.push("Harmless");
-  if (selected.value.works_underwater) flags.push("Works Underwater");
-  if (selected.value.works_while_falling) flags.push("Works While Falling");
+  if (base.is_harmless) flags.push("Harmless");
+  if (base.works_underwater) flags.push("Works Underwater");
+  if (base.works_while_falling) flags.push("Works While Falling");
   if (raw.WorksInCombat === false) flags.push("Out of Combat Only");
   if (raw.WorksWhileStunned) flags.push("Works While Stunned");
   if (raw.WorksWhileMounted) flags.push("Works While Mounted");
@@ -408,16 +455,17 @@ const abilityFlags = computed(() => {
 function clearSelection() {
   selected.value = null;
   iconSrc.value = null;
-  sources.value = null;
+  resolvedTiers.value = [];
+  relatedTsys.value = [];
 }
 
 useKeyboard({
   listNavigation: {
-    items: filteredAbilities,
+    items: filteredFamilies,
     selectedIndex,
     onConfirm: (index: number) => {
-      const ability = filteredAbilities.value[index];
-      if (ability) selectAbility(ability);
+      const family = filteredFamilies.value[index];
+      if (family) selectFamily(family);
     },
     scrollContainerRef: listRef,
   },

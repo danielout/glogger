@@ -60,6 +60,7 @@ Available helpers (defined per parser file):
 - `bool_field(&value, "Key")` → `Option<bool>`
 - `str_array_field(&value, "Key")` → `Vec<String>`
 - For complex types: `value.get("Key").cloned()` → `Option<Value>`
+- For typed sub-objects: define a struct (e.g., `CombatStats`, `TsysTierInfo`) and a parse function that extracts typed fields, with an `extra: Value` catch-all for the long tail of rare fields. See `abilities.rs::parse_combat_stats` and `tsys.rs::parse_tiers` for examples.
 
 ### 4. Add DB column
 
@@ -102,6 +103,15 @@ When the CDN version bumps, the schemas should be re-extracted from fresh data. 
 2. Run extraction against the JSON files to produce updated schemas
 3. Compare against previous schemas to identify new/removed/changed fields
 
+## Precomputed Indices
+
+After parsing all CDN JSON files, `load_from_cache()` in `game_data/mod.rs` builds in-memory indices for fast lookups. These are `HashMap` fields on the `GameData` struct, computed once at startup:
+
+- **Name/ID indices**: `item_name_index`, `skill_name_index`, `ability_name_index`, etc. — map display names to IDs for entity resolution
+- **Relationship indices**: `recipes_by_skill`, `recipes_producing_item`, `vendors_for_item`, etc. — precomputed joins
+- **Ability families**: `ability_families` groups ability tiers by `upgrade_of` chains. `ability_to_family` provides reverse lookup
+- **TSys ↔ Ability cross-reference**: `tsys_to_abilities` and `ability_to_tsys` map treasure mods to the abilities they affect and vice versa. Built using three matching strategies (attribute token overlap, icon ID matching, text name matching with prefix disambiguation). See the build planner docs for details.
+
 ## CDN JSON Key Patterns
 
 Files use two key formats:
@@ -120,7 +130,7 @@ Files use two key formats:
 | `array<string>` | `Vec<String>` | `TEXT` (JSON) | `string[]` |
 | `array<integer>` | `Vec<u32>` | `TEXT` (JSON) | `number[]` |
 | `array<object>` | `Vec<Value>` or `Option<Vec<Value>>` | `TEXT` (JSON) | `unknown[]` or `unknown[] \| null` |
-| `object` (complex) | `Option<Value>` | `TEXT` (JSON) | `unknown \| null` |
+| `object` (complex) | `Option<Value>` or typed struct | `TEXT` (JSON) | `unknown \| null` or typed interface |
 | Full entry | `Value` (always present) | `TEXT NOT NULL` | `Record<string, unknown>` |
 
 Use `Option<T>` for fields with < 100% coverage. Use bare `Vec<T>` (defaulting to empty) for arrays even if coverage is < 100%.
@@ -152,9 +162,9 @@ Complete field inventory for all 27 CDN JSON files. Coverage indicates what perc
 | SpecialInfo | string | 34% | yes |
 | WorksUnderwater | boolean | 23.2% | yes |
 | WorksWhileFalling | boolean | 17.4% | yes |
-| PvE | object | 100% | yes |
-| PvP | object | varies | yes |
-| InternalName | string | 100% | raw_json |
+| PvE | object | 100% | yes (`CombatStats` struct: damage, power_cost, range, rage_cost, accuracy, attribute modifier arrays, plus `extra` catch-all) |
+| PvP | object | varies | yes (`CombatStats` struct, same shape as PvE) |
+| InternalName | string | 100% | yes |
 | SharesResetTimerWith | string | 66.4% | raw_json |
 | UpgradeOf | string | 66.2% | raw_json |
 | CausesOfDeath | array\<string\> | 91.5% | raw_json |
@@ -401,7 +411,7 @@ Complete field inventory for all 27 CDN JSON files. Coverage indicates what perc
 | InternalName | string | 100% | yes |
 | Skill | string | 100% | yes |
 | Slots | array\<string\> | 100% | yes |
-| Tiers | object | 100% | yes |
+| Tiers | object | 100% | yes (`HashMap<String, TsysTierInfo>` with typed fields: effect_descs, min_level, max_level, min_rarity, skill_level_prereq) |
 | Suffix | string | 46.6% | yes |
 | Prefix | string | 16.4% | yes |
 | IsUnavailable | boolean | 1% | yes |

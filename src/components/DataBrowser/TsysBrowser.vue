@@ -84,6 +84,12 @@
             <div class="flex gap-1 shrink-0">
               <span v-if="selected.is_unavailable" class="text-[0.65rem] px-1.5 py-0.5 bg-accent-red/20 border border-accent-red/40 text-accent-red">Unavailable</span>
               <span v-if="selected.is_hidden_from_transmutation" class="text-[0.65rem] px-1.5 py-0.5 bg-yellow-900/30 border border-yellow-700/40 text-yellow-400">Hidden from Transmute</span>
+              <button
+                class="bg-transparent border-none cursor-pointer px-1 py-0 text-sm transition-colors"
+                :class="isFav ? 'text-accent-gold' : 'text-text-dim hover:text-accent-gold'"
+                :title="isFav ? 'Remove from favorites' : 'Add to favorites'"
+                @click="dataBrowserStore.toggleFavorite({ type: 'treasure', reference: selected.key, label: selected.internal_name || selected.key })"
+              >&#x2605;</button>
               <button class="bg-transparent border-none text-text-dim cursor-pointer px-1 py-0 text-sm hover:text-accent-red" @click="clearSelection">✕</button>
             </div>
           </div>
@@ -128,22 +134,41 @@
                 class="bg-surface-dark border border-surface-card p-2 text-xs">
                 <div class="flex items-baseline gap-3 mb-1">
                   <span class="text-text-dim font-mono text-[0.65rem]">{{ tierKey }}</span>
-                  <span v-if="tierMinLevel(tier) != null" class="text-text-muted">
-                    Lv {{ tierMinLevel(tier) }}–{{ tierMaxLevel(tier) }}
+                  <span v-if="tier.min_level != null" class="text-text-muted">
+                    Lv {{ tier.min_level }}–{{ tier.max_level }}
                   </span>
-                  <span v-if="tierRarity(tier)" class="text-entity-item text-[0.65rem]">{{ tierRarity(tier) }}</span>
-                  <span v-if="tierSkillPrereq(tier)" class="text-text-muted text-[0.65rem]">
-                    Prereq: {{ tierSkillPrereq(tier) }}
+                  <span v-if="tier.min_rarity" class="text-entity-item text-[0.65rem]">{{ tier.min_rarity }}</span>
+                  <span v-if="tier.skill_level_prereq" class="text-text-muted text-[0.65rem]">
+                    Prereq: {{ tier.skill_level_prereq }}
                   </span>
                 </div>
-                <div v-if="tierEffects(tier).length" class="flex flex-col gap-0.5 pl-2">
+                <div v-if="tier.effect_descs.length" class="flex flex-col gap-0.5 pl-2">
                   <span
-                    v-for="(effect, i) in tierEffects(tier)"
+                    v-for="(effect, i) in tier.effect_descs"
                     :key="i"
                     class="text-text-secondary font-mono text-[0.72rem]">
                     {{ effect }}
                   </span>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Related Abilities -->
+          <div v-if="relatedAbilitiesLoading || relatedAbilities.length" class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+              Related Abilities
+              <span v-if="relatedAbilities.length" class="text-text-muted">({{ relatedAbilities.length }})</span>
+            </div>
+            <div v-if="relatedAbilitiesLoading" class="text-accent-gold text-xs animate-spin">⟳</div>
+            <div v-else class="flex flex-col gap-1">
+              <div
+                v-for="ab in relatedAbilities"
+                :key="ab.id"
+                class="flex items-baseline gap-2 px-2 py-1 bg-surface-dark border border-surface-card text-xs">
+                <AbilityInline :reference="ab.name" />
+                <span v-if="ab.skill" class="text-text-muted text-[0.65rem]">{{ ab.skill }}</span>
+                <span v-if="ab.level" class="text-text-dim text-[0.65rem]">Lv {{ ab.level }}</span>
               </div>
             </div>
           </div>
@@ -164,11 +189,14 @@ import { ref, watch, computed, onMounted } from "vue";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useKeyboard } from "../../composables/useKeyboard";
+import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import SkillInline from "../Shared/Skill/SkillInline.vue";
-import type { TsysBrowserEntry } from "../../types/gameData";
+import AbilityInline from "../Shared/Ability/AbilityInline.vue";
+import type { TsysBrowserEntry, TsysTierInfo, AbilityTsysXref } from "../../types/gameData";
 
 const store = useGameDataStore();
 const settingsStore = useSettingsStore();
+const dataBrowserStore = useDataBrowserStore();
 
 const query = ref("");
 const results = ref<TsysBrowserEntry[]>([]);
@@ -178,6 +206,8 @@ const selectedIndex = ref(0);
 const listRef = ref<HTMLElement | null>(null);
 const searching = ref(false);
 const skillFilter = ref("");
+const relatedAbilities = ref<AbilityTsysXref[]>([]);
+const relatedAbilitiesLoading = ref(false);
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -197,10 +227,9 @@ const filteredResults = computed(() => {
 });
 
 // Sort tiers by their numeric id
-const sortedTiers = computed(() => {
+const sortedTiers = computed<Record<string, TsysTierInfo>>(() => {
   if (!selected.value?.tiers) return {};
-  const tiers = selected.value.tiers as Record<string, unknown>;
-  const entries = Object.entries(tiers);
+  const entries = Object.entries(selected.value.tiers);
   entries.sort((a, b) => {
     const aNum = parseInt(a[0].replace("id_", ""));
     const bNum = parseInt(b[0].replace("id_", ""));
@@ -265,40 +294,25 @@ useKeyboard({
   },
 });
 
+const isFav = computed(() =>
+  selected.value ? dataBrowserStore.isFavorite("treasure", selected.value.key) : false
+);
+
 function selectEntry(entry: TsysBrowserEntry) {
   selected.value = entry;
+  relatedAbilities.value = [];
+  dataBrowserStore.addToHistory({ type: "treasure", reference: entry.key, label: entry.internal_name || entry.key });
+
+  relatedAbilitiesLoading.value = true;
+  store.getAbilitiesForTsys(entry.key)
+    .then(a => { relatedAbilities.value = a; })
+    .catch(e => { console.warn("Ability xref fetch failed:", e); })
+    .finally(() => { relatedAbilitiesLoading.value = false; });
 }
 
 function clearSelection() {
   selected.value = null;
+  relatedAbilities.value = [];
 }
 
-// Tier field helpers
-function tierMinLevel(tier: unknown): number | null {
-  const t = tier as Record<string, unknown>;
-  return typeof t?.MinLevel === "number" ? t.MinLevel : null;
-}
-
-function tierMaxLevel(tier: unknown): number | null {
-  const t = tier as Record<string, unknown>;
-  return typeof t?.MaxLevel === "number" ? t.MaxLevel : null;
-}
-
-function tierRarity(tier: unknown): string | null {
-  const t = tier as Record<string, unknown>;
-  return typeof t?.MinRarity === "string" ? t.MinRarity : null;
-}
-
-function tierSkillPrereq(tier: unknown): number | null {
-  const t = tier as Record<string, unknown>;
-  return typeof t?.SkillLevelPrereq === "number" ? t.SkillLevelPrereq : null;
-}
-
-function tierEffects(tier: unknown): string[] {
-  const t = tier as Record<string, unknown>;
-  if (Array.isArray(t?.EffectDescs)) {
-    return t.EffectDescs.filter((d: unknown) => typeof d === "string") as string[];
-  }
-  return [];
-}
 </script>

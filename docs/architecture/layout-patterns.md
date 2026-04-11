@@ -1,6 +1,6 @@
 # Layout Patterns
 
-Standard layout components and patterns for building screens. All patterns follow the UX standards defined in [ux-standards.md](ux-standards.md) (including the Desktop-First Design section) and are modeled after the Data Browser.
+Standard layout components and patterns for building screens. All patterns follow the UX standards defined in [ux-standards.md](ux-standards.md) (including the Desktop-First Design section). The Data Browser's individual browser components serve as the reference implementation for search/detail two-panel layouts.
 
 ## Screen Navigation (v-show with Lazy Mount)
 

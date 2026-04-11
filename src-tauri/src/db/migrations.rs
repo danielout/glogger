@@ -467,6 +467,7 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
         CREATE TABLE abilities (
             id INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
+            internal_name TEXT,
             description TEXT,
             icon_id INTEGER,
             skill TEXT,
@@ -476,6 +477,7 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
             reset_time REAL,
             target TEXT,
             prerequisite TEXT,
+            upgrade_of TEXT,
             is_harmless BOOLEAN,
             animation TEXT,
             special_info TEXT,

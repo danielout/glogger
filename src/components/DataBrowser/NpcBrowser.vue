@@ -91,6 +91,12 @@
               </div>
             </div>
 
+            <button
+              class="bg-transparent border-none cursor-pointer px-1 py-0 text-sm shrink-0 transition-colors"
+              :class="isFav ? 'text-accent-gold' : 'text-text-dim hover:text-accent-gold'"
+              :title="isFav ? 'Remove from favorites' : 'Add to favorites'"
+              @click="dataBrowserStore.toggleFavorite({ type: 'npc', reference: selected.key, label: selected.name })"
+            >&#x2605;</button>
             <button class="bg-transparent border-none text-text-dim cursor-pointer px-1 py-0 text-sm shrink-0 hover:text-accent-red" @click="clearSelection">✕</button>
           </div>
 
@@ -204,6 +210,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useKeyboard } from "../../composables/useKeyboard";
+import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { NpcInfo, QuestInfo } from "../../types/gameData";
 
@@ -225,6 +232,11 @@ const props = defineProps<{
 
 const store = useGameDataStore();
 const settingsStore = useSettingsStore();
+const dataBrowserStore = useDataBrowserStore();
+
+const isFav = computed(() =>
+  selected.value ? dataBrowserStore.isFavorite("npc", selected.value.key) : false
+);
 
 const query = ref("");
 const selectedArea = ref<string>("All Areas");
@@ -276,6 +288,7 @@ watch([query, selectedArea, allNpcs], () => {
 async function selectNpc(npc: NpcInfo) {
   selected.value = npc;
   associatedQuests.value = [];
+  dataBrowserStore.addToHistory({ type: "npc", reference: npc.key, label: npc.name });
   vendorItems.value = [];
 
   store.getQuestsForNpc(npc.key)

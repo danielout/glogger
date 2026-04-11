@@ -43,9 +43,7 @@
             <div v-if="visited.has('chat')" v-show="currentView === 'chat'" class="h-full">
               <ChatView :active-tab="activeSubTab" />
             </div>
-            <div v-if="visited.has('data-browser')" v-show="currentView === 'data-browser'" class="h-full">
-              <DataBrowser :nav-target="entityNavTarget" :active-tab="activeSubTab" />
-            </div>
+            <!-- Data browser is now an overlay, not a view -->
             <div v-if="visited.has('search')" v-show="currentView === 'search'" class="h-full">
               <SearchView @navigate="handleSearchNavigate" />
             </div>
@@ -84,6 +82,7 @@
         </div>
       </div>
 
+      <DataBrowserOverlay ref="dataBrowserOverlayRef" />
       <ToastContainer />
       <QuickSearchOverlay
         :show="showQuickSearch"
@@ -103,7 +102,8 @@ import { useUpdateStore } from "./stores/updateStore";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useGameStateStore } from "./stores/gameStateStore";
 import { useSurveyStore } from "./stores/surveyStore";
-import { provideEntityNavigation, type EntityNavigationTarget } from "./composables/useEntityNavigation";
+import { provideEntityNavigation } from "./composables/useEntityNavigation";
+import { useDataBrowserStore, entityTypeToTab } from "./stores/dataBrowserStore";
 import { provideViewNavigation } from "./composables/useViewNavigation";
 import MenuBar, { type AppView } from "./components/MenuBar.vue";
 import DashboardView from "./components/Dashboard/DashboardView.vue";
@@ -112,7 +112,7 @@ import InventoryWrapper from "./components/Inventory/InventoryWrapper.vue";
 import CraftingView from "./components/Crafting/CraftingView.vue";
 import EconomicsView from "./components/Economics/EconomicsView.vue";
 import ChatView from "./components/Chat/ChatView.vue";
-import DataBrowser from "./components/DataBrowser/DataBrowser.vue";
+import DataBrowserOverlay from "./components/DataBrowser/DataBrowserOverlay.vue";
 import SearchView from "./components/Search/SearchView.vue";
 import EmptyState from "./components/Shared/EmptyState.vue";
 import Settings from "./components/Settings.vue";
@@ -131,6 +131,8 @@ import type { SearchResult } from "./composables/useQuickSearch";
 const settingsStore = useSettingsStore();
 const startup = useStartupStore();
 const updateStore = useUpdateStore();
+const dataBrowserStore = useDataBrowserStore();
+const dataBrowserOverlayRef = ref<InstanceType<typeof DataBrowserOverlay> | null>(null);
 
 function openUpdate() {
   openUrl(updateStore.downloadUrl);
@@ -139,7 +141,6 @@ function openUpdate() {
 const error = ref("");
 const parsing = ref(false);
 const currentView = ref<AppView>("dashboard");
-const entityNavTarget = ref<EntityNavigationTarget | null>(null);
 const visited = reactive(new Set<AppView>(["dashboard"]));
 const menuBarRef = ref<InstanceType<typeof MenuBar> | null>(null);
 const activeSubTab = ref("");
@@ -167,23 +168,13 @@ onBeforeUnmount(() => {
 });
 
 function handleSearchNavigate(result: SearchResult) {
-  // If the result has an entity type, use the entity navigation system
+  // If the result has an entity type, open the data browser overlay
   if (result.navigation.entityType && result.navigation.entityId) {
-    visited.add("data-browser");
-    currentView.value = "data-browser";
-    entityNavTarget.value = {
+    dataBrowserOverlayRef.value?.navigateToEntity({
       type: result.navigation.entityType as any,
       id: result.navigation.entityId,
-    };
-    const entityTypeToTab: Record<string, string> = {
-      item: "items", skill: "skills", ability: "abilities", recipe: "recipes",
-      quest: "quests", npc: "npcs", effect: "effects", title: "titles",
-    };
-    const tab = entityTypeToTab[result.navigation.entityType];
-    if (tab && menuBarRef.value) {
-      menuBarRef.value.activeSubTabs["data-browser"] = tab;
-      activeSubTab.value = tab;
-    }
+    });
+    dataBrowserStore.open(entityTypeToTab[result.navigation.entityType]);
     return;
   }
 
@@ -206,18 +197,9 @@ provideViewNavigation((target) => {
 });
 
 provideEntityNavigation((target) => {
-  visited.add("data-browser");
-  currentView.value = "data-browser";
-  entityNavTarget.value = { ...target };
-  const entityTypeToTab: Record<string, string> = {
-    item: "items", skill: "skills", ability: "abilities", recipe: "recipes",
-    quest: "quests", npc: "npcs", effect: "effects", title: "titles",
-  };
+  dataBrowserOverlayRef.value?.navigateToEntity(target);
   const tab = entityTypeToTab[target.type];
-  if (tab && menuBarRef.value) {
-    menuBarRef.value.activeSubTabs["data-browser"] = tab;
-    activeSubTab.value = tab;
-  }
+  if (tab) dataBrowserStore.open(tab);
 });
 
 onMounted(async () => {

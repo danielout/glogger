@@ -107,7 +107,7 @@ Per-screen documentation organized by view.
   - [chat-watchwords.md](features/screens/chat/chat-watchwords.md) — Watchwords tab: rule-based alerts and notifications.
 
 ### Data Browser
-- [data-browser.md](features/screens/data-browser.md) — Data Browser screen: architecture, shared patterns, search/filter summary.
+- [data-browser.md](features/screens/data-browser.md) — Data Browser overlay: architecture, layout, sidebar tabs (History/Favorites/Pinned), shared patterns, search/filter summary.
   - [data-browser-items.md](features/screens/data-browser/data-browser-items.md) — Items tab.
   - [data-browser-skills.md](features/screens/data-browser/data-browser-skills.md) — Skills tab.
   - [data-browser-abilities.md](features/screens/data-browser/data-browser-abilities.md) — Abilities tab.

@@ -52,36 +52,38 @@
         </div>
 
         <div v-else class="flex-1 overflow-y-auto flex flex-col gap-1">
-          <!-- Skill abilities group -->
-          <template v-if="skillAbilities.length > 0">
+          <!-- Skill ability families -->
+          <template v-if="skillFamilyEntries.length > 0">
             <div class="sticky top-0 bg-surface-base py-1 z-10">
               <h5 class="text-[10px] font-semibold uppercase tracking-wider text-blue-400">
-                {{ skillName }} ({{ filteredSkillAbilities.length }})
+                {{ skillName }} ({{ filteredSkillFamilies.length }})
               </h5>
             </div>
-            <AbilityOption
-              v-for="ability in filteredSkillAbilities"
-              :key="ability.id"
-              :ability="ability"
-              :is-assigned="isAssigned(ability.id)"
-              :mod-boost-count="getModBoostCount(ability.name)"
-              @add="handleAdd(ability)" />
+            <AbilityFamilyOption
+              v-for="entry in filteredSkillFamilies"
+              :key="entry.family.base_internal_name"
+              :family="entry.family"
+              :tiers="entry.tiers"
+              :assigned-ids="assignedIdSet"
+              :mod-boost-count="getModBoostCount(entry.family.base_name)"
+              @add="handleAdd" />
           </template>
 
           <!-- Sidebar abilities from other skills -->
-          <template v-if="store.activeBar === 'sidebar' && sidebarAbilities.length > 0">
+          <template v-if="store.activeBar === 'sidebar' && sidebarFamilyEntries.length > 0">
             <div class="sticky top-0 bg-surface-base py-1 z-10">
               <h5 class="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
-                Sidebar Skills ({{ filteredSidebarAbilities.length }})
+                Sidebar Skills ({{ filteredSidebarFamilies.length }})
               </h5>
             </div>
-            <AbilityOption
-              v-for="ability in filteredSidebarAbilities"
-              :key="ability.id"
-              :ability="ability"
-              :is-assigned="isAssigned(ability.id)"
-              :mod-boost-count="getModBoostCount(ability.name)"
-              @add="handleAdd(ability)" />
+            <AbilityFamilyOption
+              v-for="entry in filteredSidebarFamilies"
+              :key="entry.family.base_internal_name"
+              :family="entry.family"
+              :tiers="entry.tiers"
+              :assigned-ids="assignedIdSet"
+              :mod-boost-count="getModBoostCount(entry.family.base_name)"
+              @add="handleAdd" />
           </template>
         </div>
       </div>
@@ -94,21 +96,21 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useBuildPlannerStore } from '../../../stores/buildPlannerStore'
 import { useGameDataStore } from '../../../stores/gameDataStore'
 import { useSettingsStore } from '../../../stores/settingsStore'
-import type { AbilityInfo } from '../../../types/gameData'
+import type { AbilityInfo, AbilityFamily } from '../../../types/gameData'
 import AbilityInline from '../../Shared/Ability/AbilityInline.vue'
-import AbilityOption from './AbilityOption.vue'
+import AbilityFamilyOption from './AbilityFamilyOption.vue'
+
+interface FamilyEntry {
+  family: AbilityFamily
+  tiers: AbilityInfo[]
+}
 
 const store = useBuildPlannerStore()
 const gameData = useGameDataStore()
 const settingsStore = useSettingsStore()
 
-function filterObtainable(abilities: AbilityInfo[]): AbilityInfo[] {
-  if (settingsStore.settings.showUnobtainableItems) return abilities
-  return abilities.filter(a => !a.keywords.includes('Lint_NotObtainable'))
-}
-
-const skillAbilities = ref<AbilityInfo[]>([])
-const sidebarAbilities = ref<AbilityInfo[]>([])
+const skillFamilyEntries = ref<FamilyEntry[]>([])
+const sidebarFamilyEntries = ref<FamilyEntry[]>([])
 const resolvedAbilities = ref<Record<number, AbilityInfo>>({})
 const loading = ref(false)
 const abilityFilter = ref('')
@@ -134,45 +136,86 @@ const barAbilities = computed(() => {
   return store.getBarAbilities(store.activeBar)
 })
 
-const filteredSkillAbilities = computed(() => {
-  if (!abilityFilter.value) return skillAbilities.value
-  const q = abilityFilter.value.toLowerCase()
-  return skillAbilities.value.filter(a =>
-    a.name.toLowerCase().includes(q) ||
-    (a.description?.toLowerCase().includes(q) ?? false)
-  )
+const assignedIdSet = computed(() => {
+  return new Set(barAbilities.value.map(a => a.ability_id))
 })
 
-const filteredSidebarAbilities = computed(() => {
-  if (!abilityFilter.value) return sidebarAbilities.value
-  const q = abilityFilter.value.toLowerCase()
-  return sidebarAbilities.value.filter(a =>
-    a.name.toLowerCase().includes(q) ||
-    (a.description?.toLowerCase().includes(q) ?? false)
+function filterFamilyEntries(entries: FamilyEntry[], q: string): FamilyEntry[] {
+  if (!q) return entries
+  const lower = q.toLowerCase()
+  return entries.filter(e =>
+    e.family.base_name.toLowerCase().includes(lower) ||
+    e.tiers.some(t =>
+      t.name.toLowerCase().includes(lower) ||
+      (t.description?.toLowerCase().includes(lower) ?? false)
+    )
   )
-})
-
-function isAssigned(abilityId: number): boolean {
-  return barAbilities.value.some(a => a.ability_id === abilityId)
 }
 
-/** Count how many assigned mods reference an ability by name (case-insensitive substring match on power_name) */
-function getModBoostCount(abilityName: string): number {
-  const baseName = abilityName.replace(/\s+\d+$/, '').toLowerCase()
-  if (!baseName) return 0
+const filteredSkillFamilies = computed(() =>
+  filterFamilyEntries(skillFamilyEntries.value, abilityFilter.value)
+)
+
+const filteredSidebarFamilies = computed(() =>
+  filterFamilyEntries(sidebarFamilyEntries.value, abilityFilter.value)
+)
+
+/** Count how many assigned mods reference an ability by base name */
+function getModBoostCount(baseName: string): number {
+  const lower = baseName.toLowerCase()
+  if (!lower) return 0
   return store.presetMods.filter(m =>
-    m.power_name.toLowerCase().includes(baseName)
+    m.power_name.toLowerCase().includes(lower)
   ).length
 }
 
-async function handleAdd(ability: AbilityInfo) {
-  await store.addAbility(ability.id, ability.name)
+async function handleAdd(ability: AbilityInfo, _familyBaseName: string) {
+  if (store.activeBar) {
+    await store.setAbilityAtSlot(store.activeBar, 0, ability.id, ability.name)
+  }
+}
+
+function filterObtainable(tiers: AbilityInfo[]): AbilityInfo[] {
+  return tiers.filter(a => {
+    // Always hide internal abilities in the build planner
+    if ((a.raw_json as Record<string, unknown>)?.InternalAbility) return false
+    if (settingsStore.settings.showUnobtainableItems) return true
+    return !a.keywords.includes('Lint_NotLearnable') &&
+      !a.keywords.includes('Lint_NotObtainable')
+  })
+}
+
+async function resolveFamilies(skill: string, filterSidebar: boolean): Promise<FamilyEntry[]> {
+  const families = await gameData.getAbilityFamiliesForSkill(skill)
+  const entries: FamilyEntry[] = []
+
+  for (const family of families) {
+    // Resolve all tiers in parallel
+    const tierPromises = family.tier_ids.map(id => gameData.resolveAbility(id))
+    let tiers = (await Promise.all(tierPromises)).filter((t): t is AbilityInfo => t !== null)
+
+    // Filter unobtainable
+    tiers = filterObtainable(tiers)
+
+    // For sidebar, filter out abilities that can't be on sidebar
+    if (filterSidebar) {
+      tiers = tiers.filter(t =>
+        (t.raw_json as Record<string, unknown>)?.CanBeOnSidebar !== false
+      )
+    }
+
+    if (tiers.length > 0) {
+      entries.push({ family, tiers })
+    }
+  }
+
+  return entries
 }
 
 async function loadAbilities() {
   loading.value = true
   try {
-    // Load abilities for the bar's skill
+    // Load families for the bar's skill
     const skill = store.activeBar === 'primary'
       ? store.activePreset?.skill_primary
       : store.activeBar === 'secondary'
@@ -180,30 +223,28 @@ async function loadAbilities() {
         : null
 
     if (skill) {
-      skillAbilities.value = filterObtainable(await gameData.getAbilitiesForSkill(skill))
+      skillFamilyEntries.value = await resolveFamilies(skill, false)
     } else {
-      skillAbilities.value = []
+      skillFamilyEntries.value = []
     }
 
-    // For sidebar bar, also load sidebar-eligible abilities
+    // For sidebar bar, also load sidebar-eligible ability families
     if (store.activeBar === 'sidebar') {
-      const sidebarResults: AbilityInfo[] = []
+      const sidebarResults: FamilyEntry[] = []
       for (const sideSkill of SIDEBAR_SKILLS) {
         try {
-          const abilities = await gameData.getAbilitiesForSkill(sideSkill)
-          sidebarResults.push(...abilities.filter(a =>
-            (a.raw_json as Record<string, unknown>)?.CanBeOnSidebar !== false
-          ))
+          const entries = await resolveFamilies(sideSkill, true)
+          sidebarResults.push(...entries)
         } catch {
           // Skill might not exist
         }
       }
-      sidebarAbilities.value = filterObtainable(sidebarResults)
+      sidebarFamilyEntries.value = sidebarResults
     } else {
-      sidebarAbilities.value = []
+      sidebarFamilyEntries.value = []
     }
 
-    // Build resolution map for assigned abilities
+    // Build resolution map for assigned abilities (for the left panel)
     await resolveAssignedAbilities()
   } finally {
     loading.value = false
@@ -211,9 +252,12 @@ async function loadAbilities() {
 }
 
 async function resolveAssignedAbilities() {
-  const allLoaded = [...skillAbilities.value, ...sidebarAbilities.value]
+  const allTiers = [
+    ...skillFamilyEntries.value.flatMap(e => e.tiers),
+    ...sidebarFamilyEntries.value.flatMap(e => e.tiers),
+  ]
   const map: Record<number, AbilityInfo> = {}
-  for (const a of allLoaded) {
+  for (const a of allTiers) {
     map[a.id] = a
   }
   resolvedAbilities.value = map

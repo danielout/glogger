@@ -1,5 +1,6 @@
-import { computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useBuildPlannerStore } from '../stores/buildPlannerStore'
+import { useGameDataStore } from '../stores/gameDataStore'
 
 /** Strip trailing rank number from ability name (e.g. "Pound To Slag 9" -> "Pound To Slag") */
 function baseAbilityName(name: string): string {
@@ -8,14 +9,12 @@ function baseAbilityName(name: string): string {
 
 /**
  * Provides cross-referencing between mods and abilities in the build planner.
- *
- * - `abilityBaseNames`: deduplicated set of base ability names from assigned abilities
- * - `abilityModCounts`: map of base ability name -> count of slot powers whose effects mention it
- * - `powerAbilities`: map of power key -> list of ability names the power's effects mention
- * - `isAbilityRelated`: check if a power's effects reference any assigned ability
+ * Uses a precomputed backend index (built once at CDN load time) for O(1) lookups.
+ * Makes a single batch call when slot powers change, then all queries are in-memory.
  */
 export function useBuildCrossRef() {
   const store = useBuildPlannerStore()
+  const gameData = useGameDataStore()
 
   /** Deduplicated base ability names from all assigned abilities */
   const abilityBaseNames = computed(() => {
@@ -30,68 +29,99 @@ export function useBuildCrossRef() {
     return names
   })
 
-  /**
-   * For each slot power currently loaded, which assigned abilities do its effects reference?
-   * Returns a Map of power key -> array of display ability names.
-   */
-  const powerAbilities = computed(() => {
-    const result = new Map<string, string[]>()
-    if (abilityBaseNames.value.size === 0) return result
+  /** Set of assigned ability IDs for fast lookup */
+  const assignedAbilityIds = computed(() =>
+    new Set(store.presetAbilities.map(a => a.ability_id))
+  )
 
+  /**
+   * Cache: power key → list of assigned ability names that this power affects.
+   * Built from one batch backend call, then filtered client-side.
+   */
+  const powerAbilities = ref(new Map<string, string[]>())
+
+  /** Raw mapping from backend: tsys_key → all ability IDs it affects */
+  let tsysAbilityCache: Record<string, number[]> = {}
+
+  /** Rebuild the cross-reference cache using the precomputed backend index */
+  async function refreshCrossRef() {
+    if (store.slotPowers.length === 0 || store.presetAbilities.length === 0) {
+      powerAbilities.value = new Map()
+      tsysAbilityCache = {}
+      return
+    }
+
+    // Single batch call to the backend — uses precomputed O(1) lookup per key
+    const tsysKeys = store.slotPowers.map(p => p.key)
+    try {
+      tsysAbilityCache = await gameData.getTsysAbilityMap(tsysKeys)
+    } catch {
+      tsysAbilityCache = {}
+    }
+
+    // Build the power → ability names mapping by filtering to assigned abilities
+    const abilityNameById = new Map<number, string>()
+    for (const a of store.presetAbilities) {
+      if (a.ability_name) abilityNameById.set(a.ability_id, a.ability_name)
+    }
+
+    const result = new Map<string, string[]>()
     for (const power of store.slotPowers) {
       const key = power.internal_name ?? power.key
-      const matched: string[] = []
+      const abilityIds = tsysAbilityCache[power.key]
+      if (!abilityIds) continue
 
-      for (const [baseName, displayName] of abilityBaseNames.value) {
-        const baseNameLower = baseName.toLowerCase()
-        const effectsMatch = power.effects.some(e => e.toLowerCase().includes(baseNameLower))
-          || power.raw_effects.some(e => e.toLowerCase().includes(baseNameLower))
-        if (effectsMatch) {
-          matched.push(displayName)
-        }
-      }
+      const matched = abilityIds
+        .filter(id => assignedAbilityIds.value.has(id))
+        .map(id => abilityNameById.get(id))
+        .filter((name): name is string => name != null)
 
       if (matched.length > 0) {
         result.set(key, matched)
       }
     }
-    return result
+    powerAbilities.value = result
+  }
+
+  // Refresh when slot powers or abilities change
+  watch(
+    () => [store.slotPowers.length, store.presetAbilities.length],
+    () => { refreshCrossRef() },
+    { immediate: true },
+  )
+
+  watch(() => store.selectedSlot, () => {
+    refreshCrossRef()
   })
 
   /**
    * Count of mods (from slotPowers) that reference each assigned ability.
-   * Returns a Map of base ability name -> count.
    */
   const abilityModCounts = computed(() => {
     const counts = new Map<string, number>()
-    if (abilityBaseNames.value.size === 0) return counts
-
-    for (const [baseName] of abilityBaseNames.value) {
-      const baseNameLower = baseName.toLowerCase()
-      let count = 0
-      for (const power of store.slotPowers) {
-        const mentions = power.effects.some(e => e.toLowerCase().includes(baseNameLower))
-          || power.raw_effects.some(e => e.toLowerCase().includes(baseNameLower))
-        if (mentions) count++
+    for (const abilities of powerAbilities.value.values()) {
+      for (const name of abilities) {
+        const base = baseAbilityName(name)
+        counts.set(base, (counts.get(base) ?? 0) + 1)
       }
-      counts.set(baseName, count)
     }
     return counts
   })
 
-  /**
-   * Check if a power's effects reference any assigned ability.
-   * Useful for filtering out mods not related to the build's abilities.
-   */
   function isAbilityRelated(powerKey: string): boolean {
     return powerAbilities.value.has(powerKey)
   }
 
-  /**
-   * Get the ability names a power's effects reference.
-   */
   function getAbilitiesForPower(powerKey: string): string[] {
     return powerAbilities.value.get(powerKey) ?? []
+  }
+
+  /**
+   * Get the raw tsys→ability ID mapping for use by other components (e.g. BuildSummary).
+   * Returns the cached result from the last batch call.
+   */
+  function getTsysAbilityCache(): Record<string, number[]> {
+    return tsysAbilityCache
   }
 
   return {
@@ -100,5 +130,6 @@ export function useBuildCrossRef() {
     abilityModCounts,
     isAbilityRelated,
     getAbilitiesForPower,
+    getTsysAbilityCache,
   }
 }

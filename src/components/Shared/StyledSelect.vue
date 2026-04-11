@@ -130,7 +130,7 @@ function positionDropdown() {
 
   dropdownStyle.value = {
     left: `${rect.left}px`,
-    width: `${Math.max(rect.width, 120)}px`,
+    width: `${Math.max(rect.width, 160)}px`,
     ...(openAbove
       ? { bottom: `${window.innerHeight - rect.top + 2}px` }
       : { top: `${rect.bottom + 2}px` }),

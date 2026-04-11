@@ -1,11 +1,11 @@
 <template>
   <div
     class="shrink-0 flex transition-[width] duration-200 ease-out overflow-hidden"
-    :style="{ width: collapsed ? '28px' : `${width}px` }">
+    :style="{ width: isFixed ? `${fixedWidth}px` : collapsed ? '28px' : `${width}px` }">
 
     <!-- Collapsed strip (left pane: strip on left, right pane: strip on right) -->
     <div
-      v-show="collapsed"
+      v-show="collapsed && !isFixed"
       class="w-7 shrink-0 flex flex-col items-center justify-center cursor-pointer border-border-default hover:bg-surface-card transition-colors"
       :class="side === 'left' ? 'border-r' : 'border-l'"
       @click="toggle">
@@ -18,7 +18,7 @@
 
     <!-- Drag handle (right pane: handle on the left/interior edge) -->
     <div
-      v-show="!collapsed && side === 'right'"
+      v-show="!collapsed && !isFixed && side === 'right'"
       class="w-1.5 shrink-0 cursor-col-resize flex items-center justify-center hover:bg-accent-gold/20 rounded transition-colors"
       :class="{ 'bg-accent-gold/30': isResizing }"
       @mousedown="startResize"
@@ -27,11 +27,12 @@
     </div>
 
     <!-- Pane content -->
-    <div v-show="!collapsed" class="flex-1 flex flex-col overflow-hidden min-w-0">
+    <div v-show="!collapsed || isFixed" class="flex-1 flex flex-col overflow-hidden min-w-0">
       <!-- Header -->
       <div class="flex items-center justify-between px-2 py-1.5 shrink-0">
         <span class="text-text-primary text-sm font-semibold">{{ title }}</span>
         <button
+          v-if="!isFixed"
           class="text-text-muted text-xs cursor-pointer bg-transparent border-none hover:text-text-primary px-1"
           :title="'Collapse ' + title"
           @click="toggle">
@@ -47,7 +48,7 @@
 
     <!-- Drag handle (left pane: handle on the right/interior edge) -->
     <div
-      v-show="!collapsed && side === 'left'"
+      v-show="!collapsed && !isFixed && side === 'left'"
       class="w-1.5 shrink-0 cursor-col-resize flex items-center justify-center hover:bg-accent-gold/20 rounded transition-colors"
       :class="{ 'bg-accent-gold/30': isResizing }"
       @mousedown="startResize"
@@ -70,12 +71,16 @@ const props = withDefaults(defineProps<{
   minWidth?: number;
   maxWidth?: number;
   defaultCollapsed?: boolean;
+  /** When set, locks the pane to this exact width with no resize or collapse. */
+  fixedWidth?: number;
 }>(), {
   defaultWidth: 320,
   minWidth: 200,
   maxWidth: 700,
   defaultCollapsed: false,
 });
+
+const isFixed = computed(() => props.fixedWidth != null);
 
 const { prefs, update } = useViewPrefs(`${props.screenKey}.pane.${props.side}`, {
   collapsed: props.defaultCollapsed,

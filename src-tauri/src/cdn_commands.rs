@@ -1,6 +1,7 @@
 use chrono::{Datelike, Local};
 /// Tauri commands for CDN data management and game data queries.
 /// These are the invoke() endpoints the Vue frontend calls.
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager, State};
@@ -10,8 +11,8 @@ use serde_json::Value;
 
 use crate::cdn;
 use crate::game_data::{
-    self, AbilityInfo, AreaInfo, EffectInfo, GameData, ItemInfo, NpcInfo, PlayerTitleInfo,
-    QuestInfo, RecipeInfo, SkillInfo, SourceEntry, TsysClientInfo,
+    self, AbilityFamily, AbilityInfo, AreaInfo, EffectInfo, GameData, ItemInfo, NpcInfo, PlayerTitleInfo,
+    QuestInfo, RecipeInfo, SkillInfo, SourceEntry, TsysClientInfo, TsysTierInfo,
 };
 
 /// Timestamped log line for startup diagnostics.
@@ -306,15 +307,26 @@ pub async fn search_items(
                     return false;
                 }
             }
-            // Effect text filter (search within resolved effect descriptions)
+            // Effect text filter (search within effect descriptions)
             if let Some(ref eq) = effect_q {
                 if !eq.is_empty() {
                     let has_match = item.effect_descs.iter().any(|desc| {
-                        // Check raw effect desc and also try to match against resolved text
-                        desc.to_lowercase().contains(eq)
+                        // Check raw effect desc string
+                        if desc.to_lowercase().contains(eq) {
+                            return true;
+                        }
+                        // Also try resolving the effect for a human-readable match
+                        if let Some(resolved) = resolve_single_effect(desc, &data) {
+                            if resolved.formatted.to_lowercase().contains(eq)
+                                || resolved.label.to_lowercase().contains(eq)
+                            {
+                                return true;
+                            }
+                        }
+                        false
                     });
                     if !has_match {
-                        // Also check the item name and description as fallback
+                        // Also check the item description as fallback
                         let desc_match = item.description.as_ref()
                             .map(|d| d.to_lowercase().contains(eq))
                             .unwrap_or(false);
@@ -495,6 +507,179 @@ pub async fn get_abilities_for_skill(
             .unwrap_or(std::cmp::Ordering::Equal)
     });
     Ok(abilities)
+}
+
+/// Get all ability families for a given skill, sorted by base ability level.
+#[tauri::command]
+pub async fn get_ability_families_for_skill(
+    skill: String,
+    include_monster: Option<bool>,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<AbilityFamily>, String> {
+    let data = state.read().await;
+    let show_monster = include_monster.unwrap_or(false);
+
+    // Resolve display name → internal name
+    let internal_name = data
+        .skills
+        .values()
+        .find(|s| s.name == skill)
+        .map(|s| s.internal_name.clone());
+    let match_name = internal_name.as_deref().unwrap_or(&skill);
+
+    let mut families: Vec<AbilityFamily> = data
+        .ability_families
+        .values()
+        .filter(|f| {
+            f.skill.as_deref() == Some(match_name)
+                && (show_monster || !f.is_monster_ability)
+        })
+        .cloned()
+        .collect();
+
+    // Sort by the level of the first (lowest) tier
+    families.sort_by(|a, b| {
+        let level_a = a
+            .tier_ids
+            .first()
+            .and_then(|id| data.abilities.get(id))
+            .and_then(|ab| ab.level)
+            .unwrap_or(0.0);
+        let level_b = b
+            .tier_ids
+            .first()
+            .and_then(|id| data.abilities.get(id))
+            .and_then(|ab| ab.level)
+            .unwrap_or(0.0);
+        level_a
+            .partial_cmp(&level_b)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    Ok(families)
+}
+
+/// Given any tier's ability ID, return the family it belongs to.
+#[tauri::command]
+pub async fn get_ability_family(
+    ability_id: u32,
+    state: State<'_, GameDataState>,
+) -> Result<Option<AbilityFamily>, String> {
+    let data = state.read().await;
+    let family = data
+        .ability_to_family
+        .get(&ability_id)
+        .and_then(|key| data.ability_families.get(key))
+        .cloned();
+    Ok(family)
+}
+
+/// Search ability families by name/description across all skills (or within one skill).
+/// Returns up to `limit` matching families, sorted by base name.
+#[tauri::command]
+pub async fn search_ability_families(
+    query: String,
+    skill: Option<String>,
+    limit: Option<usize>,
+    include_monster: Option<bool>,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<AbilityFamily>, String> {
+    let data = state.read().await;
+    let lower = query.to_lowercase();
+    let max = limit.unwrap_or(50);
+    let show_monster = include_monster.unwrap_or(false);
+
+    // Resolve skill display name → internal name if provided
+    let skill_internal = skill.as_ref().and_then(|s| {
+        data.skills
+            .values()
+            .find(|sk| sk.name == *s)
+            .map(|sk| sk.internal_name.clone())
+    });
+    let skill_match = skill_internal.as_deref().or(skill.as_deref());
+
+    let mut results: Vec<AbilityFamily> = data
+        .ability_families
+        .values()
+        .filter(|f| {
+            // Filter out monster abilities unless requested
+            if !show_monster && f.is_monster_ability {
+                return false;
+            }
+            // Filter by skill if specified
+            if let Some(sm) = skill_match {
+                if f.skill.as_deref() != Some(sm) {
+                    return false;
+                }
+            }
+            // Match on family base_name first (fast path)
+            if f.base_name.to_lowercase().contains(&lower) {
+                return true;
+            }
+            // Fall back to checking individual tier names and descriptions
+            for tier_id in &f.tier_ids {
+                if let Some(ability) = data.abilities.get(tier_id) {
+                    if ability.name.to_lowercase().contains(&lower) {
+                        return true;
+                    }
+                    if let Some(desc) = &ability.description {
+                        if desc.to_lowercase().contains(&lower) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            false
+        })
+        .take(max)
+        .cloned()
+        .collect();
+
+    results.sort_by(|a, b| a.base_name.to_lowercase().cmp(&b.base_name.to_lowercase()));
+    if results.len() > max {
+        results.truncate(max);
+    }
+    Ok(results)
+}
+
+/// Return a map of skill display name → number of ability families for that skill.
+/// Used to populate the skill filter dropdown without N+1 IPC calls.
+#[tauri::command]
+pub async fn get_skills_with_ability_counts(
+    include_monster: Option<bool>,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<(String, usize)>, String> {
+    let data = state.read().await;
+    let show_monster = include_monster.unwrap_or(false);
+
+    // Build internal_name → display_name map
+    let internal_to_display: HashMap<&str, &str> = data
+        .skills
+        .values()
+        .map(|s| (s.internal_name.as_str(), s.name.as_str()))
+        .collect();
+
+    // Count families per skill internal name
+    let mut counts: HashMap<&str, usize> = HashMap::new();
+    for family in data.ability_families.values() {
+        if !show_monster && family.is_monster_ability {
+            continue;
+        }
+        if let Some(skill) = family.skill.as_deref() {
+            *counts.entry(skill).or_insert(0) += 1;
+        }
+    }
+
+    // Convert to display names and sort
+    let mut result: Vec<(String, usize)> = counts
+        .into_iter()
+        .filter_map(|(internal, count)| {
+            let display = internal_to_display.get(internal).unwrap_or(&internal);
+            Some((display.to_string(), count))
+        })
+        .filter(|(_, count)| *count > 0)
+        .collect();
+    result.sort_by(|a, b| a.0.cmp(&b.0));
+    Ok(result)
 }
 
 // ── Recipe query commands ─────────────────────────────────────────────────────
@@ -1592,31 +1777,23 @@ pub async fn get_tsys_power_info(
     let mut tier_effects_structured = Vec::new();
     let mut icon_id: Option<u32> = None;
 
-    if let Some(descs) = info
-        .tiers
-        .as_ref()
-        .and_then(|tiers| tiers.get(&tier_key))
-        .and_then(|t| t.get("EffectDescs"))
-        .and_then(|descs| descs.as_array())
-    {
-        for desc_val in descs {
-            if let Some(desc) = desc_val.as_str() {
-                if let Some(resolved) = resolve_single_effect(desc, &data) {
-                    if icon_id.is_none() {
-                        icon_id = resolved.icon_id;
-                    }
-                    tier_effects.push(resolved.formatted.clone());
-                    tier_effects_structured.push(resolved);
-                } else {
-                    tier_effects.push(desc.to_string());
-                    tier_effects_structured.push(ResolvedEffect {
-                        label: desc.to_string(),
-                        value: String::new(),
-                        display_type: String::new(),
-                        formatted: desc.to_string(),
-                        icon_id: None,
-                    });
+    if let Some(tier_info) = info.tiers.get(&tier_key) {
+        for desc in &tier_info.effect_descs {
+            if let Some(resolved) = resolve_single_effect(desc, &data) {
+                if icon_id.is_none() {
+                    icon_id = resolved.icon_id;
                 }
+                tier_effects.push(resolved.formatted.clone());
+                tier_effects_structured.push(resolved);
+            } else {
+                tier_effects.push(desc.to_string());
+                tier_effects_structured.push(ResolvedEffect {
+                    label: desc.to_string(),
+                    value: String::new(),
+                    display_type: String::new(),
+                    formatted: desc.to_string(),
+                    icon_id: None,
+                });
             }
         }
     }
@@ -1791,6 +1968,8 @@ pub struct SlotTsysPower {
     pub icon_id: Option<u32>,
     /// All available tiers for this power (for tier selection UI)
     pub available_tiers: Vec<TsysTierSummary>,
+    /// Equipment slots this power can appear on
+    pub slots: Vec<String>,
 }
 
 /// Get all eligible TSys powers for a given equipment slot, filtered by skills and target level.
@@ -1828,27 +2007,21 @@ pub async fn get_tsys_powers_for_slot(
         // The frontend filters by skill per-column.
 
         // Find the best tier for the target level
-        let tiers = match &info.tiers {
-            Some(Value::Object(map)) => map,
-            _ => continue,
-        };
+        if info.tiers.is_empty() {
+            continue;
+        }
+        let tiers = &info.tiers;
 
         // Collect all available tiers for this power
         let mut available_tiers: Vec<TsysTierSummary> = Vec::new();
-        for (tier_key, tier_val) in tiers {
-            let min_level = tier_val.get("MinLevel").and_then(|v| v.as_i64()).unwrap_or(0);
-            let max_level = tier_val.get("MaxLevel").and_then(|v| v.as_i64()).unwrap_or(999);
-            let min_rarity = tier_val.get("MinRarity").and_then(|v| v.as_str()).map(String::from);
-            let skill_level_prereq = tier_val.get("SkillLevelPrereq").and_then(|v| v.as_i64());
-
-            let raw_descs: Vec<String> = tier_val
-                .get("EffectDescs")
-                .and_then(|v| v.as_array())
-                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
-                .unwrap_or_default();
+        for (tier_key, tier) in tiers {
+            let min_level = tier.min_level.unwrap_or(0) as i64;
+            let max_level = tier.max_level.unwrap_or(999) as i64;
+            let min_rarity = tier.min_rarity.clone();
+            let skill_level_prereq = tier.skill_level_prereq.map(|v| v as i64);
 
             let mut tier_icon_id: Option<u32> = None;
-            let effects: Vec<String> = raw_descs
+            let effects: Vec<String> = tier.effect_descs
                 .iter()
                 .map(|desc| {
                     if let Some(resolved) = resolve_single_effect(desc, &data) {
@@ -1882,49 +2055,33 @@ pub async fn get_tsys_powers_for_slot(
         let mut best_skill_prereq: Option<i64> = None;
         let mut best_icon_id: Option<u32> = None;
 
-        for (tier_key, tier_val) in tiers {
-            let min_level = tier_val
-                .get("MinLevel")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(0);
-            let max_level = tier_val
-                .get("MaxLevel")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(999);
+        // Helper to resolve effects from a tier
+        let resolve_tier = |tier: &TsysTierInfo, data: &GameData| -> (Vec<String>, Vec<String>, Option<u32>) {
+            let raw = tier.effect_descs.clone();
+            let mut icon: Option<u32> = None;
+            let resolved: Vec<String> = raw.iter().map(|desc| {
+                if let Some(r) = resolve_single_effect(desc, data) {
+                    if icon.is_none() { icon = r.icon_id; }
+                    r.formatted
+                } else {
+                    desc.clone()
+                }
+            }).collect();
+            (resolved, raw, icon)
+        };
+
+        for (tier_key, tier) in tiers {
+            let min_level = tier.min_level.unwrap_or(0) as i64;
+            let max_level = tier.max_level.unwrap_or(999) as i64;
 
             if target_level >= min_level && target_level <= max_level {
                 best_tier_id = Some(tier_key.clone());
-                best_min_rarity = tier_val
-                    .get("MinRarity")
-                    .and_then(|v| v.as_str())
-                    .map(String::from);
-                best_skill_prereq = tier_val.get("SkillLevelPrereq").and_then(|v| v.as_i64());
-
-                let raw_descs: Vec<String> = tier_val
-                    .get("EffectDescs")
-                    .and_then(|v| v.as_array())
-                    .map(|arr| {
-                        arr.iter()
-                            .filter_map(|v| v.as_str().map(String::from))
-                            .collect()
-                    })
-                    .unwrap_or_default();
-
-                best_raw_effects = raw_descs.clone();
-                best_icon_id = None;
-                best_effects = raw_descs
-                    .iter()
-                    .map(|desc| {
-                        if let Some(resolved) = resolve_single_effect(desc, &data) {
-                            if best_icon_id.is_none() {
-                                best_icon_id = resolved.icon_id;
-                            }
-                            resolved.formatted
-                        } else {
-                            desc.clone()
-                        }
-                    })
-                    .collect();
+                best_min_rarity = tier.min_rarity.clone();
+                best_skill_prereq = tier.skill_level_prereq.map(|v| v as i64);
+                let (eff, raw, icon) = resolve_tier(tier, &data);
+                best_effects = eff;
+                best_raw_effects = raw;
+                best_icon_id = icon;
                 break; // First matching tier wins
             }
         }
@@ -1932,45 +2089,17 @@ pub async fn get_tsys_powers_for_slot(
         // If no tier matched, try to find the highest tier at or below target level
         if best_tier_id.is_none() {
             let mut best_min: i64 = 0;
-            for (tier_key, tier_val) in tiers {
-                let min_level = tier_val
-                    .get("MinLevel")
-                    .and_then(|v| v.as_i64())
-                    .unwrap_or(0);
+            for (tier_key, tier) in tiers {
+                let min_level = tier.min_level.unwrap_or(0) as i64;
                 if min_level <= target_level && min_level >= best_min {
                     best_min = min_level;
                     best_tier_id = Some(tier_key.clone());
-                    best_min_rarity = tier_val
-                        .get("MinRarity")
-                        .and_then(|v| v.as_str())
-                        .map(String::from);
-                    best_skill_prereq = tier_val.get("SkillLevelPrereq").and_then(|v| v.as_i64());
-
-                    let raw_descs: Vec<String> = tier_val
-                        .get("EffectDescs")
-                        .and_then(|v| v.as_array())
-                        .map(|arr| {
-                            arr.iter()
-                                .filter_map(|v| v.as_str().map(String::from))
-                                .collect()
-                        })
-                        .unwrap_or_default();
-
-                    best_raw_effects = raw_descs.clone();
-                    best_icon_id = None;
-                    best_effects = raw_descs
-                        .iter()
-                        .map(|desc| {
-                            if let Some(resolved) = resolve_single_effect(desc, &data) {
-                                if best_icon_id.is_none() {
-                                    best_icon_id = resolved.icon_id;
-                                }
-                                resolved.formatted
-                            } else {
-                                desc.clone()
-                            }
-                        })
-                        .collect();
+                    best_min_rarity = tier.min_rarity.clone();
+                    best_skill_prereq = tier.skill_level_prereq.map(|v| v as i64);
+                    let (eff, raw, icon) = resolve_tier(tier, &data);
+                    best_effects = eff;
+                    best_raw_effects = raw;
+                    best_icon_id = icon;
                 }
             }
         }
@@ -1979,45 +2108,17 @@ pub async fn get_tsys_powers_for_slot(
         // (higher-level mods can go on lower-level gear, raising the equip requirement)
         if best_tier_id.is_none() {
             let mut lowest_min: i64 = i64::MAX;
-            for (tier_key, tier_val) in tiers {
-                let min_level = tier_val
-                    .get("MinLevel")
-                    .and_then(|v| v.as_i64())
-                    .unwrap_or(0);
+            for (tier_key, tier) in tiers {
+                let min_level = tier.min_level.unwrap_or(0) as i64;
                 if min_level < lowest_min {
                     lowest_min = min_level;
                     best_tier_id = Some(tier_key.clone());
-                    best_min_rarity = tier_val
-                        .get("MinRarity")
-                        .and_then(|v| v.as_str())
-                        .map(String::from);
-                    best_skill_prereq = tier_val.get("SkillLevelPrereq").and_then(|v| v.as_i64());
-
-                    let raw_descs: Vec<String> = tier_val
-                        .get("EffectDescs")
-                        .and_then(|v| v.as_array())
-                        .map(|arr| {
-                            arr.iter()
-                                .filter_map(|v| v.as_str().map(String::from))
-                                .collect()
-                        })
-                        .unwrap_or_default();
-
-                    best_raw_effects = raw_descs.clone();
-                    best_icon_id = None;
-                    best_effects = raw_descs
-                        .iter()
-                        .map(|desc| {
-                            if let Some(resolved) = resolve_single_effect(desc, &data) {
-                                if best_icon_id.is_none() {
-                                    best_icon_id = resolved.icon_id;
-                                }
-                                resolved.formatted
-                            } else {
-                                desc.clone()
-                            }
-                        })
-                        .collect();
+                    best_min_rarity = tier.min_rarity.clone();
+                    best_skill_prereq = tier.skill_level_prereq.map(|v| v as i64);
+                    let (eff, raw, icon) = resolve_tier(tier, &data);
+                    best_effects = eff;
+                    best_raw_effects = raw;
+                    best_icon_id = icon;
                 }
             }
         }
@@ -2041,6 +2142,16 @@ pub async fn get_tsys_powers_for_slot(
                 skill_level_prereq: best_skill_prereq,
                 icon_id: best_icon_id,
                 available_tiers: if available_tiers.len() > 1 { available_tiers } else { vec![] },
+                slots: info.slots.iter().map(|s| {
+                    // Map CDN slot names back to display names
+                    match s.as_str() {
+                        "Waist" => "Belt".to_string(),
+                        "OffHandShield" => "Off Hand".to_string(),
+                        "OffHand" => "Off Hand".to_string(),
+                        "MainHand" => "Main Hand".to_string(),
+                        _ => s.clone(),
+                    }
+                }).collect(),
             });
         }
     }
@@ -2085,7 +2196,7 @@ pub struct TsysBrowserEntry {
     pub slots: Vec<String>,
     pub prefix: Option<String>,
     pub suffix: Option<String>,
-    pub tiers: Option<Value>,
+    pub tiers: HashMap<String, TsysTierInfo>,
     pub is_unavailable: Option<bool>,
     pub is_hidden_from_transmutation: Option<bool>,
     pub tier_count: usize,
@@ -2094,12 +2205,7 @@ pub struct TsysBrowserEntry {
 
 impl TsysBrowserEntry {
     fn from_entry(key: &str, info: &TsysClientInfo) -> Self {
-        let tier_count = info
-            .tiers
-            .as_ref()
-            .and_then(|t| t.as_object())
-            .map(|m| m.len())
-            .unwrap_or(0);
+        let tier_count = info.tiers.len();
         Self {
             key: key.to_string(),
             internal_name: info.internal_name.clone(),
@@ -2435,13 +2541,9 @@ pub async fn get_cp_recipes_for_slot(
                 // Resolve effect description from the power's tier data
                 let tier_str = parts[1].trim();
                 let tier_key = format!("id_{}", tier_str);
-                let description = tsys_info.tiers.as_ref()
-                    .and_then(|tiers| tiers.get(&tier_key))
-                    .and_then(|t| t.get("EffectDescs"))
-                    .and_then(|descs| descs.as_array())
-                    .map(|descs| {
-                        descs.iter()
-                            .filter_map(|d| d.as_str())
+                let description = tsys_info.tiers.get(&tier_key)
+                    .map(|tier| {
+                        tier.effect_descs.iter()
                             .filter_map(|desc| resolve_single_effect(desc, &data))
                             .map(|r| r.formatted)
                             .collect::<Vec<_>>()
@@ -2474,10 +2576,22 @@ pub async fn get_cp_recipes_for_slot(
                         Err(_) => continue,
                     };
 
-                    // Check if this recipe applies to this slot type
                     // Crafting enhancements apply to armor slots only
                     let armor_slots = ["Head", "Chest", "Legs", "Hands", "Feet"];
                     if !armor_slots.contains(&cdn_slot) { continue; }
+
+                    // Filter by item type in recipe name — recipes target specific
+                    // body parts via name patterns like "...Cloth Pants", "...Leather Shirt"
+                    let name_lower = recipe.name.to_lowercase();
+                    let slot_matches = match cdn_slot {
+                        "Head" => name_lower.contains("helmet") || name_lower.contains("head"),
+                        "Chest" => name_lower.contains("shirt") || name_lower.contains("chest"),
+                        "Legs" => name_lower.contains("pants") || name_lower.contains("legs"),
+                        "Hands" => name_lower.contains("gloves") || name_lower.contains("hands") || name_lower.contains("gauntlets"),
+                        "Feet" => name_lower.contains("boots") || name_lower.contains("feet") || name_lower.contains("shoes"),
+                        _ => false,
+                    };
+                    if !slot_matches { continue; }
 
                     // Use recipe description as the effect description
                     let description = recipe.description.clone().unwrap_or_else(|| recipe.name.clone());
@@ -2501,5 +2615,412 @@ pub async fn get_cp_recipes_for_slot(
     // Sort by effect_type (shamanic first), then by name
     results.sort_by(|a, b| a.effect_type.cmp(&b.effect_type).then(a.recipe_name.cmp(&b.recipe_name)));
 
+    Ok(results)
+}
+
+// ── Precomputed TSys ↔ Ability lookups ─────────────────────────────────────
+
+/// Batch lookup: given a list of TSys keys or internal names, return the ability IDs each one affects.
+/// Accepts either CDN keys (e.g., "power_12345") or internal names (e.g., "SwordDamageBoost").
+/// Uses the precomputed index built at CDN load time — O(1) per key.
+#[tauri::command]
+pub async fn get_tsys_ability_map(
+    tsys_keys: Vec<String>,
+    state: State<'_, GameDataState>,
+) -> Result<HashMap<String, Vec<u32>>, String> {
+    let data = state.read().await;
+    let mut result = HashMap::new();
+    for key in &tsys_keys {
+        // Try direct CDN key lookup first
+        if let Some(ids) = data.tsys_to_abilities.get(key) {
+            result.insert(key.clone(), ids.clone());
+            continue;
+        }
+        // Try as internal_name via precomputed index — O(1)
+        if let Some(cdn_key) = data.tsys_internal_name_index.get(key) {
+            if let Some(ids) = data.tsys_to_abilities.get(cdn_key) {
+                result.insert(key.clone(), ids.clone());
+            }
+        }
+    }
+    Ok(result)
+}
+
+// ── Ability ↔ TSys cross-reference commands (legacy, still used by data browser) ──
+
+/// Extract all `{TOKEN}` keys from a list of effect_desc strings.
+fn extract_effect_tokens(effect_descs: &[String]) -> Vec<String> {
+    let mut tokens = Vec::new();
+    for desc in effect_descs {
+        if !desc.starts_with('{') { continue; }
+        // Format: "{TOKEN}{VALUE}" — extract the TOKEN part
+        let parts: Vec<&str> = desc.split('{').filter(|s| !s.is_empty()).collect();
+        if let Some(first) = parts.first() {
+            let token = first.trim_end_matches('}');
+            if !token.is_empty() {
+                tokens.push(token.to_string());
+            }
+        }
+    }
+    tokens
+}
+
+/// Extract `<icon=NNNN>` IDs from text-format effect descriptions.
+fn extract_icon_ids(effect_descs: &[String]) -> std::collections::HashSet<u32> {
+    let mut icons = std::collections::HashSet::new();
+    for desc in effect_descs {
+        // Only process text-format (non-token) descriptions
+        if desc.starts_with('{') { continue; }
+        let mut remaining = desc.as_str();
+        while let Some(start) = remaining.find("<icon=") {
+            let after = &remaining[start + 6..];
+            if let Some(end) = after.find('>') {
+                if let Ok(id) = after[..end].parse::<u32>() {
+                    icons.insert(id);
+                }
+            }
+            remaining = &remaining[start + 6..];
+        }
+    }
+    icons
+}
+
+/// Collect all attribute tokens referenced by an ability's PvE/PvP combat stats,
+/// including DoT attribute arrays from the raw JSON.
+fn collect_ability_attribute_tokens(ability: &AbilityInfo) -> std::collections::HashSet<String> {
+    let mut tokens = std::collections::HashSet::new();
+
+    for stats in [&ability.pve, &ability.pvp].into_iter().flatten() {
+        for t in &stats.attributes_that_delta_damage { tokens.insert(t.clone()); }
+        for t in &stats.attributes_that_mod_base_damage { tokens.insert(t.clone()); }
+        for t in &stats.attributes_that_mod_damage { tokens.insert(t.clone()); }
+        for t in &stats.attributes_that_mod_crit_damage { tokens.insert(t.clone()); }
+        for t in &stats.attributes_that_delta_power_cost { tokens.insert(t.clone()); }
+        for t in &stats.attributes_that_mod_power_cost { tokens.insert(t.clone()); }
+        for t in &stats.attributes_that_delta_rage { tokens.insert(t.clone()); }
+        for t in &stats.attributes_that_mod_rage { tokens.insert(t.clone()); }
+        for t in &stats.attributes_that_delta_taunt { tokens.insert(t.clone()); }
+        for t in &stats.attributes_that_mod_taunt { tokens.insert(t.clone()); }
+
+        // Also check DoTs in the extra field (e.g., DoTs[].AttributesThatDelta)
+        if let Some(dots) = stats.extra.get("DoTs").and_then(|v| v.as_array()) {
+            for dot in dots {
+                for key in ["AttributesThatDelta", "AttributesThatMod", "AttributesThatDeltaDamage",
+                            "AttributesThatModDamage", "AttributesThatModBaseDamage"] {
+                    if let Some(arr) = dot.get(key).and_then(|v| v.as_array()) {
+                        for val in arr {
+                            if let Some(s) = val.as_str() {
+                                tokens.insert(s.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    tokens
+}
+
+/// Check if `text` contains `name` as an exact ability reference, not as a prefix
+/// of a longer ability name. `longer_names` contains all known ability base names
+/// that start with `name + " "`.
+fn text_contains_ability_name(text: &str, name: &str, longer_names: &[&str]) -> bool {
+    let mut search_from = 0;
+    while let Some(idx) = text[search_from..].find(name) {
+        let abs_idx = search_from + idx;
+        // Check: does a longer ability name also match at this position?
+        let is_prefix_of_longer = longer_names.iter().any(|longer| {
+            text[abs_idx..].starts_with(longer)
+        });
+        if !is_prefix_of_longer {
+            return true;
+        }
+        // Move past this match and keep looking — the short name might appear
+        // elsewhere in the text on its own
+        search_from = abs_idx + name.len();
+    }
+    false
+}
+
+/// Check if a TSys mod matches an ability via any of:
+/// 1. Attribute token overlap (PvE/PvP stats ↔ {TOKEN}{VALUE} effect descs)
+/// 2. Icon ID match (ability icon_id in <icon=NNN> tags in text effect descs)
+/// 3. Ability display name appears in text effect descs (with prefix disambiguation)
+fn tsys_matches_ability(
+    info: &TsysClientInfo,
+    ability_tokens: &std::collections::HashSet<String>,
+    ability_name: &str,
+    ability_icon_id: Option<u32>,
+    longer_ability_names: &[&str],
+) -> bool {
+    // Collect all effect_descs across tiers (check one tier for text match, all for tokens)
+    for tier in info.tiers.values() {
+        // 1. Token matching
+        let tier_tokens = extract_effect_tokens(&tier.effect_descs);
+        if tier_tokens.iter().any(|t| ability_tokens.contains(t)) {
+            return true;
+        }
+    }
+
+    // For text matching, only check one representative tier (they all reference the same abilities)
+    if let Some(tier) = info.tiers.values().next() {
+        // 2. Icon ID matching
+        if let Some(icon_id) = ability_icon_id {
+            let tier_icons = extract_icon_ids(&tier.effect_descs);
+            if tier_icons.contains(&icon_id) {
+                return true;
+            }
+        }
+
+        // 3. Ability display name matching in text descriptions
+        // Only match names that are 4+ chars to avoid false positives on short names
+        if ability_name.len() >= 4 {
+            for desc in &tier.effect_descs {
+                if desc.starts_with('{') { continue; }
+                let (clean, _) = strip_icon_tags(desc);
+                if text_contains_ability_name(&clean, ability_name, longer_ability_names) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
+}
+
+/// Lightweight TSys summary returned for ability cross-references.
+#[derive(Debug, serde::Serialize, Clone)]
+pub struct TsysAbilityXref {
+    pub key: String,
+    pub internal_name: Option<String>,
+    pub skill: Option<String>,
+    pub prefix: Option<String>,
+    pub suffix: Option<String>,
+    pub slots: Vec<String>,
+    pub tier_count: usize,
+    /// Resolved effect descriptions from the highest tier
+    pub top_tier_effects: Vec<String>,
+}
+
+fn resolve_top_tier_effects(info: &TsysClientInfo, data: &GameData) -> Vec<String> {
+    let top_tier = info.tiers.iter()
+        .max_by_key(|(k, _)| {
+            k.strip_prefix("id_").and_then(|n| n.parse::<u32>().ok()).unwrap_or(0)
+        })
+        .map(|(_, tier)| tier);
+
+    top_tier
+        .map(|tier| {
+            tier.effect_descs.iter()
+                .map(|desc| {
+                    resolve_single_effect(desc, data)
+                        .map(|r| r.formatted)
+                        .unwrap_or_else(|| strip_icon_tags(desc).0)
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Get all TSys mods that affect a given ability.
+/// Matches via attribute tokens, icon IDs, and ability name text matching.
+#[tauri::command]
+pub async fn get_tsys_for_ability(
+    ability_id: u32,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<TsysAbilityXref>, String> {
+    let data = state.read().await;
+    let ability = data.abilities.get(&ability_id).ok_or("Ability not found")?;
+
+    // Monster abilities don't have treasure system effects
+    if ability.keywords.iter().any(|k| k == "Lint_MonsterAbility") {
+        return Ok(Vec::new());
+    }
+
+    let ability_tokens = collect_ability_attribute_tokens(ability);
+
+    // Get the base ability name (without trailing number) for text matching
+    // e.g., "Reckless Slam 3" → "Reckless Slam"
+    let base_display_name = ability.name.trim_end_matches(|c: char| c.is_ascii_digit())
+        .trim()
+        .to_string();
+
+    // Build list of longer ability names that start with this one + space
+    // e.g., for "Pound" → ["Pound To Slag"]
+    // This prevents "Pound" from matching text about "Pound To Slag"
+    let all_base_names: Vec<String> = data.abilities.values()
+        .map(|a| a.name.trim_end_matches(|c: char| c.is_ascii_digit()).trim().to_string())
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect();
+    let longer_names: Vec<&str> = all_base_names.iter()
+        .filter(|n| n.len() > base_display_name.len() && n.starts_with(&format!("{} ", base_display_name)))
+        .map(|n| n.as_str())
+        .collect();
+
+    let mut results: Vec<TsysAbilityXref> = Vec::new();
+
+    for (key, info) in &data.tsys.client_info {
+        if tsys_matches_ability(info, &ability_tokens, &base_display_name, ability.icon_id, &longer_names) {
+            let top_tier_effects = resolve_top_tier_effects(info, &data);
+
+            results.push(TsysAbilityXref {
+                key: key.clone(),
+                internal_name: info.internal_name.clone(),
+                skill: info.skill.clone(),
+                prefix: info.prefix.clone(),
+                suffix: info.suffix.clone(),
+                slots: info.slots.clone(),
+                tier_count: info.tiers.len(),
+                top_tier_effects,
+            });
+        }
+    }
+
+    results.sort_by(|a, b| {
+        let a_name = a.internal_name.as_deref().unwrap_or(&a.key);
+        let b_name = b.internal_name.as_deref().unwrap_or(&b.key);
+        a_name.cmp(b_name)
+    });
+
+    Ok(results)
+}
+
+/// Lightweight ability summary returned for TSys cross-references.
+#[derive(Debug, serde::Serialize, Clone)]
+pub struct AbilityTsysXref {
+    pub id: u32,
+    pub name: String,
+    pub icon_id: Option<u32>,
+    pub skill: Option<String>,
+    pub level: Option<f32>,
+    pub internal_name: Option<String>,
+}
+
+/// Get all abilities affected by a given TSys mod.
+/// Matches via attribute tokens, icon IDs, and ability name text matching.
+#[tauri::command]
+pub async fn get_abilities_for_tsys(
+    tsys_key: String,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<AbilityTsysXref>, String> {
+    let data = state.read().await;
+    let info = data.tsys.client_info.get(&tsys_key).ok_or("TSys entry not found")?;
+
+    // Collect attribute tokens from {TOKEN}{VALUE} format effect descs
+    let mut tsys_tokens = std::collections::HashSet::new();
+    for tier in info.tiers.values() {
+        for token in extract_effect_tokens(&tier.effect_descs) {
+            tsys_tokens.insert(token);
+        }
+    }
+
+    // Collect icon IDs from text-format effect descs
+    let mut tsys_icon_ids = std::collections::HashSet::new();
+    for tier in info.tiers.values() {
+        tsys_icon_ids.extend(extract_icon_ids(&tier.effect_descs));
+    }
+
+    // Collect ability display names from text-format effect descs
+    // Build a set of all known ability base names for matching
+    let mut ability_base_names: std::collections::HashMap<String, Vec<u32>> = std::collections::HashMap::new();
+    for ab in data.abilities.values() {
+        let base = ab.name.trim_end_matches(|c: char| c.is_ascii_digit()).trim().to_string();
+        if base.len() >= 4 {
+            ability_base_names.entry(base).or_default().push(ab.id);
+        }
+    }
+
+    let mut matched_ability_ids = std::collections::HashSet::new();
+
+    // 1. Token matching: find abilities whose attribute tokens overlap
+    if !tsys_tokens.is_empty() {
+        for ability in data.abilities.values() {
+            let ability_tokens = collect_ability_attribute_tokens(ability);
+            if ability_tokens.iter().any(|t| tsys_tokens.contains(t)) {
+                matched_ability_ids.insert(ability.id);
+            }
+        }
+    }
+
+    // 2. Icon ID matching: find abilities whose icon_id appears in text descs
+    if !tsys_icon_ids.is_empty() {
+        for ability in data.abilities.values() {
+            if let Some(icon_id) = ability.icon_id {
+                if tsys_icon_ids.contains(&icon_id) {
+                    matched_ability_ids.insert(ability.id);
+                }
+            }
+        }
+    }
+
+    // 3. Text name matching: find ability names in text effect descs
+    // Sort names longest-first so longer names get priority over shorter prefixes
+    let mut sorted_names: Vec<&String> = ability_base_names.keys().collect();
+    sorted_names.sort_by(|a, b| b.len().cmp(&a.len()));
+
+    if let Some(tier) = info.tiers.values().next() {
+        for desc in &tier.effect_descs {
+            if desc.starts_with('{') { continue; }
+            let (clean, _) = strip_icon_tags(desc);
+            for base_name in &sorted_names {
+                // Build longer-names list for this specific name
+                let longer: Vec<&str> = sorted_names.iter()
+                    .filter(|n| n.len() > base_name.len() && n.starts_with(&format!("{} ", base_name)))
+                    .map(|n| n.as_str())
+                    .collect();
+                if text_contains_ability_name(&clean, base_name, &longer) {
+                    if let Some(ids) = ability_base_names.get(base_name.as_str()) {
+                        for id in ids {
+                            matched_ability_ids.insert(*id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Deduplicate by base ability name, keep highest-level version
+    let mut results: Vec<AbilityTsysXref> = Vec::new();
+    let mut seen_base_names = std::collections::HashSet::new();
+
+    for &ability_id in &matched_ability_ids {
+        if let Some(ability) = data.abilities.get(&ability_id) {
+            let base_name = ability.internal_name.as_deref()
+                .unwrap_or(&ability.name)
+                .trim_end_matches(char::is_numeric)
+                .to_string();
+
+            if seen_base_names.contains(&base_name) { continue; }
+
+            // Find the highest-level version of this ability
+            let best = data.abilities.values()
+                .filter(|a| {
+                    let a_base = a.internal_name.as_deref()
+                        .unwrap_or(&a.name)
+                        .trim_end_matches(char::is_numeric)
+                        .to_string();
+                    a_base == base_name
+                })
+                .max_by(|a, b| {
+                    a.level.unwrap_or(0.0).partial_cmp(&b.level.unwrap_or(0.0))
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
+                .unwrap_or(ability);
+
+            seen_base_names.insert(base_name);
+            results.push(AbilityTsysXref {
+                id: best.id,
+                name: best.name.clone(),
+                icon_id: best.icon_id,
+                skill: best.skill.clone(),
+                level: best.level,
+                internal_name: best.internal_name.clone(),
+            });
+        }
+    }
+
+    results.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(results)
 }

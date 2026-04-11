@@ -115,6 +115,12 @@
               </div>
             </div>
 
+            <button
+              class="bg-transparent border-none cursor-pointer px-1 py-0 text-sm shrink-0 transition-colors"
+              :class="isFav ? 'text-accent-gold' : 'text-text-dim hover:text-accent-gold'"
+              :title="isFav ? 'Remove from favorites' : 'Add to favorites'"
+              @click="dataBrowserStore.toggleFavorite({ type: 'recipe', reference: selected.name, label: selected.name })"
+            >&#x2605;</button>
             <button class="bg-transparent border-none text-text-dim cursor-pointer px-1 py-0 text-sm shrink-0 hover:text-accent-red" @click="clearSelection">✕</button>
           </div>
 
@@ -302,6 +308,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useKeyboard } from "../../composables/useKeyboard";
+import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { SkillInfo, RecipeInfo, ItemInfo, EntitySources } from "../../types/gameData";
 import ItemInline from "../Shared/Item/ItemInline.vue";
@@ -316,7 +323,12 @@ const props = defineProps<{
 
 const store = useGameDataStore();
 const settingsStore = useSettingsStore();
+const dataBrowserStore = useDataBrowserStore();
 const recipeCost = useRecipeCost();
+
+const isFav = computed(() =>
+  selected.value ? dataBrowserStore.isFavorite("recipe", selected.value.name) : false
+);
 
 const allSkills = ref<SkillInfo[]>([]);
 const skillRecipeCounts = ref<Record<string, number>>({});
@@ -441,6 +453,7 @@ useKeyboard({
 async function selectRecipe(recipe: RecipeInfo) {
   selected.value = recipe;
   iconSrc.value = null;
+  dataBrowserStore.addToHistory({ type: "recipe", reference: recipe.name, label: recipe.name });
   sources.value = null;
   ingredientItems.value = {};
   resultItems.value = {};

@@ -29,7 +29,11 @@ use tokio::sync::RwLock;
 use cdn_commands::{
     force_refresh_cdn,
     get_abilities_for_skill,
+    get_ability_families_for_skill,
+    get_ability_family,
     get_ability_sources,
+    get_skills_with_ability_counts,
+    search_ability_families,
     get_all_item_keywords,
     get_all_npcs,
     get_all_player_titles,
@@ -61,6 +65,9 @@ use cdn_commands::{
     get_tsys_power_info,
     get_tsys_powers_for_slot,
     get_tsys_profiles,
+    get_tsys_for_ability,
+    get_abilities_for_tsys,
+    get_tsys_ability_map,
     search_tsys,
     get_xp_table_for_skill,
     init_game_data,
@@ -326,6 +333,10 @@ pub fn run() {
             get_all_skills,
             // Ability queries
             get_abilities_for_skill,
+            get_ability_families_for_skill,
+            get_ability_family,
+            search_ability_families,
+            get_skills_with_ability_counts,
             // Recipe queries
             get_recipes_for_item,
             get_recipes_using_item,
@@ -348,6 +359,9 @@ pub fn run() {
             get_all_tsys,
             search_tsys,
             get_tsys_profiles,
+            get_tsys_for_ability,
+            get_abilities_for_tsys,
+            get_tsys_ability_map,
             // Player Title queries
             get_all_player_titles,
             search_player_titles,

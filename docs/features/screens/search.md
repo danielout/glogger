@@ -25,7 +25,7 @@ The "Search" nav item in the menu bar. For broader, more detailed exploration.
 - Filter toggles (pill buttons) for each category — all enabled by default. Shows match count per category.
 - Results grouped by category in collapsible cards, no per-category cap (uses cap=50).
 - Results use shared inline components with icons for richer display.
-- Clicking a result navigates to the appropriate view via the same `handleSearchNavigate` handler in `App.vue`.
+- Clicking a result navigates to the appropriate view via the same `handleSearchNavigate` handler in `App.vue`. For entity-type results (items, skills, NPCs, etc.), this opens the Data Browser overlay rather than switching views.
 
 ## Search Categories
 

@@ -186,24 +186,31 @@ fn insert_abilities(
     abilities: &std::collections::HashMap<u32, AbilityInfo>,
 ) -> Result<()> {
     let mut stmt = tx.prepare(
-        "INSERT INTO abilities (id, name, description, icon_id, skill, level_req, keywords,
-                                damage_type, reset_time, target, prerequisite, is_harmless,
+        "INSERT INTO abilities (id, name, internal_name, description, icon_id, skill, level_req, keywords,
+                                damage_type, reset_time, target, prerequisite, upgrade_of, is_harmless,
                                 animation, special_info, works_underwater, works_while_falling,
                                 pve, pvp, mana_cost, power_cost, armor_cost, health_cost,
                                 range, raw_json)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24)"
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26)"
     )?;
 
     for (id, ability) in abilities {
         let keywords_json =
             serde_json::to_string(&ability.keywords).unwrap_or_else(|_| "[]".to_string());
-        let pve_json = ability.pve.as_ref().map(|v| v.to_string());
-        let pvp_json = ability.pvp.as_ref().map(|v| v.to_string());
+        let pve_json = ability
+            .pve
+            .as_ref()
+            .and_then(|v| serde_json::to_string(v).ok());
+        let pvp_json = ability
+            .pvp
+            .as_ref()
+            .and_then(|v| serde_json::to_string(v).ok());
         let raw_json_str = ability.raw_json.to_string();
 
         stmt.execute(params![
             id,
             &ability.name,
+            &ability.internal_name,
             &ability.description,
             ability.icon_id,
             &ability.skill,
@@ -213,6 +220,7 @@ fn insert_abilities(
             ability.reset_time,
             &ability.target,
             &ability.prerequisite,
+            &ability.upgrade_of,
             ability.is_harmless,
             &ability.animation,
             &ability.special_info,
@@ -404,7 +412,7 @@ fn insert_tsys_client_info(
 
     for (key, info) in client_info {
         let slots_json = serde_json::to_string(&info.slots).unwrap_or_else(|_| "[]".to_string());
-        let tiers_json = info.tiers.as_ref().map(|v| v.to_string());
+        let tiers_json = serde_json::to_string(&info.tiers).ok();
         let raw_json_str = info.raw_json.to_string();
 
         stmt.execute(params![

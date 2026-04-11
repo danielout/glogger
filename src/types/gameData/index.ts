@@ -1,7 +1,7 @@
 // Re-export all game data types from their modules
 export type { ItemInfo } from './items'
 export type { SkillInfo } from './skills'
-export type { AbilityInfo } from './abilities'
+export type { AbilityInfo, AbilityFamily, CombatStats } from './abilities'
 export type { RecipeIngredient, RecipeResultItem, RecipeInfo } from './recipes'
 export type {
   QuestInfo,
@@ -14,7 +14,7 @@ export type {
 export type { NpcPreference, NpcInfo } from './npcs'
 export type { EffectInfo } from './effects'
 export type { PlayerTitleInfo } from './playerTitles'
-export type { TsysBrowserEntry } from './tsys'
+export type { TsysBrowserEntry, TsysTierInfo } from './tsys'
 export type { SourceEntry, QuestSummary, EntitySources } from './sources'
 
 // Cross-reference types
@@ -24,6 +24,26 @@ export interface NpcFavorEntry {
   desire: string
   pref: number
   match_type: string
+}
+
+export interface TsysAbilityXref {
+  key: string
+  internal_name: string | null
+  skill: string | null
+  prefix: string | null
+  suffix: string | null
+  slots: string[]
+  tier_count: number
+  top_tier_effects: string[]
+}
+
+export interface AbilityTsysXref {
+  id: number
+  name: string
+  icon_id: number | null
+  skill: string | null
+  level: number | null
+  internal_name: string | null
 }
 
 // CacheStatus lives here since it's not really a game data type
