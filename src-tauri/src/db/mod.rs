@@ -18,6 +18,7 @@ pub mod inventory_commands;
 pub mod market_commands;
 pub mod migrations;
 pub mod player_commands;
+#[allow(dead_code)]
 pub mod price_helper_commands;
 pub mod player_commands_survey_events;
 pub mod queries;

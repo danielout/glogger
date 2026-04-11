@@ -34,6 +34,7 @@ import { useGameDataStore } from "../../../stores/gameDataStore";
 import { useReferenceShelfStore, type PinnedEntity } from "../../../stores/referenceShelfStore";
 import { useEntityNavigation, type EntityType } from "../../../composables/useEntityNavigation";
 import { useTooltip } from "../../../composables/useTooltip";
+import { convertFileSrc } from "@tauri-apps/api/core";
 
 // Lazy imports for tooltip components
 import ItemTooltip from "../Item/ItemTooltip.vue";
@@ -148,7 +149,6 @@ async function loadTooltipData() {
     tooltipData.value = data;
 
     if (data.icon_id) {
-      const { convertFileSrc } = await import("@tauri-apps/api/core");
       const path = await store.getIconPath(data.icon_id);
       tooltipIconSrc.value = convertFileSrc(path);
     }

@@ -1156,7 +1156,6 @@ fn build_tsys_ability_index(
         tokens: std::collections::HashSet<String>,
         icon_id: Option<u32>,
         base_name: String,
-        is_monster: bool,
     }
 
     // Build base name → list of all base names that start with it (for prefix disambiguation)
@@ -1184,7 +1183,6 @@ fn build_tsys_ability_index(
             tokens,
             icon_id: ability.icon_id,
             base_name,
-            is_monster: false,
         });
     }
 

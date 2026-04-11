@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { useSettingsStore } from './settingsStore'
+import { useCharacterStore } from './characterStore'
 import {
   skillTotalLevel,
   type GameStateSkill,
@@ -832,8 +833,6 @@ export const useGameStateStore = defineStore('gameState', () => {
     await loadAll()
 
     // Reload character reports/snapshots for the newly active character
-    // (import inside callback to avoid circular dependency at init time)
-    const { useCharacterStore } = await import('./characterStore')
     const characterStore = useCharacterStore()
     characterStore.initForActiveCharacter()
   })
