@@ -8,7 +8,8 @@
       :default-width="leftPane.defaultWidth ?? 320"
       :min-width="leftPane.minWidth ?? 200"
       :max-width="leftPane.maxWidth ?? 700"
-      :default-collapsed="leftPane.defaultCollapsed ?? false">
+      :default-collapsed="leftPane.defaultCollapsed ?? false"
+      :fixed-width="leftPane.fixedWidth">
       <slot name="left" />
     </SidePane>
 
@@ -24,7 +25,8 @@
       :default-width="rightPane.defaultWidth ?? 320"
       :min-width="rightPane.minWidth ?? 200"
       :max-width="rightPane.maxWidth ?? 700"
-      :default-collapsed="rightPane.defaultCollapsed ?? false">
+      :default-collapsed="rightPane.defaultCollapsed ?? false"
+      :fixed-width="rightPane.fixedWidth">
       <slot name="right" />
     </SidePane>
   </div>
@@ -39,6 +41,8 @@ export interface PaneConfig {
   minWidth?: number;
   maxWidth?: number;
   defaultCollapsed?: boolean;
+  /** When set, the pane is locked to this exact width with no resize or collapse. */
+  fixedWidth?: number;
 }
 
 defineProps<{

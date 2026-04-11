@@ -1,6 +1,6 @@
 # UX Standards
 
-This document defines the UX/UI patterns every screen in glogger should follow. The data browser is our gold standard — when in doubt, look at how it does things.
+This document defines the UX/UI patterns every screen in glogger should follow. The data browser (now a popup overlay rather than a dedicated screen) is our gold standard for search/detail patterns — when in doubt, look at how it does things.
 
 ---
 
@@ -90,7 +90,7 @@ glogger is a desktop application targeting desktop monitors (1920×1080 and abov
 
 ## Patterns to Follow (from the Data Browser)
 
-The data browser establishes the patterns below. Other screens should match these as closely as makes sense.
+The data browser's individual browser components establish the patterns below. Other screens should match these as closely as makes sense. (Note: the data browser itself is a popup overlay opened via Ctrl+D or the nav bar button, not a dedicated screen.)
 
 ### Search & Filtering
 - Text search uses a **250ms debounce** before executing.

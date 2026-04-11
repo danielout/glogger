@@ -70,7 +70,7 @@ Shared logic lives in [`src/composables/`](../../src/composables/):
 
 - **`useTooltip(options?)`** — Tooltip show/hide with configurable delay. Options: `delay`, `interactive`, `onHover`. Returns `showTooltip`, `onMouseEnter`, `onMouseLeave`, `onTooltipMouseEnter`, `onTooltipMouseLeave`, `cleanup`. When `interactive: true`, mouseleave has a 150ms grace period so the user can move their cursor into the tooltip body.
 - **`useGameIcon()`** — Loads icon via `gameDataStore.getIconPath()` + `convertFileSrc()`. Returns `iconSrc`, `iconLoading`, `loadIcon(iconId)`. Memoizes per icon ID.
-- **`useEntityNavigation()`** — Provides/injects a `navigateToEntity(target)` function for click-to-browse. The provider in [`App.vue`](../../src/App.vue) switches to the Data Browser view and passes a nav target to [`DataBrowser.vue`](../../src/components/DataBrowser/DataBrowser.vue).
+- **`useEntityNavigation()`** — Provides/injects a `navigateToEntity(target)` function for click-to-browse. The provider in [`App.vue`](../../src/App.vue) opens the Data Browser overlay and passes a nav target to [`DataBrowserOverlay.vue`](../../src/components/DataBrowser/DataBrowserOverlay.vue).
 - **`useToast()`** — Wrapper for `toastStore` with convenience methods: `success()`, `info()`, `warn()`, `error()`.
 - **`usePaneResize(options)`** — Drag-to-resize logic for `SidePane`. Options: `side` (`"left"` | `"right"`), `minWidth`, `maxWidth`, `initialWidth`, `defaultWidth`, `onWidthChange`, `onResizeEnd`. Returns `isResizing`, `startResize(e)`, `resetWidth()`. Side-aware (left pane drag-right = wider, right pane drag-left = wider).
 - **`useViewPrefs<T>(screenKey, defaults)`** — Persists view preferences (pane widths, collapsed state) to settings store with 500ms debounce. Returns `prefs` (Ref\<T\>), `update(partial)`.
@@ -510,7 +510,7 @@ const config: VueUiDonutConfig = {
 
 ## Navigation
 
-Inline components call `navigateToEntity({ type, id })` on click, which is provided via Vue's provide/inject from [`App.vue`](../../src/App.vue). This switches the app to the Data Browser view and activates the correct tab.
+Inline components call `navigateToEntity({ type, id })` on click, which is provided via Vue's provide/inject from [`App.vue`](../../src/App.vue). This opens the Data Browser overlay (via `dataBrowserStore.open()`) and activates the correct browser type tab.
 
 The mapping from entity type to Data Browser tab:
 

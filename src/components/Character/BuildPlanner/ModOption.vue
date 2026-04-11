@@ -17,28 +17,28 @@
           Generic
         </span>
         <span class="font-medium text-text-primary truncate">{{ displayName }}</span>
-        <!-- Compact tier dropdown inline with name -->
-        <select
+        <!-- Tier selector -->
+        <TierSelector
           v-if="hasTiers && !isAssigned && !isAssignedAsAugment"
-          :value="selectedTierId"
-          class="tier-select bg-surface-hover border border-border-default rounded px-1.5 py-0.5 text-xs text-text-muted cursor-pointer shrink-0 ml-auto"
-          @click.stop
-          @change="onTierChange">
-          <option v-for="tier in power.available_tiers" :key="tier.tier_id" :value="tier.tier_id">
-            Lv{{ tier.min_level }}–{{ tier.max_level }}
-          </option>
-        </select>
+          :tiers="power.available_tiers"
+          :model-value="selectedTierId"
+          class="ml-auto"
+          @update:model-value="selectedTierId = $event" />
       </div>
-      <div v-if="activeEffects.length > 0" class="text-xs text-text-secondary mt-0.5">
-        <div v-for="(effect, i) in activeEffects" :key="i">{{ effect }}</div>
-      </div>
-      <div v-if="activePrereq" class="text-[10px] text-text-dim mt-0.5">
-        Requires {{ power.skill ?? 'skill' }} level {{ activePrereq }}
-      </div>
-      <!-- Blocked reason shown inline -->
-      <div v-if="disabledReason" class="text-[10px] text-amber-400/80 mt-0.5">
-        {{ disabledReason }}
-      </div>
+      <template v-if="!compact">
+        <div v-if="activeEffects.length > 0" class="mt-0.5">
+          <EffectLine v-for="(effect, i) in activeEffects" :key="i" :text="effect" />
+        </div>
+        <div v-if="activePrereq" class="text-[10px] text-text-dim mt-0.5">
+          Requires {{ power.skill ?? 'skill' }} level {{ activePrereq }}
+        </div>
+        <div v-if="boostedAbilities.length > 0" class="text-[10px] text-accent-gold/70 mt-0.5">
+          boosts: {{ boostedAbilities.join(', ') }}
+        </div>
+        <div v-if="disabledReason" class="text-[10px] text-amber-400/80 mt-0.5">
+          {{ disabledReason }}
+        </div>
+      </template>
     </div>
 
     <template v-if="props.augmentOnly">
@@ -74,12 +74,16 @@ import { useBuildPlannerStore } from '../../../stores/buildPlannerStore'
 import type { SlotTsysPower } from '../../../types/buildPlanner'
 import { getPowerDisplayName } from '../../../types/buildPlanner'
 import GameIcon from '../../Shared/GameIcon.vue'
+import TierSelector from './TierSelector.vue'
+import EffectLine from './EffectLine.vue'
+import { useBuildCrossRef } from '../../../composables/useBuildCrossRef'
 
 const props = defineProps<{
   power: SlotTsysPower
   augmentOnly?: boolean
   disabled?: boolean
   disabledReason?: string
+  compact?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -87,6 +91,12 @@ const emit = defineEmits<{
 }>()
 
 const store = useBuildPlannerStore()
+const { getAbilitiesForPower } = useBuildCrossRef()
+
+const boostedAbilities = computed(() => {
+  const powerKey = props.power.internal_name ?? props.power.key
+  return getAbilitiesForPower(powerKey)
+})
 
 const displayName = computed(() => getPowerDisplayName(props.power))
 
@@ -113,10 +123,6 @@ const activePrereq = computed(() => {
   const tier = props.power.available_tiers.find(t => t.tier_id === selectedTierId.value)
   return tier?.skill_level_prereq ?? props.power.skill_level_prereq
 })
-
-function onTierChange(e: Event) {
-  selectedTierId.value = (e.target as HTMLSelectElement).value
-}
 
 function emitAdd(isAugment: boolean) {
   const tierId = hasTiers.value ? selectedTierId.value : undefined
@@ -169,14 +175,3 @@ function handleClick() {
   }
 }
 </script>
-
-<style scoped>
-.tier-select {
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='%23888' d='M0 2l4 4 4-4z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 4px center;
-  padding-right: 14px;
-  max-width: 110px;
-}
-</style>

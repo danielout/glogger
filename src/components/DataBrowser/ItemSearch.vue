@@ -185,6 +185,12 @@
               </div>
             </div>
 
+            <button
+              class="bg-transparent border-none cursor-pointer px-1 py-0 text-sm shrink-0 transition-colors"
+              :class="isFav ? 'text-accent-gold' : 'text-text-dim hover:text-accent-gold'"
+              :title="isFav ? 'Remove from favorites' : 'Add to favorites'"
+              @click="dataBrowserStore.toggleFavorite({ type: 'item', reference: selected.name, label: selected.name })"
+            >&#x2605;</button>
             <button class="bg-transparent border-none text-text-dim cursor-pointer px-1 py-0 text-sm shrink-0 hover:text-accent-red" @click="clearSelection">✕</button>
           </div>
 
@@ -390,6 +396,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useKeyboard } from "../../composables/useKeyboard";
+import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import { useEntityNavigation } from "../../composables/useEntityNavigation";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { ItemInfo, RecipeInfo, EntitySources, NpcFavorEntry } from "../../types/gameData";
@@ -405,7 +412,12 @@ const props = defineProps<{
 
 const store = useGameDataStore();
 const settingsStore = useSettingsStore();
+const dataBrowserStore = useDataBrowserStore();
 const { navigateToEntity } = useEntityNavigation();
+
+const isFav = computed(() =>
+  selected.value ? dataBrowserStore.isFavorite("item", selected.value.name) : false
+);
 
 const query = ref("");
 const results = ref<ItemInfo[]>([]);
@@ -540,6 +552,7 @@ async function doSearch(q: string) {
 async function selectItem(item: ItemInfo) {
   selected.value = item;
   iconSrc.value = null;
+  dataBrowserStore.addToHistory({ type: "item", reference: item.name, label: item.name });
   sources.value = null;
   recipesProducing.value = [];
   recipesUsing.value = [];

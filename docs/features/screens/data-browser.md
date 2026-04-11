@@ -1,15 +1,18 @@
-# Data Browser Screen
+# Data Browser
 
 ## Overview
 
-A multi-tab reference browser for exploring all CDN game data. Nine tabs cover the major entity types: Items, Skills, Abilities, Recipes, Quests, NPCs, Effects, Titles, and Treasure (TSys mods). All browsers share a consistent two-panel layout with search/filter on the left and detail view on the right.
+A multi-tab reference browser for exploring all CDN game data, presented as a **popup overlay** that can be opened from any screen. Nine tabs cover the major entity types: Items, Skills, Abilities, Recipes, Quests, NPCs, Effects, Titles, and Treasure (TSys mods). The overlay uses a three-panel layout: search/filter list on the left (from each browser's own PaneLayout), detail view in the center, and a sidebar on the right with History, Favorites, and Pinned tabs.
+
+**Opening the Data Browser:** Click "Data Browser" in the nav bar, press `Ctrl+D`, or click any entity inline link (ItemInline, SkillInline, etc.) to open the overlay targeting that entity.
 
 ## Architecture
 
 ### Files
 
 **Frontend (Vue/TS):**
-- `src/components/DataBrowser/DataBrowser.vue` — 9-tab container
+- `src/components/DataBrowser/DataBrowserOverlay.vue` — teleported overlay shell with type selector tabs
+- `src/components/DataBrowser/DataBrowserSidebar.vue` — right panel with History/Favorites/Pinned tabs
 - `src/components/DataBrowser/ItemSearch.vue` — items browser
 - `src/components/DataBrowser/SkillBrowser.vue` — skills browser
 - `src/components/DataBrowser/AbilityBrowser.vue` — abilities browser
@@ -20,8 +23,10 @@ A multi-tab reference browser for exploring all CDN game data. Nine tabs cover t
 - `src/components/DataBrowser/TitleBrowser.vue` — titles browser
 - `src/components/DataBrowser/TsysBrowser.vue` — treasure system mods browser
 
-**Store:**
-- `gameDataStore` — CDN data loading, entity resolution, query methods, icon caching
+**Stores:**
+- `src/stores/dataBrowserStore.ts` — overlay state (open/close, active type), favorites, history, persistence
+- `src/stores/gameDataStore.ts` — CDN data loading, entity resolution, query methods, icon caching
+- `src/stores/referenceShelfStore.ts` — pinned entities (used by the Pinned tab)
 
 **Backend (Rust):**
 - `src-tauri/src/cdn_commands.rs` — all Tauri query commands (async, reading from shared `GameDataState`)
@@ -30,7 +35,7 @@ A multi-tab reference browser for exploring all CDN game data. Nine tabs cover t
 ### Component Hierarchy
 
 ```
-DataBrowser.vue                     — 9-tab container
+DataBrowserOverlay.vue              — teleported overlay, type tabs, ESC/Ctrl+D
 ├── ItemSearch.vue                  — items with advanced filters
 ├── SkillBrowser.vue                — skills with abilities
 ├── AbilityBrowser.vue              — abilities by skill
@@ -39,12 +44,40 @@ DataBrowser.vue                     — 9-tab container
 ├── NpcBrowser.vue                  — NPCs with area filter
 ├── EffectBrowser.vue               — effects
 ├── TitleBrowser.vue                — titles with color rendering
-└── TsysBrowser.vue                — treasure mods with skill filter + tier breakdown
+├── TsysBrowser.vue                 — treasure mods with skill filter + tier breakdown
+└── DataBrowserSidebar.vue          — History / Favorites / Pinned tabs
 ```
+
+## Layout
+
+The overlay is teleported to `<body>` with `position: fixed; inset: 1rem` (nearly full screen). It contains:
+
+1. **Top bar** — type selector tabs (Items, Skills, Abilities, ...) + close button + ESC hint
+2. **Body** — flex row:
+   - **Browser area** (flex-1): each browser's own PaneLayout provides the left panel (search/filters/list) and center panel (detail view). Browsers use `v-if`/`v-show` (visited set pattern) to preserve filter state across tab switches.
+   - **Sidebar** (w-72, fixed): three tabs for History, Favorites, and Pinned entities.
+
+## Sidebar Tabs
+
+### History
+- Automatically populated when any entity is selected in any browser
+- Shows the most recent N entries (default 30, configurable in Settings > Advanced)
+- Each entry shows entity type badge, label, and relative timestamp
+- Click navigates to that entity within the overlay
+
+### Favorites
+- Every browser detail view has a star (&#x2605;) button to toggle favorites
+- Searchable by name, filterable by entity type chips
+- Persisted across sessions in `settings.viewPreferences.dataBrowser`
+
+### Pinned
+- Mirrors the Reference Shelf pins (from `referenceShelfStore`)
+- Click navigates within the overlay
+- Individual unpin buttons + "Clear all pins" action
 
 ## Shared Patterns
 
-All browsers follow a consistent two-panel layout:
+All browsers follow a consistent two-panel layout (via their own PaneLayout):
 
 **Left Panel (~360px fixed width):**
 - Search input (with optional loading spinner)
@@ -54,6 +87,7 @@ All browsers follow a consistent two-panel layout:
 **Right Panel (flex):**
 - Detail view of selected entity
 - Icon display (with loading state and fallback)
+- Favorite star button + close button in header
 - Metadata sections specific to entity type
 - Raw JSON view at the bottom of every detail panel (hidden by default; enable via Settings > Advanced > "Show Raw JSON in Data Browser")
 
@@ -62,6 +96,8 @@ All browsers follow a consistent two-panel layout:
 - Status banner while CDN data is loading
 - Entity resolution via unified `resolve*` store methods
 - Icons loaded asynchronously with caching
+- History tracking on entity selection
+- Favorite toggle in detail header
 
 ## Per-Tab Documentation
 
@@ -118,7 +154,7 @@ The `GameData` struct maintains prebuilt indices for efficient lookups:
 
 ### Cross-Entity Navigation
 
-The `provideEntityNavigation` composable enables other parts of the app to navigate into the Data Browser targeting a specific entity. `DataBrowser.vue` watches a `navTarget` prop and maps entity types to tabs.
+The `provideEntityNavigation` composable enables other parts of the app to open the Data Browser overlay targeting a specific entity. `App.vue` calls `dataBrowserStore.open(tab)` and sets a `navTarget` on the `DataBrowserOverlay` ref, which routes to the correct browser tab. Clicking any entity inline link (ItemInline, SkillInline, etc.) opens the overlay and navigates to the entity.
 
 ## Tauri Commands
 

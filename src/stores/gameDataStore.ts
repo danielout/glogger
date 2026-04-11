@@ -6,6 +6,7 @@ import type {
   ItemInfo,
   SkillInfo,
   AbilityInfo,
+  AbilityFamily,
   RecipeInfo,
   QuestInfo,
   NpcInfo,
@@ -15,6 +16,8 @@ import type {
   CacheStatus,
   EntitySources,
   NpcFavorEntry,
+  TsysAbilityXref,
+  AbilityTsysXref,
 } from "../types/gameData";
 
 export type DataStatus = "loading" | "ready" | "error" | "empty";
@@ -146,13 +149,21 @@ export const useGameDataStore = defineStore("gameData", () => {
 
   async function searchItems(
     query: string,
-    filters?: { equipSlot?: string; levelMin?: number; levelMax?: number },
+    filters?: {
+      equipSlot?: string
+      levelMin?: number
+      levelMax?: number
+      armorType?: string
+      effectText?: string
+    },
   ): Promise<ItemInfo[]> {
     return invoke<ItemInfo[]>("search_items", {
       query,
       equipSlot: filters?.equipSlot ?? null,
       levelMin: filters?.levelMin ?? null,
       levelMax: filters?.levelMax ?? null,
+      armorType: filters?.armorType ?? null,
+      effectText: filters?.effectText ?? null,
     });
   }
 
@@ -187,6 +198,22 @@ export const useGameDataStore = defineStore("gameData", () => {
 
   async function getAbilitiesForSkill(skill: string): Promise<AbilityInfo[]> {
     return invoke<AbilityInfo[]>("get_abilities_for_skill", { skill });
+  }
+
+  async function getAbilityFamiliesForSkill(skill: string, includeMonster = false): Promise<AbilityFamily[]> {
+    return invoke<AbilityFamily[]>("get_ability_families_for_skill", { skill, includeMonster });
+  }
+
+  async function getAbilityFamily(abilityId: number): Promise<AbilityFamily | null> {
+    return invoke<AbilityFamily | null>("get_ability_family", { abilityId });
+  }
+
+  async function searchAbilityFamilies(query: string, skill?: string, limit?: number, includeMonster = false): Promise<AbilityFamily[]> {
+    return invoke<AbilityFamily[]>("search_ability_families", { query, skill: skill ?? null, limit: limit ?? null, includeMonster });
+  }
+
+  async function getSkillsWithAbilityCounts(includeMonster = false): Promise<[string, number][]> {
+    return invoke<[string, number][]>("get_skills_with_ability_counts", { includeMonster });
   }
 
   // ── Recipe queries ─────────────────────────────────────────────────────────
@@ -305,6 +332,21 @@ export const useGameDataStore = defineStore("gameData", () => {
     return invoke<QuestInfo[]>("get_quests_by_moon_phase", { moonPhase });
   }
 
+  // ── Ability ↔ TSys cross-reference queries ────────────────────────────────
+
+  async function getTsysForAbility(abilityId: number): Promise<TsysAbilityXref[]> {
+    return invoke<TsysAbilityXref[]>("get_tsys_for_ability", { abilityId });
+  }
+
+  async function getAbilitiesForTsys(tsysKey: string): Promise<AbilityTsysXref[]> {
+    return invoke<AbilityTsysXref[]>("get_abilities_for_tsys", { tsysKey });
+  }
+
+  /** Batch lookup: TSys keys → ability IDs each one affects. Uses precomputed index (O(1) per key). */
+  async function getTsysAbilityMap(tsysKeys: string[]): Promise<Record<string, number[]>> {
+    return invoke<Record<string, number[]>>("get_tsys_ability_map", { tsysKeys });
+  }
+
   // ── Storage vault queries ──────────────────────────────────────────────────
 
   interface StorageVaultZoneInfo {
@@ -369,6 +411,10 @@ export const useGameDataStore = defineStore("gameData", () => {
     getEquipSlots,
     getAllSkills,
     getAbilitiesForSkill,
+    getAbilityFamiliesForSkill,
+    getAbilityFamily,
+    searchAbilityFamilies,
+    getSkillsWithAbilityCounts,
     getRecipesForItem,
     getRecipesUsingItem,
     searchRecipes,
@@ -401,5 +447,8 @@ export const useGameDataStore = defineStore("gameData", () => {
     getQuestsForSkill,
     getQuestsByMoonPhase,
     getRecipesForKeyword,
+    getTsysForAbility,
+    getAbilitiesForTsys,
+    getTsysAbilityMap,
   };
 });

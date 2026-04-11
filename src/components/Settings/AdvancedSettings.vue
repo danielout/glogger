@@ -47,9 +47,23 @@
           <span>Show Unobtainable Items</span>
         </label>
         <p class="mt-2 text-text-muted text-xs leading-relaxed">
-          Include items and abilities tagged as unobtainable (Lint_NotObtainable) in
-          search results and data browsers. These are typically developer/test entries
-          that cannot be acquired in-game.
+          Include items and abilities tagged as unobtainable (Lint_NotObtainable,
+          Lint_NotLearnable) in search results, data browsers, and the build planner.
+          These are typically developer/test entries that cannot be acquired in-game.
+        </p>
+      </div>
+
+      <div class="mb-4">
+        <label class="text-sm text-text-secondary mb-1 block">History size</label>
+        <input
+          type="number"
+          v-model.number="historyMax"
+          @change="saveHistoryMax"
+          min="5"
+          max="200"
+          class="bg-surface-elevated border border-border-default rounded px-3 py-1.5 text-sm text-text-primary w-24" />
+        <p class="mt-1 text-text-muted text-xs">
+          Maximum number of recently viewed entries to keep in the Data Browser history (5–200).
         </p>
       </div>
     </div>
@@ -169,6 +183,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useCharacterStore } from "../../stores/characterStore";
+import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 
 const props = defineProps<{
   parsing: boolean;
@@ -178,6 +193,7 @@ const props = defineProps<{
 
 const settingsStore = useSettingsStore();
 const characterStore = useCharacterStore();
+const dataBrowserStore = useDataBrowserStore();
 
 // Dev mode
 const devMode = ref(settingsStore.settings.devModeEnabled);
@@ -191,6 +207,16 @@ function saveShowRawJson() {
 
 // Unobtainable items visibility
 const showUnobtainable = ref(settingsStore.settings.showUnobtainableItems);
+
+// Data Browser history size
+dataBrowserStore.load();
+const historyMax = ref(dataBrowserStore.maxHistory);
+
+function saveHistoryMax() {
+  const clamped = Math.max(5, Math.min(200, historyMax.value));
+  historyMax.value = clamped;
+  dataBrowserStore.setMaxHistory(clamped);
+}
 
 function saveShowUnobtainable() {
   settingsStore.updateSettings({ showUnobtainableItems: showUnobtainable.value });

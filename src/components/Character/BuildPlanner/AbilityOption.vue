@@ -20,6 +20,7 @@
         <span v-if="ability.mana_cost">{{ ability.mana_cost }} mana</span>
         <span v-if="ability.power_cost">{{ ability.power_cost }} power</span>
         <span v-if="ability.range">{{ ability.range }}m</span>
+        <span v-if="modBoostCount > 0" class="text-accent-gold">{{ modBoostCount }} mod{{ modBoostCount > 1 ? 's' : '' }} boost this</span>
       </div>
     </div>
     <button
@@ -36,10 +37,13 @@
 import type { AbilityInfo } from '../../../types/gameData'
 import GameIcon from '../../Shared/GameIcon.vue'
 
-defineProps<{
+withDefaults(defineProps<{
   ability: AbilityInfo
   isAssigned: boolean
-}>()
+  modBoostCount?: number
+}>(), {
+  modBoostCount: 0,
+})
 
 const emit = defineEmits<{
   add: []

@@ -25,9 +25,9 @@
         <div class="border-l border-border-default h-8" />
         <button
           class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer font-mono text-sm rounded transition-all hover:bg-surface-elevated hover:text-text-primary"
-          :class="{ 'bg-surface-elevated! text-accent-gold!': currentView === 'data-browser' }"
-          @click="emit('navigate', 'data-browser')"
-          title="Data Browser">
+          :class="{ 'bg-surface-elevated! text-accent-gold!': dataBrowserStore.isOpen }"
+          @click="dataBrowserStore.toggle()"
+          title="Data Browser (Ctrl+D)">
           Data Browser
         </button>
       </div>
@@ -93,6 +93,7 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from "vue";
 import { useCoordinatorStore } from "../stores/coordinatorStore";
+import { useDataBrowserStore } from "../stores/dataBrowserStore";
 import { useKeyboard } from "../composables/useKeyboard";
 import CharacterPicker from "./CharacterPicker.vue";
 
@@ -147,17 +148,6 @@ const viewTabs: Partial<Record<AppView, SubTab[]>> = {
     { id: "all", label: "All Messages" },
     { id: "watchwords", label: "Watchwords" },
   ],
-  "data-browser": [
-    { id: "items", label: "Items" },
-    { id: "skills", label: "Skills" },
-    { id: "abilities", label: "Abilities" },
-    { id: "recipes", label: "Recipes" },
-    { id: "quests", label: "Quests" },
-    { id: "npcs", label: "NPCs" },
-    { id: "effects", label: "Effects" },
-    { id: "titles", label: "Titles" },
-    { id: "treasure", label: "Treasure" },
-  ],
 };
 
 // Default sub-tab per view
@@ -167,10 +157,10 @@ const defaultSubTabs: Partial<Record<AppView, string>> = {
   crafting: "quick-calc",
   economics: "market",
   chat: "channels",
-  "data-browser": "items",
 };
 
 const coordinatorStore = useCoordinatorStore();
+const dataBrowserStore = useDataBrowserStore();
 const isPlayerLogTailing = computed(() => coordinatorStore.isPlayerLogTailing);
 const isChatLogTailing = computed(() => coordinatorStore.isChatLogTailing);
 

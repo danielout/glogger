@@ -93,6 +93,12 @@
               </div>
             </div>
 
+            <button
+              class="bg-transparent border-none cursor-pointer px-1 py-0 text-sm shrink-0 transition-colors"
+              :class="isFav ? 'text-accent-gold' : 'text-text-dim hover:text-accent-gold'"
+              :title="isFav ? 'Remove from favorites' : 'Add to favorites'"
+              @click="dataBrowserStore.toggleFavorite({ type: 'effect', reference: String(selected.id), label: selected.name || 'Unnamed' })"
+            >&#x2605;</button>
             <button class="bg-transparent border-none text-text-dim cursor-pointer px-1 py-0 text-sm shrink-0 hover:text-accent-red" @click="clearSelection">✕</button>
           </div>
 
@@ -157,15 +163,21 @@
 
 <script setup lang="ts">
 import PaneLayout from "../Shared/PaneLayout.vue";
-import { ref, watch } from "vue";
+import { ref, watch, computed } from "vue";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import { useKeyboard } from "../../composables/useKeyboard";
 import type { EffectInfo } from "../../types/gameData";
 
 const store = useGameDataStore();
 const settingsStore = useSettingsStore();
+const dataBrowserStore = useDataBrowserStore();
+
+const isFav = computed(() =>
+  selected.value ? dataBrowserStore.isFavorite("effect", String(selected.value.id)) : false
+);
 
 const query = ref("");
 const results = ref<EffectInfo[]>([]);
@@ -214,6 +226,7 @@ useKeyboard({
 async function selectEffect(effect: EffectInfo) {
   selected.value = effect;
   iconSrc.value = null;
+  dataBrowserStore.addToHistory({ type: "effect", reference: String(effect.id), label: effect.name || "Unnamed" });
 
   if (effect.icon_id) {
     iconLoading.value = true;

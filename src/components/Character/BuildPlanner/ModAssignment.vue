@@ -11,19 +11,16 @@
           AUG
         </span>
         <span class="font-medium text-text-primary truncate">{{ resolvedDisplayName }}</span>
-        <!-- Compact tier dropdown -->
-        <select
+        <!-- Tier selector -->
+        <TierSelector
           v-if="availableTiers.length > 1"
-          :value="currentTierId"
-          class="tier-select bg-surface-hover border border-border-default rounded px-1.5 py-0.5 text-xs text-text-muted cursor-pointer shrink-0 ml-auto"
-          @change="onTierChange">
-          <option v-for="tier in availableTiers" :key="tier.tier_id" :value="tier.tier_id">
-            Lv{{ tier.min_level }}–{{ tier.max_level }}
-          </option>
-        </select>
+          :tiers="availableTiers"
+          :model-value="currentTierId"
+          class="ml-auto"
+          @update:model-value="onTierChange" />
       </div>
-      <div v-if="resolvedEffects.length > 0" class="text-xs text-text-secondary mt-0.5">
-        <div v-for="(effect, i) in resolvedEffects" :key="i">{{ effect }}</div>
+      <div v-if="resolvedEffects.length > 0" class="mt-0.5">
+        <EffectLine v-for="(effect, i) in resolvedEffects" :key="i" :text="effect" />
       </div>
     </div>
     <button
@@ -41,6 +38,8 @@ import { invoke } from '@tauri-apps/api/core'
 import type { BuildPresetMod, TsysTierSummary } from '../../../types/buildPlanner'
 import { useBuildPlannerStore } from '../../../stores/buildPlannerStore'
 import GameIcon from '../../Shared/GameIcon.vue'
+import TierSelector from './TierSelector.vue'
+import EffectLine from './EffectLine.vue'
 
 const props = defineProps<{
   mod: BuildPresetMod
@@ -68,8 +67,7 @@ const currentTierId = computed(() => {
   return `id_${props.mod.tier}`
 })
 
-async function onTierChange(e: Event) {
-  const tierId = (e.target as HTMLSelectElement).value
+async function onTierChange(tierId: string) {
   if (tierId === currentTierId.value) return
   await store.changeModTier(props.mod, tierId)
   await resolveEffects()
@@ -104,14 +102,3 @@ onMounted(resolveEffects)
 // Re-resolve when tier changes externally
 watch(() => props.mod.tier, resolveEffects)
 </script>
-
-<style scoped>
-.tier-select {
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='%23888' d='M0 2l4 4 4-4z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 4px center;
-  padding-right: 14px;
-  max-width: 110px;
-}
-</style>

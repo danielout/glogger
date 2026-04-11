@@ -127,6 +127,30 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 20)?;
     }
 
+    if current_version < 21 {
+        migration_v21_build_preset_cp_recipes(conn)?;
+        super::record_migration(conn, 21)?;
+    }
+
+    Ok(())
+}
+
+/// Migration V21: CP-consuming recipes (shamanic infusion, crafting enhancements) for build planner.
+fn migration_v21_build_preset_cp_recipes(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE build_preset_cp_recipes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            preset_id INTEGER NOT NULL REFERENCES build_presets(id) ON DELETE CASCADE,
+            equip_slot TEXT NOT NULL,
+            recipe_id INTEGER NOT NULL,
+            recipe_name TEXT,
+            cp_cost INTEGER NOT NULL,
+            effect_type TEXT NOT NULL,
+            effect_key TEXT NOT NULL,
+            sort_order INTEGER DEFAULT 0
+        );
+        CREATE INDEX idx_build_preset_cp_recipes_preset ON build_preset_cp_recipes(preset_id);"
+    )?;
     Ok(())
 }
 
@@ -443,6 +467,7 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
         CREATE TABLE abilities (
             id INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
+            internal_name TEXT,
             description TEXT,
             icon_id INTEGER,
             skill TEXT,
@@ -452,6 +477,7 @@ fn migration_v1_unified_schema(conn: &Connection) -> Result<()> {
             reset_time REAL,
             target TEXT,
             prerequisite TEXT,
+            upgrade_of TEXT,
             is_harmless BOOLEAN,
             animation TEXT,
             special_info TEXT,

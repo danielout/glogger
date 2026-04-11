@@ -1,11 +1,11 @@
 <template>
-  <div class="flex flex-col gap-1.5">
+  <div class="flex flex-col gap-1.5 h-full min-h-0">
     <div class="flex items-center gap-2">
       <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wider">Base Item</h4>
     </div>
 
-    <!-- Currently selected item -->
-    <div v-if="currentItem && currentItem.item_id !== 0" class="flex items-center gap-2 px-2 py-1.5 bg-surface-elevated border border-border-default rounded text-sm group">
+    <!-- Currently selected item (hidden in preview mode, dialog handles it) -->
+    <div v-if="!previewMode && currentItem && currentItem.item_id !== 0" class="flex items-center gap-2 px-2 py-1.5 bg-surface-elevated border border-border-default rounded text-sm group">
       <ItemInline :reference="String(currentItem.item_id)" :show-icon="true" />
       <span class="flex-1" />
       <button
@@ -29,13 +29,20 @@
       <!-- Filter row -->
       <div class="flex items-center gap-1.5 flex-wrap">
         <!-- Skill filter -->
-        <select
-          v-model="filterSkill"
-          class="bg-surface-elevated border border-border-default rounded px-1.5 py-0.5 text-[10px] text-text-secondary min-w-0"
-          @change="onFilterChange">
-          <option value="">Any skill</option>
-          <option v-for="skill in availableSkills" :key="skill" :value="skill">{{ skill }}</option>
-        </select>
+        <StyledSelect
+          :model-value="filterSkill"
+          :options="skillFilterOptions"
+          placeholder="Any skill"
+          size="xs"
+          @update:model-value="filterSkill = $event; onFilterChange()" />
+
+        <!-- Armor type filter -->
+        <StyledSelect
+          :model-value="filterArmorType"
+          :options="armorTypeOptions"
+          placeholder="Any armor"
+          size="xs"
+          @update:model-value="filterArmorType = $event; onFilterChange()" />
 
         <!-- Level range -->
         <div class="flex items-center gap-0.5">
@@ -47,7 +54,7 @@
             max="125"
             class="bg-surface-elevated border border-border-default rounded px-1 py-0.5 text-[10px] text-text-secondary w-10 text-center"
             @change="onFilterChange" />
-          <span class="text-text-dim text-[10px]">–</span>
+          <span class="text-text-dim text-[10px]">-</span>
           <input
             v-model.number="filterLevelMax"
             type="number"
@@ -69,10 +76,18 @@
         <span class="flex-1" />
         <span class="text-[10px] text-text-dim">{{ results.length }} items</span>
       </div>
+
+      <!-- Effect text search -->
+      <input
+        v-model="filterEffectText"
+        type="text"
+        placeholder="Search item effects..."
+        class="w-full bg-surface-elevated border border-border-default rounded px-2 py-0.5 text-[10px] text-text-primary"
+        @input="onFilterChange" />
     </div>
 
     <!-- Results list -->
-    <div class="flex-1 overflow-y-auto max-h-80 border border-border-default rounded">
+    <div class="flex-1 overflow-y-auto border border-border-default rounded" :class="previewMode ? '' : 'max-h-80'">
       <div v-if="loading" class="px-2 py-3 text-xs text-text-muted text-center">
         Loading items...
       </div>
@@ -124,6 +139,19 @@ import type { ArmorType } from '../../../types/buildPlanner'
 import type { ItemInfo } from '../../../types/gameData'
 import ItemInline from '../../Shared/Item/ItemInline.vue'
 import GameIcon from '../../Shared/GameIcon.vue'
+import StyledSelect from '../../Shared/StyledSelect.vue'
+
+const props = withDefaults(defineProps<{
+  /** If true, clicking an item previews it instead of selecting immediately */
+  previewMode?: boolean
+}>(), {
+  previewMode: false,
+})
+
+const emit = defineEmits<{
+  selected: []
+  preview: [item: ItemInfo]
+}>()
 
 const store = useBuildPlannerStore()
 const gameData = useGameDataStore()
@@ -133,6 +161,8 @@ const query = ref('')
 const results = ref<ItemInfo[]>([])
 const loading = ref(false)
 const filterSkill = ref('')
+const filterArmorType = ref('')
+const filterEffectText = ref('')
 const filterLevelMin = ref<number | undefined>(undefined)
 const filterLevelMax = ref<number | undefined>(undefined)
 
@@ -151,8 +181,22 @@ const availableSkills = computed(() => {
   return skills
 })
 
+const skillFilterOptions = computed(() => [
+  { value: '', label: 'Any skill' },
+  ...availableSkills.value.map(s => ({ value: s, label: s })),
+])
+
+const armorTypeOptions = [
+  { value: '', label: 'Any armor' },
+  { value: 'Cloth', label: 'Cloth' },
+  { value: 'Leather', label: 'Leather' },
+  { value: 'Metal', label: 'Metal' },
+  { value: 'Organic', label: 'Organic' },
+]
+
 const hasActiveFilters = computed(() =>
-  query.value.length > 0 || filterSkill.value !== '' || filterLevelMin.value != null || filterLevelMax.value != null
+  query.value.length > 0 || filterSkill.value !== '' || filterArmorType.value !== '' ||
+  filterEffectText.value.length > 0 || filterLevelMin.value != null || filterLevelMax.value != null
 )
 
 function getItemArmorType(item: ItemInfo): ArmorType | null {
@@ -174,6 +218,8 @@ function armorTypeBadge(type: string): string {
 watch(() => store.selectedSlot, () => {
   query.value = ''
   filterSkill.value = ''
+  filterArmorType.value = ''
+  filterEffectText.value = ''
   filterLevelMin.value = undefined
   filterLevelMax.value = undefined
   loadItems()
@@ -191,6 +237,8 @@ function onFilterChange() {
 function clearFilters() {
   query.value = ''
   filterSkill.value = ''
+  filterArmorType.value = ''
+  filterEffectText.value = ''
   filterLevelMin.value = undefined
   filterLevelMax.value = undefined
   loadItems()
@@ -204,6 +252,8 @@ async function loadItems() {
       equipSlot: store.selectedSlot,
       levelMin: filterLevelMin.value,
       levelMax: filterLevelMax.value,
+      armorType: filterArmorType.value || undefined,
+      effectText: filterEffectText.value || undefined,
     })
 
     // Client-side skill filter: keep items that require the selected skill
@@ -227,7 +277,12 @@ async function loadItems() {
 }
 
 async function selectItem(item: ItemInfo) {
+  if (props.previewMode) {
+    emit('preview', item)
+    return
+  }
   if (!store.selectedSlot) return
   await store.setSlotItem(store.selectedSlot, item.id, item.name)
+  emit('selected')
 }
 </script>

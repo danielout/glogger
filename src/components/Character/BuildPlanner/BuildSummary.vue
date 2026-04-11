@@ -1,236 +1,109 @@
 <template>
-  <!-- Slide-out overlay panel -->
-  <Teleport to="body">
-    <Transition name="slide">
-      <div v-if="showPanel" class="fixed inset-0 z-50 flex justify-end">
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/40" @click="showPanel = false" />
+  <div class="flex flex-col h-full overflow-y-auto px-4 py-3 space-y-5">
+    <!-- Effects section with view tabs -->
+    <div v-if="store.presetMods.length > 0">
+      <!-- Tab bar -->
+      <div class="flex items-center gap-1 mb-3">
+        <button
+          v-for="tab in VIEW_TABS"
+          :key="tab.id"
+          class="px-2.5 py-1 rounded text-xs font-semibold cursor-pointer transition-colors"
+          :class="activeTab === tab.id
+            ? 'bg-accent-gold/20 text-accent-gold'
+            : 'text-text-muted hover:text-text-secondary'"
+          @click="activeTab = tab.id">
+          {{ tab.label }}
+        </button>
+      </div>
 
-        <!-- Panel -->
-        <div class="relative w-160 max-w-[90vw] bg-surface-base border-l border-border-default shadow-xl flex flex-col h-full">
-          <!-- Header -->
-          <div class="flex items-center justify-between px-5 py-4 border-b border-border-default shrink-0">
-            <div class="flex items-center gap-3">
-              <h2 class="text-base font-semibold text-text-primary">Build Summary</h2>
-              <span v-if="store.activePreset" class="text-sm text-text-muted">
-                {{ store.activePreset.name }}
-              </span>
-            </div>
-            <button
-              class="text-text-muted hover:text-text-primary text-lg cursor-pointer px-2"
-              @click="showPanel = false">
-              ✕
-            </button>
-          </div>
+      <div v-if="loadingEffects" class="text-sm text-text-muted py-4 text-center">
+        Loading effects...
+      </div>
 
-          <!-- Scrollable content -->
-          <div class="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-            <!-- Skills & Rarity -->
-            <div class="flex items-center gap-4 text-sm">
-              <div v-if="store.activePreset?.skill_primary" class="flex items-center gap-1.5">
-                <span class="text-[10px] font-semibold text-blue-400 uppercase">Primary:</span>
-                <span class="text-text-primary">{{ store.activePreset.skill_primary }}</span>
-              </div>
-              <div v-if="store.activePreset?.skill_secondary" class="flex items-center gap-1.5">
-                <span class="text-[10px] font-semibold text-emerald-400 uppercase">Secondary:</span>
-                <span class="text-text-primary">{{ store.activePreset.skill_secondary }}</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="text-[10px] font-semibold text-text-muted uppercase">Target:</span>
-                <span class="text-text-primary">
-                  Lv{{ store.activePreset?.target_level }}
-                  {{ store.activePreset?.target_rarity }}
-                </span>
-              </div>
-            </div>
-
-            <!-- Armor type breakdown -->
-            <div v-if="Object.keys(store.armorTypeCounts).length > 0">
-              <h3 class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Armor Sets</h3>
-              <div class="flex items-center gap-2 flex-wrap">
-                <span
-                  v-for="(count, type) in store.armorTypeCounts"
-                  :key="type"
-                  class="px-2 py-1 rounded text-xs font-medium"
-                  :class="[armorBadge(type as string), count >= 3 ? 'ring-1 ring-accent-gold/50' : '']">
-                  {{ count }}x {{ type }}
-                  <span v-if="count >= 3" class="text-accent-gold ml-0.5">(3pc bonus)</span>
-                </span>
-              </div>
-            </div>
-
-            <!-- Crafting points overview -->
-            <div v-if="totalCPBudget > 0">
-              <h3 class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Crafting Points</h3>
-              <div class="text-sm text-text-secondary">
-                {{ totalCPUsedByAugments }}/{{ totalCPBudget }} CP used by augments
-              </div>
-            </div>
-
-            <!-- Per-slot breakdown table -->
-            <div v-if="store.presetMods.length > 0">
-              <h3 class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Slot Breakdown</h3>
-              <div class="grid grid-cols-[120px_1fr] gap-x-3 gap-y-1 text-sm">
-                <template v-for="slot in EQUIPMENT_SLOTS" :key="slot.id">
-                  <span class="text-text-muted">{{ slot.label }}</span>
-                  <div class="flex items-center gap-2">
-                    <span
-                      class="font-medium"
-                      :class="modsForSlot(slot.id).length >= store.getMaxModsForSlot(slot.id)
-                        ? 'text-green-400'
-                        : modsForSlot(slot.id).length > 0
-                          ? 'text-yellow-400'
-                          : 'text-text-dim'">
-                      {{ modsForSlot(slot.id).length }}/{{ store.getMaxModsForSlot(slot.id) }}
-                    </span>
-                    <span v-if="hasAugment(slot.id)" class="text-purple-400 text-xs">+aug</span>
-                    <span v-if="modsForSlot(slot.id).length === 0 && !hasAugment(slot.id)" class="text-text-dim">—</span>
-                  </div>
-                </template>
-
-                <!-- Totals row -->
-                <span class="text-text-muted font-semibold border-t border-border-default pt-1 mt-1">Total</span>
-                <span class="text-accent-gold font-semibold border-t border-border-default pt-1 mt-1">
-                  {{ store.presetMods.filter(m => !m.is_augment).length }} mods,
-                  {{ store.presetMods.filter(m => m.is_augment).length }} augments
-                </span>
-              </div>
-            </div>
-
-            <!-- Base item attributes (armor, combat refresh, etc.) -->
-            <div v-if="itemAttributes.length > 0">
-              <h3 class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Item Attributes</h3>
-              <div class="space-y-1">
-                <div
-                  v-for="attr in itemAttributes"
-                  :key="attr.label"
-                  class="flex items-center gap-3 text-sm py-0.5 px-2">
-                  <GameIcon v-if="attr.iconId" :icon-id="attr.iconId" size="xs" class="shrink-0" />
-                  <span class="flex-1 text-text-primary">{{ attr.label }}</span>
-                  <span class="font-semibold" :class="attr.value > 0 ? 'text-green-400' : attr.value < 0 ? 'text-red-400' : 'text-text-secondary'">
-                    {{ attr.formattedValue }}
-                  </span>
+      <!-- By Skill view (original) -->
+      <div v-else-if="activeTab === 'skill'" class="space-y-4">
+        <div v-for="group in effectGroups" :key="group.label">
+          <h4 class="text-sm font-semibold mb-2" :class="group.labelClass">
+            {{ group.label }} ({{ group.mods.length }})
+          </h4>
+          <div class="space-y-2">
+            <div
+              v-for="mod in group.mods"
+              :key="mod.id"
+              class="flex items-start gap-3 text-sm pl-2 py-1 rounded"
+              :class="mod.is_augment ? 'bg-purple-900/10' : ''">
+              <span class="text-text-dim shrink-0 w-24 text-xs pt-0.5">{{ slotLabel(mod.equip_slot) }}</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-medium text-text-primary">{{ resolvedNames[modKey(mod)] ?? mod.power_name }}</span>
+                  <span v-if="mod.is_augment" class="text-[10px] font-semibold text-purple-400 uppercase">AUG</span>
+                </div>
+                <div v-if="resolvedEffects[modKey(mod)]" class="mt-0.5">
+                  <EffectLine v-for="(effect, i) in resolvedEffects[modKey(mod)]" :key="i" :text="effect" />
                 </div>
               </div>
-            </div>
-
-            <!-- Effects section with view tabs -->
-            <div v-if="store.presetMods.length > 0">
-              <!-- Tab bar -->
-              <div class="flex items-center gap-1 mb-3">
-                <button
-                  v-for="tab in VIEW_TABS"
-                  :key="tab.id"
-                  class="px-2.5 py-1 rounded text-xs font-semibold cursor-pointer transition-colors"
-                  :class="activeTab === tab.id
-                    ? 'bg-accent-gold/20 text-accent-gold'
-                    : 'text-text-muted hover:text-text-secondary'"
-                  @click="activeTab = tab.id">
-                  {{ tab.label }}
-                </button>
-              </div>
-
-              <div v-if="loadingEffects" class="text-sm text-text-muted py-4 text-center">
-                Loading effects...
-              </div>
-
-              <!-- By Skill view (original) -->
-              <div v-else-if="activeTab === 'skill'" class="space-y-4">
-                <div v-for="group in effectGroups" :key="group.label">
-                  <h4 class="text-sm font-semibold mb-2" :class="group.labelClass">
-                    {{ group.label }} ({{ group.mods.length }})
-                  </h4>
-                  <div class="space-y-2">
-                    <div
-                      v-for="mod in group.mods"
-                      :key="mod.id"
-                      class="flex items-start gap-3 text-sm pl-2 py-1 rounded"
-                      :class="mod.is_augment ? 'bg-purple-900/10' : ''">
-                      <span class="text-text-dim shrink-0 w-24 text-xs pt-0.5">{{ slotLabel(mod.equip_slot) }}</span>
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-1.5">
-                          <span class="font-medium text-text-primary">{{ resolvedNames[modKey(mod)] ?? mod.power_name }}</span>
-                          <span v-if="mod.is_augment" class="text-[10px] font-semibold text-purple-400 uppercase">AUG</span>
-                        </div>
-                        <div v-if="resolvedEffects[modKey(mod)]" class="text-text-secondary text-xs mt-0.5">
-                          <div v-for="(effect, i) in resolvedEffects[modKey(mod)]" :key="i">{{ effect }}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div v-if="effectGroups.length === 0" class="text-sm text-text-dim text-center py-4">
-                  No mods assigned yet
-                </div>
-              </div>
-
-              <!-- Effect Totals view -->
-              <div v-else-if="activeTab === 'totals'" class="space-y-3">
-                <div v-if="aggregatedEffects.length === 0" class="text-sm text-text-dim text-center py-4">
-                  No effects resolved yet
-                </div>
-                <div v-else class="space-y-1">
-                  <div
-                    v-for="agg in aggregatedEffects"
-                    :key="agg.label"
-                    class="flex items-center gap-3 text-sm py-1 px-2 rounded"
-                    :class="agg.count > 1 ? 'bg-surface-elevated' : ''">
-                    <GameIcon v-if="agg.iconId" :icon-id="agg.iconId" size="xs" class="shrink-0" />
-                    <span class="flex-1 text-text-primary">{{ agg.label }}</span>
-                    <span class="font-semibold" :class="agg.numericValue > 0 ? 'text-green-400' : agg.numericValue < 0 ? 'text-red-400' : 'text-text-secondary'">
-                      {{ agg.formattedValue }}
-                    </span>
-                    <span v-if="agg.count > 1" class="text-[10px] text-text-dim">
-                      ({{ agg.count }} sources)
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- By Ability view -->
-              <div v-else-if="activeTab === 'ability'" class="space-y-4">
-                <div v-if="abilityEffectGroups.length === 0" class="text-sm text-text-dim text-center py-4">
-                  {{ store.presetAbilities.length === 0 ? 'No abilities assigned to ability bars' : 'No mod effects reference your abilities' }}
-                </div>
-                <div v-for="group in abilityEffectGroups" :key="group.abilityName" class="space-y-1">
-                  <h4 class="text-sm font-semibold text-text-primary">{{ group.abilityName }}</h4>
-                  <div
-                    v-for="(effect, i) in group.effects"
-                    :key="i"
-                    class="flex items-center gap-3 text-sm py-1 px-2 rounded bg-surface-elevated">
-                    <GameIcon v-if="effect.iconId" :icon-id="effect.iconId" size="xs" class="shrink-0" />
-                    <span class="flex-1 text-text-primary">{{ effect.label }}</span>
-                    <span class="font-semibold" :class="effect.numericValue > 0 ? 'text-green-400' : effect.numericValue < 0 ? 'text-red-400' : 'text-text-secondary'">
-                      {{ effect.formattedValue }}
-                    </span>
-                    <span class="text-[10px] text-text-dim shrink-0">{{ effect.source }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div v-else class="text-sm text-text-dim text-center py-8">
-              No mods assigned. Select equipment slots and add mods to see your build summary.
             </div>
           </div>
         </div>
+
+        <div v-if="effectGroups.length === 0" class="text-sm text-text-dim text-center py-4">
+          No mods assigned yet
+        </div>
       </div>
-    </Transition>
-  </Teleport>
+
+      <!-- Effect Totals view -->
+      <div v-else-if="activeTab === 'totals'" class="space-y-3">
+        <div v-if="aggregatedEffects.length === 0" class="text-sm text-text-dim text-center py-4">
+          No effects resolved yet
+        </div>
+        <div v-else class="space-y-1">
+          <div
+            v-for="agg in aggregatedEffects"
+            :key="agg.label"
+            class="flex items-center gap-2 py-1 px-2 rounded"
+            :class="agg.count > 1 ? 'bg-surface-elevated' : ''">
+            <EffectLine
+              :label="agg.label"
+              :formatted-value="agg.formattedValue"
+              :numeric-value="agg.numericValue"
+              :icon-id="agg.iconId"
+              class="flex-1" />
+            <span v-if="agg.count > 1" class="text-[10px] text-text-muted shrink-0">
+              {{ agg.count }} sources
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- By Ability view -->
+      <div v-else-if="activeTab === 'ability'" class="space-y-2">
+        <div v-if="abilityEffectGroups.length === 0" class="text-sm text-text-dim text-center py-4">
+          {{ store.presetAbilities.length === 0 ? 'No abilities assigned to ability bars' : 'No mod effects reference your abilities' }}
+        </div>
+        <AbilityDamageCard
+          v-for="group in abilityEffectGroups"
+          :key="group.abilityName"
+          :ability-name="group.abilityName"
+          :effects="group.effects" />
+      </div>
+    </div>
+
+    <div v-else class="text-sm text-text-dim text-center py-8">
+      No mods assigned. Select equipment slots and add mods to see your build summary.
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useBuildPlannerStore } from '../../../stores/buildPlannerStore'
-import {
-  EQUIPMENT_SLOTS,
-  AUGMENT_CP_COST,
-  getSlotCraftingPoints,
-} from '../../../types/buildPlanner'
+import { useGameDataStore } from '../../../stores/gameDataStore'
+import { EQUIPMENT_SLOTS } from '../../../types/buildPlanner'
 import type { BuildPresetMod } from '../../../types/buildPlanner'
-import GameIcon from '../../Shared/GameIcon.vue'
+import { formatStatValue } from '../../../composables/useBuildStats'
+import EffectLine from './EffectLine.vue'
+import AbilityDamageCard from './AbilityDamageCard.vue'
 
 const VIEW_TABS = [
   { id: 'skill', label: 'By Skill' },
@@ -240,8 +113,8 @@ const VIEW_TABS = [
 
 type ViewTab = typeof VIEW_TABS[number]['id']
 
-const showPanel = defineModel<boolean>({ default: false })
 const store = useBuildPlannerStore()
+const gameData = useGameDataStore()
 const loadingEffects = ref(false)
 const activeTab = ref<ViewTab>('skill')
 const resolvedEffects = ref<Record<string, string[]>>({})
@@ -259,14 +132,6 @@ interface StructuredEffect {
 }
 const structuredEffects = ref<Record<string, StructuredEffect[]>>({})
 
-function modsForSlot(slotId: string) {
-  return store.presetMods.filter(m => m.equip_slot === slotId && !m.is_augment)
-}
-
-function hasAugment(slotId: string) {
-  return store.presetMods.some(m => m.equip_slot === slotId && m.is_augment)
-}
-
 function slotLabel(slotId: string): string {
   return EQUIPMENT_SLOTS.find(s => s.id === slotId)?.label ?? slotId
 }
@@ -274,24 +139,6 @@ function slotLabel(slotId: string): string {
 function modKey(mod: BuildPresetMod): string {
   return `${mod.power_name}:${mod.tier ?? 0}`
 }
-
-const totalCPBudget = computed(() => {
-  let total = 0
-  for (const slot of EQUIPMENT_SLOTS) {
-    total += getSlotCraftingPoints(store.getSlotItem(slot.id))
-  }
-  return total
-})
-
-const totalCPUsedByAugments = computed(() => {
-  let used = 0
-  for (const slot of EQUIPMENT_SLOTS) {
-    if (store.slotHasAugment[slot.id]) {
-      used += AUGMENT_CP_COST
-    }
-  }
-  return used
-})
 
 interface EffectGroup {
   label: string
@@ -384,33 +231,13 @@ const aggregatedEffects = computed((): AggregatedEffect[] => {
   // Format aggregated values
   const results = Array.from(totals.values())
   for (const agg of results) {
-    agg.formattedValue = formatValue(agg.numericValue, agg.displayType)
+    agg.formattedValue = formatStatValue(agg.numericValue, agg.displayType)
   }
 
   // Sort: highest absolute value first
   results.sort((a, b) => Math.abs(b.numericValue) - Math.abs(a.numericValue))
   return results
 })
-
-function formatValue(value: number, displayType: string): string {
-  switch (displayType) {
-    case 'AsPercent':
-    case 'AsBuffMod':
-      return `+${Math.round(value * 100)}%`
-    case 'AsDebuffMod':
-      return `-${Math.round(Math.abs(value) * 100)}%`
-    case 'AsBuffDelta':
-    case 'AsInt':
-      return `+${Math.round(value)}`
-    case 'AsDebuffDelta':
-      return `${Math.round(value)}`
-    case 'AsBool':
-      return 'Yes'
-    default:
-      if (value === 0) return ''
-      return value > 0 ? `+${Math.round(value)}` : `${Math.round(value)}`
-  }
-}
 
 // ── By Ability view ──────────────────────────────────────────────────────────
 
@@ -427,136 +254,72 @@ interface AbilityEffectGroup {
   effects: AbilityEffectEntry[]
 }
 
-/** Strip trailing rank number from ability name (e.g. "Pound To Slag 9" -> "Pound To Slag") */
-function baseAbilityName(name: string): string {
-  return name.replace(/\s+\d+$/, '')
-}
+/**
+ * Ability effect groups built using the precomputed TSys↔Ability index.
+ * Uses a single batch call to the backend, then groups effects client-side.
+ */
+const abilityEffectGroups = ref<AbilityEffectGroup[]>([])
 
-const abilityEffectGroups = computed((): AbilityEffectGroup[] => {
-  const abilities = store.presetAbilities
-  if (abilities.length === 0) return []
-
-  // Deduplicate by base name (e.g. "First Aid 5" and "First Aid 3" both match "First Aid")
-  const baseNames = new Map<string, string>()
-  for (const a of abilities) {
-    if (!a.ability_name) continue
-    const base = baseAbilityName(a.ability_name)
-    // Keep the full name for display (prefer the highest rank)
-    if (!baseNames.has(base) || a.ability_name > baseNames.get(base)!) {
-      baseNames.set(base, a.ability_name)
-    }
+async function refreshAbilityEffectGroups() {
+  if (store.presetAbilities.length === 0 || store.presetMods.length === 0) {
+    abilityEffectGroups.value = []
+    return
   }
 
-  const groups: AbilityEffectGroup[] = []
-
-  for (const [baseName, displayName] of baseNames) {
-    const effects: AbilityEffectEntry[] = []
-    const baseNameLower = baseName.toLowerCase()
-
-    for (const mod of store.presetMods) {
-      const key = modKey(mod)
-      const modEffects = structuredEffects.value[key]
-      if (!modEffects) continue
-
-      for (const effect of modEffects) {
-        if (effect.label.toLowerCase().includes(baseNameLower)) {
-          effects.push({
-            label: effect.label,
-            numericValue: parseFloat(effect.value) || 0,
-            formattedValue: formatValue(parseFloat(effect.value) || 0, effect.displayType),
-            iconId: effect.iconId,
-            source: `${resolvedNames.value[key] ?? mod.power_name} (${slotLabel(mod.equip_slot)})`,
-          })
-        }
-      }
-    }
-
-    if (effects.length > 0) {
-      groups.push({ abilityName: displayName, effects })
-    }
+  const assignedAbilityIds = new Set(store.presetAbilities.map(a => a.ability_id))
+  const abilityNames = new Map<number, string>()
+  for (const a of store.presetAbilities) {
+    if (a.ability_name) abilityNames.set(a.ability_id, a.ability_name)
   }
 
-  // Sort by number of effects (most modified abilities first)
-  groups.sort((a, b) => b.effects.length - a.effects.length)
-  return groups
-})
+  // Collect unique power names from all assigned mods
+  // power_name is the internal_name — backend resolves to CDN key via index
+  const powerNames = [...new Set(store.presetMods.map(m => m.power_name))]
 
-// ── Item Attributes (base item effects: armor, combat refresh, etc.) ─────────
-
-interface ItemAttribute {
-  label: string
-  value: number
-  formattedValue: string
-  iconId: number | null
-}
-
-const itemAttributes = ref<ItemAttribute[]>([])
-
-async function resolveItemAttributes() {
-  const totals = new Map<string, { value: number; displayType: string; iconId: number | null }>()
-
-  for (const slot of EQUIPMENT_SLOTS) {
-    const slotItem = store.getSlotItem(slot.id)
-    if (!slotItem || slotItem.item_id === 0) continue
-
+  // Single batch call — backend accepts internal names or CDN keys, O(1) per key
+  let tsysAbilityMap: Record<string, number[]> = {}
+  if (powerNames.length > 0) {
     try {
-      const item = await invoke<{
-        effect_descs: string[]
-      } | null>('resolve_item', { reference: String(slotItem.item_id) })
-      if (!item?.effect_descs?.length) continue
+      tsysAbilityMap = await gameData.getTsysAbilityMap(powerNames)
+    } catch { /* ignore */ }
+  }
 
-      const resolved = await invoke<Array<{
-        label: string
-        value: string
-        display_type: string
-        formatted: string
-        icon_id: number | null
-      }>>('resolve_effect_descs', { descs: item.effect_descs })
+  // Group effects by ability
+  const groups = new Map<number, AbilityEffectEntry[]>()
 
-      for (const eff of resolved) {
-        const numVal = parseFloat(eff.value) || 0
-        if (numVal === 0 && eff.display_type !== 'AsBool') continue
+  for (const mod of store.presetMods) {
+    const key = modKey(mod)
 
-        const existing = totals.get(eff.label)
-        if (existing) {
-          existing.value += numVal
-        } else {
-          totals.set(eff.label, {
-            value: numVal,
-            displayType: eff.display_type,
-            iconId: eff.icon_id,
-          })
-        }
+    const abilityIds = tsysAbilityMap[mod.power_name]
+    if (!abilityIds) continue
+
+    const matchedIds = abilityIds.filter(id => assignedAbilityIds.has(id))
+    if (matchedIds.length === 0) continue
+
+    const modEffects = structuredEffects.value[key]
+    if (!modEffects) continue
+
+    for (const abilityId of matchedIds) {
+      if (!groups.has(abilityId)) groups.set(abilityId, [])
+      for (const effect of modEffects) {
+        groups.get(abilityId)!.push({
+          label: effect.label,
+          numericValue: parseFloat(effect.value) || 0,
+          formattedValue: formatStatValue(parseFloat(effect.value) || 0, effect.displayType),
+          iconId: effect.iconId,
+          source: `${resolvedNames.value[key] ?? mod.power_name} (${slotLabel(mod.equip_slot)})`,
+        })
       }
-    } catch {
-      // Item might not resolve
     }
   }
 
-  const results: ItemAttribute[] = []
-  for (const [label, data] of totals) {
-    results.push({
-      label,
-      value: data.value,
-      formattedValue: formatValue(data.value, data.displayType),
-      iconId: data.iconId,
-    })
+  const result: AbilityEffectGroup[] = []
+  for (const [abilityId, effects] of groups) {
+    const name = abilityNames.get(abilityId) ?? `Ability #${abilityId}`
+    result.push({ abilityName: name, effects })
   }
-  // Sort by absolute value descending
-  results.sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
-  itemAttributes.value = results
-}
-
-// ── Armor badge styling ──────────────────────────────────────────────────────
-
-function armorBadge(type: string): string {
-  switch (type) {
-    case 'Cloth': return 'bg-blue-900/30 text-blue-300'
-    case 'Leather': return 'bg-amber-900/30 text-amber-300'
-    case 'Metal': return 'bg-slate-600/30 text-slate-300'
-    case 'Organic': return 'bg-green-900/30 text-green-300'
-    default: return 'bg-surface-hover text-text-dim'
-  }
+  result.sort((a, b) => b.effects.length - a.effects.length)
+  abilityEffectGroups.value = result
 }
 
 // ── Data loading ─────────────────────────────────────────────────────────────
@@ -615,38 +378,17 @@ async function resolveAllEffects() {
     resolvedNames.value = names
     structuredEffects.value = structured
     loadingEffects.value = false
+    // Refresh ability cross-reference after effects are resolved
+    refreshAbilityEffectGroups()
   }
 }
 
-// Load effects and item attributes when panel opens
-watch(showPanel, (open) => {
-  if (open) {
-    if (store.presetMods.length > 0) resolveAllEffects()
-    resolveItemAttributes()
-  }
+// Load effects when mods change (array reference changes on preset load)
+onMounted(() => {
+  if (store.presetMods.length > 0) resolveAllEffects()
 })
 
-// Re-resolve if mods change while panel is open
-watch(() => store.presetMods.length, () => {
-  if (showPanel.value) resolveAllEffects()
+watch(() => store.presetMods, () => {
+  resolveAllEffects()
 })
 </script>
-
-<style scoped>
-.slide-enter-active,
-.slide-leave-active {
-  transition: all 0.25s ease;
-}
-.slide-enter-active .absolute,
-.slide-leave-active .absolute {
-  transition: opacity 0.25s ease;
-}
-.slide-enter-from,
-.slide-leave-to {
-  opacity: 0;
-}
-.slide-enter-from .relative,
-.slide-leave-to .relative {
-  transform: translateX(100%);
-}
-</style>

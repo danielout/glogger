@@ -122,6 +122,12 @@
                 </template>
               </div>
             </div>
+            <button
+              class="bg-transparent border-none cursor-pointer px-1 py-0 text-sm shrink-0 transition-colors"
+              :class="isFav ? 'text-accent-gold' : 'text-text-dim hover:text-accent-gold'"
+              :title="isFav ? 'Remove from favorites' : 'Add to favorites'"
+              @click="dataBrowserStore.toggleFavorite({ type: 'quest', reference: selected.internal_name, label: selected.raw?.Name || selected.internal_name })"
+            >&#x2605;</button>
             <button class="bg-transparent border-none text-text-dim cursor-pointer px-1 py-0 text-sm shrink-0 hover:text-accent-red" @click="clearSelection">✕</button>
           </div>
 
@@ -257,6 +263,7 @@ import PaneLayout from "../Shared/PaneLayout.vue";
 import { ref, computed, onMounted, watch } from "vue";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useKeyboard } from "../../composables/useKeyboard";
+import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { QuestInfo, QuestReward, QuestRequirement, EntitySources } from "../../types/gameData";
 import SourcesPanel from "../Shared/SourcesPanel.vue";
@@ -271,6 +278,11 @@ const props = defineProps<{
 }>();
 
 const store = useGameDataStore();
+const dataBrowserStore = useDataBrowserStore();
+
+const isFav = computed(() =>
+  selected.value ? dataBrowserStore.isFavorite("quest", selected.value.internal_name) : false
+);
 
 const query = ref("");
 const allQuests = ref<QuestInfo[]>([]);
@@ -426,6 +438,7 @@ useKeyboard({
 function selectQuest(quest: QuestInfo) {
   selected.value = quest;
   sources.value = null;
+  dataBrowserStore.addToHistory({ type: "quest", reference: quest.internal_name, label: quest.raw?.Name || quest.internal_name });
 
   // Load sources (items that bestow this quest)
   sourcesLoading.value = true;

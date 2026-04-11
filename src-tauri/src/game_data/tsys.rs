@@ -4,6 +4,16 @@ use std::collections::HashMap;
 
 // ── Parsed structs (app shape) ───────────────────────────────────────────────
 
+/// A single tier within a TSys power.
+#[derive(Debug, Serialize, Clone)]
+pub struct TsysTierInfo {
+    pub effect_descs: Vec<String>,
+    pub min_level: Option<u32>,
+    pub max_level: Option<u32>,
+    pub min_rarity: Option<String>,
+    pub skill_level_prereq: Option<u32>,
+}
+
 /// A single TSys (crafting system) client info entry.
 #[derive(Debug, Serialize, Clone)]
 pub struct TsysClientInfo {
@@ -12,7 +22,7 @@ pub struct TsysClientInfo {
     pub slots: Vec<String>,
     pub prefix: Option<String>,
     pub suffix: Option<String>,
-    pub tiers: Option<Value>,
+    pub tiers: HashMap<String, TsysTierInfo>,
     pub is_unavailable: Option<bool>,
     pub is_hidden_from_transmutation: Option<bool>,
 
@@ -48,7 +58,7 @@ impl TsysData {
                     slots: str_array_field(&value, "Slots"),
                     prefix: str_field(&value, "Prefix"),
                     suffix: str_field(&value, "Suffix"),
-                    tiers: value.get("Tiers").cloned(),
+                    tiers: parse_tiers(value.get("Tiers")),
                     is_unavailable: bool_field(&value, "IsUnavailable"),
                     is_hidden_from_transmutation: bool_field(&value, "IsHiddenFromTransmutation"),
                     raw_json: value,
@@ -67,10 +77,35 @@ impl TsysData {
     }
 }
 
+// ── Tier parsing ────────────────────────────────────────────────────────────
+
+fn parse_tiers(value: Option<&Value>) -> HashMap<String, TsysTierInfo> {
+    let Some(obj) = value.and_then(|v| v.as_object()) else {
+        return HashMap::new();
+    };
+
+    obj.iter()
+        .map(|(key, tier)| {
+            let info = TsysTierInfo {
+                effect_descs: str_array_field(tier, "EffectDescs"),
+                min_level: u32_field(tier, "MinLevel"),
+                max_level: u32_field(tier, "MaxLevel"),
+                min_rarity: str_field(tier, "MinRarity"),
+                skill_level_prereq: u32_field(tier, "SkillLevelPrereq"),
+            };
+            (key.clone(), info)
+        })
+        .collect()
+}
+
 // ── Field extraction helpers ─────────────────────────────────────────────────
 
 fn str_field(value: &Value, key: &str) -> Option<String> {
     value.get(key)?.as_str().map(|s| s.to_string())
+}
+
+fn u32_field(value: &Value, key: &str) -> Option<u32> {
+    value.get(key)?.as_u64().map(|n| n as u32)
 }
 
 fn bool_field(value: &Value, key: &str) -> Option<bool> {

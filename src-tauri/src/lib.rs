@@ -29,7 +29,11 @@ use tokio::sync::RwLock;
 use cdn_commands::{
     force_refresh_cdn,
     get_abilities_for_skill,
+    get_ability_families_for_skill,
+    get_ability_family,
     get_ability_sources,
+    get_skills_with_ability_counts,
+    search_ability_families,
     get_all_item_keywords,
     get_all_npcs,
     get_all_player_titles,
@@ -37,6 +41,7 @@ use cdn_commands::{
     get_all_skills,
     get_cache_status,
     get_combat_skills,
+    get_cp_recipes_for_slot,
     get_effect,
     get_equip_slots,
     get_icon_path,
@@ -60,6 +65,9 @@ use cdn_commands::{
     get_tsys_power_info,
     get_tsys_powers_for_slot,
     get_tsys_profiles,
+    get_tsys_for_ability,
+    get_abilities_for_tsys,
+    get_tsys_ability_map,
     search_tsys,
     get_xp_table_for_skill,
     init_game_data,
@@ -104,9 +112,10 @@ use db::admin_commands::{force_rebuild_cdn_tables, get_database_stats, purge_pla
 use db::aggregate_commands::{get_aggregate_inventory, get_aggregate_skills, get_aggregate_wealth};
 use db::build_planner_commands::{
     clear_build_preset_slot_item, create_build_preset, delete_build_preset,
-    get_build_preset_abilities, get_build_preset_mods, get_build_preset_slot_items,
-    get_build_presets, set_build_preset_abilities, set_build_preset_mods,
-    set_build_preset_slot_item, update_build_preset, update_build_preset_slot_props,
+    get_build_preset_abilities, get_build_preset_cp_recipes, get_build_preset_mods,
+    get_build_preset_slot_items, get_build_presets, set_build_preset_abilities,
+    set_build_preset_cp_recipes, set_build_preset_mods, set_build_preset_slot_item,
+    update_build_preset, update_build_preset_slot_props,
 };
 use db::character_commands::{
     compare_snapshots, get_character_snapshots, get_characters, get_snapshot_active_quests,
@@ -324,6 +333,10 @@ pub fn run() {
             get_all_skills,
             // Ability queries
             get_abilities_for_skill,
+            get_ability_families_for_skill,
+            get_ability_family,
+            search_ability_families,
+            get_skills_with_ability_counts,
             // Recipe queries
             get_recipes_for_item,
             get_recipes_using_item,
@@ -346,6 +359,9 @@ pub fn run() {
             get_all_tsys,
             search_tsys,
             get_tsys_profiles,
+            get_tsys_for_ability,
+            get_abilities_for_tsys,
+            get_tsys_ability_map,
             // Player Title queries
             get_all_player_titles,
             search_player_titles,
@@ -493,6 +509,7 @@ pub fn run() {
             // CDN - Build planner queries
             get_combat_skills,
             get_tsys_powers_for_slot,
+            get_cp_recipes_for_slot,
             // Build planner persistence
             create_build_preset,
             get_build_presets,
@@ -506,6 +523,8 @@ pub fn run() {
             update_build_preset_slot_props,
             set_build_preset_abilities,
             get_build_preset_abilities,
+            get_build_preset_cp_recipes,
+            set_build_preset_cp_recipes,
             // Game state queries
             get_game_state_skills,
             get_game_state_attributes,
