@@ -21,7 +21,6 @@ Small tasks and notes that don't belong in a dedicated plan.
     UnloadTime: 4.145100 ms
     ```
 
-- BUG: Cook's Helper needs to make sure it accounts for ice conjuration.
 
 ---
 

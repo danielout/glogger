@@ -96,14 +96,17 @@ pub fn parse_loot_items(loot_text: &str) -> (Vec<LootItem>, bool) {
     let speed_bonus_earned = loot_text.contains("(speed bonus!)");
 
     // Primary item: everything before " collected!"
+    // May include quantity for ring bonus, e.g. "Lapis Lazuli x2 collected!"
     if let Some(collected_idx) = loot_text.find(" collected!") {
-        let primary_name = loot_text[..collected_idx].trim();
-        items.push(LootItem {
-            item_name: primary_name.to_string(),
-            quantity: 1,
-            is_speed_bonus: false,
-            is_primary: true,
-        });
+        let primary_text = loot_text[..collected_idx].trim();
+        if let Some((name, qty)) = parse_item_with_quantity(primary_text) {
+            items.push(LootItem {
+                item_name: name,
+                quantity: qty,
+                is_speed_bonus: false,
+                is_primary: true,
+            });
+        }
     }
 
     // Secondary items: after "Also found "
@@ -157,4 +160,58 @@ pub fn parse_item_with_quantity(text: &str) -> Option<(String, u32)> {
     }
     // Just "Item Name"
     Some((text.to_string(), 1))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_loot_simple() {
+        let (items, bonus) = parse_loot_items("Fluorite collected!");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].item_name, "Fluorite");
+        assert_eq!(items[0].quantity, 1);
+        assert!(items[0].is_primary);
+        assert!(!bonus);
+    }
+
+    #[test]
+    fn test_parse_loot_with_speed_bonus() {
+        let (items, bonus) =
+            parse_loot_items("Blue Spinel collected! Also found Rubywall Crystal x2 (speed bonus!)");
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].item_name, "Blue Spinel");
+        assert_eq!(items[0].quantity, 1);
+        assert!(items[0].is_primary);
+        assert_eq!(items[1].item_name, "Rubywall Crystal");
+        assert_eq!(items[1].quantity, 2);
+        assert!(items[1].is_speed_bonus);
+        assert!(bonus);
+    }
+
+    #[test]
+    fn test_parse_loot_primary_with_quantity() {
+        // Ring bonus can grant extra primary items: "Lapis Lazuli x2 collected!"
+        let (items, bonus) =
+            parse_loot_items("Lapis Lazuli x2 collected! Also found Azurite (speed bonus!)");
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].item_name, "Lapis Lazuli");
+        assert_eq!(items[0].quantity, 2);
+        assert!(items[0].is_primary);
+        assert_eq!(items[1].item_name, "Azurite");
+        assert_eq!(items[1].quantity, 1);
+        assert!(items[1].is_speed_bonus);
+        assert!(bonus);
+    }
+
+    #[test]
+    fn test_parse_loot_primary_quantity_no_bonus() {
+        let (items, bonus) = parse_loot_items("Obsidian x2 collected!");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].item_name, "Obsidian");
+        assert_eq!(items[0].quantity, 2);
+        assert!(items[0].is_primary);
+        assert!(!bonus);
+    }
 }
