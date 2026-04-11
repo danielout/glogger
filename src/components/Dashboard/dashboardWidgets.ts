@@ -11,6 +11,7 @@ import FavorChangesWidget from './widgets/FavorChangesWidget.vue'
 import CriticalResourcesWidget from './widgets/CriticalResourcesWidget.vue'
 import StatehelmSummaryWidget from './widgets/StatehelmSummaryWidget.vue'
 import WatchwordDetectionsWidget from './widgets/WatchwordDetectionsWidget.vue'
+import DeathTrackerWidget from './widgets/DeathTrackerWidget.vue'
 
 export type WidgetSize = 'small' | 'medium' | 'large'
 
@@ -50,6 +51,7 @@ export const DASHBOARD_WIDGETS: DashboardWidget[] = [
   { id: 'critical-resources', name: 'Critical Resources', component: CriticalResourcesWidget, defaultSize: 'small' },
   { id: 'statehelm-summary', name: 'Statehelm Gifting', component: StatehelmSummaryWidget, defaultSize: 'medium' },
   { id: 'watchword-detections', name: 'Watchword Alerts', component: WatchwordDetectionsWidget, defaultSize: 'medium' },
+  { id: 'death-tracker', name: 'Death Tracker', component: DeathTrackerWidget, defaultSize: 'medium' },
 ]
 
 /** Default card order — used when no user preferences exist */

@@ -132,6 +132,11 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 21)?;
     }
 
+    if current_version < 22 {
+        migration_v22_resuscitations(conn)?;
+        super::record_migration(conn, 22)?;
+    }
+
     Ok(())
 }
 
@@ -150,6 +155,27 @@ fn migration_v21_build_preset_cp_recipes(conn: &Connection) -> Result<()> {
             sort_order INTEGER DEFAULT 0
         );
         CREATE INDEX idx_build_preset_cp_recipes_preset ON build_preset_cp_recipes(preset_id);"
+    )?;
+    Ok(())
+}
+
+/// Migration V22: Resuscitation tracking — records who rezzed whom and when.
+fn migration_v22_resuscitations(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE character_resuscitations (
+            id INTEGER PRIMARY KEY,
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            occurred_at TEXT NOT NULL,
+            caster_name TEXT NOT NULL,
+            target_name TEXT NOT NULL,
+            success INTEGER NOT NULL DEFAULT 1,
+            area TEXT
+        );
+        CREATE INDEX idx_resuscitations_character_server
+            ON character_resuscitations(character_name, server_name);
+        CREATE INDEX idx_resuscitations_occurred_at
+            ON character_resuscitations(occurred_at);"
     )?;
     Ok(())
 }

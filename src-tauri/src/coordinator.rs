@@ -1,5 +1,6 @@
 use crate::cdn_commands::GameDataState;
 use crate::chat_combat_parser::parse_combat_message;
+use crate::chat_resuscitate_parser::parse_resuscitate_message;
 use crate::chat_status_parser::{parse_status_message, ChatStatusEvent};
 use crate::db::chat_commands::insert_chat_messages;
 use crate::db::queries::log_positions;
@@ -757,6 +758,16 @@ impl DataIngestCoordinator {
                         }
                     }
 
+                    // Check Action Emotes channel for resuscitate events
+                    if let Some(rez_event) = parse_resuscitate_message(&msg) {
+                        if let Err(e) = self.persist_resuscitate_event(&rez_event) {
+                            eprintln!("Failed to persist resuscitate event: {}", e);
+                        }
+                        self.app_handle
+                            .emit("character-resuscitated", &rez_event)
+                            .ok();
+                    }
+
                     messages.push(msg);
                 }
                 LogEvent::ServerDetected {
@@ -980,6 +991,59 @@ impl DataIngestCoordinator {
                 .map_err(|e| format!("Failed to insert damage source: {}", e))?;
             }
         }
+
+        Ok(())
+    }
+
+    /// Persist a resuscitate event (successful or failed) to the database.
+    /// We record all resuscitate events (not just those involving the active character)
+    /// so the player can see who they rezzed and who rezzed them.
+    fn persist_resuscitate_event(
+        &self,
+        event: &crate::chat_resuscitate_parser::ChatResuscitateEvent,
+    ) -> Result<(), String> {
+        let (timestamp, caster_name, target_name, success) = match event {
+            crate::chat_resuscitate_parser::ChatResuscitateEvent::Resuscitated {
+                timestamp,
+                caster_name,
+                target_name,
+            } => (timestamp, caster_name, target_name, true),
+            crate::chat_resuscitate_parser::ChatResuscitateEvent::ResuscitateFailed {
+                timestamp,
+                caster_name,
+                target_name,
+            } => (timestamp, caster_name, target_name, false),
+        };
+
+        let character_name = self
+            .game_state
+            .get_active_character()
+            .unwrap_or("Unknown");
+        let server_name = self
+            .game_state
+            .get_active_server()
+            .unwrap_or("Unknown");
+        let area = self.current_area.as_deref();
+
+        let conn = self
+            .db_pool
+            .get()
+            .map_err(|e| format!("Database connection error: {e}"))?;
+        conn.execute(
+            "INSERT INTO character_resuscitations
+                (character_name, server_name, occurred_at, caster_name, target_name, success, area)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            rusqlite::params![
+                character_name,
+                server_name,
+                timestamp,
+                caster_name,
+                target_name,
+                success,
+                area,
+            ],
+        )
+        .map_err(|e| format!("Failed to insert resuscitation: {}", e))?;
 
         Ok(())
     }

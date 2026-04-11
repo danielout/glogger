@@ -58,6 +58,7 @@ Per-screen documentation organized by view.
   - [widget-critical-resources.md](features/screens/dashboard/widget-critical-resources.md) — Critical Resources widget: tracked item quantities.
   - [widget-statehelm-summary.md](features/screens/dashboard/widget-statehelm-summary.md) — Statehelm Gifting widget: weekly gift progress.
   - [widget-watchword-alerts.md](features/screens/dashboard/widget-watchword-alerts.md) — Watchword Alerts widget: recent match feed.
+  - [widget-death-tracker.md](features/screens/dashboard/widget-death-tracker.md) — Death Tracker widget: recent deaths, rez tracking, top rezzers.
 
 ### Character
 - [character.md](features/screens/character.md) — Character screen: architecture, component hierarchy, data sources.
