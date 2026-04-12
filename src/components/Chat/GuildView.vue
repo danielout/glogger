@@ -10,7 +10,9 @@
       :messages="messages"
       :loading="loading"
       :has-more="hasMore"
+      :sort-order="sortOrder"
       @load-more="loadMore"
+      @toggle-sort="toggleSort"
     />
   </div>
 </template>
@@ -25,6 +27,7 @@ const messages = ref<ChatMessage[]>([])
 const loading = ref(false)
 const hasMore = ref(true)
 const offset = ref(0)
+const sortOrder = ref<'asc' | 'desc'>('desc')
 const LIMIT = 100
 
 async function loadMessages() {
@@ -33,7 +36,8 @@ async function loadMessages() {
     const filter: ChatFilter = {
       channel: 'Guild',
       limit: LIMIT,
-      offset: offset.value
+      offset: offset.value,
+      sortOrder: sortOrder.value,
     }
 
     const newMessages = await invoke<ChatMessage[]>('get_chat_messages', filter)
@@ -58,6 +62,13 @@ function loadMore() {
 }
 
 function refresh() {
+  offset.value = 0
+  hasMore.value = true
+  loadMessages()
+}
+
+function toggleSort() {
+  sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc'
   offset.value = 0
   hasMore.value = true
   loadMessages()

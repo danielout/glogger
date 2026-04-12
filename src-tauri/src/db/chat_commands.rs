@@ -82,6 +82,8 @@ pub struct ChatMessageFilter {
     pub tell_partner: Option<String>,
     pub limit: i64,
     pub offset: i64,
+    /// "asc" for oldest-first, "desc" (default) for newest-first
+    pub sort_order: String,
 }
 
 impl Default for ChatMessageFilter {
@@ -97,6 +99,7 @@ impl Default for ChatMessageFilter {
             tell_partner: None,
             limit: 100,
             offset: 0,
+            sort_order: "desc".to_string(),
         }
     }
 }
@@ -215,10 +218,11 @@ pub fn get_chat_messages(
         format!(" WHERE {}", conditions.join(" AND "))
     };
 
+    let order_dir = if filter.sort_order == "asc" { "ASC" } else { "DESC" };
     let query = format!(
         "SELECT cm.id, cm.timestamp, cm.channel, cm.sender, cm.message, cm.is_system, cm.from_player \
-         {} {} ORDER BY cm.timestamp DESC LIMIT {} OFFSET {}",
-        from_clause, where_clause, filter.limit, filter.offset
+         {} {} ORDER BY cm.timestamp {} LIMIT {} OFFSET {}",
+        from_clause, where_clause, order_dir, filter.limit, filter.offset
     );
 
     let params_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();

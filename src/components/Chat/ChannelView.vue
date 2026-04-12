@@ -46,7 +46,9 @@
         :messages="messages"
         :loading="loading"
         :has-more="hasMore"
+        :sort-order="sortOrder"
         @load-more="loadMore"
+        @toggle-sort="toggleSort"
       />
     </div>
   </div>
@@ -65,6 +67,7 @@ const loading = ref(false)
 const hasMore = ref(true)
 const offset = ref(0)
 const searchText = ref('')
+const sortOrder = ref<'asc' | 'desc'>('desc')
 const LIMIT = 100
 
 let searchTimeout: number | null = null
@@ -109,7 +112,8 @@ async function loadMessages() {
       channel: selectedChannel.value,
       searchText: searchText.value || undefined,
       limit: LIMIT,
-      offset: offset.value
+      offset: offset.value,
+      sortOrder: sortOrder.value,
     }
 
     const newMessages = await invoke<ChatMessage[]>('get_chat_messages', filter)
@@ -146,6 +150,13 @@ function onSearchInput() {
     hasMore.value = true
     loadMessages()
   }, 300)
+}
+
+function toggleSort() {
+  sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc'
+  offset.value = 0
+  hasMore.value = true
+  loadMessages()
 }
 
 onMounted(() => {

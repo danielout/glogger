@@ -10,14 +10,25 @@
       <p class="text-sm text-text-dim">Try importing chat logs from the Management tab</p>
     </div>
     <div v-else class="relative flex-1 overflow-y-auto p-4" ref="messagesContainer" @scroll="onScroll">
-      <!-- Jump to present button (shown when scrolled away from the top) -->
-      <button
-        v-if="showJumpToPresent"
-        @click="jumpToPresent"
-        class="sticky top-2 left-1/2 -translate-x-1/2 z-10 px-4 py-1.5 bg-accent-gold/90 text-surface-base text-xs font-semibold rounded-full shadow-lg cursor-pointer hover:bg-accent-gold transition-all"
-      >
-        &#8593; Jump to Present
-      </button>
+      <!-- Sort toggle + Jump to present -->
+      <div class="sticky top-0 z-10 flex justify-between items-center pb-2">
+        <button
+          v-if="sortOrder"
+          @click="emit('toggle-sort')"
+          class="px-3 py-1 bg-surface-elevated border border-border-default text-text-secondary text-xs rounded cursor-pointer hover:bg-surface-hover hover:text-text-primary transition-all"
+          :title="sortOrder === 'desc' ? 'Showing newest first — click for oldest first' : 'Showing oldest first — click for newest first'"
+        >
+          {{ sortOrder === 'desc' ? '&#9660; Newest first' : '&#9650; Oldest first' }}
+        </button>
+        <span v-else />
+        <button
+          v-if="showJumpToPresent"
+          @click="jumpToPresent"
+          class="px-4 py-1 bg-accent-gold/90 text-surface-base text-xs font-semibold rounded-full shadow-lg cursor-pointer hover:bg-accent-gold transition-all"
+        >
+          &#8593; Jump to Present
+        </button>
+      </div>
       <!-- Tell conversation layout -->
       <template v-if="isTellView">
         <div
@@ -101,6 +112,7 @@ const props = defineProps<{
   showChannel?: boolean
   hasMore?: boolean
   autoScroll?: boolean
+  sortOrder?: 'asc' | 'desc'
 }>()
 
 const isTellView = computed(() => {
@@ -111,6 +123,7 @@ const isTellView = computed(() => {
 
 const emit = defineEmits<{
   'load-more': []
+  'toggle-sort': []
 }>()
 
 const messagesContainer = ref<HTMLElement>()

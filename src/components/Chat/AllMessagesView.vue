@@ -41,7 +41,9 @@
       :loading="loading"
       :has-more="hasMore"
       :show-channel="true"
+      :sort-order="sortOrder"
       @load-more="loadMore"
+      @toggle-sort="toggleSort"
     />
   </div>
 </template>
@@ -59,6 +61,7 @@ const offset = ref(0)
 const searchText = ref('')
 const itemNameFilter = ref('')
 const hasItemLinksFilter = ref(false)
+const sortOrder = ref<'asc' | 'desc'>('desc')
 const LIMIT = 100
 
 let searchTimeout: number | null = null
@@ -71,7 +74,8 @@ async function loadMessages() {
       itemName: itemNameFilter.value || undefined,
       hasItemLinks: hasItemLinksFilter.value || undefined,
       limit: LIMIT,
-      offset: offset.value
+      offset: offset.value,
+      sortOrder: sortOrder.value,
     }
 
     const newMessages = await invoke<ChatMessage[]>('get_chat_messages', filter)
@@ -111,6 +115,13 @@ function onSearchInput() {
 }
 
 function onFilterChange() {
+  offset.value = 0
+  hasMore.value = true
+  loadMessages()
+}
+
+function toggleSort() {
+  sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc'
   offset.value = 0
   hasMore.value = true
   loadMessages()

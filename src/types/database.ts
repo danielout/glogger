@@ -268,6 +268,7 @@ export interface ChatFilter extends Record<string, unknown> {
   tellPartner?: string;
   limit?: number;
   offset?: number;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface ScanResult {

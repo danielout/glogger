@@ -208,6 +208,7 @@ pub async fn get_chat_messages(
     tell_partner: Option<String>,
     limit: Option<i64>,
     offset: Option<i64>,
+    sort_order: Option<String>,
     db_pool: State<'_, DbPool>,
 ) -> Result<Vec<chat_commands::ChatMessageRow>, String> {
     let conn = db_pool.get().map_err(|e| format!("Database error: {e}"))?;
@@ -223,6 +224,7 @@ pub async fn get_chat_messages(
         tell_partner,
         limit: limit.unwrap_or(100),
         offset: offset.unwrap_or(0),
+        sort_order: sort_order.unwrap_or_else(|| "desc".to_string()),
     };
 
     chat_commands::get_chat_messages(&conn, &filter)
