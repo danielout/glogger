@@ -459,7 +459,7 @@ impl SurveyParser {
                     PlayerEvent::ItemAdded { item_name, .. } => {
                         !self.known_surveys.contains_key(item_name.as_str())
                     }
-                    PlayerEvent::ItemStackChanged { delta, .. } if *delta > 0 => true,
+                    PlayerEvent::ItemStackChanged { delta, from_server, .. } if *delta > 0 && !from_server => true,
                     _ => false,
                 };
                 if !is_loot_event {
@@ -525,11 +525,13 @@ impl SurveyParser {
                 }
 
                 // Stack increased while actively mining our node → motherlode loot
+                // Ignore from_server events (inventory sync on zone change)
                 PlayerEvent::ItemStackChanged {
                     item_name: Some(name),
                     delta,
+                    from_server,
                     ..
-                } if mining_started && *delta > 0 => {
+                } if mining_started && *delta > 0 && !from_server => {
                     loot_items.push(LootItem {
                         item_name: name.clone(),
                         quantity: *delta as u32,
