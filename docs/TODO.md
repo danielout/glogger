@@ -21,7 +21,7 @@ Small tasks and notes that don't belong in a dedicated plan.
     UnloadTime: 4.145100 ms
     ```
 
-- FEAT: DASH WIDGET: Death Tracker. Quick links to last X latest deaths. Show Resuscitate ability cooldown timer (when we detect it used, start timer), who last rezzed you, and a "top 5" list of people most rezzed by you and who have rezzed you most.
+
 
 ---
 

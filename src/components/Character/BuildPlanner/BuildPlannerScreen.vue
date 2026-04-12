@@ -5,10 +5,17 @@
     </div>
 
     <!-- No preset selected -->
-    <EmptyState
-      v-if="!store.activePreset"
-      primary="No build selected"
-      secondary="Create a new build or select an existing one above." />
+    <div v-if="!store.activePreset" class="flex flex-col items-center justify-center h-full gap-3">
+      <EmptyState
+        primary="No build selected"
+        secondary="Create a new build or select an existing one above." />
+      <button
+        v-if="store.presets.length === 0"
+        class="px-3 py-1.5 text-sm bg-accent-gold/20 border border-accent-gold/40 text-accent-gold rounded cursor-pointer hover:bg-accent-gold/30"
+        @click="showCreate = true">
+        + New Build
+      </button>
+    </div>
 
     <!-- Three-panel PaneLayout -->
     <PaneLayout
@@ -33,13 +40,22 @@
         <BuildSummary />
       </template>
     </PaneLayout>
+
+    <ModalDialog
+      :show="showCreate"
+      title="New Build"
+      placeholder="Build name"
+      confirm-label="Create"
+      @update:show="showCreate = $event"
+      @confirm="handleCreate" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useBuildPlannerStore } from '../../../stores/buildPlannerStore'
 import EmptyState from '../../Shared/EmptyState.vue'
+import ModalDialog from '../../Shared/ModalDialog.vue'
 import PaneLayout from '../../Shared/PaneLayout.vue'
 import PaperDollLayout from './PaperDollLayout.vue'
 import SlotDetailPanel from './SlotDetailPanel.vue'
@@ -48,6 +64,12 @@ import BuildSummary from './BuildSummary.vue'
 import GlobalModSearch from './GlobalModSearch.vue'
 
 const store = useBuildPlannerStore()
+const showCreate = ref(false)
+
+async function handleCreate(name: string) {
+  if (!name) return
+  await store.createPreset(name)
+}
 
 onMounted(async () => {
   await Promise.all([
