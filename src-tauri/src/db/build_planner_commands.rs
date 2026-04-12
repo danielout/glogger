@@ -1,4 +1,5 @@
 use super::DbPool;
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use serde::{Deserialize, Serialize};
 /// Build planner persistence commands
 use tauri::State;
@@ -754,4 +755,265 @@ pub fn set_build_preset_cp_recipes(
     .ok();
 
     Ok(())
+}
+
+// ── Import/Export Commands ─────────────────────────────────────────────────
+
+/// Portable build format for sharing between players
+#[derive(Serialize, Deserialize)]
+struct ExportedBuild {
+    version: u32,
+    name: String,
+    skill_primary: Option<String>,
+    skill_secondary: Option<String>,
+    target_level: i32,
+    target_rarity: String,
+    notes: Option<String>,
+    mods: Vec<ExportedMod>,
+    slot_items: Vec<ExportedSlotItem>,
+    abilities: Vec<ExportedAbility>,
+    cp_recipes: Vec<ExportedCpRecipe>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct ExportedMod {
+    equip_slot: String,
+    power_name: String,
+    tier: Option<i32>,
+    is_augment: bool,
+    sort_order: i32,
+}
+
+#[derive(Serialize, Deserialize)]
+struct ExportedSlotItem {
+    equip_slot: String,
+    item_id: i64,
+    item_name: Option<String>,
+    slot_level: i32,
+    slot_rarity: String,
+    is_crafted: bool,
+    is_masterwork: bool,
+    slot_skill_primary: Option<String>,
+    slot_skill_secondary: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct ExportedAbility {
+    bar: String,
+    slot_position: i32,
+    ability_id: i64,
+    ability_name: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct ExportedCpRecipe {
+    equip_slot: String,
+    recipe_id: i64,
+    recipe_name: Option<String>,
+    cp_cost: i32,
+    effect_type: String,
+    effect_key: String,
+    sort_order: i32,
+}
+
+#[tauri::command]
+pub fn export_build_preset(
+    db: State<'_, DbPool>,
+    preset_id: i64,
+) -> Result<String, String> {
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
+
+    let (name, skill_primary, skill_secondary, target_level, target_rarity, notes) = conn
+        .query_row(
+            "SELECT name, skill_primary, skill_secondary, target_level, target_rarity, notes
+             FROM build_presets WHERE id = ?1",
+            [preset_id],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, Option<String>>(1)?,
+                    row.get::<_, Option<String>>(2)?,
+                    row.get::<_, i32>(3)?,
+                    row.get::<_, String>(4)?,
+                    row.get::<_, Option<String>>(5)?,
+                ))
+            },
+        )
+        .map_err(|e| format!("Preset not found: {e}"))?;
+
+    let mut stmt = conn
+        .prepare("SELECT equip_slot, power_name, tier, is_augment, sort_order FROM build_preset_mods WHERE preset_id = ?1 ORDER BY equip_slot, sort_order")
+        .map_err(|e| format!("Failed to query mods: {e}"))?;
+    let mods: Vec<ExportedMod> = stmt
+        .query_map([preset_id], |row| {
+            Ok(ExportedMod {
+                equip_slot: row.get(0)?,
+                power_name: row.get(1)?,
+                tier: row.get(2)?,
+                is_augment: row.get::<_, i32>(3).map(|v| v != 0)?,
+                sort_order: row.get(4)?,
+            })
+        })
+        .map_err(|e| format!("Mod query failed: {e}"))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Mod parse error: {e}"))?;
+
+    let mut stmt = conn
+        .prepare("SELECT equip_slot, item_id, item_name, slot_level, slot_rarity, is_crafted, is_masterwork, slot_skill_primary, slot_skill_secondary FROM build_preset_slot_items WHERE preset_id = ?1")
+        .map_err(|e| format!("Failed to query slot items: {e}"))?;
+    let slot_items: Vec<ExportedSlotItem> = stmt
+        .query_map([preset_id], |row| {
+            Ok(ExportedSlotItem {
+                equip_slot: row.get(0)?,
+                item_id: row.get(1)?,
+                item_name: row.get(2)?,
+                slot_level: row.get(3)?,
+                slot_rarity: row.get(4)?,
+                is_crafted: row.get::<_, i32>(5).map(|v| v != 0)?,
+                is_masterwork: row.get::<_, i32>(6).map(|v| v != 0)?,
+                slot_skill_primary: row.get(7)?,
+                slot_skill_secondary: row.get(8)?,
+            })
+        })
+        .map_err(|e| format!("Slot item query failed: {e}"))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Slot item parse error: {e}"))?;
+
+    let mut stmt = conn
+        .prepare("SELECT bar, slot_position, ability_id, ability_name FROM build_preset_abilities WHERE preset_id = ?1 ORDER BY bar, slot_position")
+        .map_err(|e| format!("Failed to query abilities: {e}"))?;
+    let abilities: Vec<ExportedAbility> = stmt
+        .query_map([preset_id], |row| {
+            Ok(ExportedAbility {
+                bar: row.get(0)?,
+                slot_position: row.get(1)?,
+                ability_id: row.get(2)?,
+                ability_name: row.get(3)?,
+            })
+        })
+        .map_err(|e| format!("Ability query failed: {e}"))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Ability parse error: {e}"))?;
+
+    let mut stmt = conn
+        .prepare("SELECT equip_slot, recipe_id, recipe_name, cp_cost, effect_type, effect_key, sort_order FROM build_preset_cp_recipes WHERE preset_id = ?1 ORDER BY equip_slot, sort_order")
+        .map_err(|e| format!("Failed to query CP recipes: {e}"))?;
+    let cp_recipes: Vec<ExportedCpRecipe> = stmt
+        .query_map([preset_id], |row| {
+            Ok(ExportedCpRecipe {
+                equip_slot: row.get(0)?,
+                recipe_id: row.get(1)?,
+                recipe_name: row.get(2)?,
+                cp_cost: row.get(3)?,
+                effect_type: row.get(4)?,
+                effect_key: row.get(5)?,
+                sort_order: row.get(6)?,
+            })
+        })
+        .map_err(|e| format!("CP recipe query failed: {e}"))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("CP recipe parse error: {e}"))?;
+
+    let exported = ExportedBuild {
+        version: 1,
+        name,
+        skill_primary,
+        skill_secondary,
+        target_level,
+        target_rarity,
+        notes,
+        mods,
+        slot_items,
+        abilities,
+        cp_recipes,
+    };
+
+    let json = serde_json::to_string(&exported).map_err(|e| format!("Serialization error: {e}"))?;
+    Ok(BASE64.encode(json.as_bytes()))
+}
+
+#[tauri::command]
+pub fn import_build_preset(
+    db: State<'_, DbPool>,
+    character_id: String,
+    encoded: String,
+) -> Result<i64, String> {
+    let json_bytes = BASE64
+        .decode(encoded.trim())
+        .map_err(|e| format!("Invalid build code: {e}"))?;
+    let json_str = String::from_utf8(json_bytes).map_err(|e| format!("Invalid UTF-8: {e}"))?;
+    let build: ExportedBuild =
+        serde_json::from_str(&json_str).map_err(|e| format!("Invalid build data: {e}"))?;
+
+    if build.version != 1 {
+        return Err(format!(
+            "Unsupported build version {} (this app supports version 1)",
+            build.version
+        ));
+    }
+
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
+
+    conn.execute(
+        "INSERT INTO build_presets (character_id, name, skill_primary, skill_secondary, target_level, target_rarity, notes)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        rusqlite::params![
+            character_id,
+            build.name,
+            build.skill_primary,
+            build.skill_secondary,
+            build.target_level,
+            build.target_rarity,
+            build.notes,
+        ],
+    )
+    .map_err(|e| format!("Failed to create preset: {e}"))?;
+
+    let new_id = conn.last_insert_rowid();
+
+    {
+        let mut stmt = conn
+            .prepare("INSERT INTO build_preset_mods (preset_id, equip_slot, power_name, tier, is_augment, sort_order) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")
+            .map_err(|e| format!("Failed to prepare mod insert: {e}"))?;
+        for m in &build.mods {
+            stmt.execute(rusqlite::params![new_id, m.equip_slot, m.power_name, m.tier, m.is_augment as i32, m.sort_order])
+                .map_err(|e| format!("Failed to insert mod: {e}"))?;
+        }
+    }
+
+    {
+        let mut stmt = conn
+            .prepare("INSERT INTO build_preset_slot_items (preset_id, equip_slot, item_id, item_name, slot_level, slot_rarity, is_crafted, is_masterwork, slot_skill_primary, slot_skill_secondary) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)")
+            .map_err(|e| format!("Failed to prepare slot item insert: {e}"))?;
+        for si in &build.slot_items {
+            stmt.execute(rusqlite::params![new_id, si.equip_slot, si.item_id, si.item_name, si.slot_level, si.slot_rarity, si.is_crafted as i32, si.is_masterwork as i32, si.slot_skill_primary, si.slot_skill_secondary])
+                .map_err(|e| format!("Failed to insert slot item: {e}"))?;
+        }
+    }
+
+    {
+        let mut stmt = conn
+            .prepare("INSERT INTO build_preset_abilities (preset_id, bar, slot_position, ability_id, ability_name) VALUES (?1, ?2, ?3, ?4, ?5)")
+            .map_err(|e| format!("Failed to prepare ability insert: {e}"))?;
+        for a in &build.abilities {
+            stmt.execute(rusqlite::params![new_id, a.bar, a.slot_position, a.ability_id, a.ability_name])
+                .map_err(|e| format!("Failed to insert ability: {e}"))?;
+        }
+    }
+
+    {
+        let mut stmt = conn
+            .prepare("INSERT INTO build_preset_cp_recipes (preset_id, equip_slot, recipe_id, recipe_name, cp_cost, effect_type, effect_key, sort_order) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)")
+            .map_err(|e| format!("Failed to prepare CP recipe insert: {e}"))?;
+        for r in &build.cp_recipes {
+            stmt.execute(rusqlite::params![new_id, r.equip_slot, r.recipe_id, r.recipe_name, r.cp_cost, r.effect_type, r.effect_key, r.sort_order])
+                .map_err(|e| format!("Failed to insert CP recipe: {e}"))?;
+        }
+    }
+
+    Ok(new_id)
 }

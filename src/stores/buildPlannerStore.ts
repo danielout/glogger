@@ -242,6 +242,19 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
     return id
   }
 
+  async function exportPreset(presetId: number): Promise<string> {
+    return await invoke<string>("export_build_preset", { presetId })
+  }
+
+  async function importPreset(encoded: string) {
+    const characterId = getCharacterId()
+    const id = await invoke<number>("import_build_preset", { characterId, encoded })
+    await loadPresets()
+    const preset = presets.value.find(p => p.id === id)
+    if (preset) await selectPreset(preset)
+    return id
+  }
+
   async function clonePreset(sourceId: number, newName: string) {
     const id = await invoke<number>("clone_build_preset", {
       presetId: sourceId,
@@ -725,6 +738,8 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
     loadPresets,
     createPreset,
     clonePreset,
+    exportPreset,
+    importPreset,
     selectPreset,
     updatePreset,
     deletePreset,

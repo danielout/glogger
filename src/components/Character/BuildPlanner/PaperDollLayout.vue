@@ -34,6 +34,23 @@
       </button>
     </div>
 
+    <!-- Import/Export row -->
+    <div class="flex items-center gap-2 shrink-0">
+      <button
+        v-if="store.activePreset"
+        class="px-2 py-1 text-xs bg-surface-elevated border border-border-default text-text-secondary rounded cursor-pointer hover:bg-surface-hover"
+        @click="handleExport">
+        Export
+      </button>
+      <button
+        class="px-2 py-1 text-xs bg-surface-elevated border border-border-default text-text-secondary rounded cursor-pointer hover:bg-surface-hover"
+        @click="showImport = true">
+        Import
+      </button>
+      <span v-if="exportMessage" class="text-xs text-accent-gold">{{ exportMessage }}</span>
+      <span v-if="importError" class="text-xs text-red-400">{{ importError }}</span>
+    </div>
+
     <!-- Set Defaults (collapsible) -->
     <div v-if="store.activePreset" class="shrink-0">
       <button
@@ -114,6 +131,14 @@
       @confirm="handleClone" />
 
     <ModalDialog
+      :show="showImport"
+      title="Import Build"
+      placeholder="Paste build code here..."
+      confirm-label="Import"
+      @update:show="showImport = $event"
+      @confirm="handleImport" />
+
+    <ModalDialog
       :show="showDelete"
       title="Delete Build"
       type="confirm"
@@ -158,6 +183,9 @@ const showCreate = ref(false)
 const showRename = ref(false)
 const showClone = ref(false)
 const showDelete = ref(false)
+const showImport = ref(false)
+const exportMessage = ref('')
+const importError = ref('')
 
 function onPresetChange(val: string) {
   const id = Number(val)
@@ -178,6 +206,30 @@ async function handleRename(name: string) {
 async function handleClone(name: string) {
   if (!name || !store.activePreset) return
   await store.clonePreset(store.activePreset.id, name)
+}
+
+async function handleExport() {
+  if (!store.activePreset) return
+  try {
+    const code = await store.exportPreset(store.activePreset.id)
+    await navigator.clipboard.writeText(code)
+    exportMessage.value = 'Copied to clipboard!'
+    setTimeout(() => { exportMessage.value = '' }, 3000)
+  } catch (e) {
+    exportMessage.value = `Export failed: ${e}`
+    setTimeout(() => { exportMessage.value = '' }, 5000)
+  }
+}
+
+async function handleImport(code: string) {
+  if (!code) return
+  importError.value = ''
+  try {
+    await store.importPreset(code)
+  } catch (e) {
+    importError.value = `${e}`
+    setTimeout(() => { importError.value = '' }, 5000)
+  }
 }
 
 async function handleDelete() {
