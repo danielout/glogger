@@ -242,6 +242,17 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
     return id
   }
 
+  async function clonePreset(sourceId: number, newName: string) {
+    const id = await invoke<number>("clone_build_preset", {
+      presetId: sourceId,
+      newName,
+    })
+    await loadPresets()
+    const preset = presets.value.find(p => p.id === id)
+    if (preset) await selectPreset(preset)
+    return id
+  }
+
   async function selectPreset(preset: BuildPreset) {
     activePreset.value = preset
     selectedSlot.value = null
@@ -713,6 +724,7 @@ export const useBuildPlannerStore = defineStore("buildPlanner", () => {
     loadCombatSkills,
     loadPresets,
     createPreset,
+    clonePreset,
     selectPreset,
     updatePreset,
     deletePreset,

@@ -627,6 +627,87 @@ pub fn get_build_preset_cp_recipes(
     Ok(recipes)
 }
 
+/// Clone a build preset and all its associated data (mods, slot items, abilities, CP recipes).
+#[tauri::command]
+pub fn clone_build_preset(
+    db: State<'_, DbPool>,
+    preset_id: i64,
+    new_name: String,
+) -> Result<i64, String> {
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
+
+    // Get the source preset
+    let source = conn
+        .query_row(
+            "SELECT character_id, skill_primary, skill_secondary, target_level, target_rarity, notes
+             FROM build_presets WHERE id = ?1",
+            [preset_id],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, Option<String>>(1)?,
+                    row.get::<_, Option<String>>(2)?,
+                    row.get::<_, i32>(3)?,
+                    row.get::<_, String>(4)?,
+                    row.get::<_, Option<String>>(5)?,
+                ))
+            },
+        )
+        .map_err(|e| format!("Source preset not found: {e}"))?;
+
+    let (character_id, skill_primary, skill_secondary, target_level, target_rarity, notes) = source;
+
+    // Create the new preset
+    conn.execute(
+        "INSERT INTO build_presets (character_id, name, skill_primary, skill_secondary, target_level, target_rarity, notes)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        rusqlite::params![character_id, new_name, skill_primary, skill_secondary, target_level, target_rarity, notes],
+    )
+    .map_err(|e| format!("Failed to create cloned preset: {e}"))?;
+
+    let new_id = conn.last_insert_rowid();
+
+    // Clone mods
+    conn.execute(
+        "INSERT INTO build_preset_mods (preset_id, equip_slot, power_name, tier, is_augment, sort_order)
+         SELECT ?1, equip_slot, power_name, tier, is_augment, sort_order
+         FROM build_preset_mods WHERE preset_id = ?2",
+        rusqlite::params![new_id, preset_id],
+    )
+    .map_err(|e| format!("Failed to clone mods: {e}"))?;
+
+    // Clone slot items
+    conn.execute(
+        "INSERT INTO build_preset_slot_items (preset_id, equip_slot, item_id, item_name, slot_level, slot_rarity, is_crafted, is_masterwork, slot_skill_primary, slot_skill_secondary)
+         SELECT ?1, equip_slot, item_id, item_name, slot_level, slot_rarity, is_crafted, is_masterwork, slot_skill_primary, slot_skill_secondary
+         FROM build_preset_slot_items WHERE preset_id = ?2",
+        rusqlite::params![new_id, preset_id],
+    )
+    .map_err(|e| format!("Failed to clone slot items: {e}"))?;
+
+    // Clone abilities
+    conn.execute(
+        "INSERT INTO build_preset_abilities (preset_id, bar, slot_position, ability_id, ability_name)
+         SELECT ?1, bar, slot_position, ability_id, ability_name
+         FROM build_preset_abilities WHERE preset_id = ?2",
+        rusqlite::params![new_id, preset_id],
+    )
+    .map_err(|e| format!("Failed to clone abilities: {e}"))?;
+
+    // Clone CP recipes
+    conn.execute(
+        "INSERT INTO build_preset_cp_recipes (preset_id, equip_slot, recipe_id, recipe_name, cp_cost, effect_type, effect_key, sort_order)
+         SELECT ?1, equip_slot, recipe_id, recipe_name, cp_cost, effect_type, effect_key, sort_order
+         FROM build_preset_cp_recipes WHERE preset_id = ?2",
+        rusqlite::params![new_id, preset_id],
+    )
+    .map_err(|e| format!("Failed to clone CP recipes: {e}"))?;
+
+    Ok(new_id)
+}
+
 #[tauri::command]
 pub fn set_build_preset_cp_recipes(
     db: State<'_, DbPool>,

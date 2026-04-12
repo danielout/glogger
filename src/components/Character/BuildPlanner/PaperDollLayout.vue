@@ -22,6 +22,12 @@
       </button>
       <button
         v-if="store.activePreset"
+        class="px-1.5 py-1 text-xs bg-surface-elevated border border-border-default text-text-secondary rounded cursor-pointer hover:bg-surface-hover shrink-0"
+        @click="showClone = true">
+        Clone
+      </button>
+      <button
+        v-if="store.activePreset"
         class="px-1.5 py-1 text-xs bg-red-900/20 border border-red-700/40 text-red-400 rounded cursor-pointer hover:bg-red-900/30 shrink-0"
         @click="showDelete = true">
         Del
@@ -99,6 +105,15 @@
       @confirm="handleRename" />
 
     <ModalDialog
+      :show="showClone"
+      title="Clone Build"
+      placeholder="Name for the clone"
+      :initial-value="store.activePreset ? `${store.activePreset.name} (Copy)` : ''"
+      confirm-label="Clone"
+      @update:show="showClone = $event"
+      @confirm="handleClone" />
+
+    <ModalDialog
       :show="showDelete"
       title="Delete Build"
       type="confirm"
@@ -141,6 +156,7 @@ const rarityOptions = RARITY_DEFS.map(r => ({ value: r.id, label: r.label }))
 const showDefaults = ref(false)
 const showCreate = ref(false)
 const showRename = ref(false)
+const showClone = ref(false)
 const showDelete = ref(false)
 
 function onPresetChange(val: string) {
@@ -157,6 +173,11 @@ async function handleCreate(name: string) {
 async function handleRename(name: string) {
   if (!name || name === store.activePreset?.name) return
   await store.updatePreset({ name })
+}
+
+async function handleClone(name: string) {
+  if (!name || !store.activePreset) return
+  await store.clonePreset(store.activePreset.id, name)
 }
 
 async function handleDelete() {
