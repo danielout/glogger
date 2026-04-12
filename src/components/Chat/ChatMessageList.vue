@@ -9,7 +9,15 @@
       <p class="my-1">No messages found</p>
       <p class="text-sm text-text-dim">Try importing chat logs from the Management tab</p>
     </div>
-    <div v-else class="flex-1 overflow-y-auto p-4" ref="messagesContainer" @scroll="onScroll">
+    <div v-else class="relative flex-1 overflow-y-auto p-4" ref="messagesContainer" @scroll="onScroll">
+      <!-- Jump to present button (shown when scrolled away from the top) -->
+      <button
+        v-if="showJumpToPresent"
+        @click="jumpToPresent"
+        class="sticky top-2 left-1/2 -translate-x-1/2 z-10 px-4 py-1.5 bg-accent-gold/90 text-surface-base text-xs font-semibold rounded-full shadow-lg cursor-pointer hover:bg-accent-gold transition-all"
+      >
+        &#8593; Jump to Present
+      </button>
       <!-- Tell conversation layout -->
       <template v-if="isTellView">
         <div
@@ -106,17 +114,28 @@ const emit = defineEmits<{
 }>()
 
 const messagesContainer = ref<HTMLElement>()
+const showJumpToPresent = ref(false)
 
 function onScroll() {
-  if (!messagesContainer.value || props.loading || !props.hasMore) return
+  if (!messagesContainer.value) return
 
   const el = messagesContainer.value
+
+  // Show "Jump to Present" when scrolled more than 300px from the top
+  showJumpToPresent.value = el.scrollTop > 300
+
+  if (props.loading || !props.hasMore) return
   const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
 
   // Trigger load when within 200px of the bottom
   if (distanceFromBottom < 200) {
     emit('load-more')
   }
+}
+
+function jumpToPresent() {
+  if (!messagesContainer.value) return
+  messagesContainer.value.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 function channelColorClass(channel: string): string {
