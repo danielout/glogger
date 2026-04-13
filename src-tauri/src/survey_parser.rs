@@ -1653,4 +1653,223 @@ mod tests {
             "No events after motherlode already finalized"
         );
     }
+
+    // ============================================================
+    // Integration Tests — Full Log Replay
+    // ============================================================
+
+    /// Helper: replay a full Player.log file through the parser pipeline,
+    /// collecting all survey events produced.
+    fn replay_log(
+        log_path: &str,
+        known_surveys: HashMap<String, KnownSurveyType>,
+    ) -> Vec<SurveyEvent> {
+        let content = std::fs::read_to_string(log_path)
+            .unwrap_or_else(|e| panic!("Failed to read log file {}: {}", log_path, e));
+        let mut parser = PlayerEventParser::new();
+        let mut survey = SurveyParser::new(known_surveys);
+        let mut all_events = Vec::new();
+
+        for line in content.lines() {
+            let player_events = parser.process_line(line);
+            let survey_events = survey.process_events(&player_events, line);
+            all_events.extend(survey_events);
+        }
+
+        all_events
+    }
+
+    /// Helper: tally loot from Completed events into a HashMap<item_name, total_quantity>
+    fn tally_completed_loot(events: &[SurveyEvent]) -> HashMap<String, u32> {
+        let mut totals: HashMap<String, u32> = HashMap::new();
+        for event in events {
+            if let SurveyEvent::Completed { loot_items, .. } = event {
+                for item in loot_items {
+                    *totals.entry(item.item_name.clone()).or_insert(0) += item.quantity;
+                }
+            }
+        }
+        totals
+    }
+
+    #[test]
+    fn test_replay_100x_serbule_crystal_survey() {
+        // 100x Serbule Blue Mineral Survey with surveying ring
+        // Internal name: GeologySurveySerbule1
+        let log_path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../docs/samples/surveyLogs/100x-serbcrystal-withring/Player.log"
+        );
+
+        let mut known = HashMap::new();
+        known.insert(
+            "GeologySurveySerbule1".to_string(),
+            KnownSurveyType {
+                display_name: "Serbule Blue Mineral Survey".to_string(),
+                is_motherlode: false,
+            },
+        );
+
+        let events = replay_log(log_path, known);
+
+        // Count event types
+        let completions: Vec<_> = events
+            .iter()
+            .filter(|e| matches!(e, SurveyEvent::Completed { .. }))
+            .collect();
+        let crafts: Vec<_> = events
+            .iter()
+            .filter(|e| matches!(e, SurveyEvent::MapCrafted { .. }))
+            .collect();
+        let uses: Vec<_> = events
+            .iter()
+            .filter(|e| matches!(e, SurveyEvent::SurveyUsed { .. }))
+            .collect();
+
+        assert_eq!(completions.len(), 100, "Should have 100 completions");
+        assert_eq!(crafts.len(), 100, "Should have 100 maps crafted");
+        // Uses can be more than completions due to locate steps
+        assert!(
+            uses.len() >= 100,
+            "Should have at least 100 survey uses (locates + collects), got {}",
+            uses.len()
+        );
+
+        // Verify loot totals from ScreenText parsing
+        // These are the totals as reported in the loot text messages.
+        // Note: the ring silently grants extra primary items via ProcessUpdateItemCode
+        // which are NOT reflected in the ScreenText — so these totals are lower than
+        // the actual inventory changes recorded in results.txt.
+        let loot = tally_completed_loot(&events);
+
+        let expected: HashMap<&str, u32> = [
+            ("Amethyst", 31),
+            ("Aquamarine", 7),
+            ("Azurite", 42),
+            ("Bloodstone", 16),
+            ("Blue Spinel", 32),
+            ("Fluorite", 27),
+            ("Lapis Lazuli", 25),
+            ("Malachite", 8),
+            ("Morganite", 3),
+            ("Obsidian", 36),
+            ("Peridot", 7),
+            ("Piece of Green Glass", 31),
+            ("Rubywall Crystal", 23),
+            ("Sapphire", 1),
+            ("Sunstone", 1),
+            ("Tourmaline", 8),
+            ("Tsavorite", 2),
+        ]
+        .into_iter()
+        .collect();
+
+        for (item, expected_qty) in &expected {
+            let actual = loot.get(*item).copied().unwrap_or(0);
+            assert_eq!(
+                actual, *expected_qty,
+                "Loot mismatch for {}: expected {}, got {}",
+                item, expected_qty, actual
+            );
+        }
+
+        // Verify no unexpected items appeared
+        for (item, qty) in &loot {
+            assert!(
+                expected.contains_key(item.as_str()),
+                "Unexpected loot item: {} x{}",
+                item,
+                qty
+            );
+        }
+    }
+
+    #[test]
+    fn test_replay_100x_eltibule_metal_survey() {
+        // 100x Eltibule Amazing Mining Survey with ring and pick
+        // Internal name: MiningSurveyEltibule6
+        let log_path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../docs/samples/surveyLogs/100x-eltmetal-ringandpick/Player-prev.log"
+        );
+
+        let mut known = HashMap::new();
+        known.insert(
+            "MiningSurveyEltibule6".to_string(),
+            KnownSurveyType {
+                display_name: "Eltibule Amazing Mining Survey".to_string(),
+                is_motherlode: false,
+            },
+        );
+
+        let events = replay_log(log_path, known);
+
+        // Count event types
+        let completions: Vec<_> = events
+            .iter()
+            .filter(|e| matches!(e, SurveyEvent::Completed { .. }))
+            .collect();
+        let crafts: Vec<_> = events
+            .iter()
+            .filter(|e| matches!(e, SurveyEvent::MapCrafted { .. }))
+            .collect();
+        let uses: Vec<_> = events
+            .iter()
+            .filter(|e| matches!(e, SurveyEvent::SurveyUsed { .. }))
+            .collect();
+
+        assert_eq!(completions.len(), 100, "Should have 100 completions");
+        assert_eq!(crafts.len(), 100, "Should have 100 maps crafted");
+        assert!(
+            uses.len() >= 100,
+            "Should have at least 100 survey uses, got {}",
+            uses.len()
+        );
+
+        // Verify loot totals from ScreenText parsing
+        // Same caveat: ring/pick bonuses add items silently, so ScreenText totals
+        // are lower than the results.txt inventory totals.
+        let loot = tally_completed_loot(&events);
+
+        let expected: HashMap<&str, u32> = [
+            ("Amazing Metal Slab", 94),
+            ("Astounding Metal Slab", 8),
+            ("Basic Metal Slab", 12),
+            ("Copper Ore", 10),
+            ("Expert-Quality Metal Slab", 4),
+            ("Fire Dust", 1),
+            ("Flinty Rock", 9),
+            ("Gold Nugget", 15),
+            ("Gold Ore", 4),
+            ("Good Metal Slab", 4),
+            ("Masterwork Metal Slab", 1),
+            ("Pyrite", 5),
+            ("Saltpeter", 3),
+            ("Silver Ore", 12),
+            ("Simple Metal Slab", 15),
+            ("Sulfur", 1),
+            ("Tungsten", 1),
+        ]
+        .into_iter()
+        .collect();
+
+        for (item, expected_qty) in &expected {
+            let actual = loot.get(*item).copied().unwrap_or(0);
+            assert_eq!(
+                actual, *expected_qty,
+                "Loot mismatch for {}: expected {}, got {}",
+                item, expected_qty, actual
+            );
+        }
+
+        // Verify no unexpected items appeared
+        for (item, qty) in &loot {
+            assert!(
+                expected.contains_key(item.as_str()),
+                "Unexpected loot item: {} x{}",
+                item,
+                qty
+            );
+        }
+    }
 }

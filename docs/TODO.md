@@ -21,7 +21,11 @@ Small tasks and notes that don't belong in a dedicated plan.
     UnloadTime: 4.145100 ms
     ```
 
-
+- [x] impv: 'jump to present' button in chat logs if scrolled back.
+- [x] impv: toggle to swap between top down and bottom up ordering for chat logs.
+- [x] impv: ability to clone a build in the build planner.
+- [x] impv: string-based import/export in build planner for sharing.
+- [x] fix: if a user has an active survey session running, and they change zones, the inventory update that gets sent on zone entry causes the session to double-count all the surveys already in the player's inventory.
 
 ---
 
