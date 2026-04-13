@@ -148,6 +148,15 @@ export function useStatehelmTracker() {
     { deep: true }
   )
 
+  // Also watch the DB-backed favor data — this is always refreshed by
+  // game-state-updated events regardless of which page is active, so
+  // the gift log stays current even when the statehelm page isn't open.
+  watch(
+    () => gameState.favor,
+    () => loadGiftLog(),
+    { deep: true }
+  )
+
   return {
     statehelmNpcs,
     npcStatuses,

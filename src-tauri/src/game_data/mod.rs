@@ -292,7 +292,7 @@ impl GameData {
     // Each accepts any known reference form and returns the entity.
 
     /// Resolve any string reference to an ItemInfo.
-    /// Tries: numeric ID → display name → internal name.
+    /// Tries: numeric ID → display name → internal name → TSys prefix/suffix stripping.
     pub fn resolve_item(&self, reference: &str) -> Option<&items::ItemInfo> {
         if let Ok(id) = reference.parse::<u32>() {
             if let Some(item) = self.items.get(&id) {
@@ -302,7 +302,39 @@ impl GameData {
         if let Some(item) = self.item_by_name(reference) {
             return Some(item);
         }
-        self.item_by_internal_name(reference)
+        if let Some(item) = self.item_by_internal_name(reference) {
+            return Some(item);
+        }
+        // Fallback: try stripping known TSys mod prefixes/suffixes from the name.
+        // Items with mods appear as e.g. "Amazing Iron Sword" but CDN only has "Iron Sword".
+        self.resolve_item_with_mod_stripping(reference)
+    }
+
+    /// Try to resolve an item by stripping known TSys prefixes and suffixes.
+    fn resolve_item_with_mod_stripping(&self, reference: &str) -> Option<&items::ItemInfo> {
+        for info in self.tsys.client_info.values() {
+            if let Some(prefix) = &info.prefix {
+                if let Some(stripped) = reference.strip_prefix(prefix.as_str()) {
+                    let stripped = stripped.trim_start();
+                    if !stripped.is_empty() {
+                        if let Some(item) = self.item_by_name(stripped) {
+                            return Some(item);
+                        }
+                    }
+                }
+            }
+            if let Some(suffix) = &info.suffix {
+                if let Some(stripped) = reference.strip_suffix(suffix.as_str()) {
+                    let stripped = stripped.trim_end();
+                    if !stripped.is_empty() {
+                        if let Some(item) = self.item_by_name(stripped) {
+                            return Some(item);
+                        }
+                    }
+                }
+            }
+        }
+        None
     }
 
     /// Resolve any string reference to a SkillInfo.

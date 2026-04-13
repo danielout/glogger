@@ -97,6 +97,7 @@ use cdn_commands::{
     get_quests_by_moon_phase,
     get_current_moon_phase,
     get_recipes_for_keyword,
+    find_recipe_items_in_inventory,
     GameDataState,
 };
 use chat_commands::{
@@ -390,6 +391,7 @@ pub fn run() {
             get_quests_by_moon_phase,
             get_current_moon_phase,
             get_recipes_for_keyword,
+            find_recipe_items_in_inventory,
             // Player data - Market prices
             add_market_price,
             get_market_prices_for_item,

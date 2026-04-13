@@ -1,0 +1,123 @@
+<template>
+  <PaneLayout screen-key="help">
+    <div class="max-w-2xl mx-auto py-6 px-4 flex flex-col gap-8">
+      <!-- Header -->
+      <div>
+        <h1 class="text-lg font-bold text-text-primary m-0">Help & Known Issues</h1>
+        <p class="text-sm text-text-muted mt-1">
+          Glogger is currently in <span class="text-accent-gold font-medium">early alpha</span>.
+          Below are known issues and limitations we're aware of.
+        </p>
+      </div>
+
+      <!-- Known Issues -->
+      <section>
+        <h2 class="text-sm font-bold text-text-secondary uppercase tracking-wider m-0 mb-3">Known Issues</h2>
+        <div class="flex flex-col gap-2">
+          <IssueCard
+            v-for="issue in knownIssues"
+            :key="issue.id"
+            :issue="issue" />
+        </div>
+      </section>
+
+      <!-- Limitations -->
+      <section>
+        <h2 class="text-sm font-bold text-text-secondary uppercase tracking-wider m-0 mb-3">Known Limitations</h2>
+        <div class="flex flex-col gap-2">
+          <IssueCard
+            v-for="issue in limitations"
+            :key="issue.id"
+            :issue="issue" />
+        </div>
+      </section>
+
+      <!-- Tips -->
+      <section>
+        <h2 class="text-sm font-bold text-text-secondary uppercase tracking-wider m-0 mb-3">Tips</h2>
+        <div class="flex flex-col gap-2">
+          <div
+            v-for="tip in tips"
+            :key="tip"
+            class="flex gap-2 text-sm text-text-secondary px-3 py-2 bg-surface-base rounded border border-border-default">
+            <span class="text-accent-gold shrink-0">*</span>
+            <span>{{ tip }}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <div class="text-xs text-text-dim border-t border-border-default pt-4">
+        Found a bug not listed here? Report it in the Glogger Discord or in-game.
+      </div>
+    </div>
+  </PaneLayout>
+</template>
+
+<script setup lang="ts">
+import PaneLayout from '../Shared/PaneLayout.vue'
+import IssueCard from './IssueCard.vue'
+
+interface KnownIssue {
+  id: string
+  severity: 'bug' | 'limitation' | 'cosmetic'
+  title: string
+  description: string
+}
+
+const knownIssues: KnownIssue[] = [
+  {
+    id: 'item-mod-names',
+    severity: 'bug',
+    title: 'Items with mods may not resolve correctly',
+    description: 'Items with TSys mod prefixes/suffixes (e.g., "Amazing Iron Sword") may not always link to their base item in the CDN. We\'ve added prefix/suffix stripping as a fallback, but some edge cases may remain.',
+  },
+  {
+    id: 'statehelm-offpage',
+    severity: 'bug',
+    title: 'Statehelm tracker may lag behind when off-page',
+    description: 'The Statehelm gifting tracker updates from the database, but real-time updates rely on the favor activity feed. If you notice stale data, navigating to the Statehelm page will refresh it.',
+  },
+  {
+    id: 'item-quantities',
+    severity: 'bug',
+    title: 'Item quantities may be inaccurate',
+    description: 'The Player.log doesn\'t always provide exact stack sizes. Glogger infers quantities from chat status messages, but this isn\'t always reliable. Import your VIP Inventory JSON for accurate data.',
+  },
+  {
+    id: 'rez-tracker',
+    severity: 'bug',
+    title: 'Resurrection tracker may miss events',
+    description: 'The rez tracker parses [Action Emotes] chat messages. If this channel is disabled in your game settings, or if the game uses a different message format, rez events won\'t be captured.',
+  },
+]
+
+const limitations: KnownIssue[] = [
+  {
+    id: 'no-item-mods',
+    severity: 'limitation',
+    title: 'Item mods/augments not shown in live inventory',
+    description: 'The Player.log doesn\'t include TSys mod or augment data for items. This information is only available through the VIP Inventory JSON export. Snapshot imports do include this data.',
+  },
+  {
+    id: 'no-equipment-details',
+    severity: 'limitation',
+    title: 'Current equipment lacks item details',
+    description: 'The Player.log only provides appearance keys for equipped items, not full item names or stats. A detailed equipment view would require the VIP JSON export.',
+  },
+  {
+    id: 'session-only-feeds',
+    severity: 'limitation',
+    title: 'Activity feeds are session-only',
+    description: 'Items incoming/outgoing, favor changes, and council changes are tracked per-session and reset when you restart Glogger. Historical data is preserved in the database but not shown in the live feeds.',
+  },
+]
+
+const tips = [
+  'Import your VIP Inventory JSON regularly for the most accurate inventory data.',
+  'Import your Character JSON to populate skills, recipes, and quest data.',
+  'Use Ctrl+K (or Cmd+K) to open quick search — you can search items, NPCs, skills, recipes, and more.',
+  'Dashboard widgets can be reordered by dragging. Hide ones you don\'t need in the settings panel on the right.',
+  'The Build Planner lets you plan mod configurations without committing in-game.',
+]
+</script>

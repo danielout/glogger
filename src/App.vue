@@ -53,8 +53,8 @@
                 :error="error"
                 :onParseLog="parseLog" />
             </div>
-            <div v-if="visited.has('help')" v-show="currentView === 'help'" class="h-full overflow-y-auto">
-              <EmptyState primary="Help" secondary="Coming soon." />
+            <div v-if="visited.has('help')" v-show="currentView === 'help'" class="h-full">
+              <HelpView />
             </div>
           </div>
         </div>
@@ -114,7 +114,7 @@ import EconomicsView from "./components/Economics/EconomicsView.vue";
 import ChatView from "./components/Chat/ChatView.vue";
 import DataBrowserOverlay from "./components/DataBrowser/DataBrowserOverlay.vue";
 import SearchView from "./components/Search/SearchView.vue";
-import EmptyState from "./components/Shared/EmptyState.vue";
+import HelpView from "./components/Help/HelpView.vue";
 import Settings from "./components/Settings.vue";
 import StartupSplash from "./components/Startup/StartupSplash.vue";
 import StartupLayout from "./components/Startup/StartupLayout.vue";

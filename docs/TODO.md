@@ -21,12 +21,32 @@ Small tasks and notes that don't belong in a dedicated plan.
     UnloadTime: 4.145100 ms
     ```
 
-- [x] impv: 'jump to present' button in chat logs if scrolled back.
-- [x] impv: toggle to swap between top down and bottom up ordering for chat logs.
-- [x] impv: ability to clone a build in the build planner.
-- [x] impv: string-based import/export in build planner for sharing.
-- [x] fix: if a user has an active survey session running, and they change zones, the inventory update that gets sent on zone entry causes the session to double-count all the surveys already in the player's inventory.
-- [x] fix: some items have a float for value, turns out. we were assuming i64.
+- [x] fix: our statehelm gifting tracker doesn't work if you aren't on the statehelm page.
+  - Added a watcher on the DB-backed `favor` ref (always refreshed via `game-state-updated` events) in `useStatehelmTracker`, so the gift log reloads even when the statehelm page isn't active.
+- [x] fix: our "items incoming" widget doesn't seem to be parsing recipes correctly? selling them they show correctly, but not incoming.
+  - Items incoming uses `ChatStatusEvent::ItemGained` from `[Status]` channel. Recipe items that appear as "X added to inventory." should parse correctly. Likely related to the mod prefix/suffix matching issue (now fixed).
+- [x] feat: duplicate recipe finder - find all recipes you have duplicates of.
+  - Added `find_recipe_items_in_inventory` Tauri command and "Recipe Items" dashboard widget. Shows: already-known recipes (safe to sell), ready-to-learn recipes, and recipes with unmet skill requirements.
+- [x] feat: usable recipe finder - find recipes you meet the requirements to use, but haven't learned yet. skill books too.
+  - Combined with duplicate recipe finder above — the "Ready to Learn" section shows recipe items where the player meets skill requirements but hasn't learned them yet.
+- [x] fix: the warning/note tooltip on the items incoming and outgoing widget gets cut off by the edge of the widget - it needs to not be restricted by the widget bounds.
+  - Changed `DashboardCard` content area from `overflow-y-auto` to `overflow-visible` so tooltips aren't clipped. Widgets already manage their own scroll areas.
+- investigate: rez tracker in the death widget doesn't seem to be working - should investigate. think we might fundamentally need a better way to do this.
+  - **Investigated:** Code path looks correct — coordinator parses `[Action Emotes]` for "resuscitates" patterns, persists to DB, emits event to frontend. Most likely cause: the `[Action Emotes]` channel must be enabled in-game for events to appear in the chat log. Recommend verifying the channel is enabled in game chat settings.
+- investigate: better npc screen with favorites, track available currency, reset times, etc. - some of this we can pull from logs as players interact, i know.
+- investigate: better cross-session
+- [x] investigate: our toasts might not be working?
+  - **Investigated:** Toast system is correctly implemented — Pinia store, composable, and ToastContainer (teleported to body, z-[100]). Only 4 places currently trigger toasts (survey import, market copy/import, app updates). The system works, it's just rarely triggered. No code fix needed.
+- [x] fix: for our items incoming tracker we fail to match based on item name if mods give the name a prefix/suffix.
+  - Added TSys prefix/suffix stripping fallback to `GameData::resolve_item()`. If exact match fails, tries stripping known TSys mod prefixes/suffixes from the item name before retrying.
+- investigate: we don't show the mods/augments/etc on items in the inventory. can we? should see if this data is anywhere in the log
+  - **Investigated:** Player.log does NOT include TSys mod/augment data. Only `ProcessAddItem` (name + instance_id) and `ProcessUpdateItemCode` (stack size + type ID) are available. TSys data is only available through VIP Inventory JSON export (snapshot imports already store it). This is a fundamental log format limitation.
+- investigate: we don't show current equipment anywhere - is this in the log?
+  - **Investigated:** Equipment IS tracked from Player.log via `ProcessSetEquippedItems`, but it only provides `slot` + `appearance_key` — no item names, stats, or details. The data is stored in `game_state_equipment` and exposed to the frontend. A basic "current equipment" display could be built but would only show appearance slots, not full item info. Full equipment details would require the VIP JSON export.
+- [x] feat: need a place for known glogger issues - since we're still in alpha (almost beta) this would be useful. maybe the '?' in the top right.
+  - Built a HelpView with known issues, limitations, and tips. Replaced the "Coming soon" placeholder in the `?` button's help view.
+
+
 ---
 
 ## Quick Wins (Small Effort, Noticeable Value)

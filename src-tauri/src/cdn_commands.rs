@@ -10,6 +10,7 @@ use tokio::sync::RwLock;
 use serde_json::Value;
 
 use crate::cdn;
+use crate::db::DbPool;
 use crate::game_data::{
     self, AbilityFamily, AbilityInfo, AreaInfo, EffectInfo, GameData, ItemInfo, NpcInfo, PlayerTitleInfo,
     QuestInfo, RecipeInfo, SkillInfo, SourceEntry, TsysClientInfo, TsysTierInfo,
@@ -3022,5 +3023,195 @@ pub async fn get_abilities_for_tsys(
     }
 
     results.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(results)
+}
+
+// ── Recipe Item Finder ────────────────────────────────────────────────────────
+
+/// A recipe item found in the player's inventory, with context about whether
+/// the recipes it teaches are already known or if the player meets the skill
+/// requirements to learn them.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct RecipeItemMatch {
+    /// The item's type ID from CDN
+    pub item_id: u32,
+    /// Display name of the item
+    pub item_name: String,
+    /// Icon ID for display
+    pub icon_id: Option<u32>,
+    /// How many copies are in inventory
+    pub stack_size: i32,
+    /// Recipe keys this item bestows (e.g., "recipe_1234")
+    pub bestow_recipe_keys: Vec<String>,
+    /// Display names of the recipes this item bestows
+    pub bestow_recipe_names: Vec<String>,
+    /// Whether ALL bestowed recipes are already known
+    pub all_known: bool,
+    /// Whether the player meets skill requirements to use this item
+    pub meets_requirements: bool,
+    /// Skill requirements that are NOT met (skill_name -> (required, current))
+    pub unmet_requirements: Vec<UnmetRequirement>,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct UnmetRequirement {
+    pub skill_name: String,
+    pub required: u32,
+    pub current: u32,
+}
+
+/// Find recipe items in the player's inventory and classify them.
+/// Returns items that bestow recipes, indicating whether recipes are already
+/// known and whether the player meets the skill requirements.
+#[tauri::command]
+pub async fn find_recipe_items_in_inventory(
+    character_name: String,
+    server_name: String,
+    db: State<'_, DbPool>,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<RecipeItemMatch>, String> {
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+    let data = state.read().await;
+
+    // Get all inventory items
+    let mut inv_stmt = conn.prepare(
+        "SELECT item_name, item_type_id, stack_size
+         FROM game_state_inventory
+         WHERE character_name = ?1 AND server_name = ?2"
+    ).map_err(|e| format!("Query error: {e}"))?;
+
+    let inv_items: Vec<(String, Option<i64>, i32)> = inv_stmt
+        .query_map(rusqlite::params![character_name, server_name], |row: &rusqlite::Row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, Option<i64>>(1)?, row.get::<_, i32>(2)?))
+        })
+        .map_err(|e| format!("Query error: {e}"))?
+        .filter_map(|r: Result<_, rusqlite::Error>| r.ok())
+        .collect();
+
+    // Get known recipes
+    let mut recipe_stmt = conn.prepare(
+        "SELECT recipe_id FROM game_state_recipes
+         WHERE character_name = ?1 AND server_name = ?2 AND completion_count > 0"
+    ).map_err(|e| format!("Query error: {e}"))?;
+
+    let known_recipe_ids: std::collections::HashSet<u32> = recipe_stmt
+        .query_map(rusqlite::params![character_name, server_name], |row: &rusqlite::Row| {
+            row.get::<_, i64>(0).map(|id| id as u32)
+        })
+        .map_err(|e| format!("Query error: {e}"))?
+        .filter_map(|r: Result<_, rusqlite::Error>| r.ok())
+        .collect();
+
+    // Get current skill levels
+    let mut skill_stmt = conn.prepare(
+        "SELECT skill_name, level FROM game_state_skills
+         WHERE character_name = ?1 AND server_name = ?2"
+    ).map_err(|e| format!("Query error: {e}"))?;
+
+    let skill_levels: std::collections::HashMap<String, u32> = skill_stmt
+        .query_map(rusqlite::params![character_name, server_name], |row: &rusqlite::Row| {
+            let name: String = row.get(0)?;
+            let level: i32 = row.get(1)?;
+            Ok((name, level as u32))
+        })
+        .map_err(|e| format!("Query error: {e}"))?
+        .filter_map(|r: Result<_, rusqlite::Error>| r.ok())
+        .collect();
+
+    // Aggregate by item type — sum stack sizes for same type_id
+    let mut type_stacks = std::collections::HashMap::<u32, (String, i32)>::new();
+    for entry in &inv_items {
+        if let Some(type_id) = entry.1 {
+            let id = type_id as u32;
+            let ts = type_stacks.entry(id).or_insert_with(|| (entry.0.clone(), 0));
+            ts.1 += entry.2;
+        }
+    }
+
+    let mut results: Vec<RecipeItemMatch> = Vec::new();
+
+    for (type_id, (_item_name, total_stack)) in &type_stacks {
+        let item = match data.items.get(type_id) {
+            Some(item) => item,
+            None => continue,
+        };
+
+        let bestow_recipes = match &item.bestow_recipes {
+            Some(recipes) if !recipes.is_empty() => recipes,
+            _ => continue,
+        };
+
+        let mut recipe_keys: Vec<String> = Vec::new();
+        let mut recipe_names: Vec<String> = Vec::new();
+        let mut all_known = true;
+
+        for recipe_val in bestow_recipes {
+            if let Some(recipe_key) = recipe_val.as_str() {
+                recipe_keys.push(recipe_key.to_string());
+                // Parse recipe ID from key like "recipe_1234"
+                let recipe_id: Option<u32> = recipe_key
+                    .split('_')
+                    .last()
+                    .and_then(|s| s.parse().ok());
+
+                if let Some(rid) = recipe_id {
+                    if !known_recipe_ids.contains(&rid) {
+                        all_known = false;
+                    }
+                    // Get recipe display name
+                    if let Some(recipe_info) = data.recipes.get(&rid) {
+                        recipe_names.push(recipe_info.name.clone());
+                    } else {
+                        recipe_names.push(recipe_key.to_string());
+                    }
+                }
+            }
+        }
+
+        // Check skill requirements
+        let mut unmet_requirements: Vec<UnmetRequirement> = Vec::new();
+        if let Some(ref skill_reqs) = item.skill_reqs {
+            if let Some(obj) = skill_reqs.as_object() {
+                for (skill_ref, level_val) in obj {
+                    let required = level_val.as_u64().unwrap_or(0) as u32;
+                    // Resolve skill name
+                    let skill_name = data
+                        .resolve_skill(skill_ref)
+                        .map(|s| s.name.clone())
+                        .unwrap_or_else(|| skill_ref.clone());
+                    let current = skill_levels.get(&skill_name).copied().unwrap_or(0);
+                    if current < required {
+                        unmet_requirements.push(UnmetRequirement {
+                            skill_name,
+                            required,
+                            current,
+                        });
+                    }
+                }
+            }
+        }
+
+        let meets_requirements = unmet_requirements.is_empty();
+
+        results.push(RecipeItemMatch {
+            item_id: *type_id,
+            item_name: item.name.clone(),
+            icon_id: item.icon_id,
+            stack_size: *total_stack,
+            bestow_recipe_keys: recipe_keys,
+            bestow_recipe_names: recipe_names,
+            all_known,
+            meets_requirements,
+            unmet_requirements,
+        });
+    }
+
+    // Sort: known duplicates first, then learnable, then others
+    results.sort_by(|a, b| {
+        b.all_known.cmp(&a.all_known)
+            .then(b.meets_requirements.cmp(&a.meets_requirements))
+            .then(a.item_name.cmp(&b.item_name))
+    });
+
     Ok(results)
 }
