@@ -37,8 +37,8 @@ pub struct CharacterCurrencyBreakdown {
 #[derive(Serialize)]
 pub struct AggregateWealth {
     pub total_currency: f64,
-    pub total_market_value: i64,
-    pub grand_total: i64,
+    pub total_market_value: f64,
+    pub grand_total: f64,
     pub currencies: Vec<AggregateCurrency>,
     pub per_character: Vec<CharacterWealth>,
 }
@@ -47,7 +47,7 @@ pub struct AggregateWealth {
 pub struct CharacterWealth {
     pub character_name: String,
     pub currency_total: f64,
-    pub market_value_total: i64,
+    pub market_value_total: f64,
 }
 
 #[derive(Serialize)]
@@ -209,15 +209,15 @@ pub fn get_aggregate_wealth(
         .collect();
 
     // Per-character inventory value totals (using valuation mode)
-    let mut char_market: std::collections::BTreeMap<String, i64> =
+    let mut char_market: std::collections::BTreeMap<String, f64> =
         std::collections::BTreeMap::new();
     for (character_name, stack_size, market_val, vendor_val) in &inv_rows {
         let effective = resolve_item_value(valuation_mode, *vendor_val, *market_val);
         *char_market.entry(character_name.clone()).or_default() +=
-            (*stack_size as f64 * effective) as i64;
+            *stack_size as f64 * effective;
     }
 
-    let total_market_value: i64 = char_market.values().sum();
+    let total_market_value: f64 = char_market.values().sum();
 
     // 3. Per-character currency totals
     let mut char_currency: std::collections::BTreeMap<String, f64> =
@@ -239,7 +239,7 @@ pub fn get_aggregate_wealth(
         .into_iter()
         .map(|name| {
             let ct = *char_currency.get(&name).unwrap_or(&0.0);
-            let mv = *char_market.get(&name).unwrap_or(&0);
+            let mv = *char_market.get(&name).unwrap_or(&0.0);
             CharacterWealth {
                 character_name: name,
                 currency_total: ct,
@@ -248,7 +248,7 @@ pub fn get_aggregate_wealth(
         })
         .collect();
 
-    let grand_total = total_currency as i64 + total_market_value;
+    let grand_total = total_currency + total_market_value;
 
     Ok(AggregateWealth {
         total_currency,

@@ -26,7 +26,7 @@ pub struct StorageItem {
     #[serde(default)]
     pub storage_vault: String,
     pub stack_size: i64,
-    pub value: Option<i64>,
+    pub value: Option<f64>,
     pub name: String,
     pub pet_husbandry_state: Option<String>,
     pub is_in_inventory: Option<bool>,
@@ -83,7 +83,7 @@ pub struct SnapshotItem {
     pub storage_vault: String,
     pub is_in_inventory: bool,
     pub stack_size: i64,
-    pub value: Option<i64>,
+    pub value: Option<f64>,
     pub item_name: String,
     pub rarity: Option<String>,
     pub slot: Option<String>,
@@ -105,7 +105,7 @@ pub struct SnapshotItem {
 pub struct InventorySummary {
     pub total_items: i64,
     pub total_stacks: i64,
-    pub total_value: i64,
+    pub total_value: f64,
     pub unique_items: i64,
     pub items_by_vault: HashMap<String, i64>,
     pub items_by_rarity: HashMap<String, i64>,
@@ -476,7 +476,7 @@ pub fn get_inventory_summary(
         .map_err(|e| format!("Database connection error: {e}"))?;
 
     // Get aggregate stats
-    let (total_stacks, total_items, total_value, unique_items): (i64, i64, i64, i64) = conn
+    let (total_stacks, total_items, total_value, unique_items): (i64, i64, f64, i64) = conn
         .query_row(
             "SELECT COUNT(*), COALESCE(SUM(stack_size), 0),
                 COALESCE(SUM(COALESCE(value, 0) * stack_size), 0),
