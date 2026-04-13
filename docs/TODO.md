@@ -26,7 +26,7 @@ Small tasks and notes that don't belong in a dedicated plan.
 - [x] impv: ability to clone a build in the build planner.
 - [x] impv: string-based import/export in build planner for sharing.
 - [x] fix: if a user has an active survey session running, and they change zones, the inventory update that gets sent on zone entry causes the session to double-count all the surveys already in the player's inventory.
-
+- [x] fix: some items have a float for value, turns out. we were assuming i64.
 ---
 
 ## Quick Wins (Small Effort, Noticeable Value)

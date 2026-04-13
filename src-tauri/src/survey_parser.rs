@@ -459,7 +459,7 @@ impl SurveyParser {
                     PlayerEvent::ItemAdded { item_name, .. } => {
                         !self.known_surveys.contains_key(item_name.as_str())
                     }
-                    PlayerEvent::ItemStackChanged { delta, from_server, .. } if *delta > 0 && !from_server => true,
+                    PlayerEvent::ItemStackChanged { delta, .. } if *delta > 0 => true,
                     _ => false,
                 };
                 if !is_loot_event {
@@ -525,13 +525,13 @@ impl SurveyParser {
                 }
 
                 // Stack increased while actively mining our node → motherlode loot
-                // Ignore from_server events (inventory sync on zone change)
+                // Note: motherlode loot is server-authoritative, so we accept
+                // from_server=true here (unlike regular surveys where we'd filter it)
                 PlayerEvent::ItemStackChanged {
                     item_name: Some(name),
                     delta,
-                    from_server,
                     ..
-                } if mining_started && *delta > 0 && !from_server => {
+                } if mining_started && *delta > 0 => {
                     loot_items.push(LootItem {
                         item_name: name.clone(),
                         quantity: *delta as u32,
@@ -1698,7 +1698,7 @@ mod tests {
         // Internal name: GeologySurveySerbule1
         let log_path = concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../docs/samples/surveyLogs/100x-serbcrystal-withring/Player.log"
+            "/../test_data/surveyLogs/100x-serbcrystal-withring/Player.log"
         );
 
         let mut known = HashMap::new();
@@ -1790,7 +1790,7 @@ mod tests {
         // Internal name: MiningSurveyEltibule6
         let log_path = concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../docs/samples/surveyLogs/100x-eltmetal-ringandpick/Player-prev.log"
+            "/../test_data/surveyLogs/100x-eltmetal-ringandpick/Player-prev.log"
         );
 
         let mut known = HashMap::new();
