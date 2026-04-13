@@ -12,6 +12,13 @@
         </button>
         <button
           v-if="store.sales.length > 0 || store.shopLog.length > 0"
+          class="text-xs text-text-dim hover:text-text-primary transition-colors px-2 py-1"
+          :disabled="exporting"
+          @click="handleExport">
+          {{ exporting ? 'Exporting...' : 'Export' }}
+        </button>
+        <button
+          v-if="store.sales.length > 0 || store.shopLog.length > 0"
           class="text-xs text-text-dim hover:text-accent-red transition-colors px-2 py-1"
           @click="handleClear">
           Clear data
@@ -49,6 +56,7 @@ const activeTab = ref('sales')
 const store = useStallTrackerStore()
 const importing = ref(false)
 const importMessage = ref('')
+const exporting = ref(false)
 
 onMounted(() => {
   store.loadAll()
@@ -86,6 +94,29 @@ async function handleImport() {
     importMessage.value = `Import failed: ${e}`
   } finally {
     importing.value = false
+  }
+}
+
+interface ExportResult {
+  files_written: number
+  entries_written: number
+  directory: string
+}
+
+async function handleExport() {
+  const directory = await open({ directory: true, multiple: false })
+  if (!directory || Array.isArray(directory)) return
+
+  exporting.value = true
+  importMessage.value = ''
+  try {
+    const result = await invoke<ExportResult>('export_shop_log_files', { directory })
+    importMessage.value = `Exported ${result.entries_written} entries to ${result.files_written} file(s)`
+    setTimeout(() => { importMessage.value = '' }, 5000)
+  } catch (e) {
+    importMessage.value = `Export failed: ${e}`
+  } finally {
+    exporting.value = false
   }
 }
 

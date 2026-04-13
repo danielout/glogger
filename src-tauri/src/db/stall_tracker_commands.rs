@@ -1,5 +1,7 @@
 use super::DbPool;
+use chrono::Datelike;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use tauri::State;
 
 // ── Input types ─────────────────────────────────────────────────────────────
@@ -254,5 +256,139 @@ pub fn import_shop_log_file(
     Ok(ImportResult {
         total_entries,
         new_entries,
+    })
+}
+
+#[derive(Serialize)]
+pub struct ExportResult {
+    pub files_written: usize,
+    pub entries_written: usize,
+    pub directory: String,
+}
+
+static MONTHS: &[(&str, u32)] = &[
+    ("Jan", 1), ("Feb", 2), ("Mar", 3), ("Apr", 4), ("May", 5), ("Jun", 6),
+    ("Jul", 7), ("Aug", 8), ("Sep", 9), ("Oct", 10), ("Nov", 11), ("Dec", 12),
+];
+
+/// Parse "Mon Apr 13 14:29" → (month, day). Returns None if unparseable.
+fn parse_month_day(ts: &str) -> Option<(u32, u32)> {
+    let parts: Vec<&str> = ts.split_whitespace().collect();
+    if parts.len() < 3 {
+        return None;
+    }
+    let mon = MONTHS.iter().find(|(n, _)| *n == parts[1]).map(|(_, m)| *m)?;
+    let day: u32 = parts[2].parse().ok()?;
+    Some((mon, day))
+}
+
+fn sanitize_filename_component(s: &str) -> String {
+    s.chars()
+        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+        .collect()
+}
+
+#[tauri::command]
+pub fn export_shop_log_files(
+    db: State<'_, DbPool>,
+    directory: String,
+) -> Result<ExportResult, String> {
+    let conn = db.get().map_err(|e| e.to_string())?;
+
+    // Fetch all non-unknown events. We read raw_message to preserve exact
+    // in-game phrasing and event_timestamp to group by (owner, date).
+    let mut stmt = conn
+        .prepare(
+            "SELECT event_timestamp, owner, raw_message, entry_index
+             FROM stall_events
+             WHERE action != 'unknown'",
+        )
+        .map_err(|e| e.to_string())?;
+
+    struct Row {
+        event_timestamp: String,
+        owner: Option<String>,
+        raw_message: String,
+        entry_index: i64,
+    }
+
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(Row {
+                event_timestamp: row.get(0)?,
+                owner: row.get(1)?,
+                raw_message: row.get(2)?,
+                entry_index: row.get(3)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    // event_timestamp has no year; use the current year for filenames.
+    let year = chrono::Local::now().year();
+
+    // Group by (owner, month, day). Each value is a list of rows we'll sort
+    // within the day and emit newest-first, blank-line separated.
+    let mut groups: BTreeMap<(String, u32, u32), Vec<Row>> = BTreeMap::new();
+    for row in rows {
+        let Some((mon, day)) = parse_month_day(&row.event_timestamp) else {
+            continue;
+        };
+        let owner = row
+            .owner
+            .clone()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "unknown".to_string());
+        groups.entry((owner, mon, day)).or_default().push(row);
+    }
+
+    let dir_path = std::path::PathBuf::from(&directory);
+    if !dir_path.is_dir() {
+        return Err(format!("Not a directory: {directory}"));
+    }
+
+    let mut files_written = 0usize;
+    let mut entries_written = 0usize;
+
+    for ((owner, mon, day), mut entries) in groups {
+        // Newest first: sort by (timestamp string desc, entry_index desc).
+        // The HH:MM portion sorts lexicographically within the same day.
+        entries.sort_by(|a, b| {
+            b.event_timestamp
+                .cmp(&a.event_timestamp)
+                .then(b.entry_index.cmp(&a.entry_index))
+        });
+
+        let mut body = String::new();
+        for (i, row) in entries.iter().enumerate() {
+            if i > 0 {
+                body.push_str("\n\n");
+            }
+            body.push_str(&row.event_timestamp);
+            body.push_str(" - ");
+            body.push_str(&row.raw_message);
+        }
+        body.push('\n');
+
+        let filename = format!(
+            "{}-shop-log-{:04}-{:02}-{:02}.txt",
+            sanitize_filename_component(&owner),
+            year,
+            mon,
+            day
+        );
+        let path = dir_path.join(&filename);
+        std::fs::write(&path, body)
+            .map_err(|e| format!("Failed to write {}: {e}", path.display()))?;
+
+        files_written += 1;
+        entries_written += entries.len();
+    }
+
+    Ok(ExportResult {
+        files_written,
+        entries_written,
+        directory,
     })
 }
