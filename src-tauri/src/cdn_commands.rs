@@ -4,7 +4,7 @@ use chrono::{Datelike, Local};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::RwLock;
 
 use serde_json::Value;
@@ -63,13 +63,17 @@ pub async fn init_game_data(app: &AppHandle, state: &GameDataState) -> Result<()
 
     // Try to fetch remote version; fall back to cache-only if offline
     startup_log!("Checking CDN version...");
+    emit_startup_detail(app, 0, "Checking for updates...");
     let remote_version = match cdn::fetch_remote_version().await {
         Ok(v) => v,
         Err(e) => {
             startup_log!("CDN version check failed (offline?): {e}");
             if let Some(cached) = cached_version {
                 startup_log!("Loading game data from cache (v{cached})");
-                match game_data::load_from_cache(&data_dir, cached).await {
+                emit_startup_detail(app, 0, "Loading cached data...");
+                match game_data::load_from_cache_with_progress(&data_dir, cached, |detail| {
+                    emit_startup_detail(app, 0, detail);
+                }).await {
                     Ok(data) => {
                         *state.write().await = data;
                         return Ok(());
@@ -86,17 +90,32 @@ pub async fn init_game_data(app: &AppHandle, state: &GameDataState) -> Result<()
 
     if needs_download {
         startup_log!("Downloading CDN data v{remote_version}...");
+        emit_startup_detail(app, 0, &format!("Downloading update v{remote_version}..."));
         cdn::download_all_data_files(remote_version, &data_dir).await?;
         cdn::write_cached_version(&data_dir, remote_version).await?;
+        // Remove stale cached indices so they'll be rebuilt from new data
+        let _ = tokio::fs::remove_file(data_dir.join("indices.json")).await;
         startup_log!("CDN download complete");
     } else {
         startup_log!("CDN data up to date (v{remote_version}), loading from cache");
     }
 
-    let data = game_data::load_from_cache(&data_dir, remote_version).await?;
+    let data = game_data::load_from_cache_with_progress(&data_dir, remote_version, |detail| {
+        emit_startup_detail(app, 0, detail);
+    }).await?;
     *state.write().await = data;
 
     Ok(())
+}
+
+/// Emit a sub-status detail to the frontend loading screen.
+pub fn emit_startup_detail(app: &AppHandle, task: u32, detail: &str) {
+    #[derive(serde::Serialize, Clone)]
+    struct StartupDetail {
+        task: u32,
+        detail: String,
+    }
+    app.emit("startup-detail", StartupDetail { task, detail: detail.to_string() }).ok();
 }
 
 // ── CDN management commands ───────────────────────────────────────────────────
@@ -146,6 +165,7 @@ pub async fn force_refresh_cdn(
     let remote_version = cdn::fetch_remote_version().await?;
     cdn::download_all_data_files(remote_version, &data_dir).await?;
     cdn::write_cached_version(&data_dir, remote_version).await?;
+    let _ = tokio::fs::remove_file(data_dir.join("indices.json")).await;
 
     let data = game_data::load_from_cache(&data_dir, remote_version).await?;
     let item_count = data.items.len();

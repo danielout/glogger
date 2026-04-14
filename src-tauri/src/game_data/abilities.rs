@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -61,7 +61,7 @@ pub struct AbilityInfo {
 }
 
 /// A group of ability tiers that represent the same base ability at different power levels.
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AbilityFamily {
     /// InternalName of the base (tier 1) ability, used as the family key.
     pub base_internal_name: String,

@@ -62,6 +62,8 @@ export const useStartupStore = defineStore("startup", () => {
   const serverList = ref<string[]>([]);
   const startupTasks = ref<StartupTask[]>([]);
   const error = ref<string | null>(null);
+  // Buffer for startup-detail events that arrive before tasks are created
+  const lastDetailByTask: Record<number, string> = {};
 
   const isSetupWizard = computed(() => phase.value.startsWith("setup-"));
 
@@ -81,6 +83,22 @@ export const useStartupStore = defineStore("startup", () => {
 
   async function initialize() {
     const settingsStore = useSettingsStore();
+
+    // Register startup detail listener early so we catch events from
+    // the Rust CDN background task that starts during Tauri setup()
+    await listen<{ task: number; detail: string }>("startup-detail", (event) => {
+      const { task, detail } = event.payload;
+      const t = startupTasks.value[task];
+      if (t) {
+        // Only update if the task is currently running
+        if (t.status === "running") {
+          updateTask(task, "running", detail);
+        }
+      } else {
+        // Task not created yet — buffer the detail so it shows when task starts
+        lastDetailByTask[task] = detail;
+      }
+    });
 
     // Load settings first
     await settingsStore.initialize();
@@ -179,7 +197,12 @@ export const useStartupStore = defineStore("startup", () => {
   function updateTask(index: number, status: StartupTask["status"], detail?: string) {
     if (startupTasks.value[index]) {
       startupTasks.value[index].status = status;
-      if (detail !== undefined) startupTasks.value[index].detail = detail;
+      // Clear detail when task completes/errors unless explicitly provided
+      if (status === "done" || status === "error") {
+        startupTasks.value[index].detail = detail;
+      } else if (detail !== undefined) {
+        startupTasks.value[index].detail = detail;
+      }
     }
   }
 
@@ -192,7 +215,7 @@ export const useStartupStore = defineStore("startup", () => {
     const TASK_GAME_STATE = 3;
 
     startupTasks.value = [
-      { label: "Loading game data", status: "running" },
+      { label: "Loading game data", status: "running", detail: lastDetailByTask[0] },
       { label: "Catching up on logs", status: "pending" },
       { label: "Loading character data", status: "pending" },
       { label: "Preparing game state", status: "pending" },
@@ -242,7 +265,7 @@ export const useStartupStore = defineStore("startup", () => {
     // game state from the log history. Only after catch-up do we know
     // who is actually playing.
     log("Starting log watchers and catching up");
-    updateTask(TASK_LOG_CATCHUP, "running");
+    updateTask(TASK_LOG_CATCHUP, "running", "Registering event listeners...");
     try {
       // Register event listeners BEFORE starting watchers so no events are missed
       await listen("skill-update", (event: any) => {
@@ -272,6 +295,7 @@ export const useStartupStore = defineStore("startup", () => {
       });
 
       // Start log watchers if enabled
+      updateTask(TASK_LOG_CATCHUP, "running", "Starting log watchers...");
       if (settingsStore.settings.autoTailPlayerLog && settingsStore.settings.gameDataPath) {
         await coordinator.startPlayerTailing();
       }
@@ -282,9 +306,11 @@ export const useStartupStore = defineStore("startup", () => {
       // Run one synchronous poll to process all historical log content.
       // This blocks until the catch-up is complete, so after this call
       // the active character and game state are fully resolved.
+      updateTask(TASK_LOG_CATCHUP, "running", "Processing log history...");
       await invoke('poll_watchers');
 
       // Now start periodic polling for live updates
+      updateTask(TASK_LOG_CATCHUP, "running", "Starting live polling...");
       coordinator.startPolling(1500);
 
       updateTask(TASK_LOG_CATCHUP, "done");
@@ -301,7 +327,7 @@ export const useStartupStore = defineStore("startup", () => {
 
     // ── Task 3: Load character data from reports ────────────────────────
     log("Loading character data from reports");
-    updateTask(TASK_CHARACTER, "running");
+    updateTask(TASK_CHARACTER, "running", "Importing reports...");
     try {
       // Auto-import latest character + inventory reports and seed game state
       await characterStore.initForActiveCharacter();
@@ -316,15 +342,18 @@ export const useStartupStore = defineStore("startup", () => {
 
     // ── Task 4: Load full game state from DB ────────────────────────────
     log("Loading game state from database");
-    updateTask(TASK_GAME_STATE, "running");
+    updateTask(TASK_GAME_STATE, "running", "Loading state domains...");
     try {
       // Load all game state domains (skills, inventory, favor, recipes, etc.)
       await gameState.loadAll();
       // Also load storage vault CDN metadata
+      updateTask(TASK_GAME_STATE, "running", "Loading storage vaults...");
       await gameState.loadStorageVaults();
       // Load market values
+      updateTask(TASK_GAME_STATE, "running", "Loading market data...");
       await marketStore.loadAll();
       // Load stall tracker stats + filter options for the active character
+      updateTask(TASK_GAME_STATE, "running", "Loading stall tracker...");
       await Promise.all([
         stallTrackerStore.loadStats(),
         stallTrackerStore.loadFilterOptions(),

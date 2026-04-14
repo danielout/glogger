@@ -293,13 +293,19 @@ pub fn run() {
                             t0.elapsed().as_secs_f64(),
                         );
 
-                        // Persist CDN data to database (in background, non-blocking)
+                        // Persist CDN data to database only if version changed
                         if let Some(pool) = app_handle.try_state::<db::DbPool>() {
                             if let Ok(mut conn) = pool.get() {
-                                if let Err(e) = db::cdn_persistence::persist_cdn_data(&mut conn, &data) {
-                                    startup_log!("Failed to persist CDN data to database: {e}");
+                                let db_version = db::queries::cdn_data::get_cdn_version(&conn).ok().flatten();
+                                if db_version == Some(data.version) {
+                                    startup_log!("CDN v{} already persisted to database, skipping", data.version);
                                 } else {
-                                    startup_log!("CDN data persisted to database");
+                                    cdn_commands::emit_startup_detail(&app_handle, 0, "Saving to database...");
+                                    if let Err(e) = db::cdn_persistence::persist_cdn_data(&mut conn, &data) {
+                                        startup_log!("Failed to persist CDN data to database: {e}");
+                                    } else {
+                                        startup_log!("CDN data persisted to database");
+                                    }
                                 }
                             }
                         }

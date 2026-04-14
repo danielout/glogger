@@ -1,5 +1,5 @@
 use chrono::Local;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 /// Deserialization of Project: Gorgon CDN JSON files into typed structs.
 ///
 /// The CDN uses object maps keyed by "Item_1", "Ability_2", etc.
@@ -204,6 +204,42 @@ pub struct GameData {
     pub ability_to_tsys: HashMap<u32, Vec<String>>,
     /// TSys internal_name → CDN key (for resolving power_name from presetMods)
     pub tsys_internal_name_index: HashMap<String, String>,
+}
+
+/// Serializable container for all derived indices. Cached to disk so they
+/// only need rebuilding when the CDN version changes.
+#[derive(Serialize, Deserialize)]
+struct GameDataIndices {
+    item_name_index: HashMap<String, u32>,
+    item_internal_name_index: HashMap<String, u32>,
+    skill_name_index: HashMap<String, u32>,
+    recipes_by_skill: HashMap<String, Vec<u32>>,
+    recipes_producing_item: HashMap<u32, Vec<u32>>,
+    recipes_using_item: HashMap<u32, Vec<u32>>,
+    recipe_name_index: HashMap<String, u32>,
+    recipe_internal_name_index: HashMap<String, u32>,
+    npcs_by_skill: HashMap<String, Vec<String>>,
+    quest_internal_name_index: HashMap<String, String>,
+    skill_internal_name_index: HashMap<String, u32>,
+    npc_name_index: HashMap<String, String>,
+    area_name_index: HashMap<String, String>,
+    ability_name_index: HashMap<String, u32>,
+    ability_families: HashMap<String, abilities::AbilityFamily>,
+    ability_to_family: HashMap<u32, String>,
+    items_bestowing_ability: HashMap<String, Vec<u32>>,
+    items_bestowing_recipe: HashMap<String, Vec<u32>>,
+    items_bestowing_quest: HashMap<String, Vec<u32>>,
+    quests_rewarding_item: HashMap<String, Vec<String>>,
+    npc_favor_by_item_name: HashMap<String, Vec<(String, String, f32)>>,
+    npc_favor_by_keyword: HashMap<String, Vec<(String, String, f32)>>,
+    quests_by_npc: HashMap<String, Vec<String>>,
+    quests_by_work_order_skill: HashMap<String, Vec<String>>,
+    recipes_by_ingredient_keyword: HashMap<String, Vec<u32>>,
+    vendor_items_by_npc: HashMap<String, Vec<u32>>,
+    vendors_for_item: HashMap<u32, Vec<String>>,
+    tsys_to_abilities: HashMap<String, Vec<u32>>,
+    ability_to_tsys: HashMap<u32, Vec<String>>,
+    tsys_internal_name_index: HashMap<String, String>,
 }
 
 impl GameData {
@@ -415,6 +451,18 @@ impl GameData {
 
 /// Load all cached JSON files from disk into a `GameData` instance.
 pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData, String> {
+    load_from_cache_with_progress(cache_dir, version, |_| {}).await
+}
+
+/// Load cached JSON files with a progress callback for sub-status updates.
+/// The callback fires between async boundaries so events can be delivered.
+pub async fn load_from_cache_with_progress(
+    cache_dir: &Path,
+    version: u32,
+    on_progress: impl Fn(&str),
+) -> Result<GameData, String> {
+    on_progress("Reading cached files...");
+
     // Read all existing files
     let items_json = read_file(&cache_dir.join("items.json")).await?;
     let skills_json = read_file(&cache_dir.join("skills.json")).await?;
@@ -562,83 +610,211 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
             String::from("{}")
         });
 
-    // Parse all data
-    startup_log!("Parsing game data files...");
+    // Try to load cached indices
+    let indices_path = cache_dir.join("indices.json");
+    let cached_indices: Option<GameDataIndices> = match fs::read_to_string(&indices_path).await {
+        Ok(json) => match serde_json::from_str(&json) {
+            Ok(idx) => {
+                startup_log!("Loaded cached indices from disk");
+                Some(idx)
+            }
+            Err(e) => {
+                startup_log!("Cached indices invalid, will rebuild: {e}");
+                None
+            }
+        },
+        Err(_) => None,
+    };
 
-    let items = items::parse(&items_json)?;
-    startup_log!("  items: {} entries", items.len());
+    let has_cached_indices = cached_indices.is_some();
 
-    let skills = skills::parse(&skills_json)?;
-    startup_log!("  skills: {} entries", skills.len());
+    // Parse all data + optionally build indices in a blocking thread
+    // so we don't starve the async runtime (and events can be delivered).
+    if has_cached_indices {
+        on_progress("Parsing game data...");
+    } else {
+        on_progress("Parsing and indexing game data (one-time setup)...");
+    }
 
-    let abilities = abilities::parse(&abilities_json)?;
-    startup_log!("  abilities: {} entries", abilities.len());
+    let indices_path_owned = indices_path.clone();
+    let game_data = tokio::task::spawn_blocking(move || -> Result<GameData, String> {
+        startup_log!("Parsing game data files...");
 
-    let recipes = recipes::parse(&recipes_json)?;
-    startup_log!("  recipes: {} entries", recipes.len());
+        let items = items::parse(&items_json)?;
+        startup_log!("  items: {} entries", items.len());
 
-    let npcs = npcs::parse(&npcs_json)?;
-    startup_log!("  npcs: {} entries", npcs.len());
+        let skills = skills::parse(&skills_json)?;
+        startup_log!("  skills: {} entries", skills.len());
 
-    let effects = effects::parse(&effects_json)?;
-    startup_log!("  effects: {} entries", effects.len());
+        let abilities = abilities::parse(&abilities_json)?;
+        startup_log!("  abilities: {} entries", abilities.len());
 
-    let areas = areas::parse(&areas_json)?;
-    startup_log!("  areas: {} entries", areas.len());
+        let recipes = recipes::parse(&recipes_json)?;
+        startup_log!("  recipes: {} entries", recipes.len());
 
-    let attributes = attributes::parse(&attributes_json)?;
-    startup_log!("  attributes: {} entries", attributes.len());
+        let npcs = npcs::parse(&npcs_json)?;
+        startup_log!("  npcs: {} entries", npcs.len());
 
-    let xp_tables = xp_tables::parse(&xp_tables_json)?;
-    startup_log!("  xp_tables: {} entries", xp_tables.len());
+        let effects = effects::parse(&effects_json)?;
+        startup_log!("  effects: {} entries", effects.len());
 
-    let advancement_tables = advancement_tables::parse(&advancement_tables_json)?;
-    startup_log!("  advancement_tables: {} entries", advancement_tables.len());
+        let areas = areas::parse(&areas_json)?;
+        startup_log!("  areas: {} entries", areas.len());
 
-    let ability_keywords = ability_keywords::parse(&ability_keywords_json)?;
-    startup_log!("  ability_keywords: {} entries", ability_keywords.len());
+        let attributes = attributes::parse(&attributes_json)?;
+        startup_log!("  attributes: {} entries", attributes.len());
 
-    let ability_dynamic = ability_dynamic::AbilityDynamicData::parse(
-        &ability_dynamic_dots_json,
-        &ability_dynamic_special_json,
-    )?;
-    startup_log!("  ability_dynamic: parsed");
+        let xp_tables = xp_tables::parse(&xp_tables_json)?;
+        startup_log!("  xp_tables: {} entries", xp_tables.len());
 
-    let ai = ai::parse(&ai_json)?;
-    startup_log!("  ai: {} entries", ai.len());
+        let advancement_tables = advancement_tables::parse(&advancement_tables_json)?;
+        startup_log!("  advancement_tables: {} entries", advancement_tables.len());
 
-    let directed_goals = directed_goals::parse(&directed_goals_json)?;
-    startup_log!("  directed_goals: {} entries", directed_goals.len());
+        let ability_keywords = ability_keywords::parse(&ability_keywords_json)?;
+        startup_log!("  ability_keywords: {} entries", ability_keywords.len());
 
-    let item_uses = item_uses::parse(&item_uses_json)?;
-    startup_log!("  item_uses: {} entries", item_uses.len());
+        let ability_dynamic = ability_dynamic::AbilityDynamicData::parse(
+            &ability_dynamic_dots_json,
+            &ability_dynamic_special_json,
+        )?;
+        startup_log!("  ability_dynamic: parsed");
 
-    let landmarks = landmarks::parse(&landmarks_json)?;
-    startup_log!("  landmarks: {} entries", landmarks.len());
+        let ai = ai::parse(&ai_json)?;
+        startup_log!("  ai: {} entries", ai.len());
 
-    let lorebooks = lorebooks::LorebookData::parse(&lorebooks_json, &lorebook_info_json)?;
-    startup_log!("  lorebooks: {} books, {} categories", lorebooks.books.len(), lorebooks.categories.len());
+        let directed_goals = directed_goals::parse(&directed_goals_json)?;
+        startup_log!("  directed_goals: {} entries", directed_goals.len());
 
-    let player_titles = player_titles::parse(&player_titles_json)?;
-    startup_log!("  player_titles: {} entries", player_titles.len());
+        let item_uses = item_uses::parse(&item_uses_json)?;
+        startup_log!("  item_uses: {} entries", item_uses.len());
 
-    let quests = quests::parse(&quests_json)?;
-    startup_log!("  quests: {} entries", quests.len());
+        let landmarks = landmarks::parse(&landmarks_json)?;
+        startup_log!("  landmarks: {} entries", landmarks.len());
 
-    let sources = sources::SourcesData::parse(
-        &sources_abilities_json,
-        &sources_items_json,
-        &sources_recipes_json,
-    )?;
-    startup_log!("  sources: parsed");
+        let lorebooks = lorebooks::LorebookData::parse(&lorebooks_json, &lorebook_info_json)?;
+        startup_log!("  lorebooks: {} books, {} categories", lorebooks.books.len(), lorebooks.categories.len());
 
-    let storage_vaults = storage_vaults::parse(&storage_vaults_json)?;
-    startup_log!("  storage_vaults: {} entries", storage_vaults.len());
+        let player_titles = player_titles::parse(&player_titles_json)?;
+        startup_log!("  player_titles: {} entries", player_titles.len());
 
-    let tsys = tsys::TsysData::parse(&tsys_client_info_json, &tsys_profiles_json)?;
-    startup_log!("  tsys: parsed");
+        let quests = quests::parse(&quests_json)?;
+        startup_log!("  quests: {} entries", quests.len());
 
-    // Build indices
+        let sources = sources::SourcesData::parse(
+            &sources_abilities_json,
+            &sources_items_json,
+            &sources_recipes_json,
+        )?;
+        startup_log!("  sources: parsed");
+
+        let storage_vaults = storage_vaults::parse(&storage_vaults_json)?;
+        startup_log!("  storage_vaults: {} entries", storage_vaults.len());
+
+        let tsys = tsys::TsysData::parse(&tsys_client_info_json, &tsys_profiles_json)?;
+        startup_log!("  tsys: parsed");
+
+        // Use cached indices if available, otherwise build them
+        let indices = if let Some(idx) = cached_indices {
+            startup_log!("Using cached indices (skipping index build)");
+            idx
+        } else {
+            startup_log!("Building indices from scratch...");
+            let idx = build_all_indices(
+                &items, &skills, &abilities, &recipes, &npcs, &quests,
+                &sources, &areas, &tsys,
+            );
+            // Save indices to disk for next startup
+            match serde_json::to_string(&idx) {
+                Ok(json) => {
+                    if let Err(e) = std::fs::write(&indices_path_owned, json) {
+                        startup_log!("Failed to cache indices: {e}");
+                    } else {
+                        startup_log!("Indices cached to disk");
+                    }
+                }
+                Err(e) => { startup_log!("Failed to serialize indices: {e}"); }
+            }
+            idx
+        };
+
+        Ok(GameData {
+            version,
+            items,
+            skills,
+            abilities,
+            recipes,
+            npcs,
+            effects,
+            areas,
+            attributes,
+            xp_tables,
+            advancement_tables,
+            ability_keywords,
+            ability_dynamic,
+            ai,
+            directed_goals,
+            item_uses,
+            landmarks,
+            lorebooks,
+            player_titles,
+            quests,
+            sources,
+            storage_vaults,
+            tsys,
+            item_name_index: indices.item_name_index,
+            item_internal_name_index: indices.item_internal_name_index,
+            skill_name_index: indices.skill_name_index,
+            recipes_by_skill: indices.recipes_by_skill,
+            recipes_producing_item: indices.recipes_producing_item,
+            recipes_using_item: indices.recipes_using_item,
+            recipe_name_index: indices.recipe_name_index,
+            recipe_internal_name_index: indices.recipe_internal_name_index,
+            npcs_by_skill: indices.npcs_by_skill,
+            quest_internal_name_index: indices.quest_internal_name_index,
+            skill_internal_name_index: indices.skill_internal_name_index,
+            npc_name_index: indices.npc_name_index,
+            area_name_index: indices.area_name_index,
+            ability_name_index: indices.ability_name_index,
+            ability_families: indices.ability_families,
+            ability_to_family: indices.ability_to_family,
+            items_bestowing_ability: indices.items_bestowing_ability,
+            items_bestowing_recipe: indices.items_bestowing_recipe,
+            items_bestowing_quest: indices.items_bestowing_quest,
+            quests_rewarding_item: indices.quests_rewarding_item,
+            npc_favor_by_item_name: indices.npc_favor_by_item_name,
+            npc_favor_by_keyword: indices.npc_favor_by_keyword,
+            quests_by_npc: indices.quests_by_npc,
+            quests_by_work_order_skill: indices.quests_by_work_order_skill,
+            recipes_by_ingredient_keyword: indices.recipes_by_ingredient_keyword,
+            vendor_items_by_npc: indices.vendor_items_by_npc,
+            vendors_for_item: indices.vendors_for_item,
+            tsys_to_abilities: indices.tsys_to_abilities,
+            ability_to_tsys: indices.ability_to_tsys,
+            tsys_internal_name_index: indices.tsys_internal_name_index,
+        })
+    }).await.map_err(|e| format!("Parsing task panicked: {e}"))??;
+
+    if !has_cached_indices {
+        on_progress("Indices built and cached");
+    }
+
+    Ok(game_data)
+}
+
+// ── Index builder ──────────────────────────────────────────────────────────
+
+/// Build all derived indices from parsed game data.
+fn build_all_indices(
+    items: &HashMap<u32, items::ItemInfo>,
+    skills: &HashMap<u32, skills::SkillInfo>,
+    abilities: &HashMap<u32, abilities::AbilityInfo>,
+    recipes: &HashMap<u32, recipes::RecipeInfo>,
+    npcs: &HashMap<String, npcs::NpcInfo>,
+    quests: &HashMap<String, quests::QuestInfo>,
+    sources: &sources::SourcesData,
+    areas: &HashMap<String, areas::AreaInfo>,
+    tsys: &tsys::TsysData,
+) -> GameDataIndices {
     let item_name_index: HashMap<String, u32> = items
         .iter()
         .map(|(id, item)| (item.name.clone(), *id))
@@ -664,11 +840,11 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
     let mut recipes_producing_item: HashMap<u32, Vec<u32>> = HashMap::new();
     let mut recipes_using_item: HashMap<u32, Vec<u32>> = HashMap::new();
 
-    for (recipe_id, recipe) in &recipes {
+    for (recipe_id, recipe) in recipes {
         if let Some(skill) = &recipe.skill {
             // Use display name if available, fall back to raw skill name
             let display_name = skill_internal_to_display
-                .get(skill)
+                .get(skill.as_str())
                 .cloned()
                 .unwrap_or_else(|| skill.clone());
             recipes_by_skill
@@ -706,7 +882,7 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         .collect();
 
     let mut npcs_by_skill: HashMap<String, Vec<String>> = HashMap::new();
-    for (npc_key, npc) in &npcs {
+    for (npc_key, npc) in npcs {
         for skill in &npc.trains_skills {
             npcs_by_skill
                 .entry(skill.clone())
@@ -717,7 +893,7 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
 
     // Build quest internal name → key index
     let mut quest_internal_name_index: HashMap<String, String> = HashMap::new();
-    for (quest_key, quest) in &quests {
+    for (quest_key, quest) in quests {
         if !quest.internal_name.is_empty() {
             quest_internal_name_index.insert(quest.internal_name.clone(), quest_key.clone());
         }
@@ -735,7 +911,7 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         .collect();
 
     let mut area_name_index: HashMap<String, String> = HashMap::new();
-    for (key, area) in &areas {
+    for (key, area) in areas {
         if let Some(ref name) = area.friendly_name {
             area_name_index.insert(name.clone(), key.clone());
         }
@@ -749,7 +925,7 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
     let mut items_bestowing_recipe: HashMap<String, Vec<u32>> = HashMap::new();
     let mut items_bestowing_quest: HashMap<String, Vec<u32>> = HashMap::new();
 
-    for (item_id, item) in &items {
+    for (item_id, item) in items {
         if let Some(ref ability_key) = item.bestow_ability {
             items_bestowing_ability
                 .entry(ability_key.clone())
@@ -776,7 +952,7 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
     }
 
     let mut quests_rewarding_item: HashMap<String, Vec<String>> = HashMap::new();
-    for (quest_key, quest) in &quests {
+    for (quest_key, quest) in quests {
         if let Some(reward_items) = quest.raw.get("Rewards_Items").and_then(|v| v.as_array()) {
             for reward in reward_items {
                 if let Some(item_key) = reward.get("Item").and_then(|v| v.as_str()) {
@@ -792,7 +968,7 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
     // Build NPC favor reverse indices: item name → NPCs, keyword → NPCs
     let mut npc_favor_by_item_name: HashMap<String, Vec<(String, String, f32)>> = HashMap::new();
     let mut npc_favor_by_keyword: HashMap<String, Vec<(String, String, f32)>> = HashMap::new();
-    for (npc_key, npc) in &npcs {
+    for (npc_key, npc) in npcs {
         for pref in &npc.preferences {
             let entry = (npc_key.clone(), pref.desire.clone(), pref.pref);
             if let Some(ref name) = pref.name {
@@ -813,7 +989,7 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
     // Build quest reverse indices: NPC → quests, skill → work order quests
     let mut quests_by_npc: HashMap<String, Vec<String>> = HashMap::new();
     let mut quests_by_work_order_skill: HashMap<String, Vec<String>> = HashMap::new();
-    for (quest_key, quest) in &quests {
+    for (quest_key, quest) in quests {
         if let Some(favor_npc) = quest.raw.get("FavorNpc").and_then(|v| v.as_str()) {
             // FavorNpc is a path like "AreaName/NPC_Foo" — extract the NPC key
             if let Some(npc_key) = favor_npc.split('/').last() {
@@ -833,7 +1009,7 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
 
     // Build recipe keyword ingredient index: keyword → recipe IDs
     let mut recipes_by_ingredient_keyword: HashMap<String, Vec<u32>> = HashMap::new();
-    for (recipe_id, recipe) in &recipes {
+    for (recipe_id, recipe) in recipes {
         for ingredient in &recipe.ingredients {
             if ingredient.item_id.is_none() {
                 for keyword in &ingredient.item_keys {
@@ -895,7 +1071,7 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
 
     // Collect which base internal names have upgrades pointing to them
     let mut family_tiers: HashMap<String, Vec<u32>> = HashMap::new();
-    for (id, ability) in &abilities {
+    for (id, ability) in abilities {
         if let Some(ref upgrade_of) = ability.upgrade_of {
             family_tiers
                 .entry(upgrade_of.clone())
@@ -958,7 +1134,7 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
     }
 
     // Create single-tier families for standalone abilities (no upgrade_of, nothing upgrades to them)
-    for (id, ability) in &abilities {
+    for (id, ability) in abilities {
         if !ability_to_family.contains_key(id) {
             let internal_name = ability
                 .internal_name
@@ -1004,7 +1180,7 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
 
     // ── Build TSys ↔ Ability cross-reference index ──────────────────────
     let (tsys_to_abilities, ability_to_tsys) = build_tsys_ability_index(
-        &tsys, &abilities, &ability_families, &ability_to_family,
+        tsys, abilities, &ability_families, &ability_to_family,
     );
     startup_log!(
         "TSys↔Ability index built: {} TSys entries mapped, {} abilities mapped",
@@ -1014,30 +1190,7 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
 
     startup_log!("Game data indices built");
 
-    Ok(GameData {
-        version,
-        items,
-        skills,
-        abilities,
-        recipes,
-        npcs,
-        effects,
-        areas,
-        attributes,
-        xp_tables,
-        advancement_tables,
-        ability_keywords,
-        ability_dynamic,
-        ai,
-        directed_goals,
-        item_uses,
-        landmarks,
-        lorebooks,
-        player_titles,
-        quests,
-        sources,
-        storage_vaults,
-        tsys,
+    GameDataIndices {
         item_name_index,
         item_internal_name_index,
         skill_name_index,
@@ -1051,6 +1204,9 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         skill_internal_name_index,
         npc_name_index,
         area_name_index,
+        ability_name_index,
+        ability_families,
+        ability_to_family,
         items_bestowing_ability,
         items_bestowing_recipe,
         items_bestowing_quest,
@@ -1062,13 +1218,10 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
         recipes_by_ingredient_keyword,
         vendor_items_by_npc,
         vendors_for_item,
-        ability_name_index,
-        ability_families,
-        ability_to_family,
         tsys_to_abilities,
         ability_to_tsys,
         tsys_internal_name_index,
-    })
+    }
 }
 
 // ── TSys ↔ Ability index builder ────────────────────────────────────────────

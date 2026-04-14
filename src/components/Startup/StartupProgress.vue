@@ -21,7 +21,7 @@
             <span :class="task.status === 'pending' ? 'text-text-muted' : task.status === 'error' ? 'text-accent-red' : 'text-text-primary'">
               {{ task.label }}
             </span>
-            <span v-if="task.detail" class="text-text-muted text-xs ml-2">{{ task.detail }}</span>
+            <div v-if="task.detail" class="text-text-muted text-xs mt-0.5">{{ task.detail }}</div>
           </div>
         </div>
       </div>
