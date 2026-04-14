@@ -16,6 +16,9 @@ mod player_event_parser;
 mod replay;
 mod settings;
 mod setup_commands;
+mod shop_log_parser;
+mod stall_aggregations;
+mod stall_year_resolver;
 mod survey_parser;
 mod survey_persistence;
 mod update_check;
@@ -265,6 +268,7 @@ pub fn run() {
             app.manage(settings_manager.clone());
             app.manage(db_pool.clone());
             app.manage(coordinator.clone());
+            app.manage(db::stall_tracker_commands::StallOpsLock::default());
 
             startup_log!("Splash screen displayed (frontend rendering)");
 
@@ -568,6 +572,17 @@ pub fn run() {
             get_aggregate_inventory,
             get_aggregate_wealth,
             get_aggregate_skills,
+            // Stall Tracker
+            db::stall_tracker_commands::get_stall_events,
+            db::stall_tracker_commands::get_stall_stats,
+            db::stall_tracker_commands::get_stall_revenue,
+            db::stall_tracker_commands::get_stall_inventory,
+            db::stall_tracker_commands::get_stall_filter_options,
+            db::stall_tracker_commands::toggle_stall_event_ignored,
+            db::stall_tracker_commands::clear_stall_events,
+            db::stall_tracker_commands::import_shop_log_file,
+            db::stall_tracker_commands::export_shop_log_files,
+            db::stall_tracker_commands::seed_stall_events_dev,
             // Update check
             check_for_update,
         ])

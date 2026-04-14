@@ -137,6 +137,11 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 22)?;
     }
 
+    if current_version < 23 {
+        migration_v23_stall_events(conn)?;
+        super::record_migration(conn, 23)?;
+    }
+
     Ok(())
 }
 
@@ -176,6 +181,46 @@ fn migration_v22_resuscitations(conn: &Connection) -> Result<()> {
             ON character_resuscitations(character_name, server_name);
         CREATE INDEX idx_resuscitations_occurred_at
             ON character_resuscitations(occurred_at);"
+    )?;
+    Ok(())
+}
+
+/// Migration V23: Stall Tracker — persisted PlayerShopLog book entries.
+///
+/// Every row is scoped to a specific `owner` (character) so multi-alt accounts
+/// can't cross-contaminate. The unique key intentionally includes `entry_index`:
+/// two buyers of the same item at the same price in the same minute would
+/// otherwise collapse into one row since `event_timestamp` only has minute
+/// precision. See docs/features/screens/economics/economics-stall-tracker.md.
+fn migration_v23_stall_events(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE stall_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_timestamp TEXT NOT NULL,
+            event_at TEXT,
+            log_timestamp TEXT NOT NULL,
+            log_title TEXT NOT NULL,
+            action TEXT NOT NULL,
+            player TEXT NOT NULL,
+            owner TEXT,
+            item TEXT,
+            quantity INTEGER NOT NULL DEFAULT 1,
+            price_unit REAL,
+            price_total INTEGER,
+            raw_message TEXT NOT NULL,
+            entry_index INTEGER NOT NULL DEFAULT 0,
+            ignored INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(event_timestamp, raw_message, entry_index)
+        );
+        CREATE INDEX idx_stall_events_action          ON stall_events(action);
+        CREATE INDEX idx_stall_events_created         ON stall_events(created_at DESC);
+        CREATE INDEX idx_stall_events_timestamp       ON stall_events(event_timestamp);
+        CREATE INDEX idx_stall_events_event_at        ON stall_events(event_at DESC);
+        CREATE INDEX idx_stall_events_action_event_at ON stall_events(action, event_at DESC);
+        CREATE INDEX idx_stall_events_player          ON stall_events(player);
+        CREATE INDEX idx_stall_events_item            ON stall_events(item);
+        CREATE INDEX idx_stall_events_owner           ON stall_events(owner);"
     )?;
     Ok(())
 }
