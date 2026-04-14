@@ -234,6 +234,7 @@ const typeBadgeClasses: Record<BrowserEntityType, string> = {
   area: "bg-entity-area/15 text-entity-area",
   enemy: "bg-entity-enemy/15 text-entity-enemy",
   effect: "bg-purple-500/15 text-purple-400",
+  lorebook: "bg-sky-500/15 text-sky-400",
   title: "bg-amber-500/15 text-amber-400",
   treasure: "bg-emerald-500/15 text-emerald-400",
 };
@@ -252,6 +253,7 @@ const typeLabels: Record<BrowserEntityType, string> = {
   area: "ARE",
   enemy: "ENM",
   effect: "EFX",
+  lorebook: "LOR",
   title: "TTL",
   treasure: "TRS",
 };

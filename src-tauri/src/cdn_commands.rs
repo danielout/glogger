@@ -12,8 +12,9 @@ use serde_json::Value;
 use crate::cdn;
 use crate::db::DbPool;
 use crate::game_data::{
-    self, AbilityFamily, AbilityInfo, AreaInfo, EffectInfo, GameData, ItemInfo, NpcInfo, PlayerTitleInfo,
-    QuestInfo, RecipeInfo, SkillInfo, SourceEntry, TsysClientInfo, TsysTierInfo,
+    self, AbilityFamily, AbilityInfo, AreaInfo, EffectInfo, GameData, ItemInfo, LorebookCategoryInfo,
+    LorebookEntry, NpcInfo, PlayerTitleInfo, QuestInfo, RecipeInfo, SkillInfo, SourceEntry,
+    TsysClientInfo, TsysTierInfo,
 };
 
 /// Timestamped log line for startup diagnostics.
@@ -3213,5 +3214,90 @@ pub async fn find_recipe_items_in_inventory(
             .then(a.item_name.cmp(&b.item_name))
     });
 
+    Ok(results)
+}
+
+// ── Lorebook query commands ─────────────────────────────────────────────────
+
+/// Get all lorebook entries, sorted by title.
+#[tauri::command]
+pub async fn get_all_lorebooks(
+    state: State<'_, GameDataState>,
+) -> Result<Vec<LorebookEntry>, String> {
+    let data = state.read().await;
+    let mut results: Vec<LorebookEntry> = data.lorebooks.books.values().cloned().collect();
+    results.sort_by(|a, b| {
+        let a_title = a.title.as_deref().unwrap_or("");
+        let b_title = b.title.as_deref().unwrap_or("");
+        a_title.cmp(b_title)
+    });
+    Ok(results)
+}
+
+/// Get lorebook category info.
+#[tauri::command]
+pub async fn get_lorebook_categories(
+    state: State<'_, GameDataState>,
+) -> Result<Vec<LorebookCategoryInfo>, String> {
+    let data = state.read().await;
+    let mut results: Vec<LorebookCategoryInfo> = data.lorebooks.categories.values().cloned().collect();
+    results.sort_by(|a, b| {
+        let a_sort = a.sort_title.as_deref().unwrap_or(a.title.as_deref().unwrap_or(""));
+        let b_sort = b.sort_title.as_deref().unwrap_or(b.title.as_deref().unwrap_or(""));
+        a_sort.cmp(b_sort)
+    });
+    Ok(results)
+}
+
+/// Search lorebook entries by title, text, or category.
+#[tauri::command]
+pub async fn search_lorebooks(
+    query: String,
+    category: Option<String>,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<LorebookEntry>, String> {
+    let data = state.read().await;
+    let q = query.to_lowercase();
+
+    let mut results: Vec<LorebookEntry> = data
+        .lorebooks
+        .books
+        .values()
+        .filter(|b| {
+            // Category filter
+            if let Some(ref cat) = category {
+                if b.category.as_deref() != Some(cat.as_str()) {
+                    return false;
+                }
+            }
+            // Text query filter
+            if q.is_empty() {
+                return true;
+            }
+            let title_match = b
+                .title
+                .as_ref()
+                .map(|t| t.to_lowercase().contains(&q))
+                .unwrap_or(false);
+            let text_match = b
+                .text
+                .as_ref()
+                .map(|t| t.to_lowercase().contains(&q))
+                .unwrap_or(false);
+            let location_match = b
+                .location_hint
+                .as_ref()
+                .map(|l| l.to_lowercase().contains(&q))
+                .unwrap_or(false);
+            title_match || text_match || location_match
+        })
+        .cloned()
+        .collect();
+
+    results.sort_by(|a, b| {
+        let a_title = a.title.as_deref().unwrap_or("");
+        let b_title = b.title.as_deref().unwrap_or("");
+        a_title.cmp(b_title)
+    });
     Ok(results)
 }

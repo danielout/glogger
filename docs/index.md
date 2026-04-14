@@ -116,6 +116,7 @@ Per-screen documentation organized by view.
   - [data-browser-quests.md](features/screens/data-browser/data-browser-quests.md) — Quests tab.
   - [data-browser-npcs.md](features/screens/data-browser/data-browser-npcs.md) — NPCs tab.
   - [data-browser-effects.md](features/screens/data-browser/data-browser-effects.md) — Effects tab.
+  - [data-browser-lorebooks.md](features/screens/data-browser/data-browser-lorebooks.md) — Lorebooks tab (book reader).
   - [data-browser-titles.md](features/screens/data-browser/data-browser-titles.md) — Titles tab.
 
 ### Search

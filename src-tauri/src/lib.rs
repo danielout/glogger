@@ -36,6 +36,7 @@ use cdn_commands::{
     get_skills_with_ability_counts,
     search_ability_families,
     get_all_item_keywords,
+    get_all_lorebooks,
     get_all_npcs,
     get_all_player_titles,
     get_all_quests,
@@ -48,6 +49,7 @@ use cdn_commands::{
     get_icon_path,
     get_item_sources,
     get_items_by_keyword,
+    get_lorebook_categories,
     get_recipe_ingredient_keywords,
     get_npcs_in_area,
     get_quest_sources,
@@ -83,6 +85,7 @@ use cdn_commands::{
     resolve_recipe,
     resolve_skill,
     search_effects,
+    search_lorebooks,
     // Query/filter commands (not replaced by resolvers)
     search_items,
     search_npcs,
@@ -369,6 +372,10 @@ pub fn run() {
             // Player Title queries
             get_all_player_titles,
             search_player_titles,
+            // Lorebook queries
+            get_all_lorebooks,
+            get_lorebook_categories,
+            search_lorebooks,
             // Storage vault queries
             get_storage_vault_zones,
             get_storage_vault_metadata,

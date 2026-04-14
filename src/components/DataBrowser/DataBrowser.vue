@@ -23,6 +23,9 @@
         <template v-else-if="activeTab === 'effects'">
           <EffectBrowser />
         </template>
+        <template v-else-if="activeTab === 'lorebooks'">
+          <LoreBrowser />
+        </template>
         <template v-else-if="activeTab === 'titles'">
           <TitleBrowser />
         </template>
@@ -44,6 +47,7 @@ import RecipeBrowser from "./RecipeBrowser.vue";
 import QuestBrowser from "./QuestBrowser.vue";
 import NpcBrowser from "./NpcBrowser.vue";
 import EffectBrowser from "./EffectBrowser.vue";
+import LoreBrowser from "./LoreBrowser.vue";
 import TitleBrowser from "./TitleBrowser.vue";
 import TsysBrowser from "./TsysBrowser.vue";
 

@@ -4,7 +4,7 @@ import { useSettingsStore } from "./settingsStore";
 import type { EntityType } from "../composables/useEntityNavigation";
 
 /** Extends EntityType with browser-only types that don't support entity navigation */
-export type BrowserEntityType = EntityType | "effect" | "title" | "treasure";
+export type BrowserEntityType = EntityType | "effect" | "lorebook" | "title" | "treasure";
 
 export interface FavoriteEntry {
   type: BrowserEntityType;
@@ -29,6 +29,7 @@ export const browserTypes = [
   { id: "quests", label: "Quests" },
   { id: "npcs", label: "NPCs" },
   { id: "effects", label: "Effects" },
+  { id: "lorebooks", label: "Lorebooks" },
   { id: "titles", label: "Titles" },
   { id: "treasure", label: "Treasure" },
 ] as const;
@@ -41,6 +42,7 @@ export const entityTypeToTab: Record<string, string> = {
   quest: "quests",
   npc: "npcs",
   effect: "effects",
+  lorebook: "lorebooks",
   title: "titles",
   treasure: "treasure",
 };

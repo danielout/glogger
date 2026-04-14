@@ -8,83 +8,27 @@ Small tasks and notes that don't belong in a dedicated plan.
 
 ## To Sort
 
-- IMPROVEMENT: Found these lines in the player.log, probably something we can work in to our parsing to improve things:
-    ```
-    [16:00:51] New Network State: Picking Character... (GotCharacters -> PickingCharacter)
-    [16:00:51] Vivox - LoginAsync(Zenith)
-    [16:00:51] Logged in as character Zenith. Time UTC=03/06/2026 16:00:51. Timezone Offset -08:00:00
-    EVENT(Ok): loginCharacter, numChars=2
-    [16:00:51] New Network State: Joined Area... Initializing Scene (PickingCharacter -> JoinedArea)
-    [16:00:51] LOADING LEVEL AreaCasino
-    Unloading 3 Unused Serialized files (Serialized files now loaded: 8)
-    [16:00:51] Logging chat to C:/Users/danie/AppData/LocalLow/Elder Game/Project Gorgon/ChatLogs/Chat-26-03-06.log
-    UnloadTime: 4.145100 ms
-    ```
 
-- [x] fix: our statehelm gifting tracker doesn't work if you aren't on the statehelm page.
-  - Added a watcher on the DB-backed `favor` ref (always refreshed via `game-state-updated` events) in `useStatehelmTracker`, so the gift log reloads even when the statehelm page isn't active.
-- [x] fix: our "items incoming" widget doesn't seem to be parsing recipes correctly? selling them they show correctly, but not incoming.
-  - Items incoming uses `ChatStatusEvent::ItemGained` from `[Status]` channel. Recipe items that appear as "X added to inventory." should parse correctly. Likely related to the mod prefix/suffix matching issue (now fixed).
-- [x] feat: duplicate recipe finder - find all recipes you have duplicates of.
-  - Added `find_recipe_items_in_inventory` Tauri command and "Recipe Items" dashboard widget. Shows: already-known recipes (safe to sell), ready-to-learn recipes, and recipes with unmet skill requirements.
-- [x] feat: usable recipe finder - find recipes you meet the requirements to use, but haven't learned yet. skill books too.
-  - Combined with duplicate recipe finder above — the "Ready to Learn" section shows recipe items where the player meets skill requirements but hasn't learned them yet.
-- [x] fix: the warning/note tooltip on the items incoming and outgoing widget gets cut off by the edge of the widget - it needs to not be restricted by the widget bounds.
-  - Changed `DashboardCard` content area from `overflow-y-auto` to `overflow-visible` so tooltips aren't clipped. Widgets already manage their own scroll areas.
-- investigate: rez tracker in the death widget doesn't seem to be working - should investigate. think we might fundamentally need a better way to do this.
-  - **Investigated:** Code path looks correct — coordinator parses `[Action Emotes]` for "resuscitates" patterns, persists to DB, emits event to frontend. Most likely cause: the `[Action Emotes]` channel must be enabled in-game for events to appear in the chat log. Recommend verifying the channel is enabled in game chat settings.
-- investigate: better npc screen with favorites, track available currency, reset times, etc. - some of this we can pull from logs as players interact, i know.
-- investigate: better cross-session
-- [x] investigate: our toasts might not be working?
-  - **Investigated:** Toast system is correctly implemented — Pinia store, composable, and ToastContainer (teleported to body, z-[100]). Only 4 places currently trigger toasts (survey import, market copy/import, app updates). The system works, it's just rarely triggered. No code fix needed.
-- [x] fix: for our items incoming tracker we fail to match based on item name if mods give the name a prefix/suffix.
-  - Added TSys prefix/suffix stripping fallback to `GameData::resolve_item()`. If exact match fails, tries stripping known TSys mod prefixes/suffixes from the item name before retrying.
 - investigate: we don't show the mods/augments/etc on items in the inventory. can we? should see if this data is anywhere in the log
   - **Investigated:** Player.log does NOT include TSys mod/augment data. Only `ProcessAddItem` (name + instance_id) and `ProcessUpdateItemCode` (stack size + type ID) are available. TSys data is only available through VIP Inventory JSON export (snapshot imports already store it). This is a fundamental log format limitation.
 - investigate: we don't show current equipment anywhere - is this in the log?
   - **Investigated:** Equipment IS tracked from Player.log via `ProcessSetEquippedItems`, but it only provides `slot` + `appearance_key` — no item names, stats, or details. The data is stored in `game_state_equipment` and exposed to the frontend. A basic "current equipment" display could be built but would only show appearance slots, not full item info. Full equipment details would require the VIP JSON export.
-- [x] feat: need a place for known glogger issues - since we're still in alpha (almost beta) this would be useful. maybe the '?' in the top right.
-  - Built a HelpView with known issues, limitations, and tips. Replaced the "Coming soon" placeholder in the `?` button's help view.
-- fix: on login we are assuming a lot of stack sizes are 1 it seems. this feels like data we should be able to pull out of the pile of inventory messages you get when you login or change zones.
-- investigate: we really need to overhaul how we track inventory changes and find some systemic solution to resolving what source, how much, what item, and where.
-- [x] impv: for the levelling tool in crafting, a 'use current skill and xp' or something to set the xp bar to the correct amount base don what the player has. so if i'm half way through 87, it can start me there. fallback option of allowing manual setting of xp value i supposed?
-  - Added `startingXp` to the leveling state. When a skill is selected, the current XP toward next level is auto-populated from game state. A "Starting XP" input is shown next to the level input, with a "use current" button to reset to the game state value. The first plan level pre-populates `xp_accumulated` with the starting XP, and the XP progress bar reflects it. The input is editable for manual override and disabled once a plan is started (clear to change).
-- [x] bug: leveling planner → project conversion doesn't account for multi-output recipes
-  - `createProjectFromLevelingPlan` was passing craft counts directly as project quantities, but the project system interprets quantities as "desired output items" and divides by output-per-craft. Fixed by multiplying craft counts by `recipe.result_items[0].stack_size` before passing to `addEntry`. Cook's Helper is unaffected (always passes 1, which correctly resolves to 1 craft).
+
+
 
 ---
 
 ## Quick Wins (Small Effort, Noticeable Value)
 
-- [x] BUG: Market Prices screen doesn't scroll properly
-  - The main values table in `MarketView.vue` has no explicit overflow handling inside its PaneLayout parent. Likely just needs an `overflow-y-auto` on the table container.
-  - **Effort: Small | Impact: Medium (unusable at scale)**
-
-- [x] BUG: Crafting project delete fires at the same time the confirmation dialog appears
-  - The delete action triggers immediately rather than waiting for user confirmation. Need to gate the delete behind the dialog result.
-  - **Effort: Small | Impact: Medium (destructive action without confirmation)**
 
 - [ ] Save page state of projects page when navigating off it
   - Active project and group selection are ephemeral reactive refs in `craftingStore`. Pane widths already persist via `useViewPrefs()`. Just need to persist `activeProject`/`activeGroupName` the same way.
   - **Effort: Small | Impact: Medium (annoyance)**
 
-- [x] Better formatting for older chat lines that include date
-  - Fixed: timestamp column had fixed `w-15` width too narrow for date+time format; switched to `whitespace-nowrap` with auto width.
-
-- [x] Character->Skills: PaneLayout, rewards, bonus sources, alignment, and layout improvements
-  - Converted to PaneLayout with resizable/collapsible left pane. Rewards now show attained (with checkmarks) and upcoming. Bonus level sources section shows which skills grant bonuses with achieved status. Fixed level alignment. XP/Session stats use responsive grid layout.
-
-- [ ] Primary/Secondary naming on gear is confusing in the build planner
-  - Currently uses generic "Primary"/"Secondary" labels with blue/emerald color coding. Could replace with actual skill names (e.g., "Sword / Psychology") throughout the UI — the skill names are already available on the preset.
-  - **Effort: Small | Impact: Medium (reduces confusion)**
 
 ---
 
 ## Medium Effort, High Value
-
-- [ ] Update data browser to have better, more readable layouts
-  - Design/UX task. All tabs already use `PaneLayout` with consistent two-pane search/detail pattern. Improvements are incremental polish: better section headers, consistent key-value grids, spacing per `docs/architecture/ux-standards.md`. Could break into sub-tasks per browser tab.
-  - **Effort: Medium (iterative) | Impact: Medium (polish)**
 
 
 - [ ] Actually implement audio alerts for watchwords
@@ -107,10 +51,8 @@ Small tasks and notes that don't belong in a dedicated plan.
   - Some screens still don't look like they fit within the app, or have their own paradigms. Sidebars that don't use standardized panels, inconsistent patterns, etc.
   - **Effort: Medium (iterative) | Impact: Medium (consistency/polish)**
 
-- [ ] Book viewer in the data browser
-  - We have the book data already. Would make books easier to read than the in-game UI. Needs a new detail view/tab in the data browser.
-  - **Effort: Medium | Impact: Medium (nice quality-of-life feature)**
-
+- [x] Book viewer in the data browser
+  - Lorebooks tab added to the data browser. Browse by category, search by title/text/location, read formatted book content.
 
 - [ ] Hot tips tracker
   - Track hot tips in the game. Needs investigation into what data is available.
@@ -120,31 +62,20 @@ Small tasks and notes that don't belong in a dedicated plan.
   - Right now in the data browser, items show up as "gift from grindstone" or "gift from ripesunflowerplant" with no direct linkage. Need to check if CDN data has a way to link seedling → plant → milling product.
   - **Effort: Medium | Impact: Low-Medium (data browser completeness)**
 
-- [x] Pinned tooltips in a bottom tray
-  - Implemented as the Reference Shelf — see `docs/plans/quick-reference-system.md`. Pin entities from tooltips, hover shelf chips to peek, click to navigate.
+
 
 ---
 
 ## Larger Efforts / Research Needed
 
-- [x] UX for checking recipes/data without losing context
-  - Addressed by Reference Shelf — hover pinned chips to see full tooltips without leaving current screen.
-
-- [x] Quick reference favorites / bookmarking system
-  - Implemented as the Reference Shelf pin system. Pins persist across screens and sessions.
 
 - [ ] Shop/stall tracking — track what you put in, what sells, trends (would require manual entry or future log support) (reported by Reyetta)
   - Big feature. Needs: investigation of what log events exist for stalls, schema for tracking stock/sales, analytics UI. Manual entry fallback would work but adoption is questionable (Reyetta herself said manual entry is "too much effort"). The player event parser handles ~24 of ~60 known event types — player vendor events are in the "low priority / future" bucket per the parser docs.
   - **Effort: Large | Impact: High (if automated), Low (if manual-only)**
 
-- [ ] Gear transmutation reference tool (reported by Reyetta)
-  - No transmutation data in CDN. Would need manual data entry for transmutation rules, costs, and outcomes. Code is straightforward once data exists — the data is the bottleneck.
-  - **Effort: Large (data acquisition) | Impact: Low-Medium (niche use case)**
-
 - [ ] Nightmare cave challenge door tracker
   - Need to look up all the challenges and see which ones we can track. Some are easy (1200 armor) and some are harder (have 4x 10-second premonition buffs). Could also track how many letters of authority the player has as an alternate path. Requires research + parser work.
   - **Effort: Large (research + implementation) | Impact: Medium (niche but useful)**
-
 
 - [ ] Gardening helper
   - Should be able to detect seeds, fertilizer, water in inventory. Could also track what nearby plants need. Needs investigation into what inventory/proximity data is available from logs.

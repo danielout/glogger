@@ -54,6 +54,9 @@
               <div v-if="visitedTypes.has('effects')" v-show="store.activeType === 'effects'" class="h-full">
                 <EffectBrowser />
               </div>
+              <div v-if="visitedTypes.has('lorebooks')" v-show="store.activeType === 'lorebooks'" class="h-full">
+                <LoreBrowser />
+              </div>
               <div v-if="visitedTypes.has('titles')" v-show="store.activeType === 'titles'" class="h-full">
                 <TitleBrowser />
               </div>
@@ -82,6 +85,7 @@ import RecipeBrowser from "./RecipeBrowser.vue";
 import QuestBrowser from "./QuestBrowser.vue";
 import NpcBrowser from "./NpcBrowser.vue";
 import EffectBrowser from "./EffectBrowser.vue";
+import LoreBrowser from "./LoreBrowser.vue";
 import TitleBrowser from "./TitleBrowser.vue";
 import TsysBrowser from "./TsysBrowser.vue";
 import DataBrowserSidebar from "./DataBrowserSidebar.vue";

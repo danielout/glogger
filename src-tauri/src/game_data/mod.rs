@@ -46,6 +46,8 @@ pub use areas::AreaInfo;
 pub use effects::EffectInfo;
 pub use item_uses::ItemUseInfo;
 pub use items::ItemInfo;
+pub use lorebooks::LorebookCategoryInfo;
+pub use lorebooks::LorebookEntry;
 pub use npcs::NpcInfo;
 pub use player_titles::PlayerTitleInfo;
 pub use quests::QuestInfo;
@@ -615,7 +617,7 @@ pub async fn load_from_cache(cache_dir: &Path, version: u32) -> Result<GameData,
     startup_log!("  landmarks: {} entries", landmarks.len());
 
     let lorebooks = lorebooks::LorebookData::parse(&lorebooks_json, &lorebook_info_json)?;
-    startup_log!("  lorebooks: parsed");
+    startup_log!("  lorebooks: {} books, {} categories", lorebooks.books.len(), lorebooks.categories.len());
 
     let player_titles = player_titles::parse(&player_titles_json)?;
     startup_log!("  player_titles: {} entries", player_titles.len());

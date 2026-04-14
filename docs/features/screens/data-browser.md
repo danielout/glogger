@@ -2,7 +2,7 @@
 
 ## Overview
 
-A multi-tab reference browser for exploring all CDN game data, presented as a **popup overlay** that can be opened from any screen. Nine tabs cover the major entity types: Items, Skills, Abilities, Recipes, Quests, NPCs, Effects, Titles, and Treasure (TSys mods). The overlay uses a three-panel layout: search/filter list on the left (from each browser's own PaneLayout), detail view in the center, and a sidebar on the right with History, Favorites, and Pinned tabs.
+A multi-tab reference browser for exploring all CDN game data, presented as a **popup overlay** that can be opened from any screen. Ten tabs cover the major entity types: Items, Skills, Abilities, Recipes, Quests, NPCs, Effects, Lorebooks, Titles, and Treasure (TSys mods). The overlay uses a three-panel layout: search/filter list on the left (from each browser's own PaneLayout), detail view in the center, and a sidebar on the right with History, Favorites, and Pinned tabs.
 
 **Opening the Data Browser:** Click "Data Browser" in the nav bar, press `Ctrl+D`, or click any entity inline link (ItemInline, SkillInline, etc.) to open the overlay targeting that entity.
 
@@ -20,6 +20,7 @@ A multi-tab reference browser for exploring all CDN game data, presented as a **
 - `src/components/DataBrowser/QuestBrowser.vue` — quests browser
 - `src/components/DataBrowser/NpcBrowser.vue` — NPCs browser
 - `src/components/DataBrowser/EffectBrowser.vue` — effects browser
+- `src/components/DataBrowser/LoreBrowser.vue` — lorebooks browser (book reader with category filter)
 - `src/components/DataBrowser/TitleBrowser.vue` — titles browser
 - `src/components/DataBrowser/TsysBrowser.vue` — treasure system mods browser
 
@@ -43,6 +44,7 @@ DataBrowserOverlay.vue              — teleported overlay, type tabs, ESC/Ctrl+
 ├── QuestBrowser.vue                — quests with area/sort filters
 ├── NpcBrowser.vue                  — NPCs with area filter
 ├── EffectBrowser.vue               — effects
+├── LoreBrowser.vue                 — lorebooks with category filter + book reader
 ├── TitleBrowser.vue                — titles with color rendering
 ├── TsysBrowser.vue                 — treasure mods with skill filter + tier breakdown
 └── DataBrowserSidebar.vue          — History / Favorites / Pinned tabs

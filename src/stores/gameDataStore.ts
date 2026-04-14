@@ -11,6 +11,8 @@ import type {
   QuestInfo,
   NpcInfo,
   EffectInfo,
+  LorebookEntry,
+  LorebookCategoryInfo,
   PlayerTitleInfo,
   TsysBrowserEntry,
   CacheStatus,
@@ -288,6 +290,20 @@ export const useGameDataStore = defineStore("gameData", () => {
     return invoke<PlayerTitleInfo[]>("search_player_titles", { query });
   }
 
+  // ── Lorebook queries ───────────────────────────────────────────────────────
+
+  async function getAllLorebooks(): Promise<LorebookEntry[]> {
+    return invoke<LorebookEntry[]>("get_all_lorebooks");
+  }
+
+  async function getLorebookCategories(): Promise<LorebookCategoryInfo[]> {
+    return invoke<LorebookCategoryInfo[]>("get_lorebook_categories");
+  }
+
+  async function searchLorebooks(query: string, category?: string): Promise<LorebookEntry[]> {
+    return invoke<LorebookEntry[]>("search_lorebooks", { query, category: category ?? null });
+  }
+
   // ── Source queries ─────────────────────────────────────────────────────────
 
   async function getAbilitySources(id: number): Promise<EntitySources> {
@@ -431,6 +447,9 @@ export const useGameDataStore = defineStore("gameData", () => {
     getEffect,
     getAllTsys,
     searchTsys,
+    getAllLorebooks,
+    getLorebookCategories,
+    searchLorebooks,
     getAllPlayerTitles,
     searchPlayerTitles,
     getAbilitySources,
