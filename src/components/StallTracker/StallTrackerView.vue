@@ -117,25 +117,7 @@ function onKeydown(e: KeyboardEvent) {
   shopLogOpen.value = false
 }
 window.addEventListener('keydown', onKeydown)
-
-// Native <input type="date"> popups are controlled by the webview and
-// Chromium's outside-click behavior is inconsistent — sometimes the popup
-// stays open until the input itself loses focus. Force-blur any focused
-// date input on a mousedown outside it so the picker closes the way users
-// expect. One global listener at the parent covers every date input under
-// the Stall Tracker (Sales / Revenue / Shop Log modal).
-function onDocumentMousedown(e: MouseEvent) {
-  const active = document.activeElement as HTMLInputElement | null
-  if (!active || active.tagName !== 'INPUT' || active.type !== 'date') return
-  if (e.target instanceof Node && active.contains(e.target)) return
-  active.blur()
-}
-document.addEventListener('mousedown', onDocumentMousedown)
-
-onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onKeydown)
-  document.removeEventListener('mousedown', onDocumentMousedown)
-})
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
 // Close the modal on character switch — the persisted Shop Log filters
 // would otherwise apply against a different character's data on next open.
