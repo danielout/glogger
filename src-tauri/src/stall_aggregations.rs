@@ -633,6 +633,29 @@ mod tests {
     }
 
     #[test]
+    fn revenue_weekly_year_boundary_uses_iso_year_in_label() {
+        // ISO weeks belong to the year containing their Thursday, so a date
+        // late in December can land in ISO week 1 of the following year.
+        // This test pins the actual behavior so a future regex/format
+        // change can't silently shift the year.
+        //
+        // Mon Dec 29 2025 → ISO 2026-W01 (Thursday Jan 1 2026 is in this week)
+        // Mon Apr 13 2026 → ISO 2026-W16
+        let events = vec![
+            rev("Quality Reins", "2025-12-29 09:00:00", 100),
+            rev("Quality Reins", "2026-04-13 09:00:00", 200),
+        ];
+        let r = aggregate_revenue(events, Granularity::Weekly);
+        assert_eq!(r.periods.len(), 2);
+        assert_eq!(r.periods[0].key, "2026-W01");
+        assert_eq!(r.periods[1].key, "2026-W16");
+        // Multi-year detection by CALENDAR year still fires (events span
+        // 2025 and 2026 calendar years), so labels include year suffix.
+        assert!(r.periods[0].label.contains("2025") || r.periods[0].label.contains("2026"));
+        assert!(r.periods[1].label.contains("2026"));
+    }
+
+    #[test]
     fn revenue_weekly_groups_by_iso_week() {
         let events = vec![
             // Mon Apr 13 2026 = ISO week 16
