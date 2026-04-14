@@ -277,7 +277,7 @@ async function reload() {
   error.value = null
   try {
     result.value = await invoke<InventoryResult>('get_stall_inventory', {
-      params: { period_days: salesPeriodDays.value },
+      params: { owner: store.currentOwner, period_days: salesPeriodDays.value },
     })
   } catch (e) {
     error.value = String(e)

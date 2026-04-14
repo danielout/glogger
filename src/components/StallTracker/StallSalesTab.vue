@@ -124,6 +124,7 @@ const error = ref<string | null>(null)
 
 function buildParams(offset: number) {
   return {
+    owner: store.currentOwner,
     action: 'bought',
     player: filterBuyer.value || null,
     item: filterItem.value || null,
@@ -139,6 +140,7 @@ function buildParams(offset: number) {
 
 function statsFilters() {
   return {
+    owner: store.currentOwner,
     player: filterBuyer.value || null,
     item: filterItem.value || null,
     date_from: filterDateFrom.value || null,
@@ -202,9 +204,23 @@ async function handleToggleIgnored(event: StallEvent) {
     { title: `${action} Event`, kind: 'info' },
   )
   if (ok) {
-    await store.toggleIgnored(event.id, !event.ignored)
+    try {
+      await store.toggleIgnored(event.id, !event.ignored)
+    } catch (e) {
+      error.value = `Failed to update event: ${e}`
+    }
   }
 }
+
+// Auto-swap filter dates if the user ends up with from > to. This matches
+// the user's likely intent (they picked two dates) rather than silently
+// returning an empty result set.
+watch([filterDateFrom, filterDateTo], ([from, to]) => {
+  if (from && to && from > to) {
+    filterDateFrom.value = to
+    filterDateTo.value = from
+  }
+})
 
 // Debounce so rapid filter typing doesn't spam invokes.
 let reloadTimer: ReturnType<typeof setTimeout> | null = null

@@ -251,6 +251,10 @@ pub fn run() {
             app.manage(settings_manager.clone());
             app.manage(db_pool.clone());
             app.manage(coordinator.clone());
+            // Short-held mutex that serializes stall_events writes between
+            // the coordinator's live-ingest path and the Clear command,
+            // so a Clear can't race a concurrent PlayerShopLog insert.
+            app.manage(db::stall_tracker_commands::StallOpsLock::default());
 
             startup_log!("Splash screen displayed (frontend rendering)");
 

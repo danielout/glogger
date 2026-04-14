@@ -17,14 +17,14 @@
           {{ importing ? 'Importing...' : 'Import' }}
         </button>
         <button
-          v-if="hasData"
+          v-if="hasData && store.currentOwner"
           class="text-xs text-text-dim hover:text-text-primary transition-colors px-2 py-1"
           :disabled="exporting"
           @click="handleExport">
           {{ exporting ? 'Exporting...' : 'Export' }}
         </button>
         <button
-          v-if="hasData"
+          v-if="hasData && store.currentOwner"
           class="text-xs text-text-dim hover:text-accent-red transition-colors px-2 py-1"
           @click="handleClear">
           Clear data
@@ -140,14 +140,22 @@ async function handleImport() {
 
   let totalNew = 0
   let totalEntries = 0
+  let filesWithNoEntries = 0
   try {
     for (const path of paths) {
       const result = await invoke<ImportResult>('import_shop_log_file', { path })
       totalNew += result.new_entries
       totalEntries += result.total_entries
+      if (result.total_entries === 0) filesWithNoEntries++
     }
     const skipped = totalEntries - totalNew
-    importMessage.value = `Imported ${totalNew} entries` + (skipped > 0 ? `, ${skipped} duplicates skipped` : '')
+    if (totalEntries === 0) {
+      importMessage.value = filesWithNoEntries === 1
+        ? 'No shop log entries found in file. Is it an exported shop log book?'
+        : `No shop log entries found in ${filesWithNoEntries} file(s).`
+    } else {
+      importMessage.value = `Imported ${totalNew} entries` + (skipped > 0 ? `, ${skipped} duplicates skipped` : '')
+    }
     store.dataVersion++
     await Promise.all([store.loadStats(), store.loadFilterOptions()])
     setTimeout(() => { importMessage.value = '' }, 5000)
@@ -171,7 +179,10 @@ async function handleExport() {
   exporting.value = true
   importMessage.value = ''
   try {
-    const result = await invoke<ExportResult>('export_shop_log_files', { directory })
+    const result = await invoke<ExportResult>('export_shop_log_files', {
+      directory,
+      owner: store.currentOwner,
+    })
     importMessage.value = `Exported ${result.entries_written} entries to ${result.files_written} file(s)`
     setTimeout(() => { importMessage.value = '' }, 5000)
   } catch (e) {
@@ -182,12 +193,18 @@ async function handleExport() {
 }
 
 async function handleClear() {
+  if (!store.currentOwner) return  // button is gated on this, defensive only
+  const character = store.currentOwner
   const ok = await confirm(
-    'This will delete all stall tracker data (sales and shop log entries). You can re-import by opening your shop log books in-game.',
+    `This will delete all stall tracker data for ${character}. Other characters are not affected.\n\nConsider using Export first — in-game shop log books only hold recent history, so once this data is gone it may not be recoverable from the game.`,
     { title: 'Clear Stall Data', kind: 'warning' },
   )
   if (ok) {
-    await store.clearAll()
+    try {
+      await store.clearAll()
+    } catch (e) {
+      importMessage.value = `Clear failed: ${e}`
+    }
   }
 }
 </script>

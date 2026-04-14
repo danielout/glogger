@@ -110,6 +110,7 @@ const error = ref<string | null>(null)
 
 function buildParams(offset: number) {
   return {
+    owner: store.currentOwner,
     action: filterAction.value || null,
     player: filterPlayer.value || null,
     item: filterItem.value || null,
@@ -193,9 +194,20 @@ async function handleToggleIgnored(event: StallEvent) {
     { title: `${action} Event`, kind: 'info' },
   )
   if (ok) {
-    await store.toggleIgnored(event.id, !event.ignored)
+    try {
+      await store.toggleIgnored(event.id, !event.ignored)
+    } catch (e) {
+      error.value = `Failed to update event: ${e}`
+    }
   }
 }
+
+watch([filterDateFrom, filterDateTo], ([from, to]) => {
+  if (from && to && from > to) {
+    filterDateFrom.value = to
+    filterDateTo.value = from
+  }
+})
 
 let reloadTimer: ReturnType<typeof setTimeout> | null = null
 function scheduleReload() {

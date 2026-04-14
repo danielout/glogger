@@ -27,7 +27,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 /// Timestamped log line for startup diagnostics.
 macro_rules! startup_log {
@@ -641,7 +641,8 @@ impl DataIngestCoordinator {
                                         entry_index: e.entry_index,
                                     }
                                 }).collect();
-                                match crate::db::stall_tracker_commands::insert_stall_events(&self.db_pool, &inputs) {
+                                let ops_lock = self.app_handle.state::<crate::db::stall_tracker_commands::StallOpsLock>();
+                                match crate::db::stall_tracker_commands::insert_stall_events(&self.db_pool, &ops_lock, &inputs) {
                                     Ok(inserted) => {
                                         if inserted > 0 {
                                             self.app_handle.emit("stall-events-updated", inserted).ok();

@@ -6,7 +6,14 @@ use crate::stall_aggregations::{
 use chrono::{Datelike, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::sync::Mutex;
 use tauri::State;
+
+/// Short-held mutex that serializes stall_events writes across the
+/// coordinator's live-ingest path and user-initiated writes (Clear).
+/// Acquire only around the actual DB mutation — keep critical sections small.
+#[derive(Default)]
+pub struct StallOpsLock(pub Mutex<()>);
 
 // ── Input types ─────────────────────────────────────────────────────────────
 
@@ -59,7 +66,15 @@ pub struct StallStats {
 
 /// Insert stall events into the database, ignoring duplicates.
 /// Returns the number of newly inserted rows.
-pub fn insert_stall_events(pool: &DbPool, events: &[StallEventInput]) -> Result<usize, String> {
+///
+/// Acquires `StallOpsLock` around the batch so a concurrent Clear can't
+/// interleave with partial inserts and leave orphaned rows behind.
+pub fn insert_stall_events(
+    pool: &DbPool,
+    ops_lock: &StallOpsLock,
+    events: &[StallEventInput],
+) -> Result<usize, String> {
+    let _guard = ops_lock.0.lock().map_err(|e| e.to_string())?;
     let conn = pool.get().map_err(|e| e.to_string())?;
     let mut count = 0usize;
     for event in events {
@@ -114,8 +129,13 @@ fn row_to_stall_event(row: &rusqlite::Row) -> rusqlite::Result<StallEvent> {
 
 /// Common filter shape for paginated/aggregated queries.
 /// All fields optional; empty strings behave as None.
+///
+/// `owner` scopes the query to a single character's stall data — the
+/// frontend always passes the active character. A missing/empty value
+/// returns all characters' data (used by diagnostic tooling only).
 #[derive(Deserialize, Default, Debug)]
 pub struct StallEventsFilters {
+    pub owner: Option<String>,
     pub action: Option<String>,
     pub player: Option<String>,
     pub item: Option<String>,
@@ -139,6 +159,10 @@ fn build_filter_where(
     let mut sql = String::from(" WHERE 1=1");
     let mut params: Vec<Value> = Vec::new();
 
+    if let Some(o) = opt_nonempty(&filters.owner) {
+        sql.push_str(" AND owner = ?");
+        params.push(Value::Text(o.into()));
+    }
     if let Some(a) = force_action {
         sql.push_str(" AND action = ?");
         params.push(Value::Text(a.into()));
@@ -213,6 +237,11 @@ pub fn get_stall_events(
     db: State<'_, DbPool>,
     params: StallEventsParams,
 ) -> Result<StallEventsPage, String> {
+    // No character loaded yet → nothing to show. Avoid leaking data from
+    // other characters if the frontend forgets to pass owner.
+    if opt_nonempty(&params.filters.owner).is_none() {
+        return Ok(StallEventsPage { rows: Vec::new(), total_count: 0 });
+    }
     let conn = db.get().map_err(|e| e.to_string())?;
 
     let (where_sql, where_params) = build_filter_where(&params.filters, None);
@@ -254,11 +283,19 @@ pub fn get_stall_stats(
     db: State<'_, DbPool>,
     filters: Option<StallEventsFilters>,
 ) -> Result<StallStats, String> {
+    let mut f = filters.unwrap_or_default();
+    if opt_nonempty(&f.owner).is_none() {
+        return Ok(StallStats {
+            total_sales: 0,
+            total_revenue: 0,
+            unique_buyers: 0,
+            unique_items: 0,
+        });
+    }
     let conn = db.get().map_err(|e| e.to_string())?;
 
     // Stats are always scoped to non-ignored 'bought' events, with optional
     // additional filters from the caller.
-    let mut f = filters.unwrap_or_default();
     f.include_ignored = Some(false);
     let (where_sql, where_params) = build_filter_where(&f, Some("bought"));
     let params_ref = rusqlite::params_from_iter(where_params.iter());
@@ -288,10 +325,23 @@ pub fn get_stall_stats(
 }
 
 #[tauri::command]
-pub fn clear_stall_events(db: State<'_, DbPool>) -> Result<usize, String> {
+pub fn clear_stall_events(
+    db: State<'_, DbPool>,
+    ops_lock: State<'_, StallOpsLock>,
+    owner: Option<String>,
+) -> Result<usize, String> {
+    // Always scope Clear to a specific character. The UI flow can only reach
+    // this command once a character is loaded, so a missing owner here means
+    // the client misbehaved — fail loudly rather than wipe every character.
+    let owner = owner
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| "clear_stall_events requires an owner".to_string())?;
+
+    let _guard = ops_lock.0.lock().map_err(|e| e.to_string())?;
     let conn = db.get().map_err(|e| e.to_string())?;
     let deleted = conn
-        .execute("DELETE FROM stall_events", [])
+        .execute("DELETE FROM stall_events WHERE owner = ?1", rusqlite::params![owner])
         .map_err(|e| e.to_string())?;
     Ok(deleted)
 }
@@ -340,6 +390,7 @@ fn year_from_filename(path: &str) -> Option<i32> {
 #[tauri::command]
 pub fn import_shop_log_file(
     db: State<'_, DbPool>,
+    ops_lock: State<'_, StallOpsLock>,
     path: String,
 ) -> Result<ImportResult, String> {
     let content = std::fs::read_to_string(&path)
@@ -370,7 +421,7 @@ pub fn import_shop_log_file(
         }
     }).collect();
 
-    let new_entries = insert_stall_events(&db, &inputs)?;
+    let new_entries = insert_stall_events(&db, &ops_lock, &inputs)?;
 
     Ok(ImportResult {
         total_entries,
@@ -382,11 +433,18 @@ pub fn import_shop_log_file(
 ///
 /// Uses a single transaction for speed. ~90% bought, ~10% owner actions.
 /// Spreads events across 30 days in Mar/Apr with 20 unique buyer names.
+/// `owner` must be the active character so queries scoped by owner
+/// actually surface the seeded data.
 #[tauri::command]
 pub fn seed_stall_events_dev(
     db: State<'_, DbPool>,
     count: usize,
+    owner: Option<String>,
 ) -> Result<usize, String> {
+    let owner_name = owner
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| "seed_stall_events_dev requires an owner".to_string())?;
     let mut conn = db.get().map_err(|e| e.to_string())?;
     let tx = conn.transaction().map_err(|e| e.to_string())?;
 
@@ -410,7 +468,7 @@ pub fn seed_stall_events_dev(
         ("Wed", "Apr", 8, 4), ("Thu", "Apr", 9, 4), ("Fri", "Apr", 10, 4), ("Sat", "Apr", 11, 4),
         ("Sun", "Apr", 12, 4), ("Mon", "Apr", 13, 4),
     ];
-    let owner = "Deradon";
+    let owner = owner_name;
     use chrono::Datelike;
     let seed_year = chrono::Local::now().year();
 
@@ -496,19 +554,29 @@ fn sanitize_filename_component(s: &str) -> String {
 pub fn export_shop_log_files(
     db: State<'_, DbPool>,
     directory: String,
+    owner: Option<String>,
 ) -> Result<ExportResult, String> {
+    // Export is scoped to a specific character to match the rest of the
+    // Stall Tracker. Users who want to back up multiple characters switch
+    // character and export each. The UI flow can only reach this command
+    // once a character is loaded.
+    let owner = owner
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| "export_shop_log_files requires an owner".to_string())?;
+
     let conn = db.get().map_err(|e| e.to_string())?;
 
-    // Fetch all non-unknown events. We read `raw_message` to preserve exact
-    // in-game phrasing and `event_at` to group by (owner, real date). Pre-V22
-    // rows that somehow lack event_at fall back to event_timestamp + current
-    // year, which is only wrong across year boundaries — unlikely for data
-    // that survived the V22 backfill.
+    // Fetch non-unknown events for this owner. We read `raw_message` to
+    // preserve exact in-game phrasing and `event_at` to group by real date.
+    // Pre-V22 rows that somehow lack event_at fall back to event_timestamp +
+    // current year, which is only wrong across year boundaries — unlikely
+    // for data that survived the V22 backfill.
     let mut stmt = conn
         .prepare(
             "SELECT event_timestamp, event_at, owner, raw_message, entry_index
              FROM stall_events
-             WHERE action != 'unknown'",
+             WHERE action != 'unknown' AND owner = ?1",
         )
         .map_err(|e| e.to_string())?;
 
@@ -521,7 +589,7 @@ pub fn export_shop_log_files(
     }
 
     let rows = stmt
-        .query_map([], |row| {
+        .query_map(rusqlite::params![owner], |row| {
             Ok(Row {
                 event_timestamp: row.get(0)?,
                 event_at: row.get(1)?,
@@ -617,6 +685,7 @@ fn parse_event_at(s: &str) -> Option<NaiveDateTime> {
 
 #[derive(Deserialize, Default)]
 pub struct RevenueParams {
+    pub owner: Option<String>,
     pub granularity: String,
     pub date_from: Option<String>,
     pub date_to: Option<String>,
@@ -632,6 +701,10 @@ pub fn get_stall_revenue(
     let granularity = Granularity::parse(&params.granularity)
         .ok_or_else(|| format!("Invalid granularity: {}", params.granularity))?;
 
+    if opt_nonempty(&params.owner).is_none() {
+        return Ok(aggregate_revenue(std::iter::empty(), granularity));
+    }
+
     let conn = db.get().map_err(|e| e.to_string())?;
     let mut sql = String::from(
         "SELECT event_at, item, price_total, player
@@ -642,6 +715,10 @@ pub fn get_stall_revenue(
            AND event_at IS NOT NULL",
     );
     let mut args: Vec<rusqlite::types::Value> = Vec::new();
+    if let Some(o) = params.owner.as_deref().filter(|s| !s.is_empty()) {
+        sql.push_str(" AND owner = ?");
+        args.push(rusqlite::types::Value::Text(o.into()));
+    }
     if let Some(from) = &params.date_from {
         sql.push_str(" AND event_at >= ?");
         args.push(rusqlite::types::Value::Text(format!("{from} 00:00:00")));
@@ -690,6 +767,7 @@ pub fn get_stall_revenue(
 
 #[derive(Deserialize)]
 pub struct InventoryParams {
+    pub owner: Option<String>,
     /// Sales-period window in days. Use a very large number (e.g., 100000) for "all time".
     pub period_days: f64,
 }
@@ -699,22 +777,30 @@ pub fn get_stall_inventory(
     db: State<'_, DbPool>,
     params: InventoryParams,
 ) -> Result<InventoryResult, String> {
+    if opt_nonempty(&params.owner).is_none() {
+        return Ok(aggregate_inventory(std::iter::empty(), params.period_days));
+    }
     let conn = db.get().map_err(|e| e.to_string())?;
 
-    let mut stmt = conn
-        .prepare(
-            "SELECT event_at, action, item, quantity, price_unit, price_total
-             FROM stall_events
-             WHERE action IN ('added', 'removed', 'bought', 'configured', 'visible')
-               AND NOT ignored
-               AND item IS NOT NULL
-               AND event_at IS NOT NULL
-             ORDER BY event_at ASC, id ASC",
-        )
-        .map_err(|e| e.to_string())?;
+    let mut sql = String::from(
+        "SELECT event_at, action, item, quantity, price_unit, price_total
+         FROM stall_events
+         WHERE action IN ('added', 'removed', 'bought', 'configured', 'visible')
+           AND NOT ignored
+           AND item IS NOT NULL
+           AND event_at IS NOT NULL",
+    );
+    let mut args: Vec<rusqlite::types::Value> = Vec::new();
+    if let Some(o) = params.owner.as_deref().filter(|s| !s.is_empty()) {
+        sql.push_str(" AND owner = ?");
+        args.push(rusqlite::types::Value::Text(o.into()));
+    }
+    sql.push_str(" ORDER BY event_at ASC, id ASC");
+
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
 
     let rows = stmt
-        .query_map([], |row| {
+        .query_map(rusqlite::params_from_iter(args.iter()), |row| {
             Ok((
                 row.get::<_, String>(0)?,
                 row.get::<_, String>(1)?,
@@ -759,60 +845,89 @@ pub struct StallFilterOptions {
 #[tauri::command]
 pub fn get_stall_filter_options(
     db: State<'_, DbPool>,
+    owner: Option<String>,
 ) -> Result<StallFilterOptions, String> {
+    if opt_nonempty(&owner).is_none() {
+        return Ok(StallFilterOptions {
+            buyers: Vec::new(),
+            players: Vec::new(),
+            items: Vec::new(),
+            dates: Vec::new(),
+            actions: Vec::new(),
+        });
+    }
     let conn = db.get().map_err(|e| e.to_string())?;
 
+    // When an owner is supplied, every dropdown list is scoped to that
+    // character's data. Callers pass the active character; only dev/debug
+    // tooling would call this without one.
+    let owner_clause = if owner.as_deref().map(|s| !s.is_empty()).unwrap_or(false) {
+        " AND owner = ?1"
+    } else {
+        ""
+    };
+    let params: Vec<&dyn rusqlite::ToSql> =
+        if owner.as_deref().map(|s| !s.is_empty()).unwrap_or(false) {
+            vec![owner.as_ref().unwrap() as &dyn rusqlite::ToSql]
+        } else {
+            vec![]
+        };
+
     let buyers: Vec<String> = conn
-        .prepare("SELECT DISTINCT player FROM stall_events WHERE action = 'bought' ORDER BY player")
+        .prepare(&format!(
+            "SELECT DISTINCT player FROM stall_events
+             WHERE action = 'bought'{owner_clause}
+             ORDER BY player"
+        ))
         .map_err(|e| e.to_string())?
-        .query_map([], |row| row.get(0))
+        .query_map(rusqlite::params_from_iter(params.iter()), |row| row.get(0))
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
 
     let players: Vec<String> = conn
-        .prepare(
+        .prepare(&format!(
             "SELECT DISTINCT player FROM stall_events
-             WHERE action != 'unknown' AND player != ''
-             ORDER BY player",
-        )
+             WHERE action != 'unknown' AND player != ''{owner_clause}
+             ORDER BY player"
+        ))
         .map_err(|e| e.to_string())?
-        .query_map([], |row| row.get(0))
+        .query_map(rusqlite::params_from_iter(params.iter()), |row| row.get(0))
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
 
     let items: Vec<String> = conn
-        .prepare(
+        .prepare(&format!(
             "SELECT DISTINCT item FROM stall_events
-             WHERE item IS NOT NULL AND action != 'unknown'
-             ORDER BY item",
-        )
+             WHERE item IS NOT NULL AND action != 'unknown'{owner_clause}
+             ORDER BY item"
+        ))
         .map_err(|e| e.to_string())?
-        .query_map([], |row| row.get(0))
+        .query_map(rusqlite::params_from_iter(params.iter()), |row| row.get(0))
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
 
     let dates: Vec<String> = conn
-        .prepare(
+        .prepare(&format!(
             "SELECT DISTINCT substr(event_at, 1, 10) FROM stall_events
-             WHERE event_at IS NOT NULL
-             ORDER BY 1 DESC",
-        )
+             WHERE event_at IS NOT NULL{owner_clause}
+             ORDER BY 1 DESC"
+        ))
         .map_err(|e| e.to_string())?
-        .query_map([], |row| row.get(0))
+        .query_map(rusqlite::params_from_iter(params.iter()), |row| row.get(0))
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
 
     let actions: Vec<String> = conn
-        .prepare(
+        .prepare(&format!(
             "SELECT DISTINCT action FROM stall_events
-             WHERE action != 'unknown' ORDER BY action",
-        )
+             WHERE action != 'unknown'{owner_clause} ORDER BY action"
+        ))
         .map_err(|e| e.to_string())?
-        .query_map([], |row| row.get(0))
+        .query_map(rusqlite::params_from_iter(params.iter()), |row| row.get(0))
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;

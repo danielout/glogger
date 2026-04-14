@@ -168,6 +168,7 @@ async function reload() {
   try {
     result.value = await invoke<RevenueResult>('get_stall_revenue', {
       params: {
+        owner: store.currentOwner,
         granularity: granularity.value,
         date_from: filterDateFrom.value || null,
         date_to: filterDateTo.value || null,
@@ -186,4 +187,11 @@ onMounted(() => reload())
 
 watch([granularity, filterDateFrom, filterDateTo, filterBuyer, filterItem], () => reload())
 watch(() => store.dataVersion, () => reload())
+
+watch([filterDateFrom, filterDateTo], ([from, to]) => {
+  if (from && to && from > to) {
+    filterDateFrom.value = to
+    filterDateTo.value = from
+  }
+})
 </script>
