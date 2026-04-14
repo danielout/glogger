@@ -564,6 +564,12 @@ pub fn run() {
             get_aggregate_inventory,
             get_aggregate_wealth,
             get_aggregate_skills,
+            // Stall Tracker
+            db::stall_tracker_commands::get_stall_events,
+            db::stall_tracker_commands::get_stall_stats,
+            db::stall_tracker_commands::get_stall_filter_options,
+            db::stall_tracker_commands::toggle_stall_event_ignored,
+            db::stall_tracker_commands::clear_stall_events,
             // Update check
             check_for_update,
         ])
