@@ -540,6 +540,29 @@ Mon Apr 13 14:29 - MrBonq bought Nice Saddle at a cost of 4000 per 1 = 4000";
     }
 
     #[test]
+    fn test_parse_shop_log_empty_content_returns_no_entries() {
+        // Empty / whitespace-only content should produce zero entries and
+        // a None owner — the import command relies on this to surface the
+        // "No shop log entries found" message instead of erroring.
+        let log = parse_shop_log("Imported", "", "imported", 2026);
+        assert!(log.entries.is_empty());
+        assert_eq!(log.owner, None);
+
+        let log = parse_shop_log("Imported", "   \n  \n\n", "imported", 2026);
+        assert!(log.entries.is_empty());
+        assert_eq!(log.owner, None);
+    }
+
+    #[test]
+    fn test_parse_shop_log_garbage_content_returns_no_entries() {
+        // A file with no parseable timestamp prefix produces zero entries.
+        // The user-facing path: `import_shop_log_file` returns total_entries=0
+        // and the frontend shows "No shop log entries found".
+        let log = parse_shop_log("Imported", "this is not a shop log\n", "imported", 2026);
+        assert!(log.entries.is_empty());
+    }
+
+    #[test]
     fn test_bought_only_log_has_no_owner_hint() {
         // No owner actions (added/removed/etc.) → owner hint is None.
         let content =
