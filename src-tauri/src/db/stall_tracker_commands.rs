@@ -365,6 +365,12 @@ pub fn toggle_stall_event_ignored(
 pub struct ImportResult {
     pub total_entries: usize,
     pub new_entries: usize,
+    /// The stall owner parsed from the book's owner actions (added, visible,
+    /// configured, etc.). None if the book had no owner-type events, which
+    /// happens when the file is a plain list of "bought" entries with no
+    /// context. Frontend uses this to warn when the parsed owner doesn't
+    /// match the active character.
+    pub parsed_owner: Option<String>,
 }
 
 /// Extract a 4-digit year from a filename like `Deradon-shop-log-2026-04-13.txt`
@@ -426,6 +432,7 @@ pub fn import_shop_log_file(
     Ok(ImportResult {
         total_entries,
         new_entries,
+        parsed_owner: shop_log.owner.clone(),
     })
 }
 
