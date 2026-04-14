@@ -40,12 +40,36 @@
         <thead class="sticky top-0 bg-surface-elevated z-10">
           <tr class="text-text-secondary">
             <th class="px-2 py-1.5 text-center w-8"></th>
-            <th class="px-2 py-1.5 text-left">DATE</th>
-            <th class="px-2 py-1.5 text-left">PLAYER</th>
-            <th class="px-2 py-1.5 text-left">ACTION</th>
-            <th class="px-2 py-1.5 text-left">ITEM</th>
-            <th class="px-2 py-1.5 text-right">QTY</th>
-            <th class="px-2 py-1.5 text-right">GOLD</th>
+            <th
+              class="px-2 py-1.5 text-left cursor-pointer hover:text-text-primary"
+              @click="toggleSort('event_at')">
+              DATE {{ sortIndicator('event_at') }}
+            </th>
+            <th
+              class="px-2 py-1.5 text-left cursor-pointer hover:text-text-primary"
+              @click="toggleSort('player')">
+              PLAYER {{ sortIndicator('player') }}
+            </th>
+            <th
+              class="px-2 py-1.5 text-left cursor-pointer hover:text-text-primary"
+              @click="toggleSort('action')">
+              ACTION {{ sortIndicator('action') }}
+            </th>
+            <th
+              class="px-2 py-1.5 text-left cursor-pointer hover:text-text-primary"
+              @click="toggleSort('item')">
+              ITEM {{ sortIndicator('item') }}
+            </th>
+            <th
+              class="px-2 py-1.5 text-right cursor-pointer hover:text-text-primary"
+              @click="toggleSort('quantity')">
+              QTY {{ sortIndicator('quantity') }}
+            </th>
+            <th
+              class="px-2 py-1.5 text-right cursor-pointer hover:text-text-primary"
+              @click="toggleSort('price_total')">
+              GOLD {{ sortIndicator('price_total') }}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -156,6 +180,9 @@ const filterPlayer = ref<string | null>(null)
 const filterAction = ref<string | null>(null)
 const filterItem = ref<string | null>(null)
 
+const sortBy = ref<string>('event_at')
+const sortDir = ref<'asc' | 'desc'>('desc')
+
 let reloadToken = 0
 
 const hasActiveFilters = computed(
@@ -182,11 +209,28 @@ function buildParams(offset: number): StallEventsParams {
     // default `action != 'unknown'` filter so unparseable entries surface.
     forceAction: filterAction.value === 'unknown' ? 'unknown' : null,
     includeIgnored: true,
-    sortBy: 'event_at',
-    sortDir: 'desc',
+    sortBy: sortBy.value,
+    sortDir: sortDir.value,
     limit: PAGE_SIZE,
     offset,
   }
+}
+
+function toggleSort(col: string) {
+  if (sortBy.value === col) {
+    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortBy.value = col
+    // Numeric / date columns default desc, text columns default asc.
+    sortDir.value =
+      col === 'player' || col === 'item' || col === 'action' ? 'asc' : 'desc'
+  }
+  void reload()
+}
+
+function sortIndicator(col: string): string {
+  if (sortBy.value !== col) return ''
+  return sortDir.value === 'asc' ? '▲' : '▼'
 }
 
 async function reload() {
