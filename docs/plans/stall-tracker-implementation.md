@@ -780,7 +780,11 @@ Use the shared `EmptyState` component with `variant="panel"`. Always mention
   visually pinned at the bottom-left corner.
 - Row order: items sorted alphabetically (already sorted by `BTreeMap` in the
   aggregation). Column order: period keys sorted lexicographically
-  (`YYYY-MM-DD` / `YYYY-Www` / `YYYY-MM` all sort correctly).
+  (`YYYY-MM-DD` / `YYYY-Www` / `YYYY-MM` all sort correctly), then
+  **reversed in the display layer** so the most recent period is the
+  leftmost column after the sticky Total. Recent data is visible without
+  horizontal scrolling. The cell lookup is keyed by `period_key` so the
+  reversal is purely visual — totals are unaffected.
 - Single invoke per change: `get_stall_revenue({ owner, granularity,
   date_from, date_to, buyer, item })`. No frontend pivoting.
 - Same character-switch + inverted-date-range rules as Sales.

@@ -60,7 +60,7 @@
               TOTAL
             </th>
             <th
-              v-for="period in result.periods"
+              v-for="period in displayPeriods"
               :key="period.key"
               class="sticky top-0 z-10 bg-surface-elevated text-text-secondary px-2 py-1.5 text-right border-b border-border-default min-w-[80px] whitespace-nowrap">
               {{ period.label }}
@@ -83,7 +83,7 @@
               {{ formatTotal(rowTotalLookup.get(item)) }}
             </td>
             <td
-              v-for="period in result.periods"
+              v-for="period in displayPeriods"
               :key="period.key"
               class="px-2 py-1 text-right border-b border-border-default/40 tabular-nums">
               {{ formatCell(cellLookup.get(`${item}|${period.key}`)) }}
@@ -102,7 +102,7 @@
               {{ formatTotal(result.grand_total) }}
             </th>
             <th
-              v-for="period in result.periods"
+              v-for="period in displayPeriods"
               :key="period.key"
               class="sticky bottom-0 z-10 bg-surface-elevated text-accent-gold px-2 py-1.5 text-right border-t border-border-default tabular-nums">
               {{ formatTotal(colTotalLookup.get(period.key)) }}
@@ -152,6 +152,14 @@ let reloadToken = 0
 
 const hasActiveFilters = computed(
   () => !!(filterDateFrom.value || filterDateTo.value || filterBuyer.value || filterItem.value),
+)
+
+/** Periods reversed so the most recent date is the LEFTMOST column after the
+ * sticky Total. Recent data should be visible without horizontal scrolling.
+ * Cells, row totals, and grand total are unaffected because they're keyed by
+ * `period_key` and looked up via the Map below. */
+const displayPeriods = computed(() =>
+  result.value ? [...result.value.periods].reverse() : [],
 )
 
 /** O(1) cell lookup keyed by `${item}|${period_key}`. */
