@@ -6,7 +6,7 @@
         v-model="activeTab"
         :tabs="tabs" />
 
-      <div class="flex items-center gap-3 pb-2">
+      <div class="flex items-center gap-3 pb-2 flex-wrap justify-end">
         <span
           v-if="store.currentOwner"
           class="text-sm text-text-secondary"
@@ -146,11 +146,20 @@ async function handleImport() {
   // a single malformed file in a 5-file import doesn't lose the other 4
   // (each invoke runs its own transaction — partial success is real and
   // the user deserves an accurate summary).
-  const entriesByOwner = new Map<string, number>()
+  //
+  // Per-owner state tracks both the count AND whether any of the contributing
+  // files were "claimed" (no parser hint, fell back to current_owner). The
+  // mixed-claim case — one file claimed for the active char, another with an
+  // explicit different owner — is rare but real, and the message needs to
+  // surface both facts.
+  interface OwnerTally {
+    count: number
+    claimed: boolean
+  }
+  const entriesByOwner = new Map<string, OwnerTally>()
   const failedFiles: { path: string; error: string }[] = []
   let totalNew = 0
   let totalRows = 0
-  let anyClaimed = false
 
   for (const path of paths) {
     try {
@@ -159,10 +168,12 @@ async function handleImport() {
         currentOwner: store.currentOwner,
       })
       const owner = result.effective_owner ?? '(unknown)'
-      entriesByOwner.set(owner, (entriesByOwner.get(owner) ?? 0) + result.total_entries)
+      const tally = entriesByOwner.get(owner) ?? { count: 0, claimed: false }
+      tally.count += result.total_entries
+      if (result.owner_claimed) tally.claimed = true
+      entriesByOwner.set(owner, tally)
       totalNew += result.new_entries
       totalRows += result.total_entries
-      if (result.owner_claimed) anyClaimed = true
     } catch (e) {
       const fileName = path.split(/[/\\]/).pop() ?? path
       failedFiles.push({ path: fileName, error: String(e) })
@@ -184,15 +195,29 @@ async function handleImport() {
   }
 
   if (totalRows > 0) {
-    const ownersList = Array.from(entriesByOwner.entries())
-      .map(([o, n]) => `${n.toLocaleString()} for ${o}`)
-      .join(', ')
-    const otherOwners = Array.from(entriesByOwner.keys()).filter(
-      (o) => o !== store.currentOwner,
+    // Per-owner segments include a "(claimed)" marker on any owner whose
+    // contributing files all came from owner-less books. Sorts the active
+    // character first when present for readability.
+    const sortedOwners = Array.from(entriesByOwner.entries()).sort(
+      ([a], [b]) => {
+        if (a === store.currentOwner) return -1
+        if (b === store.currentOwner) return 1
+        return a.localeCompare(b)
+      },
     )
+    const ownersList = sortedOwners
+      .map(
+        ([o, t]) =>
+          `${t.count.toLocaleString()} for ${o}${t.claimed ? ' (claimed)' : ''}`,
+      )
+      .join(', ')
+    const otherOwners = sortedOwners
+      .map(([o]) => o)
+      .filter((o) => o !== store.currentOwner)
+
     if (otherOwners.length > 0) {
       parts.push(`Imported ${ownersList}. Switch character to view entries for other owners.`)
-    } else if (anyClaimed) {
+    } else if (sortedOwners.some(([, t]) => t.claimed)) {
       parts.push(
         `Imported ${totalRows.toLocaleString()} entries (claimed for ${store.currentOwner ?? 'active character'} — book did not identify an owner).`,
       )

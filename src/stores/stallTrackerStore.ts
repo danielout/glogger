@@ -151,6 +151,35 @@ export const useStallTrackerStore = defineStore('stallTracker', () => {
     }, 500)
   })
 
+  // Dev-only: expose a bench helper on `window.stallBench` for DevTools-driven
+  // scale testing per plan §14.5. `seed(100000)` should complete in a few
+  // seconds on a modern machine; tab opens after that should remain sub-second.
+  if (typeof window !== 'undefined' && import.meta.env.DEV) {
+    ;(window as unknown as { stallBench: unknown }).stallBench = {
+      seed: async (count: number) => {
+        if (!currentOwner.value) {
+          console.error('[stallBench] No active character — seed requires an owner.')
+          return 0
+        }
+        const inserted = await invoke<number>('seed_stall_events_dev', {
+          count,
+          owner: currentOwner.value,
+        })
+        await refresh()
+        console.log(`[stallBench] seeded ${inserted} events for ${currentOwner.value}`)
+        return inserted
+      },
+      clear: async () => {
+        const deleted = await clearAll()
+        console.log(`[stallBench] cleared ${deleted} events`)
+        return deleted
+      },
+      bump: () => {
+        dataVersion.value++
+      },
+    }
+  }
+
   return {
     stats,
     filterOptions,

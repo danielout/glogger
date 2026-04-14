@@ -111,6 +111,12 @@ const limitations: KnownIssue[] = [
     title: 'Activity feeds are session-only',
     description: 'Items incoming/outgoing, favor changes, and council changes are tracked per-session and reset when you restart Glogger. Historical data is preserved in the database but not shown in the live feeds.',
   },
+  {
+    id: 'stall-inventory-truncation',
+    severity: 'limitation',
+    title: 'Stall Tracker inventory may show incomplete or negative quantities',
+    description: 'Inventory is reconstructed from the shop log event history. If the in-game log was truncated before an item was added (older entries scroll out of range), the baseline is lost and the quantity can briefly go negative until a fresh "added" event resets the tier stack. Open your shop log in-game regularly, or use Import to backfill from an exported book file.',
+  },
 ]
 
 const tips = [

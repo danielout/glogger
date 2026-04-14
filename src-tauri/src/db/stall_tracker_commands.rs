@@ -909,6 +909,140 @@ pub fn export_shop_log_files(
     })
 }
 
+/// Dev-only bulk insert for benchmarking at 10k / 100k scale. Not registered
+/// in any user-facing UI — the frontend exposes it via `window.stallBench`
+/// for DevTools-driven scale testing per plan §14.5.
+///
+/// Generates a realistic-looking mix of `bought` / `added` / `visible` /
+/// `configured` / `removed` events spread across the past year, attributed
+/// to the active character. Uses the same `insert_stall_events` helper as
+/// live ingest so the StallOpsLock and dedup behavior are identical.
+#[tauri::command]
+pub fn seed_stall_events_dev(
+    db: State<'_, DbPool>,
+    ops_lock: State<'_, StallOpsLock>,
+    count: usize,
+    owner: Option<String>,
+) -> Result<usize, String> {
+    let owner = opt_nonempty(&owner)
+        .ok_or_else(|| "seed_stall_events_dev requires an owner".to_string())?
+        .to_string();
+
+    // Fixed pools to keep the seeded data realistic without any
+    // randomness library — the synthetic distribution is deterministic
+    // (modulo arithmetic), which makes scale-test runs reproducible.
+    const ITEMS: &[(&str, i64)] = &[
+        ("Quality Reins", 4500),
+        ("Mystic Saddlebag", 40000),
+        ("Nice Saddle", 4000),
+        ("Decent Horseshoes", 3500),
+        ("Amazing Horseshoes", 6000),
+        ("Orcish Spell Pouch", 450),
+        ("Barley Seeds", 100),
+        ("Iron Shortsword", 8500),
+        ("Sturdy Belt", 2200),
+        ("Cured Pelt", 950),
+    ];
+    const BUYERS: &[&str] = &[
+        "MrBonq", "AlestiarWolf", "Zangariel", "Brynn", "Kork",
+        "Ashbringer", "Vexis", "Tomlin", "Sylvae", "Galadwen",
+    ];
+
+    let now = chrono::Local::now();
+    let mut inputs: Vec<StallEventInput> = Vec::with_capacity(count);
+
+    for i in 0..count {
+        // Spread events across the past 365 days, ~once every few minutes
+        // so a 100k seed lands a single event roughly every 5 minutes.
+        let minutes_ago = (i as i64) * 5;
+        let dt = now - chrono::Duration::minutes(minutes_ago);
+        let event_at = dt.format("%Y-%m-%d %H:%M:%S").to_string();
+        let event_timestamp = dt.format("%a %b %-d %H:%M").to_string();
+
+        let (item_name, base_price) = ITEMS[i % ITEMS.len()];
+        let buyer = BUYERS[i % BUYERS.len()];
+        // Cycle through actions with a realistic distribution.
+        let action_pick = i % 10;
+        let (action, player, item, quantity, price_unit, price_total, raw): (
+            &str,
+            String,
+            Option<String>,
+            i64,
+            Option<f64>,
+            Option<i64>,
+            String,
+        ) = match action_pick {
+            0..=5 => (
+                "bought",
+                buyer.to_string(),
+                Some(item_name.to_string()),
+                1,
+                Some(base_price as f64),
+                Some(base_price),
+                format!("{buyer} bought {item_name} at a cost of {base_price} per 1 = {base_price}"),
+            ),
+            6 => (
+                "added",
+                owner.clone(),
+                Some(item_name.to_string()),
+                1,
+                None,
+                None,
+                format!("{owner} added {item_name} to shop"),
+            ),
+            7 => (
+                "visible",
+                owner.clone(),
+                Some(item_name.to_string()),
+                1,
+                Some(base_price as f64),
+                None,
+                format!(
+                    "{owner} made {item_name} visible in shop at a cost of {base_price} per 1"
+                ),
+            ),
+            8 => (
+                "configured",
+                owner.clone(),
+                Some(item_name.to_string()),
+                1,
+                Some(base_price as f64),
+                None,
+                format!("{owner} configured {item_name} to cost {base_price} per 1."),
+            ),
+            _ => (
+                "removed",
+                owner.clone(),
+                Some(item_name.to_string()),
+                1,
+                None,
+                None,
+                format!("{owner} removed {item_name} from shop"),
+            ),
+        };
+
+        inputs.push(StallEventInput {
+            event_timestamp,
+            event_at: Some(event_at),
+            log_timestamp: "seeded".to_string(),
+            log_title: "Seeded".to_string(),
+            action: action.to_string(),
+            player,
+            owner: Some(owner.clone()),
+            item,
+            quantity,
+            price_unit,
+            price_total,
+            raw_message: raw,
+            // Use `i` as the entry_index so dedup rejects re-seeding without
+            // a clear in between.
+            entry_index: i as i64,
+        });
+    }
+
+    insert_stall_events(&db, &ops_lock, &inputs)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -947,5 +1081,45 @@ mod tests {
         assert_eq!(sanitize_owner("foo\\bar"), "foo_bar");
         assert_eq!(sanitize_owner("normal"), "normal");
         assert_eq!(sanitize_owner("with:colon"), "with_colon");
+    }
+
+    /// Round-trip integration test (no DB, no Tauri State): build a body
+    /// in the export format, parse it back through the parser, verify the
+    /// inputs survive byte-for-byte. Catches any drift between the export
+    /// body builder and `parse_shop_log`'s ENTRY_RE.
+    #[test]
+    fn export_format_roundtrips_through_parser() {
+        use crate::shop_log_parser::parse_shop_log;
+
+        // These mirror what export_shop_log_files writes for one date group:
+        // entries newest-first, separated by `\n\n`, trailing `\n`.
+        let entries = vec![
+            ("Wed Apr 15 11:45", "MrBonq bought Quality Reins at a cost of 4500 per 1 = 4500"),
+            ("Tue Apr 14 10:30", "Deradon made Quality Reins visible in shop at a cost of 4500 per 1"),
+            ("Mon Apr 13 09:00", "Deradon added Quality Reins to shop"),
+        ];
+        let mut body = String::new();
+        for (i, (ts, msg)) in entries.iter().enumerate() {
+            if i > 0 {
+                body.push_str("\n\n");
+            }
+            body.push_str(ts);
+            body.push_str(" - ");
+            body.push_str(msg);
+        }
+        body.push('\n');
+
+        // Parse the body back through parse_shop_log.
+        let parsed = parse_shop_log("Imported", &body, "imported", 2026);
+        assert_eq!(parsed.entries.len(), 3);
+        // The parser reverses, so index 0 is the OLDEST.
+        assert_eq!(parsed.entries[0].action, "added");
+        assert_eq!(parsed.entries[1].action, "visible");
+        assert_eq!(parsed.entries[2].action, "bought");
+        // Owner detection survives the round trip.
+        assert_eq!(parsed.owner.as_deref(), Some("Deradon"));
+        // event_at resolution survives.
+        assert_eq!(parsed.entries[0].event_at.as_deref(), Some("2026-04-13 09:00:00"));
+        assert_eq!(parsed.entries[2].event_at.as_deref(), Some("2026-04-15 11:45:00"));
     }
 }
