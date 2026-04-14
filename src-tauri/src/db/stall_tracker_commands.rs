@@ -1083,6 +1083,47 @@ mod tests {
         assert_eq!(sanitize_owner("with:colon"), "with_colon");
     }
 
+    #[test]
+    fn build_filter_where_single_day_range_produces_inclusive_bounds() {
+        // A single-day filter (date_from == date_to) should produce both a
+        // 00:00:00 lower bound and a 23:59:59 upper bound, matching all
+        // events that occurred on that calendar day. Common user pattern:
+        // "show me yesterday's sales".
+        let filters = StallEventsFilters {
+            owner: Some("Deradon".to_string()),
+            date_from: Some("2026-04-13".to_string()),
+            date_to: Some("2026-04-13".to_string()),
+            ..Default::default()
+        };
+        let (sql, params) = build_filter_where(&filters, None).expect("filter should build");
+        assert!(sql.contains("event_at >= ?"));
+        assert!(sql.contains("event_at <= ?"));
+        // Find the from / to values in the bound params.
+        let strings: Vec<&str> = params
+            .iter()
+            .filter_map(|v| match v {
+                rusqlite::types::Value::Text(s) => Some(s.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert!(strings.contains(&"2026-04-13 00:00:00"));
+        assert!(strings.contains(&"2026-04-13 23:59:59"));
+    }
+
+    #[test]
+    fn build_filter_where_invalid_date_format_returns_none() {
+        // The 10-char length guard rejects malformed dates loudly via empty
+        // results rather than producing the malformed bound
+        // "2026-04-13 14:29:00 00:00:00". Failure mode: empty result, not
+        // bad SQL.
+        let filters = StallEventsFilters {
+            owner: Some("Deradon".to_string()),
+            date_from: Some("2026-04-13 14:29:00".to_string()),
+            ..Default::default()
+        };
+        assert!(build_filter_where(&filters, None).is_none());
+    }
+
     /// Round-trip integration test (no DB, no Tauri State): build a body
     /// in the export format, parse it back through the parser, verify the
     /// inputs survive byte-for-byte. Catches any drift between the export
