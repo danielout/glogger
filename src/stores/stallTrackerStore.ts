@@ -35,6 +35,15 @@ export const useStallTrackerStore = defineStore('stallTracker', () => {
   })
   const dataVersion = ref(0)
 
+  // Per-method request tokens. Every loadStats / loadFilterOptions call
+  // captures the current token and the owner at issue time; on resume after
+  // await, the response is discarded if either the token was superseded or
+  // the active character changed. This prevents a slow query for char A
+  // from clobbering a fresh query for char B during a rapid character
+  // switch — see Phase 11 audit.
+  let statsToken = 0
+  let filterOptionsToken = 0
+
   /** Active character, normalized — empty/whitespace becomes `null`. */
   const currentOwner = computed<string | null>(() => {
     const name = settingsStore.settings.activeCharacterName
@@ -49,12 +58,16 @@ export const useStallTrackerStore = defineStore('stallTracker', () => {
       stats.value = null
       return
     }
+    const token = ++statsToken
+    const ownerAtCall = currentOwner.value
     try {
       const merged: StallEventsFilters = {
         ...(filters ?? {}),
-        owner: currentOwner.value,
+        owner: ownerAtCall,
       }
-      stats.value = await invoke<StallStats>('get_stall_stats', { filters: merged })
+      const result = await invoke<StallStats>('get_stall_stats', { filters: merged })
+      if (token !== statsToken || ownerAtCall !== currentOwner.value) return
+      stats.value = result
     } catch (e) {
       console.error('[stallTrackerStore] Failed to load stats:', e)
     }
@@ -65,10 +78,14 @@ export const useStallTrackerStore = defineStore('stallTracker', () => {
       filterOptions.value = { buyers: [], players: [], items: [], dates: [], actions: [] }
       return
     }
+    const token = ++filterOptionsToken
+    const ownerAtCall = currentOwner.value
     try {
-      filterOptions.value = await invoke<StallFilterOptions>('get_stall_filter_options', {
-        owner: currentOwner.value,
+      const result = await invoke<StallFilterOptions>('get_stall_filter_options', {
+        owner: ownerAtCall,
       })
+      if (token !== filterOptionsToken || ownerAtCall !== currentOwner.value) return
+      filterOptions.value = result
     } catch (e) {
       console.error('[stallTrackerStore] Failed to load filter options:', e)
     }
