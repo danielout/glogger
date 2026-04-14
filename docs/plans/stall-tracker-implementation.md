@@ -695,6 +695,13 @@ and renders in the same gold accent.)
 - Filter row uses `SearchableSelect` (a shared component — new, see
   `Shared/SearchableSelect.vue`). Each dropdown is populated from
   `store.filterOptions`.
+- Date inputs use `DatePicker` (also new, see `Shared/DatePicker.vue`)
+  rather than native `<input type="date">`. The native picker in WebView2
+  doesn't dismiss on outside click and there's no clean DOM workaround
+  that doesn't break in-picker month/year navigation. The custom popover
+  uses the same teleport + position-flip + click-backdrop pattern as
+  `SearchableSelect`, so it works consistently inside the Shop Log
+  modal at `z-[60]` (the picker layers at `z-[70]`).
 - `include_ignored: true` for the list query (user wants to see ignored rows),
   `false` implicit in `get_stall_stats` (stats exclude them).
 - **Ignore toggle** (first column): `⊘` for active, `○` for ignored. Click
@@ -1357,7 +1364,8 @@ src/
         └── StallShopLogTab.vue
 
 src/components/Shared/
-└── SearchableSelect.vue                         (NEW — shared component, used here first)
+├── SearchableSelect.vue                         (NEW — shared component, used here first)
+└── DatePicker.vue                               (NEW — themed calendar popover, replaces native <input type="date">)
 
 docs/
 ├── features/screens/economics/economics-stall-tracker.md    (NEW — feature doc)

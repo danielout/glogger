@@ -48,6 +48,8 @@ The Stall Tracker has three visible tabs plus a fourth view behind a modal:
 - `src/components/StallTracker/StallInventoryTab.vue` — In Stock + Recently Sold Out tables.
 - `src/components/StallTracker/StallShopLogTab.vue` — full event log (rendered inside a teleported modal).
 
+The Sales / Revenue / Shop Log filter rows depend on two shared components: `src/components/Shared/SearchableSelect.vue` for the buyer / item / action dropdowns, and `src/components/Shared/DatePicker.vue` for the from / to date inputs. Both are documented in [shared-components.md](../../../architecture/shared-components.md).
+
 ## Event Pipeline
 
 ```

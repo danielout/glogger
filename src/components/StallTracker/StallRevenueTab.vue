@@ -18,15 +18,13 @@
         </button>
       </div>
 
-      <input
+      <DatePicker
         v-model="filterDateFrom"
-        type="date"
-        class="bg-surface-elevated border border-border-default rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:border-accent-gold/50" />
+        placeholder="From date" />
       <span class="text-text-secondary text-xs">–</span>
-      <input
+      <DatePicker
         v-model="filterDateTo"
-        type="date"
-        class="bg-surface-elevated border border-border-default rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:border-accent-gold/50" />
+        placeholder="To date" />
       <SearchableSelect
         v-model="filterBuyer"
         :options="store.filterOptions.buyers"
@@ -129,6 +127,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
+import DatePicker from '../Shared/DatePicker.vue'
 import type { Granularity, RevenueResult, StallRevenueParams } from '../../types/stallTracker'
 
 const store = useStallTrackerStore()

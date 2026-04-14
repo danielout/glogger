@@ -29,6 +29,9 @@ src/components/Shared/
 ├── AccordionSection.vue         # Collapsible section with arrow toggle
 ├── Timestamp.vue                # Timezone-aware timestamp display
 ├── ToastContainer.vue           # Toast notification overlay
+├── StyledSelect.vue             # Themed dropdown replacement for native <select>
+├── SearchableSelect.vue         # StyledSelect + filter input for long option lists
+├── DatePicker.vue               # Themed calendar popover (replaces native <input type="date">)
 ├── ItemCard.vue                 # Survey loot card (count + percentage)
 ├── SkillCard.vue                # Session skill summary card
 ├── SkillGrid.vue                # Grid of SkillCard components
@@ -396,6 +399,70 @@ Toast notification overlay. Reads from `toastStore` and auto-dismisses notificat
 **Props:** *(none — reads from store)*
 
 Use via the `useToast()` composable: `toast.success("Saved!")`, `toast.error("Failed")`.
+
+### StyledSelect
+
+A themed dropdown replacement for the native `<select>` element. Teleports its option panel to `body` so it can escape parent `overflow: hidden` clipping, and matches the dark theme without per-page CSS overrides.
+
+```vue
+<StyledSelect
+  v-model="value"
+  :options="[{ value: 'a', label: 'Option A' }, { value: 'b', label: 'Option B' }]"
+  size="sm" />
+```
+
+**Props:** `options: SelectOption[]`, `modelValue: string`, `placeholder?: string` (default `"Select..."`), `size?: "xs" | "sm" | "md"` (default `"sm"`), `colorClass?: string`, `fullWidth?: boolean` (default `false`)
+
+**SelectOption:** `{ value: string; label: string }`
+
+Keyboard: Up/Down arrow keys cycle through options, Enter/Space toggles the dropdown, Escape closes it. The option panel is positioned with `Teleport`, flips above the trigger if there's no room below, and is dismissed by clicking the full-screen click-catcher backdrop.
+
+### SearchableSelect
+
+`StyledSelect`'s sibling for long option lists where typing-to-filter beats arrow-key scrubbing. The dropdown contains a focused search input at the top and an "All" sentinel option (selecting it sets the model to `null`).
+
+```vue
+<SearchableSelect
+  v-model="filterBuyer"
+  :options="store.filterOptions.buyers"
+  all-label="All buyers" />
+```
+
+**Props:** `options: string[]`, `modelValue: string | null`, `allLabel?: string` (default `"All"`), `fullWidth?: boolean` (default `false`)
+
+**Events:** `update:modelValue (value: string | null)` — `null` represents the "All" choice.
+
+Behavior:
+
+- Search query lives only while the dropdown is open and is reset on close.
+- Enter inside the search input picks the first filtered match.
+- The dropdown is teleported to `body` at `z-[70]` so it layers above any modal at `z-[60]` (the Stall Tracker Shop Log modal is the current consumer).
+- Position-flips above the trigger if there's no room below.
+- Click outside closes without applying.
+
+### DatePicker
+
+A themed calendar popover that replaces native `<input type="date">`. The motivation: WebView2's native date picker has inconsistent outside-click dismissal — the popup stays open until the input loses focus, and there's no clean DOM workaround that doesn't break in-picker interactions like month navigation. A custom popover gives full control and matches the rest of the app's dropdown styling.
+
+```vue
+<DatePicker v-model="filterDateFrom" placeholder="From date" />
+```
+
+**Props:** `modelValue: string` (ISO `"YYYY-MM-DD"` or `""` for unset), `placeholder?: string` (default `"Select date"`)
+
+**Events:** `update:modelValue (value: string)` — emits the empty string when the user clicks "Clear".
+
+Behavior:
+
+- **Trigger button**: shows the formatted date (`"Apr 13, 2026"`) when set, the placeholder otherwise. Calendar icon, matches `SearchableSelect`'s button shape.
+- **Calendar grid**: 7×6 grid (Mon-first), 42 cells with leading/trailing days from neighbor months rendered dimmer. Today is marked with a subtle ring; the selected day with `accent-gold/20` background.
+- **Footer shortcuts**: "Today" link (always visible), "Clear" link (only when a value is set).
+- **Keyboard**: Arrow keys move by 1 day / 1 week from the selected day (or from today if nothing's selected). Escape closes. The popover root has `tabindex="-1"` and is focused on open so the keydown handler actually fires.
+- **Local-time consistent**: ISO strings are constructed from local-time `getFullYear/getMonth/getDate`, matching the backend's `event_at` storage format. No UTC drift, no off-by-one across timezones.
+- **Layering**: `z-[70]` (same as `SearchableSelect`) so it works inside a `z-[60]` modal.
+- **Repositions on resize and scroll** while open so the popover follows its trigger.
+
+The component is intentionally minimal — single-month only, no range mode, no time-of-day. Two `<DatePicker>`s side-by-side cover the from-to filter pattern.
 
 ## Tooltip Components
 

@@ -2,15 +2,13 @@
   <div class="flex flex-col gap-3 h-full min-h-0">
     <!-- Filter row -->
     <div class="flex items-center gap-2 flex-wrap flex-shrink-0">
-      <input
+      <DatePicker
         v-model="filterDateFrom"
-        type="date"
-        class="bg-surface-elevated border border-border-default rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:border-accent-gold/50" />
+        placeholder="From date" />
       <span class="text-text-secondary text-xs">–</span>
-      <input
+      <DatePicker
         v-model="filterDateTo"
-        type="date"
-        class="bg-surface-elevated border border-border-default rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:border-accent-gold/50" />
+        placeholder="To date" />
       <SearchableSelect
         v-model="filterPlayer"
         :options="store.filterOptions.players"
@@ -120,6 +118,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { confirm } from '@tauri-apps/plugin-dialog'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
+import DatePicker from '../Shared/DatePicker.vue'
 import type { StallEvent, StallEventsPage, StallEventsParams } from '../../types/stallTracker'
 
 const store = useStallTrackerStore()
