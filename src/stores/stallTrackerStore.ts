@@ -74,7 +74,12 @@ export const useStallTrackerStore = defineStore('stallTracker', () => {
     }
   }
 
-  /** Toggle a single event's `ignored` flag. Bumps `dataVersion` on success. */
+  /** Toggle a single event's `ignored` flag. Bumps `dataVersion` on success.
+   *
+   * Does NOT refresh `stats` here: stats are recomputed by the active tab's
+   * reload (triggered via the dataVersion watcher), with that tab's local
+   * filter set threaded through. Refreshing stats here would briefly show
+   * unfiltered numbers between this call and the tab's reload. */
   async function toggleIgnored(id: number, ignored: boolean): Promise<void> {
     if (!currentOwner.value) {
       throw new Error('No active character — cannot toggle ignored flag')
@@ -85,7 +90,6 @@ export const useStallTrackerStore = defineStore('stallTracker', () => {
       owner: currentOwner.value,
     })
     dataVersion.value++
-    await loadStats()
   }
 
   /** Delete every stall event for the active character. Returns row count. */

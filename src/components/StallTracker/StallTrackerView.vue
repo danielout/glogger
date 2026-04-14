@@ -16,29 +16,20 @@
       </div>
     </div>
 
-    <!-- Active tab placeholder — real tab components land in Phases 6–9 -->
-    <div class="flex-1 min-h-0 overflow-auto">
+    <!-- Active tab content -->
+    <div class="flex-1 min-h-0 overflow-hidden">
       <EmptyState
         v-if="!store.currentOwner"
         primary="No active character"
         secondary="Set an active character in Settings to view Stall Tracker data." />
-      <EmptyState
-        v-else-if="!store.hasData"
-        primary="No sales recorded"
-        secondary="Open your shop log book in-game to start tracking, or use Import to load an exported book file." />
-      <div
-        v-else
-        class="p-4 text-text-secondary text-sm">
-        <p class="mb-2">
+      <template v-else>
+        <StallSalesTab v-if="activeTab === 'sales'" />
+        <div
+          v-else
+          class="p-4 text-text-secondary text-sm">
           <strong class="text-text-primary">{{ activeTab }}</strong> tab — coming in Phase {{ phaseForTab[activeTab] }}.
-        </p>
-        <p>
-          Stats: {{ store.stats?.total_sales ?? 0 }} sales,
-          {{ formatNumber(store.stats?.total_revenue ?? 0) }}g revenue,
-          {{ store.stats?.unique_buyers ?? 0 }} buyers,
-          {{ store.stats?.unique_items ?? 0 }} items.
-        </p>
-      </div>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -47,6 +38,7 @@
 import { ref, onMounted } from 'vue'
 import TabBar, { type Tab } from '../Shared/TabBar.vue'
 import EmptyState from '../Shared/EmptyState.vue'
+import StallSalesTab from './StallSalesTab.vue'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 
 const store = useStallTrackerStore()
@@ -59,13 +51,8 @@ const tabs: Tab[] = [
 const activeTab = ref<string>('sales')
 
 const phaseForTab: Record<string, number> = {
-  sales: 6,
   revenue: 7,
   inventory: 8,
-}
-
-function formatNumber(n: number): string {
-  return n.toLocaleString()
 }
 
 // Lazy: stats and filter options were preloaded at startup, but if the user
