@@ -4,7 +4,10 @@ use crate::chat_resuscitate_parser::parse_resuscitate_message;
 use crate::chat_status_parser::{parse_status_message, ChatStatusEvent};
 use crate::db::chat_commands::insert_chat_messages;
 use crate::db::queries::log_positions;
+use crate::db::stall_tracker_commands::{insert_stall_events, StallEventInput, StallOpsLock};
 use crate::db::DbPool;
+use crate::shop_log_parser::parse_shop_log;
+use crate::stall_year_resolver::base_year_for_live;
 use crate::game_state::GameStateManager;
 use crate::log_watchers::{ChatLogWatcher, LogEvent, LogFileWatcher, PlayerLogWatcher};
 use crate::parsers::chat_local_to_utc;
@@ -27,7 +30,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 /// Timestamped log line for startup diagnostics.
 macro_rules! startup_log {
@@ -610,6 +613,23 @@ impl DataIngestCoordinator {
                     }
                 }
                 LogEvent::PlayerEventParsed(player_event) => {
+                    // Side-channel: intercept PlayerShopLog books for Stall Tracker
+                    // ingestion before the event gets batched. The live path stamps
+                    // the active character as owner unconditionally — the game only
+                    // lets a player open their own shop log, so active == owner by
+                    // construction. The parser's advisory owner hint is ignored here.
+                    if let PlayerEvent::BookOpened {
+                        ref timestamp,
+                        ref title,
+                        ref content,
+                        ref book_type,
+                    } = player_event
+                    {
+                        if book_type == "PlayerShopLog" {
+                            self.ingest_shop_log(timestamp, title, content);
+                        }
+                    }
+
                     // Accumulate player events — DB persistence happens on flush
                     // in a single transaction for better performance during rapid events
                     player_event_batch.push(player_event);
@@ -1046,6 +1066,64 @@ impl DataIngestCoordinator {
         .map_err(|e| format!("Failed to insert resuscitation: {}", e))?;
 
         Ok(())
+    }
+
+    /// Parse a PlayerShopLog book body and persist its entries to the
+    /// `stall_events` table, stamped with the active character as owner.
+    ///
+    /// Called from the `PlayerEventParsed` arm when a `BookOpened` event
+    /// with `book_type == "PlayerShopLog"` arrives. During initial catch-up
+    /// replay we still want to ingest, so this uses `settings.active_character_name`
+    /// directly rather than gating on `game_state.is_live()`.
+    fn ingest_shop_log(&self, log_timestamp: &str, title: &str, content: &str) {
+        let Some(active_character) = self.settings.get().active_character_name.clone() else {
+            // No active character yet — defer. Real Player.log events imply
+            // a character is active; this is a belt-and-suspenders guard
+            // against startup ordering races.
+            return;
+        };
+
+        // Double-parse: the resolver needs the oldest entry's raw timestamp
+        // before we know the base year. The first parse is a probe (only its
+        // `entries.first().timestamp` is read) and the second is authoritative.
+        // Regex parsing is bounded by book size and dominated by the DB write
+        // that follows, so the redundant resolver pass is a non-issue in
+        // practice — revisit if profiling ever says otherwise.
+        let probe = parse_shop_log(title, content, log_timestamp, 1970);
+        let Some(first) = probe.entries.first() else {
+            return;
+        };
+        let base_year = base_year_for_live(&first.timestamp);
+        let shop_log = parse_shop_log(title, content, log_timestamp, base_year);
+
+        let inputs: Vec<StallEventInput> = shop_log
+            .entries
+            .iter()
+            .map(|e| StallEventInput {
+                event_timestamp: e.timestamp.clone(),
+                event_at: e.event_at.clone(),
+                log_timestamp: shop_log.log_timestamp.clone(),
+                log_title: shop_log.title.clone(),
+                action: e.action.clone(),
+                player: e.player.clone(),
+                owner: Some(active_character.clone()),
+                item: e.item.clone(),
+                quantity: e.quantity,
+                price_unit: e.price_unit,
+                price_total: e.price_total,
+                raw_message: e.raw_message.clone(),
+                entry_index: e.entry_index,
+            })
+            .collect();
+
+        let ops_lock = self.app_handle.state::<StallOpsLock>();
+        match insert_stall_events(&self.db_pool, &ops_lock, &inputs) {
+            Ok(0) => {}
+            Ok(n) => {
+                self.app_handle.emit("stall-events-updated", n).ok();
+            }
+            Err(e) => eprintln!("[coordinator] Failed to persist stall events: {e}"),
+        }
     }
 }
 

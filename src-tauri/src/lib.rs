@@ -264,6 +264,7 @@ pub fn run() {
             app.manage(settings_manager.clone());
             app.manage(db_pool.clone());
             app.manage(coordinator.clone());
+            app.manage(db::stall_tracker_commands::StallOpsLock::default());
 
             startup_log!("Splash screen displayed (frontend rendering)");
 
