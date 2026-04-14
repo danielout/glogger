@@ -131,7 +131,8 @@ onBeforeUnmount(() => {
 interface ImportResult {
   total_entries: number
   new_entries: number
-  parsed_owner: string | null
+  effective_owner: string | null
+  owner_claimed: boolean
 }
 
 async function handleImport() {
@@ -148,28 +149,39 @@ async function handleImport() {
   let totalNew = 0
   let totalEntries = 0
   let filesWithNoEntries = 0
-  const mismatchedOwners = new Set<string>()
+  let anyClaimed = false
+  const entriesByOwner = new Map<string, number>()
   try {
     for (const path of paths) {
-      const result = await invoke<ImportResult>('import_shop_log_file', { path })
+      const result = await invoke<ImportResult>('import_shop_log_file', {
+        path,
+        currentOwner: store.currentOwner,
+      })
       totalNew += result.new_entries
       totalEntries += result.total_entries
       if (result.total_entries === 0) filesWithNoEntries++
-      // A book's parsed owner that isn't the active character is legal but
-      // invisible in the current view — warn the user so they don't think
-      // the import silently failed.
-      if (result.parsed_owner && result.parsed_owner !== store.currentOwner) {
-        mismatchedOwners.add(result.parsed_owner)
-      }
+      if (result.owner_claimed) anyClaimed = true
+      const owner = result.effective_owner ?? '(unknown)'
+      entriesByOwner.set(owner, (entriesByOwner.get(owner) ?? 0) + result.total_entries)
     }
     const skipped = totalEntries - totalNew
+    const others = [...entriesByOwner.entries()].filter(([name]) => name !== store.currentOwner)
     if (totalEntries === 0) {
       importMessage.value = filesWithNoEntries === 1
         ? 'No shop log entries found in file. Is it an exported shop log book?'
         : `No shop log entries found in ${filesWithNoEntries} file(s).`
-    } else if (mismatchedOwners.size > 0) {
-      const names = [...mismatchedOwners].join(', ')
-      importMessage.value = `Imported ${totalNew} entries for ${names}. Switch character to view them.`
+    } else if (others.length > 0) {
+      // Mix of current-character and other-character imports — report
+      // per-owner breakdown so the user knows exactly what landed where.
+      const parts: string[] = []
+      const mine = entriesByOwner.get(store.currentOwner ?? '') ?? 0
+      if (mine > 0) parts.push(`${mine.toLocaleString()} for ${store.currentOwner}`)
+      for (const [name, count] of others) {
+        parts.push(`${count.toLocaleString()} for ${name}`)
+      }
+      importMessage.value = `Imported ${parts.join(', ')}. Switch character to view entries for other owners.`
+    } else if (anyClaimed) {
+      importMessage.value = `Imported ${totalNew.toLocaleString()} entries (claimed for ${store.currentOwner} — book(s) did not identify an owner).`
     } else {
       importMessage.value = `Imported ${totalNew} entries` + (skipped > 0 ? `, ${skipped} duplicates skipped` : '')
     }

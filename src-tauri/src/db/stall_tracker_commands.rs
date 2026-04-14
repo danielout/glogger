@@ -365,12 +365,17 @@ pub fn toggle_stall_event_ignored(
 pub struct ImportResult {
     pub total_entries: usize,
     pub new_entries: usize,
-    /// The stall owner parsed from the book's owner actions (added, visible,
-    /// configured, etc.). None if the book had no owner-type events, which
-    /// happens when the file is a plain list of "bought" entries with no
-    /// context. Frontend uses this to warn when the parsed owner doesn't
-    /// match the active character.
-    pub parsed_owner: Option<String>,
+    /// The owner stamped on every row of this import. Normally equals the
+    /// value parsed from the book's owner actions (added/visible/etc.). If
+    /// the book was bought-only (no owner actions), this falls back to the
+    /// caller-supplied `current_owner` so the data is still visible under
+    /// the current character. None only if both sources were unavailable.
+    pub effective_owner: Option<String>,
+    /// True when the book itself didn't identify an owner and the import
+    /// claimed the rows for the active character. Frontend uses this to
+    /// surface "claimed for <character>" in the success message so the
+    /// user understands why the rows appear under their view.
+    pub owner_claimed: bool,
 }
 
 /// Extract a 4-digit year from a filename like `Deradon-shop-log-2026-04-13.txt`
@@ -398,6 +403,7 @@ pub fn import_shop_log_file(
     db: State<'_, DbPool>,
     ops_lock: State<'_, StallOpsLock>,
     path: String,
+    current_owner: Option<String>,
 ) -> Result<ImportResult, String> {
     let content = std::fs::read_to_string(&path)
         .map_err(|e| format!("Failed to read file: {e}"))?;
@@ -409,6 +415,16 @@ pub fn import_shop_log_file(
     let shop_log = crate::shop_log_parser::parse_shop_log("Imported", &content, "imported", base_year);
     let total_entries = shop_log.entries.len();
 
+    // If the book itself identifies an owner, use that. Otherwise (bought-only
+    // historical files) fall back to the caller's active character so the
+    // rows are still visible under their scoped view — and flag that we did
+    // so the UI can surface a "claimed for X" notice.
+    let owner_claimed = shop_log.owner.is_none();
+    let effective_owner: Option<String> = shop_log
+        .owner
+        .clone()
+        .or_else(|| current_owner.filter(|s| !s.is_empty()));
+
     let inputs: Vec<StallEventInput> = shop_log.entries.iter().map(|e| {
         StallEventInput {
             event_timestamp: e.timestamp.clone(),
@@ -417,7 +433,7 @@ pub fn import_shop_log_file(
             log_title: "Imported".to_string(),
             action: e.action.clone(),
             player: e.player.clone(),
-            owner: shop_log.owner.clone(),
+            owner: effective_owner.clone(),
             item: e.item.clone(),
             quantity: e.quantity,
             price_unit: e.price_unit,
@@ -432,7 +448,8 @@ pub fn import_shop_log_file(
     Ok(ImportResult {
         total_entries,
         new_entries,
-        parsed_owner: shop_log.owner.clone(),
+        effective_owner,
+        owner_claimed: owner_claimed && total_entries > 0,
     })
 }
 
