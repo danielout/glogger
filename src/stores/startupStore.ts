@@ -8,6 +8,7 @@ import { useGameStateStore } from "./gameStateStore";
 import { useCharacterStore } from "./characterStore";
 import { useCoordinatorStore } from "./coordinatorStore";
 import { useMarketStore } from "./marketStore";
+import { useStallTrackerStore } from "./stallTrackerStore";
 import { useSurveyStore } from "./surveyStore";
 import { useFarmingStore } from "./farmingStore";
 import { useDeathStore } from "./deathStore";
@@ -203,6 +204,7 @@ export const useStartupStore = defineStore("startup", () => {
     const characterStore = useCharacterStore();
     const coordinator = useCoordinatorStore();
     const marketStore = useMarketStore();
+    const stallTrackerStore = useStallTrackerStore();
     const surveyStore = useSurveyStore();
     const farmingStore = useFarmingStore();
     const deathStore = useDeathStore();
@@ -322,6 +324,11 @@ export const useStartupStore = defineStore("startup", () => {
       await gameState.loadStorageVaults();
       // Load market values
       await marketStore.loadAll();
+      // Load stall tracker stats + filter options for the active character
+      await Promise.all([
+        stallTrackerStore.loadStats(),
+        stallTrackerStore.loadFilterOptions(),
+      ]);
       log("Game state ready");
       updateTask(TASK_GAME_STATE, "done");
     } catch (e) {

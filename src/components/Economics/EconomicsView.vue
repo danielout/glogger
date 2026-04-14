@@ -16,9 +16,9 @@
         <SurveyView />
       </template>
 
-      <!-- Stall Tracker (stub) -->
+      <!-- Stall Tracker -->
       <template v-else-if="activeTab === 'stall-tracker'">
-        <EmptyState primary="Stall Tracker" secondary="Coming soon." />
+        <StallTrackerView />
       </template>
     </div>
   </PaneLayout>
@@ -26,10 +26,10 @@
 
 <script setup lang="ts">
 import PaneLayout from '../Shared/PaneLayout.vue'
-import EmptyState from '../Shared/EmptyState.vue'
 import MarketView from '../Market/MarketView.vue'
 import FarmingView from './EconomicsFarmingView.vue'
 import SurveyView from './EconomicsSurveyView.vue'
+import StallTrackerView from '../StallTracker/StallTrackerView.vue'
 
 defineProps<{
   activeTab: string;
