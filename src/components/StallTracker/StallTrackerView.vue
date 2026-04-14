@@ -24,6 +24,7 @@
         secondary="Set an active character in Settings to view Stall Tracker data." />
       <template v-else>
         <StallSalesTab v-if="activeTab === 'sales'" />
+        <StallRevenueTab v-else-if="activeTab === 'revenue'" />
         <div
           v-else
           class="p-4 text-text-secondary text-sm">
@@ -39,6 +40,7 @@ import { ref, onMounted } from 'vue'
 import TabBar, { type Tab } from '../Shared/TabBar.vue'
 import EmptyState from '../Shared/EmptyState.vue'
 import StallSalesTab from './StallSalesTab.vue'
+import StallRevenueTab from './StallRevenueTab.vue'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 
 const store = useStallTrackerStore()
@@ -51,7 +53,6 @@ const tabs: Tab[] = [
 const activeTab = ref<string>('sales')
 
 const phaseForTab: Record<string, number> = {
-  revenue: 7,
   inventory: 8,
 }
 
