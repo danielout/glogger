@@ -50,6 +50,8 @@ The Stall Tracker has three visible tabs plus a fourth view behind a modal:
 
 The Sales / Revenue / Shop Log filter rows depend on two shared components: `src/components/Shared/SearchableSelect.vue` for the buyer / item / action dropdowns, and `src/components/Shared/DatePicker.vue` for the from / to date inputs. Both are documented in [shared-components.md](../../../architecture/shared-components.md).
 
+Item names are rendered via `<ItemInline>` in all five item-display surfaces (Sales row, Inventory In Stock row, Inventory Recently Sold Out row, Shop Log row, Revenue pivot row label) so hovering an item shows its CDN tooltip with rarity / equip slot / stats, and clicking navigates to the Data Browser.
+
 ## Event Pipeline
 
 ```
@@ -90,6 +92,7 @@ nothing is silently dropped.
 | Action | Example line | Fields parsed |
 |---|---|---|
 | `bought` | `MrBonq bought Quality Reins at a cost of 4500 per 1 = 4500` | player (buyer), item, quantity, price_unit, price_total |
+| `bought` (stacked) | `MARCELA bought Aquamarine x5 at a cost of 750 per 1 = 3750` | item="Aquamarine", quantity=5 (xN extracted from item) |
 | `added` | `Deradon added Barley Seeds x36 to shop` | player (owner), item, quantity |
 | `removed` | `Deradon removed Decent Horseshoes from shop` | player (owner), item, quantity |
 | `configured` | `Deradon configured Barley Seedsx36 to cost 3000 per 2.` | player (owner), item, quantity, price_unit |

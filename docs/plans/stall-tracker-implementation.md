@@ -106,10 +106,15 @@ static ENTRY_RE: Lazy<Regex> = Lazy::new(|| {
 `price_unit = price_unit_raw / quantity_unit`. Bulk configs like `"3000 per 2"`
 must produce `price_unit = 1500.0`, not 3000.
 
-**Critical**: `added` / `removed` / `visible` / `configured` all need to handle
-**optional space before the `xN` suffix** (`"Barley Seeds x36"` *and*
-`"Barley Seedsx36"`). The original PoC only handled the no-space form for
-`configured` and `visible`, which caused parse failures on bulk items. Use:
+**Critical**: ALL six action regexes (`bought`, `added`, `removed`, `visible`,
+`configured`, `collected`) need to handle **optional space before the `xN`
+suffix** (`"Barley Seeds x36"` *and* `"Barley Seedsx36"`). The original PoC
+only handled the no-space form for `configured` and `visible`. The Phase 13
+fixup added `xN` to `bought` after a real game log surfaced
+`"MARCELA bought Aquamarine x5 at a cost of 750 per 1 = 3750"` —
+without the extractor, every stacked sale became a phantom item
+("Aquamarine x5", "Aquamarine x10", ...) that fragmented filter dropdowns
+and aggregations. Use:
 
 ```
 (?P<item>.+?) ?x?(?P<quantity>\d+)?
@@ -117,6 +122,11 @@ must produce `price_unit = 1500.0`, not 3000.
 
 The trailing `?` on `?x?...` makes the quantity optional (single items show no
 `xN`). The leading `?` on ` ?` allows an optional space.
+
+For `bought`, the captured `xN` becomes the quantity directly. When `xN` is
+absent, the quantity falls back to `total / corrected_unit_price`, which
+preserves the bulk-pricing path. Either way the invariant
+`price_unit * quantity == price_total` holds.
 
 ### 3.3 Entry splitting & indexing
 
@@ -180,22 +190,23 @@ key includes `entry_index`).
 
 ### 3.4 `stall_year_resolver.rs`
 
-Three public functions:
+Two public functions:
 
 ```rust
 pub fn resolve_timestamps_oldest_first(timestamps: &[&str], base_year: i32) -> Vec<Option<String>>;
 pub fn base_year_for_live(oldest_ts: &str) -> i32;
-pub fn backfill_year(event_timestamp: &str, created_year: i32, created_month: u32, created_day: u32) -> Option<String>;
 ```
 
 `resolve_timestamps_oldest_first` walks forward, incrementing `year` when it
 detects a backward month jump (Dec → Jan). `base_year_for_live` peeks at the
 oldest entry and subtracts 1 from `now.year()` if the oldest entry's
 `(month, day)` is in the *future* — meaning the book is still from last year.
-`backfill_year` is only needed if a future schema change adds `event_at` to
-rows that pre-date the column (inverse check against `created_at`). Not
-required for the initial build — implement it alongside the other resolvers
-anyway since the logic is tiny and the test is a useful sanity check.
+
+(An earlier version of this plan included a `backfill_year` helper for a
+hypothetical schema migration that adds `event_at` to rows pre-dating the
+column. That migration never happened and the helper sat unused, so it was
+deleted in commit `d2b6599`. Re-add from git history if a future schema
+change actually needs it.)
 
 Unit tests (all must pass before moving to Phase 2):
 
@@ -203,7 +214,6 @@ Unit tests (all must pass before moving to Phase 2):
 - year-boundary book (Dec entries then Jan entries) bumps year correctly
 - `base_year_for_live_in_past` (now = Apr 14, oldest = Apr 13 → 2026)
 - `base_year_for_live_wraps_to_previous_year` (now = Jan 3 2026, oldest = Dec 28 → 2025)
-- `backfill_same_year` and `backfill_previous_year`
 
 ### 3.5 Migration — `stall_events` table
 
@@ -871,6 +881,20 @@ When the "Recently Sold Out" accordion is expanded:
   distinct dates, not calendar days, to match the backend semantics.
 - **"Avg/Day" divisor** — always the full window size (1, 2, 7, 14, 30, or the
   all-time distinct-date-count), not just active days. Conservative forecasting.
+- **Last price for sold-out items**: comes from the `InventoryItem.last_known_price`
+  field tracked separately from the tier stack. The tier stack collapses
+  to empty when an item sells out (`finalize_tiers` drops zero-quantity tiers),
+  so a Recently Sold Out row would otherwise have no price to display.
+  `last_known_price` updates on every `visible` / `configured` / `bought`
+  event, so the most recent price the customer would have seen survives the
+  collapse. Added in Phase 8 fixup.
+- **Sortable columns** (both tables): both In Stock and Recently Sold Out
+  have click-to-sort headers with their own independent sort state. In Stock
+  defaults to `item asc`; Recently Sold Out defaults to `last_activity_at desc`
+  so the most recently sold-out items appear first. Sorting happens
+  frontend-only — inventory is computed all-at-once by Rust and the item
+  count is bounded (typically <100 per character), so backend pagination
+  isn't needed.
 - Reload: `watch(salesPeriodDays, () => reload())`, `watch(() => store.dataVersion,
   () => reload())`.
 
@@ -942,29 +966,35 @@ state) that we don't want to remount it on every close/reopen. Pattern:
 
 ```vue
 <Teleport v-if="shopLogMounted" to="body">
-  <Transition name="modal" appear>
-    <div v-show="shopLogOpen" class="fixed inset-0 z-[60] …">
-      <div class="absolute inset-0 bg-black/60" @click="shopLogOpen = false" />
-      <div class="relative bg-surface-base … h-full max-h-[90vh]">
-        <div class="flex items-center justify-between px-4 py-3 border-b">
-          <h3>Shop Log</h3>
-          <button class="text-text-secondary hover:text-text-primary …"
-                  @click="shopLogOpen = false">×</button>
-        </div>
-        <div class="flex-1 min-h-0 overflow-auto p-4">
-          <StallShopLogTab />
-        </div>
+  <div v-show="shopLogOpen" class="fixed inset-0 z-[60] …">
+    <div class="absolute inset-0 bg-black/60" @click="shopLogOpen = false" />
+    <div class="relative bg-surface-base … h-full max-h-[90vh]">
+      <div class="flex items-center justify-between px-4 py-3 border-b">
+        <h3>Shop Log</h3>
+        <button class="text-text-secondary hover:text-text-primary …"
+                @click="shopLogOpen = false">×</button>
+      </div>
+      <div class="flex-1 min-h-0 overflow-auto p-4">
+        <StallShopLogTab />
       </div>
     </div>
-  </Transition>
+  </div>
 </Teleport>
 
 <script setup>
 const shopLogOpen = ref(false)
 const shopLogMounted = ref(false)
-watch(shopLogOpen, (open) => { if (open) shopLogMounted.value = true })
+function openShopLog() {
+  shopLogMounted.value = true
+  shopLogOpen.value = true
+}
 </script>
 ```
+
+(An earlier draft wrapped the inner overlay in `<Transition name="modal" appear>`,
+but the matching CSS classes never existed in any stylesheet so the transition
+was a no-op. Removed in Phase 9 fixup. Add a transition only if the matching
+CSS lands too.)
 
 **Why `v-if` on the Teleport but `v-show` on the inner overlay:** the Teleport
 doesn't mount until the first open (lazy). Once mounted, subsequent closes
@@ -978,15 +1008,21 @@ open/close cycles within the session.
 function onKeydown(e: KeyboardEvent) {
   if (e.key !== 'Escape' || !shopLogOpen.value) return
   const target = e.target as HTMLElement | null
-  if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return
+  if (target && target.tagName === 'TEXTAREA') return
+  if (target && target.tagName === 'INPUT' && (target as HTMLInputElement).type !== 'date') return
   shopLogOpen.value = false
 }
 ```
 
 The input-focus check is **critical**: the `SearchableSelect` dropdowns inside
-the modal handle their own Escape-to-close. If we intercept unconditionally,
-pressing Escape with the dropdown open would tear down the whole modal instead
-of just closing the dropdown.
+the modal handle their own Escape-to-close (and stop propagation), so Escape
+with a dropdown open should never reach the window listener. The text-input
+exemption is belt-and-suspenders for any future text input added to the
+modal.
+
+`<input type="date">` is intentionally NOT exempted: native date pickers
+don't have their own Escape behavior worth preserving, and users expect
+Escape to dismiss the modal even from a focused date input.
 
 ### 11.5 z-index trap
 
@@ -999,6 +1035,17 @@ or the menu bar will paint over its title bar and close button. Do not use
 Use `text-text-secondary` (≈5.5:1 contrast), not `text-text-dim` (≈3.2:1).
 Hover brightens to `text-text-primary`. This matches the visibility of other
 subtle chrome controls.
+
+### 11.7 Sortable columns
+
+All six list columns (Date, Player, Action, Item, Qty, Gold) have
+click-to-sort headers with the same toggle behavior as the Sales tab.
+Default sort is `event_at desc` to preserve the existing newest-first
+list order. The backend's `get_stall_events` command already supports
+all six sort keys via its whitelist (see §5.3), so this is a pure
+frontend wire-up. Same request-token race protection as the Sales tab
+prevents a header click during a `loadMore` from producing mixed-sort
+rows. Added in Phase 13.
 
 ---
 
@@ -1297,14 +1344,17 @@ awareness:
 
 **Rust unit tests (must all pass before Phase 5):**
 
-- `shop_log_parser` — 15 tests covering all action types, bulk pricing,
+- `shop_log_parser` — 27 tests covering all action types, bulk pricing,
   escaped newlines, owner detection, entry index stability, same-minute
-  duplicates.
-- `stall_year_resolver` — 7 tests covering single-year, year-boundary,
-  `base_year_for_live` (past + wrap), `backfill_year` (same + previous).
-- `stall_aggregations` — 6 tests covering daily pivot, monthly collapse,
-  add-then-sell, period scoped to recent active dates, multi-active-date
-  period, all-time divisor.
+  duplicates, stacked listing `xN` extraction (bought + visible + configured),
+  and empty / garbage content.
+- `stall_year_resolver` — 5 tests covering single-year, year-boundary,
+  `base_year_for_live` (past + wrap), and unparseable entry handling.
+- `stall_aggregations` — 21 tests covering daily/weekly/monthly pivots,
+  multi-year and ISO week year boundary labels, the full tier-stack state
+  machine (add / visible / configured / bought / removed), period window
+  scoping, all-time divisor, last_known_price survival, and the
+  last_sold_at vs last_activity_at distinction.
 
 **Manual integration tests:**
 
