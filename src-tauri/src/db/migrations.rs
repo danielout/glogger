@@ -132,6 +132,11 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 21)?;
     }
 
+    if current_version < 22 {
+        migration_v22_stall_event_at(conn)?;
+        super::record_migration(conn, 22)?;
+    }
+
     Ok(())
 }
 
@@ -1526,5 +1531,57 @@ fn migration_v21_stall_ignored(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "ALTER TABLE stall_events ADD COLUMN ignored INTEGER NOT NULL DEFAULT 0;"
     )?;
+    Ok(())
+}
+
+/// Migration V22: Add `event_at` — a real ISO 8601 timestamp derived from the
+/// game's year-less `event_timestamp` string. The original column is kept
+/// because Export round-trips events back to the in-game book format.
+///
+/// Backfill: infer the year from each row's `created_at`. Events can never be
+/// in the future at insert time, so if the parsed (month, day) is later in
+/// the year than `created_at`, the event is from the previous calendar year.
+fn migration_v22_stall_event_at(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "ALTER TABLE stall_events ADD COLUMN event_at TEXT;
+         CREATE INDEX idx_stall_events_event_at ON stall_events(event_at DESC);
+         CREATE INDEX idx_stall_events_action_event_at ON stall_events(action, event_at DESC);
+         CREATE INDEX idx_stall_events_player ON stall_events(player);
+         CREATE INDEX idx_stall_events_item ON stall_events(item);",
+    )?;
+
+    // Backfill in a single pass. chrono parses SQLite's CURRENT_TIMESTAMP format.
+    let mut stmt = conn.prepare(
+        "SELECT id, event_timestamp, created_at FROM stall_events WHERE event_at IS NULL",
+    )?;
+    let rows: Vec<(i64, String, String)> = stmt
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
+        .collect::<Result<Vec<_>>>()?;
+    drop(stmt);
+
+    let tx = conn.unchecked_transaction()?;
+    {
+        let mut upd = tx.prepare("UPDATE stall_events SET event_at = ?1 WHERE id = ?2")?;
+        for (id, event_timestamp, created_at) in rows {
+            // created_at is SQLite's "YYYY-MM-DD HH:MM:SS" UTC format.
+            let (cy, cm, cd) = match chrono::NaiveDateTime::parse_from_str(
+                &created_at,
+                "%Y-%m-%d %H:%M:%S",
+            ) {
+                Ok(dt) => {
+                    use chrono::Datelike;
+                    (dt.year(), dt.month(), dt.day())
+                }
+                Err(_) => continue,
+            };
+            if let Some(event_at) =
+                crate::stall_year_resolver::backfill_year(&event_timestamp, cy, cm, cd)
+            {
+                upd.execute(rusqlite::params![event_at, id])?;
+            }
+        }
+    }
+    tx.commit()?;
+
     Ok(())
 }

@@ -613,11 +613,21 @@ impl DataIngestCoordinator {
                     // Check for shop log books and persist stall events
                     if let PlayerEvent::BookOpened { ref timestamp, ref title, ref content, ref book_type } = player_event {
                         if book_type == "PlayerShopLog" {
-                            let shop_log = shop_log_parser::parse_shop_log(title, content, timestamp);
+                            // For live tailing, the oldest entry anchors the year. Parse once to
+                            // discover the oldest entry, then parse again with the real base year.
+                            // Cheap because parse is regex-only and we immediately discard the first.
+                            let probe = shop_log_parser::parse_shop_log(title, content, timestamp, 1970);
+                            let base_year = probe
+                                .entries
+                                .first()
+                                .map(|e| crate::stall_year_resolver::base_year_for_live(&e.timestamp))
+                                .unwrap_or_else(|| chrono::Local::now().year());
+                            let shop_log = shop_log_parser::parse_shop_log(title, content, timestamp, base_year);
                             if !shop_log.entries.is_empty() {
                                 let inputs: Vec<_> = shop_log.entries.iter().map(|e| {
                                     crate::db::stall_tracker_commands::StallEventInput {
                                         event_timestamp: e.timestamp.clone(),
+                                        event_at: e.event_at.clone(),
                                         log_timestamp: shop_log.log_timestamp.clone(),
                                         log_title: shop_log.title.clone(),
                                         action: e.action.clone(),

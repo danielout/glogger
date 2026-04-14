@@ -1,51 +1,48 @@
 <template>
   <div class="flex flex-col gap-4">
-    <div v-if="store.loading" class="text-text-dim italic text-sm">Loading sales...</div>
-    <div v-else-if="store.error" class="text-[#c87e7e] text-sm">{{ store.error }}</div>
+    <div v-if="loading && rows.length === 0" class="text-text-dim italic text-sm">Loading sales...</div>
+    <div v-else-if="error" class="text-[#c87e7e] text-sm">{{ error }}</div>
     <EmptyState
-      v-else-if="store.sales.length === 0"
+      v-else-if="!loading && totalCount === 0"
       variant="panel"
       primary="No sales recorded"
       secondary="Open your shop log book in-game to import stall data." />
 
     <template v-else>
-      <!-- Stats summary -->
       <div class="flex gap-6 flex-wrap text-center">
         <div>
           <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Total Sales</div>
-          <div class="text-lg font-bold text-text-primary">{{ filteredStats.totalSales.toLocaleString() }}</div>
+          <div class="text-lg font-bold text-text-primary">{{ (stats?.total_sales ?? 0).toLocaleString() }}</div>
         </div>
         <div>
           <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Total Revenue</div>
-          <div class="text-lg font-bold text-[#d4af37]">{{ filteredStats.totalRevenue.toLocaleString() }}g</div>
+          <div class="text-lg font-bold text-[#d4af37]">{{ (stats?.total_revenue ?? 0).toLocaleString() }}g</div>
         </div>
         <div>
           <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Unique Buyers</div>
-          <div class="text-lg font-bold text-text-primary">{{ filteredStats.uniqueBuyers.toLocaleString() }}</div>
+          <div class="text-lg font-bold text-text-primary">{{ (stats?.unique_buyers ?? 0).toLocaleString() }}</div>
         </div>
         <div>
           <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Unique Items</div>
-          <div class="text-lg font-bold text-text-primary">{{ filteredStats.uniqueItems.toLocaleString() }}</div>
+          <div class="text-lg font-bold text-text-primary">{{ (stats?.unique_items ?? 0).toLocaleString() }}</div>
         </div>
       </div>
 
-      <!-- Filters -->
       <div class="flex items-center gap-3 flex-wrap">
-        <SearchableSelect v-model="filterDateFrom" :options="dateOptions" placeholder="From date" />
+        <SearchableSelect v-model="filterDateFrom" :options="store.filterOptions.dates" placeholder="From date" />
         <span class="text-text-dim text-xs">&ndash;</span>
-        <SearchableSelect v-model="filterDateTo" :options="dateOptions" placeholder="To date" />
-        <SearchableSelect v-model="filterBuyer" :options="buyerOptions" placeholder="All buyers" />
-        <SearchableSelect v-model="filterItem" :options="itemOptions" placeholder="All items" />
-        <span class="text-xs text-text-muted">{{ sortedSales.length }} of {{ store.sales.length }} sales</span>
+        <SearchableSelect v-model="filterDateTo" :options="store.filterOptions.dates" placeholder="To date" />
+        <SearchableSelect v-model="filterBuyer" :options="store.filterOptions.buyers" placeholder="All buyers" />
+        <SearchableSelect v-model="filterItem" :options="store.filterOptions.items" placeholder="All items" />
+        <span class="text-xs text-text-muted">Showing {{ rows.length.toLocaleString() }} of {{ totalCount.toLocaleString() }} sales</span>
       </div>
 
-      <!-- Sales table -->
       <div class="overflow-auto">
         <table class="w-full text-sm">
           <thead>
             <tr class="text-left text-text-muted text-xs uppercase tracking-wide border-b border-border-default">
               <th class="pb-2 w-8"></th>
-              <th class="pb-2 pr-4 cursor-pointer hover:text-text-primary" @click="toggleSort('event_timestamp')">Date {{ sortIcon('event_timestamp') }}</th>
+              <th class="pb-2 pr-4 cursor-pointer hover:text-text-primary" @click="toggleSort('event_at')">Date {{ sortIcon('event_at') }}</th>
               <th class="pb-2 pr-4 cursor-pointer hover:text-text-primary" @click="toggleSort('player')">Buyer {{ sortIcon('player') }}</th>
               <th class="pb-2 pr-4 cursor-pointer hover:text-text-primary" @click="toggleSort('item')">Item {{ sortIcon('item') }}</th>
               <th class="pb-2 pr-4 text-right cursor-pointer hover:text-text-primary" @click="toggleSort('quantity')">Qty {{ sortIcon('quantity') }}</th>
@@ -55,7 +52,7 @@
           </thead>
           <tbody>
             <tr
-              v-for="sale in sortedSales"
+              v-for="sale in rows"
               :key="sale.id"
               class="border-b border-border-light hover:bg-[#1a1a2e] transition-colors"
               :class="{ 'opacity-35': sale.ignored }">
@@ -77,19 +74,37 @@
           </tbody>
         </table>
       </div>
+
+      <div v-if="rows.length < totalCount" class="flex justify-center">
+        <button
+          class="text-xs text-text-dim hover:text-text-primary border border-border-default rounded px-3 py-1.5"
+          :disabled="loading"
+          @click="loadMore">
+          {{ loading ? 'Loading...' : `Load more (${(totalCount - rows.length).toLocaleString()} remaining)` }}
+        </button>
+      </div>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, shallowRef, watch, onMounted } from 'vue'
 import { confirm } from '@tauri-apps/plugin-dialog'
+import { invoke } from '@tauri-apps/api/core'
 import EmptyState from '../Shared/EmptyState.vue'
 import ItemInline from '../Shared/Item/ItemInline.vue'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
-import type { StallEvent } from '../../types/stallTracker'
-import { timestampToSortKey, timestampToDateKey, uniqueDates } from './stallTimestamp'
+import type { StallEvent, StallStats } from '../../types/stallTracker'
+
+interface StallEventsPage {
+  rows: StallEvent[]
+  total_count: number
+}
+
+type SortKey = 'event_at' | 'player' | 'item' | 'quantity' | 'price_unit' | 'price_total'
+
+const PAGE_SIZE = 500
 
 const store = useStallTrackerStore()
 
@@ -98,56 +113,72 @@ const filterDateTo = ref('')
 const filterBuyer = ref('')
 const filterItem = ref('')
 
-const dateOptions = computed(() => uniqueDates(store.sales.map(s => s.event_timestamp)))
-const buyerOptions = computed(() =>
-  [...new Set(store.sales.map(s => s.player))].sort((a, b) => a.localeCompare(b))
-)
-const itemOptions = computed(() =>
-  [...new Set(store.sales.map(s => s.item).filter((v): v is string => v != null))].sort((a, b) => a.localeCompare(b))
-)
-
-type SortKey = 'event_timestamp' | 'player' | 'item' | 'quantity' | 'price_unit' | 'price_total'
-const sortKey = ref<SortKey>('event_timestamp')
+const sortKey = ref<SortKey>('event_at')
 const sortAsc = ref(false)
 
-const sortedSales = computed(() => {
-  const fb = filterBuyer.value
-  const fi = filterItem.value
-  const fromKey = filterDateFrom.value ? timestampToDateKey(filterDateFrom.value) : 0
-  const toKey = filterDateTo.value ? timestampToDateKey(filterDateTo.value) : Infinity
-  const list = store.sales.filter(s => {
-    if (fb && s.player !== fb) return false
-    if (fi && s.item !== fi) return false
-    if (fromKey || toKey < Infinity) {
-      const dk = timestampToDateKey(s.event_timestamp)
-      if (dk < fromKey || dk > toKey) return false
-    }
-    return true
-  })
-  const dir = sortAsc.value ? 1 : -1
-  const key = sortKey.value
-  list.sort((a, b) => {
-    if (key === 'event_timestamp') return (timestampToSortKey(a.event_timestamp) - timestampToSortKey(b.event_timestamp)) * dir
-    const av = a[key]
-    const bv = b[key]
-    if (av == null && bv == null) return 0
-    if (av == null) return 1
-    if (bv == null) return -1
-    if (typeof av === 'string') return av.localeCompare(bv as string) * dir
-    return ((av as number) - (bv as number)) * dir
-  })
-  return list
-})
+const rows = shallowRef<StallEvent[]>([])
+const totalCount = ref(0)
+const stats = ref<StallStats | null>(null)
+const loading = ref(false)
+const error = ref<string | null>(null)
 
-const filteredStats = computed(() => {
-  const list = sortedSales.value.filter(s => !s.ignored)
+function buildParams(offset: number) {
   return {
-    totalSales: list.length,
-    totalRevenue: list.reduce((sum, s) => sum + (s.price_total ?? 0), 0),
-    uniqueBuyers: new Set(list.map(s => s.player)).size,
-    uniqueItems: new Set(list.map(s => s.item).filter(Boolean)).size,
+    action: 'bought',
+    player: filterBuyer.value || null,
+    item: filterItem.value || null,
+    date_from: filterDateFrom.value || null,
+    date_to: filterDateTo.value || null,
+    include_ignored: true,
+    sort_by: sortKey.value,
+    sort_dir: sortAsc.value ? 'asc' : 'desc',
+    limit: PAGE_SIZE,
+    offset,
   }
-})
+}
+
+function statsFilters() {
+  return {
+    player: filterBuyer.value || null,
+    item: filterItem.value || null,
+    date_from: filterDateFrom.value || null,
+    date_to: filterDateTo.value || null,
+  }
+}
+
+async function reload() {
+  loading.value = true
+  error.value = null
+  try {
+    const [page, s] = await Promise.all([
+      invoke<StallEventsPage>('get_stall_events', { params: buildParams(0) }),
+      invoke<StallStats>('get_stall_stats', { filters: statsFilters() }),
+    ])
+    rows.value = page.rows
+    totalCount.value = page.total_count
+    stats.value = s
+  } catch (e) {
+    error.value = String(e)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadMore() {
+  if (loading.value) return
+  loading.value = true
+  try {
+    const page = await invoke<StallEventsPage>('get_stall_events', {
+      params: buildParams(rows.value.length),
+    })
+    rows.value = [...rows.value, ...page.rows]
+    totalCount.value = page.total_count
+  } catch (e) {
+    error.value = String(e)
+  } finally {
+    loading.value = false
+  }
+}
 
 function toggleSort(key: SortKey) {
   if (sortKey.value === key) {
@@ -174,4 +205,16 @@ async function handleToggleIgnored(event: StallEvent) {
     await store.toggleIgnored(event.id, !event.ignored)
   }
 }
+
+// Debounce so rapid filter typing doesn't spam invokes.
+let reloadTimer: ReturnType<typeof setTimeout> | null = null
+function scheduleReload() {
+  if (reloadTimer) clearTimeout(reloadTimer)
+  reloadTimer = setTimeout(() => reload(), 200)
+}
+
+onMounted(() => reload())
+
+watch([filterDateFrom, filterDateTo, filterBuyer, filterItem, sortKey, sortAsc], scheduleReload)
+watch(() => store.dataVersion, () => reload())
 </script>

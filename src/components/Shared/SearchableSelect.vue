@@ -28,7 +28,7 @@
     </div>
     <ul
       v-if="open && filtered.length > 0"
-      class="absolute z-10 left-0 right-0 top-full mt-0.5 bg-surface-card border border-border-default rounded shadow-lg max-h-48 overflow-y-auto list-none m-0 p-0">
+      class="absolute z-30 left-0 right-0 top-full mt-0.5 bg-surface-card border border-border-default rounded shadow-lg max-h-48 overflow-y-auto list-none m-0 p-0">
       <li
         v-for="(option, idx) in filtered"
         :key="option"

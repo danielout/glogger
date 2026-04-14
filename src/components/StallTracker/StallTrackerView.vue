@@ -11,14 +11,14 @@
           {{ importing ? 'Importing...' : 'Import' }}
         </button>
         <button
-          v-if="store.sales.length > 0 || store.shopLog.length > 0"
+          v-if="hasData"
           class="text-xs text-text-dim hover:text-text-primary transition-colors px-2 py-1"
           :disabled="exporting"
           @click="handleExport">
           {{ exporting ? 'Exporting...' : 'Export' }}
         </button>
         <button
-          v-if="store.sales.length > 0 || store.shopLog.length > 0"
+          v-if="hasData"
           class="text-xs text-text-dim hover:text-accent-red transition-colors px-2 py-1"
           @click="handleClear">
           Clear data
@@ -35,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { confirm, open } from '@tauri-apps/plugin-dialog'
 import { invoke } from '@tauri-apps/api/core'
 import TabBar from '../Shared/TabBar.vue'
@@ -58,8 +58,12 @@ const importing = ref(false)
 const importMessage = ref('')
 const exporting = ref(false)
 
-onMounted(() => {
-  store.loadAll()
+const hasData = computed(() =>
+  (store.stats?.total_sales ?? 0) > 0 || store.filterOptions.dates.length > 0
+)
+
+onMounted(async () => {
+  await Promise.all([store.loadStats(), store.loadFilterOptions()])
 })
 
 interface ImportResult {
@@ -88,7 +92,8 @@ async function handleImport() {
     }
     const skipped = totalEntries - totalNew
     importMessage.value = `Imported ${totalNew} entries` + (skipped > 0 ? `, ${skipped} duplicates skipped` : '')
-    await store.loadAll()
+    store.dataVersion++
+    await Promise.all([store.loadStats(), store.loadFilterOptions()])
     setTimeout(() => { importMessage.value = '' }, 5000)
   } catch (e) {
     importMessage.value = `Import failed: ${e}`

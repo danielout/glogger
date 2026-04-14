@@ -1,15 +1,14 @@
 <template>
   <div class="flex flex-col gap-4">
-    <div v-if="store.loading" class="text-text-dim italic text-sm">Loading...</div>
-    <div v-else-if="store.error" class="text-[#c87e7e] text-sm">{{ store.error }}</div>
+    <div v-if="loading" class="text-text-dim italic text-sm">Loading...</div>
+    <div v-else-if="error" class="text-[#c87e7e] text-sm">{{ error }}</div>
     <EmptyState
-      v-else-if="store.sales.length === 0"
+      v-else-if="result && result.cells.length === 0"
       variant="panel"
       primary="No sales recorded"
       secondary="Open your shop log book in-game to import stall data." />
 
-    <template v-else>
-      <!-- Granularity toggle -->
+    <template v-else-if="result">
       <div class="flex items-center gap-3 flex-wrap">
         <div class="flex border border-border-default rounded overflow-hidden text-xs">
           <button
@@ -24,49 +23,47 @@
           </button>
         </div>
 
-        <!-- Filters -->
-        <SearchableSelect v-model="filterDateFrom" :options="dateOptions" placeholder="From date" />
+        <SearchableSelect v-model="filterDateFrom" :options="store.filterOptions.dates" placeholder="From date" />
         <span class="text-text-dim text-xs">&ndash;</span>
-        <SearchableSelect v-model="filterDateTo" :options="dateOptions" placeholder="To date" />
-        <SearchableSelect v-model="filterBuyer" :options="buyerOptions" placeholder="All buyers" />
-        <SearchableSelect v-model="filterItem" :options="itemOptions" placeholder="All items" />
+        <SearchableSelect v-model="filterDateTo" :options="store.filterOptions.dates" placeholder="To date" />
+        <SearchableSelect v-model="filterBuyer" :options="store.filterOptions.buyers" placeholder="All buyers" />
+        <SearchableSelect v-model="filterItem" :options="store.filterOptions.items" placeholder="All items" />
       </div>
 
-      <!-- Pivot table -->
       <div class="overflow-auto max-h-[70vh]">
         <table class="text-xs border-collapse">
           <thead class="sticky top-0 z-10">
             <tr class="bg-surface-base">
-              <th class="sticky left-0 z-20 bg-surface-base text-left text-text-muted uppercase tracking-wide px-2 py-1.5 border-b border-r border-border-default min-w-[180px]">
+              <th class="sticky left-0 z-20 bg-surface-base text-left text-text-muted uppercase tracking-wide px-2 py-1.5 border-b border-r border-border-default w-[200px] min-w-[200px] max-w-[200px]">
                 Item
               </th>
+              <th class="sticky left-[200px] z-20 bg-surface-base text-right text-text-primary font-bold uppercase tracking-wide px-2 py-1.5 border-b border-r border-border-default">
+                Total
+              </th>
               <th
-                v-for="period in pivot.periods"
+                v-for="period in displayPeriods"
                 :key="period.key"
                 class="text-right text-text-muted uppercase tracking-wide px-2 py-1.5 border-b border-border-default whitespace-nowrap">
                 {{ period.label }}
-              </th>
-              <th class="text-right text-text-primary font-bold uppercase tracking-wide px-2 py-1.5 border-b border-l border-border-default">
-                Total
               </th>
             </tr>
           </thead>
           <tbody>
             <tr
-              v-for="item in pivot.items"
+              v-for="item in result.items"
               :key="item"
               class="hover:bg-[#1a1a2e] transition-colors">
-              <td class="sticky left-0 bg-surface-base px-2 py-1 border-r border-b border-border-light whitespace-nowrap">
+              <td class="sticky left-0 bg-surface-base px-2 py-1 border-r border-b border-border-light w-[200px] min-w-[200px] max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">
                 <ItemInline :reference="item" :show-icon="false" />
               </td>
+              <td class="sticky left-[200px] bg-surface-base text-right text-[#d4af37] font-bold px-2 py-1 border-r border-b border-border-light whitespace-nowrap">
+                {{ formatCell(rowTotal(item)) }}
+              </td>
               <td
-                v-for="period in pivot.periods"
+                v-for="period in displayPeriods"
                 :key="period.key"
                 class="text-right text-[#d4af37] px-2 py-1 border-b border-border-light whitespace-nowrap">
-                {{ formatCell(pivot.cells.get(item)?.get(period.key)) }}
-              </td>
-              <td class="text-right text-[#d4af37] font-bold px-2 py-1 border-l border-b border-border-light whitespace-nowrap">
-                {{ formatCell(pivot.rowTotals.get(item)) }}
+                {{ formatCell(cellValue(item, period.key)) }}
               </td>
             </tr>
           </tbody>
@@ -75,14 +72,14 @@
               <td class="sticky left-0 z-20 bg-surface-base text-text-primary px-2 py-1.5 border-t border-r border-border-default">
                 Total
               </td>
+              <td class="sticky left-[200px] z-20 bg-surface-base text-right text-[#d4af37] px-2 py-1.5 border-t border-r border-border-default whitespace-nowrap">
+                {{ formatCell(result.grand_total) }}
+              </td>
               <td
-                v-for="period in pivot.periods"
+                v-for="period in displayPeriods"
                 :key="period.key"
                 class="text-right text-[#d4af37] px-2 py-1.5 border-t border-border-default whitespace-nowrap">
-                {{ formatCell(pivot.colTotals.get(period.key)) }}
-              </td>
-              <td class="text-right text-[#d4af37] px-2 py-1.5 border-t border-l border-border-default whitespace-nowrap">
-                {{ formatCell(pivot.grandTotal) }}
+                {{ formatCell(colTotal(period.key)) }}
               </td>
             </tr>
           </tfoot>
@@ -93,20 +90,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
 import EmptyState from '../Shared/EmptyState.vue'
 import ItemInline from '../Shared/Item/ItemInline.vue'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
-import {
-  timestampToDateKey,
-  timestampToPeriod,
-  collectPeriods,
-  uniqueDates,
-  type Granularity,
-} from './stallTimestamp'
 
 const store = useStallTrackerStore()
+
+type Granularity = 'daily' | 'weekly' | 'monthly'
+
+interface RevenuePeriod { key: string, label: string }
+interface RevenueCell { item: string, period_key: string, revenue: number }
+interface RevenueResult {
+  periods: RevenuePeriod[]
+  items: string[]
+  cells: RevenueCell[]
+  row_totals: [string, number][]
+  col_totals: [string, number][]
+  grand_total: number
+}
 
 const granularities = [
   { id: 'daily' as Granularity, label: 'Daily' },
@@ -120,71 +124,66 @@ const filterDateTo = ref('')
 const filterBuyer = ref('')
 const filterItem = ref('')
 
-const dateOptions = computed(() => uniqueDates(store.sales.map(s => s.event_timestamp)))
-const buyerOptions = computed(() =>
-  [...new Set(store.sales.map(s => s.player))].sort((a, b) => a.localeCompare(b))
-)
-const itemOptions = computed(() =>
-  [...new Set(store.sales.map(s => s.item).filter((v): v is string => v != null))].sort((a, b) => a.localeCompare(b))
-)
+const loading = ref(false)
+const error = ref<string | null>(null)
+const result = ref<RevenueResult | null>(null)
 
-const filteredSales = computed(() => {
-  const fb = filterBuyer.value
-  const fi = filterItem.value
-  const fromKey = filterDateFrom.value ? timestampToDateKey(filterDateFrom.value) : 0
-  const toKey = filterDateTo.value ? timestampToDateKey(filterDateTo.value) : Infinity
-  return store.sales.filter(s => {
-    if (s.ignored) return false
-    if (fb && s.player !== fb) return false
-    if (fi && s.item !== fi) return false
-    if (fromKey || toKey < Infinity) {
-      const dk = timestampToDateKey(s.event_timestamp)
-      if (dk < fromKey || dk > toKey) return false
-    }
-    return true
-  })
+// Display periods newest-first so recent data is immediately visible
+// without horizontal scrolling. Backend returns them chronologically ASC.
+const displayPeriods = computed(() => {
+  if (!result.value) return []
+  return [...result.value.periods].reverse()
 })
 
-const pivot = computed(() => {
-  const sales = filteredSales.value
-  const g = granularity.value
-
-  // Build cells: item → periodKey → sum
-  const cells = new Map<string, Map<number, number>>()
-  const rowTotals = new Map<string, number>()
-  const colTotals = new Map<number, number>()
-  let grandTotal = 0
-
-  for (const s of sales) {
-    const item = s.item ?? '(unknown)'
-    const amount = s.price_total ?? 0
-    const period = timestampToPeriod(s.event_timestamp, g)
-
-    // Cell
-    if (!cells.has(item)) cells.set(item, new Map())
-    const row = cells.get(item)!
-    row.set(period.key, (row.get(period.key) ?? 0) + amount)
-
-    // Row total
-    rowTotals.set(item, (rowTotals.get(item) ?? 0) + amount)
-
-    // Column total
-    colTotals.set(period.key, (colTotals.get(period.key) ?? 0) + amount)
-
-    grandTotal += amount
+// Pre-indexed lookup tables, rebuilt when `result` changes.
+const cellIndex = computed(() => {
+  const m = new Map<string, number>()
+  if (!result.value) return m
+  for (const c of result.value.cells) {
+    m.set(`${c.item}\t${c.period_key}`, c.revenue)
   }
-
-  // Sorted items
-  const items = [...cells.keys()].sort((a, b) => a.localeCompare(b))
-
-  // Sorted periods
-  const periods = collectPeriods(sales.map(s => s.event_timestamp), g)
-
-  return { items, periods, cells, rowTotals, colTotals, grandTotal }
+  return m
 })
+const rowTotalIndex = computed(() => new Map(result.value?.row_totals ?? []))
+const colTotalIndex = computed(() => new Map(result.value?.col_totals ?? []))
+
+function cellValue(item: string, periodKey: string): number | undefined {
+  return cellIndex.value.get(`${item}\t${periodKey}`)
+}
+function rowTotal(item: string): number | undefined {
+  return rowTotalIndex.value.get(item)
+}
+function colTotal(periodKey: string): number | undefined {
+  return colTotalIndex.value.get(periodKey)
+}
 
 function formatCell(value: number | undefined): string {
   if (!value) return ''
   return value.toLocaleString()
 }
+
+async function reload() {
+  loading.value = true
+  error.value = null
+  try {
+    result.value = await invoke<RevenueResult>('get_stall_revenue', {
+      params: {
+        granularity: granularity.value,
+        date_from: filterDateFrom.value || null,
+        date_to: filterDateTo.value || null,
+        buyer: filterBuyer.value || null,
+        item: filterItem.value || null,
+      },
+    })
+  } catch (e) {
+    error.value = String(e)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => reload())
+
+watch([granularity, filterDateFrom, filterDateTo, filterBuyer, filterItem], () => reload())
+watch(() => store.dataVersion, () => reload())
 </script>

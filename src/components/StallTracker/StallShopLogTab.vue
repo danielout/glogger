@@ -1,23 +1,22 @@
 <template>
   <div class="flex flex-col gap-4">
-    <div v-if="store.loading" class="text-text-dim italic text-sm">Loading shop log...</div>
-    <div v-else-if="store.error" class="text-[#c87e7e] text-sm">{{ store.error }}</div>
+    <div v-if="loading && rows.length === 0" class="text-text-dim italic text-sm">Loading shop log...</div>
+    <div v-else-if="error" class="text-[#c87e7e] text-sm">{{ error }}</div>
     <EmptyState
-      v-else-if="store.shopLog.length === 0"
+      v-else-if="!loading && totalCount === 0"
       variant="panel"
       primary="No shop log entries"
       secondary="Open your shop log book in-game to import stall data." />
 
     <template v-else>
-      <!-- Filters -->
       <div class="flex items-center gap-3 flex-wrap">
-        <SearchableSelect v-model="filterDateFrom" :options="dateOptions" placeholder="From date" />
+        <SearchableSelect v-model="filterDateFrom" :options="store.filterOptions.dates" placeholder="From date" />
         <span class="text-text-dim text-xs">&ndash;</span>
-        <SearchableSelect v-model="filterDateTo" :options="dateOptions" placeholder="To date" />
-        <SearchableSelect v-model="filterPlayer" :options="playerOptions" placeholder="All players" />
-        <SearchableSelect v-model="filterAction" :options="actionOptions" placeholder="All actions" />
-        <SearchableSelect v-model="filterItem" :options="itemOptions" placeholder="All items" />
-        <span class="text-xs text-text-muted">{{ sortedLog.length }} of {{ store.shopLog.length }} entries</span>
+        <SearchableSelect v-model="filterDateTo" :options="store.filterOptions.dates" placeholder="To date" />
+        <SearchableSelect v-model="filterPlayer" :options="store.filterOptions.players" placeholder="All players" />
+        <SearchableSelect v-model="filterAction" :options="store.filterOptions.actions" placeholder="All actions" />
+        <SearchableSelect v-model="filterItem" :options="store.filterOptions.items" placeholder="All items" />
+        <span class="text-xs text-text-muted">Showing {{ rows.length.toLocaleString() }} of {{ totalCount.toLocaleString() }} entries</span>
       </div>
 
       <div class="overflow-auto">
@@ -25,17 +24,17 @@
           <thead>
             <tr class="text-left text-text-muted text-xs uppercase tracking-wide border-b border-border-default">
               <th class="pb-2 w-8"></th>
-              <th class="pb-2 pr-4 cursor-pointer hover:text-text-primary" @click="toggleSort('event_timestamp')">Date {{ sortIcon('event_timestamp') }}</th>
+              <th class="pb-2 pr-4 cursor-pointer hover:text-text-primary" @click="toggleSort('event_at')">Date {{ sortIcon('event_at') }}</th>
               <th class="pb-2 pr-4 cursor-pointer hover:text-text-primary" @click="toggleSort('player')">Player {{ sortIcon('player') }}</th>
               <th class="pb-2 pr-4 cursor-pointer hover:text-text-primary" @click="toggleSort('action')">Action {{ sortIcon('action') }}</th>
               <th class="pb-2 pr-4 cursor-pointer hover:text-text-primary" @click="toggleSort('item')">Item {{ sortIcon('item') }}</th>
               <th class="pb-2 pr-4 text-right cursor-pointer hover:text-text-primary" @click="toggleSort('quantity')">Qty {{ sortIcon('quantity') }}</th>
-              <th class="pb-2 text-right cursor-pointer hover:text-text-primary" @click="toggleSort('gold')">Gold {{ sortIcon('gold') }}</th>
+              <th class="pb-2 text-right cursor-pointer hover:text-text-primary" @click="toggleSort('price_total')">Gold {{ sortIcon('price_total') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr
-              v-for="entry in sortedLog"
+              v-for="entry in rows"
               :key="entry.id"
               class="border-b border-border-light hover:bg-[#1a1a2e] transition-colors"
               :class="{ 'opacity-35': entry.ignored }">
@@ -61,19 +60,37 @@
           </tbody>
         </table>
       </div>
+
+      <div v-if="rows.length < totalCount" class="flex justify-center">
+        <button
+          class="text-xs text-text-dim hover:text-text-primary border border-border-default rounded px-3 py-1.5"
+          :disabled="loading"
+          @click="loadMore">
+          {{ loading ? 'Loading...' : `Load more (${(totalCount - rows.length).toLocaleString()} remaining)` }}
+        </button>
+      </div>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, shallowRef, watch, onMounted } from 'vue'
 import { confirm } from '@tauri-apps/plugin-dialog'
+import { invoke } from '@tauri-apps/api/core'
 import EmptyState from '../Shared/EmptyState.vue'
 import ItemInline from '../Shared/Item/ItemInline.vue'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 import type { StallEvent } from '../../types/stallTracker'
-import { timestampToSortKey, timestampToDateKey, uniqueDates } from './stallTimestamp'
+
+interface StallEventsPage {
+  rows: StallEvent[]
+  total_count: number
+}
+
+type SortKey = 'event_at' | 'player' | 'action' | 'item' | 'quantity' | 'price_total'
+
+const PAGE_SIZE = 500
 
 const store = useStallTrackerStore()
 
@@ -83,56 +100,58 @@ const filterPlayer = ref('')
 const filterAction = ref('')
 const filterItem = ref('')
 
-const dateOptions = computed(() => uniqueDates(store.shopLog.map(e => e.event_timestamp)))
-const playerOptions = computed(() =>
-  [...new Set(store.shopLog.map(e => e.player).filter(Boolean))].sort((a, b) => a.localeCompare(b))
-)
-const actionOptions = computed(() =>
-  [...new Set(store.shopLog.map(e => e.action))].sort((a, b) => a.localeCompare(b))
-)
-const itemOptions = computed(() =>
-  [...new Set(store.shopLog.map(e => e.item).filter((v): v is string => v != null))].sort((a, b) => a.localeCompare(b))
-)
-
-type SortKey = 'event_timestamp' | 'player' | 'action' | 'item' | 'quantity' | 'gold'
-const sortKey = ref<SortKey>('event_timestamp')
+const sortKey = ref<SortKey>('event_at')
 const sortAsc = ref(false)
 
-function goldValue(entry: StallEvent): number {
-  return entry.price_total ?? entry.price_unit ?? 0
+const rows = shallowRef<StallEvent[]>([])
+const totalCount = ref(0)
+const loading = ref(false)
+const error = ref<string | null>(null)
+
+function buildParams(offset: number) {
+  return {
+    action: filterAction.value || null,
+    player: filterPlayer.value || null,
+    item: filterItem.value || null,
+    date_from: filterDateFrom.value || null,
+    date_to: filterDateTo.value || null,
+    include_ignored: true,
+    sort_by: sortKey.value,
+    sort_dir: sortAsc.value ? 'asc' : 'desc',
+    limit: PAGE_SIZE,
+    offset,
+  }
 }
 
-const sortedLog = computed(() => {
-  const fp = filterPlayer.value
-  const fa = filterAction.value
-  const fi = filterItem.value
-  const fromKey = filterDateFrom.value ? timestampToDateKey(filterDateFrom.value) : 0
-  const toKey = filterDateTo.value ? timestampToDateKey(filterDateTo.value) : Infinity
-  const list = store.shopLog.filter(e => {
-    if (fp && e.player !== fp) return false
-    if (fa && e.action !== fa) return false
-    if (fi && e.item !== fi) return false
-    if (fromKey || toKey < Infinity) {
-      const dk = timestampToDateKey(e.event_timestamp)
-      if (dk < fromKey || dk > toKey) return false
-    }
-    return true
-  })
-  const dir = sortAsc.value ? 1 : -1
-  const key = sortKey.value
-  list.sort((a, b) => {
-    if (key === 'event_timestamp') return (timestampToSortKey(a.event_timestamp) - timestampToSortKey(b.event_timestamp)) * dir
-    if (key === 'gold') return (goldValue(a) - goldValue(b)) * dir
-    if (key === 'quantity') return (a.quantity - b.quantity) * dir
-    const av = a[key as keyof StallEvent] as string | null
-    const bv = b[key as keyof StallEvent] as string | null
-    if (av == null && bv == null) return 0
-    if (av == null) return 1
-    if (bv == null) return -1
-    return av.localeCompare(bv) * dir
-  })
-  return list
-})
+async function reload() {
+  loading.value = true
+  error.value = null
+  try {
+    const page = await invoke<StallEventsPage>('get_stall_events', { params: buildParams(0) })
+    rows.value = page.rows
+    totalCount.value = page.total_count
+  } catch (e) {
+    error.value = String(e)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadMore() {
+  if (loading.value) return
+  loading.value = true
+  try {
+    const page = await invoke<StallEventsPage>('get_stall_events', {
+      params: buildParams(rows.value.length),
+    })
+    rows.value = [...rows.value, ...page.rows]
+    totalCount.value = page.total_count
+  } catch (e) {
+    error.value = String(e)
+  } finally {
+    loading.value = false
+  }
+}
 
 function toggleSort(key: SortKey) {
   if (sortKey.value === key) {
@@ -177,4 +196,15 @@ async function handleToggleIgnored(event: StallEvent) {
     await store.toggleIgnored(event.id, !event.ignored)
   }
 }
+
+let reloadTimer: ReturnType<typeof setTimeout> | null = null
+function scheduleReload() {
+  if (reloadTimer) clearTimeout(reloadTimer)
+  reloadTimer = setTimeout(() => reload(), 200)
+}
+
+onMounted(() => reload())
+
+watch([filterDateFrom, filterDateTo, filterPlayer, filterAction, filterItem, sortKey, sortAsc], scheduleReload)
+watch(() => store.dataVersion, () => reload())
 </script>

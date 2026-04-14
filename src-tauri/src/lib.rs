@@ -14,6 +14,8 @@ mod parsers;
 mod player_event_parser;
 mod replay;
 mod shop_log_parser;
+mod stall_aggregations;
+mod stall_year_resolver;
 mod settings;
 mod setup_commands;
 mod survey_parser;
@@ -140,7 +142,7 @@ use db::market_commands::{
     delete_market_value, export_market_values, get_market_value, get_market_values,
     import_market_values, set_market_value,
 };
-use db::stall_tracker_commands::{clear_stall_events, export_shop_log_files, get_stall_log, get_stall_sales, get_stall_stats, import_shop_log_file, toggle_stall_event_ignored};
+use db::stall_tracker_commands::{clear_stall_events, export_shop_log_files, get_stall_events, get_stall_filter_options, get_stall_inventory, get_stall_revenue, get_stall_stats, import_shop_log_file, seed_stall_events_dev, toggle_stall_event_ignored};
 use db::player_commands::{
     add_market_price, add_sale, get_historical_sessions, get_market_prices_for_item,
     get_recent_events, get_recent_sales, log_event, patch_survey_session,
@@ -531,13 +533,16 @@ pub fn run() {
             get_aggregate_wealth,
             get_aggregate_skills,
             // Stall tracker
-            get_stall_sales,
-            get_stall_log,
             get_stall_stats,
             clear_stall_events,
             toggle_stall_event_ignored,
             import_shop_log_file,
             export_shop_log_files,
+            seed_stall_events_dev,
+            get_stall_revenue,
+            get_stall_inventory,
+            get_stall_filter_options,
+            get_stall_events,
             // Update check
             check_for_update,
         ])

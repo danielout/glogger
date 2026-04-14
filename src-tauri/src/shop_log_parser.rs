@@ -41,6 +41,7 @@ static COLLECTED_RE: Lazy<Regex> = Lazy::new(|| {
 pub struct ShopLogEntry {
     pub entry_index: i64,
     pub timestamp: String,
+    pub event_at: Option<String>,
     pub action: String,
     pub player: String,
     pub item: Option<String>,
@@ -81,6 +82,7 @@ fn parse_entry(entry_index: i64, timestamp: &str, message: &str) -> ShopLogEntry
         return ShopLogEntry {
             entry_index,
             timestamp: timestamp.to_string(),
+            event_at: None,
             action: "bought".to_string(),
             player: caps["player"].to_string(),
             item: Some(caps["item"].to_string()),
@@ -99,6 +101,7 @@ fn parse_entry(entry_index: i64, timestamp: &str, message: &str) -> ShopLogEntry
         return ShopLogEntry {
             entry_index,
             timestamp: timestamp.to_string(),
+            event_at: None,
             action: "added".to_string(),
             player: caps["player"].to_string(),
             item: Some(caps["item"].to_string()),
@@ -117,6 +120,7 @@ fn parse_entry(entry_index: i64, timestamp: &str, message: &str) -> ShopLogEntry
         return ShopLogEntry {
             entry_index,
             timestamp: timestamp.to_string(),
+            event_at: None,
             action: "removed".to_string(),
             player: caps["player"].to_string(),
             item: Some(caps["item"].to_string()),
@@ -139,6 +143,7 @@ fn parse_entry(entry_index: i64, timestamp: &str, message: &str) -> ShopLogEntry
         return ShopLogEntry {
             entry_index,
             timestamp: timestamp.to_string(),
+            event_at: None,
             action: "configured".to_string(),
             player: caps["player"].to_string(),
             item: Some(caps["item"].to_string()),
@@ -161,6 +166,7 @@ fn parse_entry(entry_index: i64, timestamp: &str, message: &str) -> ShopLogEntry
         return ShopLogEntry {
             entry_index,
             timestamp: timestamp.to_string(),
+            event_at: None,
             action: "visible".to_string(),
             player: caps["player"].to_string(),
             item: Some(caps["item"].to_string()),
@@ -177,6 +183,7 @@ fn parse_entry(entry_index: i64, timestamp: &str, message: &str) -> ShopLogEntry
         return ShopLogEntry {
             entry_index,
             timestamp: timestamp.to_string(),
+            event_at: None,
             action: "collected".to_string(),
             player: caps["player"].to_string(),
             item: None,
@@ -191,6 +198,7 @@ fn parse_entry(entry_index: i64, timestamp: &str, message: &str) -> ShopLogEntry
     ShopLogEntry {
         entry_index,
         timestamp: timestamp.to_string(),
+        event_at: None,
         action: "unknown".to_string(),
         player: String::new(),
         item: None,
@@ -205,7 +213,12 @@ fn parse_entry(entry_index: i64, timestamp: &str, message: &str) -> ShopLogEntry
 ///
 /// The content contains newline-separated entries, each prefixed with a
 /// timestamp like "Sat Mar 28 15:39 - message text".
-pub fn parse_shop_log(title: &str, content: &str, log_timestamp: &str) -> ShopLog {
+pub fn parse_shop_log(
+    title: &str,
+    content: &str,
+    log_timestamp: &str,
+    base_year: i32,
+) -> ShopLog {
     // Unescape the content (it comes from ProcessBook with escaped newlines)
     let content = content.replace("\\n", "\n");
 
@@ -238,6 +251,14 @@ pub fn parse_shop_log(title: &str, content: &str, log_timestamp: &str) -> ShopLo
     raw_entries.reverse();
     for (i, (timestamp, message)) in raw_entries.iter().enumerate() {
         entries.push(parse_entry(i as i64, timestamp, message));
+    }
+
+    // Resolve real ISO timestamps from the year-less game format. Entries are
+    // already oldest-first, so the monotonic resolver walks forward correctly.
+    let timestamps: Vec<&str> = entries.iter().map(|e| e.timestamp.as_str()).collect();
+    let resolved = crate::stall_year_resolver::resolve_timestamps_oldest_first(&timestamps, base_year);
+    for (entry, event_at) in entries.iter_mut().zip(resolved) {
+        entry.event_at = event_at;
     }
 
     // Detect owner from first owner action
@@ -387,7 +408,7 @@ mod tests {
     #[test]
     fn test_parse_shop_log_full() {
         let content = "Sat Mar 28 15:09 - MrBonq bought Quality Reins at a cost of 4500 per 1 = 4500\n\nSat Mar 28 15:08 - AlestiarWolf bought Quality Mystic Saddlebag at a cost of 6000 per 1 = 6000\n\nSat Mar 28 14:13 - Deradon collected 30500 Councils from customer purchases\n\n";
-        let log = parse_shop_log("Today's Shop Logs", content, "19:40:40");
+        let log = parse_shop_log("Today's Shop Logs", content, "19:40:40", 2026);
 
         assert_eq!(log.title, "Today's Shop Logs");
         assert_eq!(log.log_timestamp, "19:40:40");
@@ -409,7 +430,7 @@ mod tests {
     #[test]
     fn test_parse_shop_log_with_escaped_newlines() {
         let content = r"Sat Mar 28 15:09 - MrBonq bought Quality Reins at a cost of 4500 per 1 = 4500\n\nSat Mar 28 14:13 - Deradon collected 30500 Councils from customer purchases\n\n";
-        let log = parse_shop_log("Yesterday's Shop Logs", content, "13:26:04");
+        let log = parse_shop_log("Yesterday's Shop Logs", content, "13:26:04", 2026);
 
         assert_eq!(log.entries.len(), 2);
         // Reversed: oldest first
@@ -421,7 +442,7 @@ mod tests {
     fn test_duplicate_entries_get_different_indices() {
         // Two identical purchases in the same minute should get different entry_index values
         let content = "Sat Mar 28 15:09 - Kork bought Nice Saddle at a cost of 4000 per 1 = 4000\n\nSat Mar 28 15:09 - Kork bought Nice Saddle at a cost of 4000 per 1 = 4000\n\n";
-        let log = parse_shop_log("Today's Shop Logs", content, "19:40:40");
+        let log = parse_shop_log("Today's Shop Logs", content, "19:40:40", 2026);
 
         assert_eq!(log.entries.len(), 2);
         assert_eq!(log.entries[0].raw_message, log.entries[1].raw_message);
@@ -435,11 +456,11 @@ mod tests {
     fn test_entry_indices_stable_across_reopens() {
         // First open: two entries (newest first in content)
         let content1 = "Sat Mar 28 15:09 - MrBonq bought Quality Reins at a cost of 4500 per 1 = 4500\n\nSat Mar 28 14:13 - Deradon collected 30500 Councils from customer purchases\n\n";
-        let log1 = parse_shop_log("Today's Shop Logs", content1, "16:00:00");
+        let log1 = parse_shop_log("Today's Shop Logs", content1, "16:00:00", 2026);
 
         // Second open: new entry prepended, same old entries follow
         let content2 = "Sat Mar 28 16:30 - Kork bought Nice Saddle at a cost of 4000 per 1 = 4000\n\nSat Mar 28 15:09 - MrBonq bought Quality Reins at a cost of 4500 per 1 = 4500\n\nSat Mar 28 14:13 - Deradon collected 30500 Councils from customer purchases\n\n";
-        let log2 = parse_shop_log("Today's Shop Logs", content2, "17:00:00");
+        let log2 = parse_shop_log("Today's Shop Logs", content2, "17:00:00", 2026);
 
         // Old entries should keep the same indices across both opens
         assert_eq!(log1.entries[0].entry_index, log2.entries[0].entry_index); // collected = index 0

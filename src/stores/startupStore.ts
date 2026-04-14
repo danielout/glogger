@@ -319,8 +319,9 @@ export const useStartupStore = defineStore("startup", () => {
       await gameState.loadStorageVaults();
       // Load market values
       await marketStore.loadAll();
-      // Load stall tracker data
-      await stallTrackerStore.loadAll();
+      // Load stall tracker shared metadata (stats + filter options).
+      // Per-tab list data is fetched lazily by each tab component.
+      await Promise.all([stallTrackerStore.loadStats(), stallTrackerStore.loadFilterOptions()]);
       log("Game state ready");
       updateTask(TASK_GAME_STATE, "done");
     } catch (e) {
