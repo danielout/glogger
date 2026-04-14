@@ -20,14 +20,18 @@
     </button>
 
     <Teleport to="body">
+      <!-- z-[70] so the dropdown layers above the Stall Tracker Shop Log
+           modal (z-[60]) and any future modal at z-[60]. The default z-50
+           used to occlude the dropdown when this component was rendered
+           inside such a modal. -->
       <div
         v-if="open"
-        class="fixed inset-0 z-50"
+        class="fixed inset-0 z-[70]"
         @click="close" />
       <div
         v-if="open"
         ref="dropdownRef"
-        class="fixed z-50 rounded border border-border-default bg-surface-elevated shadow-lg flex flex-col"
+        class="fixed z-[70] rounded border border-border-default bg-surface-elevated shadow-lg flex flex-col"
         :style="dropdownStyle">
         <div class="p-1.5 border-b border-border-default/60">
           <input
