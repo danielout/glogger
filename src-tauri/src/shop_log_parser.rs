@@ -16,9 +16,14 @@ static ENTRY_RE: Lazy<Regex> = Lazy::new(|| {
 });
 
 /// `MrBonq bought Quality Reins at a cost of 4500 per 1 = 4500`
+/// `MARCELA bought Aquamarine x5 at a cost of 750 per 1 = 3750`
+///
+/// The optional `x?N` after the item handles stacked listings — the seller
+/// titled the listing as "Aquamarine x5", the game logs it verbatim, and we
+/// strip the suffix into `qty` so the item name is canonical for grouping.
 static BOUGHT_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(
-        r"^(?P<player>.+?) bought (?P<item>.+?) at a cost of (?P<unit>\d+) per (?P<qty_unit>\d+) = (?P<total>\d+)",
+        r"^(?P<player>.+?) bought (?P<item>.+?)(?: ?x(?P<qty>\d+))? at a cost of (?P<unit>\d+) per (?P<qty_unit>\d+) = (?P<total>\d+)",
     )
     .unwrap()
 });
@@ -175,9 +180,17 @@ fn parse_entry(entry_index: i64, timestamp: &str, message: &str) -> ShopLogEntry
         entry.item = Some(c["item"].to_string());
         entry.price_unit = Some(unit_price);
         entry.price_total = Some(total);
-        // Quantity is total / corrected per-unit price, so the invariant
-        // `price_unit * quantity == price_total` always holds.
-        entry.quantity = if unit_price > 0.0 {
+        // Quantity resolution:
+        // - If the item was a stacked listing ("Aquamarine x5"), the regex
+        //   captures the stack count directly — that's the actual unit count
+        //   the buyer received.
+        // - Otherwise, derive from total / corrected-unit-price, which
+        //   correctly handles bulk-priced listings ("3000 per 2 = 6000" → 4
+        //   units at 1500 each).
+        // Either path preserves the invariant `price_unit * quantity == price_total`.
+        entry.quantity = if let Some(qty_match) = c.name("qty") {
+            qty_match.as_str().parse().unwrap_or(1)
+        } else if unit_price > 0.0 {
             (total as f64 / unit_price).round() as i64
         } else {
             1
@@ -291,6 +304,55 @@ mod tests {
     fn test_parse_bought_invariant_holds_for_single_price() {
         // Also assert the invariant for the common non-bulk case.
         let e = single("Zangariel bought Orcish Spell Pouch at a cost of 450 per 1 = 5400");
+        let invariant = e.price_unit.unwrap() * e.quantity as f64;
+        assert_eq!(invariant as i64, e.price_total.unwrap());
+    }
+
+    #[test]
+    fn test_parse_bought_stacked_listing_with_xn() {
+        // Real game log line: stacked listing where the seller titled the
+        // item "Aquamarine x5". The xN suffix MUST be stripped from the item
+        // name so all 5 stacked sales aggregate under "Aquamarine", not as
+        // five distinct phantom items ("Aquamarine x5", "Aquamarine x3", ...).
+        let e = single("MARCELA bought Aquamarine x5 at a cost of 750 per 1 = 3750");
+        assert_eq!(e.action, "bought");
+        assert_eq!(e.player, "MARCELA");
+        assert_eq!(e.item.as_deref(), Some("Aquamarine"));
+        assert_eq!(e.quantity, 5);
+        assert_eq!(e.price_unit, Some(750.0));
+        assert_eq!(e.price_total, Some(3750));
+        // Invariant: price_unit * quantity == price_total
+        let invariant = e.price_unit.unwrap() * e.quantity as f64;
+        assert_eq!(invariant as i64, e.price_total.unwrap());
+    }
+
+    #[test]
+    fn test_parse_bought_stacked_listing_no_space_before_xn() {
+        // Some game lines omit the space between item and xN. The optional
+        // " ?" inside the regex group handles both forms.
+        let e = single("MrBonq bought Quality Reinsx2 at a cost of 4500 per 1 = 9000");
+        assert_eq!(e.item.as_deref(), Some("Quality Reins"));
+        assert_eq!(e.quantity, 2);
+    }
+
+    #[test]
+    fn test_parse_bought_no_xn_still_works() {
+        // The xN group is optional. A plain item name resolves through the
+        // total/unit_price fallback path.
+        let e = single("Lexxi bought Aquamarine at a cost of 750 per 1 = 750");
+        assert_eq!(e.item.as_deref(), Some("Aquamarine"));
+        assert_eq!(e.quantity, 1);
+        assert_eq!(e.price_unit, Some(750.0));
+    }
+
+    #[test]
+    fn test_parse_bought_bulk_no_xn_still_works() {
+        // Bulk-priced listing without xN: the fallback path computes
+        // quantity from total / corrected-unit-price.
+        let e = single("MrBonq bought Barley Seeds at a cost of 3000 per 2 = 6000");
+        assert_eq!(e.item.as_deref(), Some("Barley Seeds"));
+        assert_eq!(e.quantity, 4);
+        assert_eq!(e.price_unit, Some(1500.0));
         let invariant = e.price_unit.unwrap() * e.quantity as f64;
         assert_eq!(invariant as i64, e.price_total.unwrap());
     }
