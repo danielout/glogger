@@ -142,106 +142,109 @@ async function handleImport() {
   if (paths.length === 0) return
 
   actionInProgress.value = true
-  // Tally imported entries per owner. Continue on per-file errors so that
-  // a single malformed file in a 5-file import doesn't lose the other 4
-  // (each invoke runs its own transaction — partial success is real and
-  // the user deserves an accurate summary).
-  //
-  // Per-owner state tracks both the count AND whether any of the contributing
-  // files were "claimed" (no parser hint, fell back to current_owner). The
-  // mixed-claim case — one file claimed for the active char, another with an
-  // explicit different owner — is rare but real, and the message needs to
-  // surface both facts.
-  interface OwnerTally {
-    count: number
-    claimed: boolean
-  }
-  const entriesByOwner = new Map<string, OwnerTally>()
-  const failedFiles: { path: string; error: string }[] = []
-  let totalNew = 0
-  let totalRows = 0
-
-  for (const path of paths) {
-    try {
-      const result = await invoke<ImportResult>('import_shop_log_file', {
-        path,
-        currentOwner: store.currentOwner,
-      })
-      const owner = result.effective_owner ?? '(unknown)'
-      const tally = entriesByOwner.get(owner) ?? { count: 0, claimed: false }
-      tally.count += result.total_entries
-      if (result.owner_claimed) tally.claimed = true
-      entriesByOwner.set(owner, tally)
-      totalNew += result.new_entries
-      totalRows += result.total_entries
-    } catch (e) {
-      const fileName = path.split(/[/\\]/).pop() ?? path
-      failedFiles.push({ path: fileName, error: String(e) })
-      console.error(`[StallTracker] Import failed for ${path}:`, e)
+  try {
+    // Tally imported entries per owner. Continue on per-file errors so that
+    // a single malformed file in a 5-file import doesn't lose the other 4
+    // (each invoke runs its own transaction — partial success is real and
+    // the user deserves an accurate summary).
+    //
+    // Per-owner state tracks both the count AND whether any of the contributing
+    // files were "claimed" (no parser hint, fell back to current_owner). The
+    // mixed-claim case — one file claimed for the active char, another with an
+    // explicit different owner — is rare but real, and the message needs to
+    // surface both facts.
+    interface OwnerTally {
+      count: number
+      claimed: boolean
     }
-  }
+    const entriesByOwner = new Map<string, OwnerTally>()
+    const failedFiles: { path: string; error: string }[] = []
+    let totalNew = 0
+    let totalRows = 0
 
-  await store.refresh()
-  actionInProgress.value = false
-
-  // Build the summary. Successes and failures are reported together so the
-  // user always knows the partial-success state.
-  const successCount = paths.length - failedFiles.length
-  const parts: string[] = []
-
-  if (totalRows === 0 && failedFiles.length === 0) {
-    flashMessage('No shop log entries found in the selected file(s).')
-    return
-  }
-
-  if (totalRows > 0) {
-    // Per-owner segments include a "(claimed)" marker on any owner whose
-    // contributing files all came from owner-less books. Sorts the active
-    // character first when present for readability.
-    const sortedOwners = Array.from(entriesByOwner.entries()).sort(
-      ([a], [b]) => {
-        if (a === store.currentOwner) return -1
-        if (b === store.currentOwner) return 1
-        return a.localeCompare(b)
-      },
-    )
-    const ownersList = sortedOwners
-      .map(
-        ([o, t]) =>
-          `${t.count.toLocaleString()} for ${o}${t.claimed ? ' (claimed)' : ''}`,
-      )
-      .join(', ')
-    const otherOwners = sortedOwners
-      .map(([o]) => o)
-      .filter((o) => o !== store.currentOwner)
-
-    if (otherOwners.length > 0) {
-      parts.push(`Imported ${ownersList}. Switch character to view entries for other owners.`)
-    } else if (sortedOwners.some(([, t]) => t.claimed)) {
-      parts.push(
-        `Imported ${totalRows.toLocaleString()} entries (claimed for ${store.currentOwner ?? 'active character'} — book did not identify an owner).`,
-      )
-    } else {
-      const dupes = totalRows - totalNew
-      parts.push(
-        `Imported ${totalNew.toLocaleString()} entries${dupes > 0 ? `, ${dupes.toLocaleString()} duplicates skipped` : ''}.`,
-      )
+    for (const path of paths) {
+      try {
+        const result = await invoke<ImportResult>('import_shop_log_file', {
+          path,
+          currentOwner: store.currentOwner,
+        })
+        const owner = result.effective_owner ?? '(unknown)'
+        const tally = entriesByOwner.get(owner) ?? { count: 0, claimed: false }
+        tally.count += result.total_entries
+        if (result.owner_claimed) tally.claimed = true
+        entriesByOwner.set(owner, tally)
+        totalNew += result.new_entries
+        totalRows += result.total_entries
+      } catch (e) {
+        const fileName = path.split(/[/\\]/).pop() ?? path
+        failedFiles.push({ path: fileName, error: String(e) })
+        console.error(`[StallTracker] Import failed for ${path}:`, e)
+      }
     }
-  }
 
-  if (failedFiles.length > 0) {
-    if (successCount > 0) {
-      parts.push(
-        `${failedFiles.length} of ${paths.length} files failed: ${failedFiles
-          .map((f) => f.path)
-          .join(', ')}`,
-      )
-    } else {
-      parts.push(`Import failed: ${failedFiles[0].error}`)
+    await store.refresh()
+
+    // Build the summary. Successes and failures are reported together so the
+    // user always knows the partial-success state.
+    const successCount = paths.length - failedFiles.length
+    const parts: string[] = []
+
+    if (totalRows === 0 && failedFiles.length === 0) {
+      flashMessage('No shop log entries found in the selected file(s).')
+      return
     }
-  }
 
-  flashMessage(parts.join(' '))
+    if (totalRows > 0) {
+      // Per-owner segments include a "(claimed)" marker on any owner whose
+      // contributing files all came from owner-less books. Sorts the active
+      // character first when present for readability.
+      const sortedOwners = Array.from(entriesByOwner.entries()).sort(
+        ([a], [b]) => {
+          if (a === store.currentOwner) return -1
+          if (b === store.currentOwner) return 1
+          return a.localeCompare(b)
+        },
+      )
+      const ownersList = sortedOwners
+        .map(
+          ([o, t]) =>
+            `${t.count.toLocaleString()} for ${o}${t.claimed ? ' (claimed)' : ''}`,
+        )
+        .join(', ')
+      const otherOwners = sortedOwners
+        .map(([o]) => o)
+        .filter((o) => o !== store.currentOwner)
+
+      if (otherOwners.length > 0) {
+        parts.push(`Imported ${ownersList}. Switch character to view entries for other owners.`)
+      } else if (sortedOwners.some(([, t]) => t.claimed)) {
+        parts.push(
+          `Imported ${totalRows.toLocaleString()} entries (claimed for ${store.currentOwner ?? 'active character'} — book did not identify an owner).`,
+        )
+      } else {
+        const dupes = totalRows - totalNew
+        parts.push(
+          `Imported ${totalNew.toLocaleString()} entries${dupes > 0 ? `, ${dupes.toLocaleString()} duplicates skipped` : ''}.`,
+        )
+      }
+    }
+
+    if (failedFiles.length > 0) {
+      if (successCount > 0) {
+        parts.push(
+          `${failedFiles.length} of ${paths.length} files failed: ${failedFiles
+            .map((f) => f.path)
+            .join(', ')}`,
+        )
+      } else {
+        parts.push(`Import failed: ${failedFiles[0].error}`)
+      }
+    }
+
+    flashMessage(parts.join(' '))
+  } finally {
+    actionInProgress.value = false
+  }
 }
 
 async function handleExport() {
