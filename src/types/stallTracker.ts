@@ -140,3 +140,19 @@ export interface StallInventoryParams {
   owner?: string | null;
   periodDays?: number | null;
 }
+
+// ── Import / Export ─────────────────────────────────────────────────────
+
+export interface ImportResult {
+  total_entries: number;
+  new_entries: number;
+  /** The owner the rows were stamped with — parser hint or current_owner fallback. */
+  effective_owner: string | null;
+  /** True when the file had no owner actions and was claimed for the active character. */
+  owner_claimed: boolean;
+}
+
+export interface ExportResult {
+  files_written: number;
+  events_exported: number;
+}

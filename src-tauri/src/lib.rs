@@ -573,6 +573,8 @@ pub fn run() {
             db::stall_tracker_commands::get_stall_filter_options,
             db::stall_tracker_commands::toggle_stall_event_ignored,
             db::stall_tracker_commands::clear_stall_events,
+            db::stall_tracker_commands::import_shop_log_file,
+            db::stall_tracker_commands::export_shop_log_files,
             // Update check
             check_for_update,
         ])

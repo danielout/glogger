@@ -1,10 +1,14 @@
 use super::DbPool;
+use crate::shop_log_parser::{parse_shop_log, ShopLog};
 use crate::stall_aggregations::{
     aggregate_inventory, aggregate_revenue, Granularity, InventoryEvent, InventoryResult,
     RevenueEvent, RevenueResult,
 };
+use chrono::{Datelike, Local};
 use rusqlite::types::Value;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+use std::path::Path;
 use std::sync::Mutex;
 use tauri::State;
 
@@ -683,4 +687,265 @@ pub fn clear_stall_events(
         )
         .map_err(|e| format!("Clear query failed: {e}"))?;
     Ok(deleted)
+}
+
+// ============================================================
+// Phase 10 — Import / Export
+// ============================================================
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ImportResult {
+    pub total_entries: usize,
+    pub new_entries: usize,
+    /// The owner the rows were stamped with: parser-detected if the book
+    /// contained owner-only actions, else the caller-supplied current_owner.
+    pub effective_owner: Option<String>,
+    /// True when the parser couldn't detect an owner (bought-only file) and
+    /// we fell back to the caller's current_owner. The UI uses this to show
+    /// "claimed for X — book did not identify an owner".
+    pub owner_claimed: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ExportResult {
+    pub files_written: usize,
+    pub events_exported: usize,
+}
+
+/// Scan a filename for a 4-digit year between 2000 and 2099. Falls back to
+/// the current local year if no match. Used by Import to seed the year
+/// resolver when the book content itself doesn't carry an explicit year.
+fn year_from_filename(path: &Path) -> i32 {
+    let name = path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or_default();
+    let bytes = name.as_bytes();
+    let mut i = 0;
+    while i + 4 <= bytes.len() {
+        if bytes[i].is_ascii_digit()
+            && bytes[i + 1].is_ascii_digit()
+            && bytes[i + 2].is_ascii_digit()
+            && bytes[i + 3].is_ascii_digit()
+        {
+            let year: i32 = std::str::from_utf8(&bytes[i..i + 4])
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(0);
+            if (2000..=2099).contains(&year) {
+                // Reject if surrounded by more digits (would be a longer number).
+                let prev_digit = i > 0 && bytes[i - 1].is_ascii_digit();
+                let next_digit = i + 4 < bytes.len() && bytes[i + 4].is_ascii_digit();
+                if !prev_digit && !next_digit {
+                    return year;
+                }
+            }
+        }
+        i += 1;
+    }
+    Local::now().year()
+}
+
+/// Replace filename-hostile characters with `_` so user-controlled owner
+/// names can't break out of the export directory.
+fn sanitize_owner(owner: &str) -> String {
+    owner
+        .chars()
+        .map(|c| match c {
+            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' | '\0' => '_',
+            _ => c,
+        })
+        .collect()
+}
+
+/// Read a `.txt` shop log file, parse it, and persist its entries.
+///
+/// Owner resolution rules (plan §10.1 / §12.1):
+/// 1. Year comes from the filename if it contains a 4-digit year between
+///    2000 and 2099, else `Local::now().year()`.
+/// 2. `effective_owner = parser_hint.or(current_owner)`. Three cases:
+///    - parser hint matches active character → normal import
+///    - parser hint is a different character → stamps with the parsed owner;
+///      the UI surfaces a "switch character to view" message
+///    - parser hint is missing (bought-only file) → falls back to
+///      current_owner and sets `owner_claimed = true`
+#[tauri::command]
+pub fn import_shop_log_file(
+    db: State<'_, DbPool>,
+    ops_lock: State<'_, StallOpsLock>,
+    path: String,
+    current_owner: Option<String>,
+) -> Result<ImportResult, String> {
+    let path_buf = std::path::PathBuf::from(&path);
+    let content = std::fs::read_to_string(&path_buf)
+        .map_err(|e| format!("Failed to read shop log file: {e}"))?;
+
+    let base_year = year_from_filename(&path_buf);
+    let shop_log: ShopLog = parse_shop_log("Imported", &content, "imported", base_year);
+    let total_entries = shop_log.entries.len();
+
+    let parsed_owner = shop_log.owner.clone();
+    let effective_owner: Option<String> = parsed_owner
+        .clone()
+        .or_else(|| opt_nonempty(&current_owner).map(str::to_string));
+
+    if effective_owner.is_none() {
+        return Err(
+            "Cannot import: file has no owner actions and no active character to claim it for"
+                .to_string(),
+        );
+    }
+
+    let owner_claimed = parsed_owner.is_none() && total_entries > 0;
+
+    let inputs: Vec<StallEventInput> = shop_log
+        .entries
+        .iter()
+        .map(|e| StallEventInput {
+            event_timestamp: e.timestamp.clone(),
+            event_at: e.event_at.clone(),
+            log_timestamp: shop_log.log_timestamp.clone(),
+            log_title: shop_log.title.clone(),
+            action: e.action.clone(),
+            player: e.player.clone(),
+            owner: effective_owner.clone(),
+            item: e.item.clone(),
+            quantity: e.quantity,
+            price_unit: e.price_unit,
+            price_total: e.price_total,
+            raw_message: e.raw_message.clone(),
+            entry_index: e.entry_index,
+        })
+        .collect();
+
+    let new_entries = insert_stall_events(&db, &ops_lock, &inputs)?;
+
+    Ok(ImportResult {
+        total_entries,
+        new_entries,
+        effective_owner,
+        owner_claimed,
+    })
+}
+
+/// Write one file per `(owner, year, month, day)` group, sorted newest-first
+/// to match the in-game book format. Round-trip contract: any file produced
+/// by Export must be re-importable by Import, landing identical rows
+/// (same UNIQUE key → INSERT OR IGNORE skips them all).
+#[tauri::command]
+pub fn export_shop_log_files(
+    db: State<'_, DbPool>,
+    directory: String,
+    owner: Option<String>,
+) -> Result<ExportResult, String> {
+    let owner = opt_nonempty(&owner)
+        .ok_or_else(|| "export_shop_log_files requires an owner".to_string())?
+        .to_string();
+
+    let dir = std::path::PathBuf::from(&directory);
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| format!("Failed to create export directory: {e}"))?;
+
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
+
+    // Fetch every non-unknown event for the owner with a resolved event_at.
+    // event_at + entry_index ordering matches the in-game book order
+    // (newest-first). The grouping below partitions by date.
+    let mut stmt = conn
+        .prepare(
+            "SELECT event_timestamp, event_at, raw_message, entry_index \
+             FROM stall_events \
+             WHERE owner = ?1 AND action != 'unknown' AND event_at IS NOT NULL \
+             ORDER BY event_at DESC, entry_index DESC, id DESC",
+        )
+        .map_err(|e| format!("Failed to prepare export query: {e}"))?;
+
+    let rows = stmt
+        .query_map(rusqlite::params![owner], |row| {
+            Ok((
+                row.get::<_, String>(0)?, // event_timestamp (raw "Mon Apr 13 14:29")
+                row.get::<_, String>(1)?, // event_at ("YYYY-MM-DD HH:MM:SS")
+                row.get::<_, String>(2)?, // raw_message
+                row.get::<_, i64>(3)?,    // entry_index
+            ))
+        })
+        .map_err(|e| format!("Export query failed: {e}"))?;
+
+    // Group by date. BTreeMap keeps groups sorted; within a group we
+    // preserve insertion order, which is already newest-first from the SQL.
+    let mut by_date: BTreeMap<String, Vec<(String, String, i64)>> = BTreeMap::new();
+    let mut total = 0usize;
+    for row in rows {
+        let (ts, event_at, msg, idx) = row.map_err(|e| format!("Failed to read row: {e}"))?;
+        let date = event_at.get(..10).unwrap_or("unknown").to_string();
+        by_date.entry(date).or_default().push((ts, msg, idx));
+        total += 1;
+    }
+
+    let safe_owner = sanitize_owner(&owner);
+    let mut files_written = 0usize;
+    for (date, entries) in by_date {
+        let file_path = dir.join(format!("{safe_owner}-shop-log-{date}.txt"));
+        let mut body = String::new();
+        for (i, (ts, msg, _idx)) in entries.iter().enumerate() {
+            if i > 0 {
+                body.push_str("\n\n");
+            }
+            body.push_str(ts);
+            body.push_str(" - ");
+            body.push_str(msg);
+        }
+        body.push('\n');
+        std::fs::write(&file_path, body)
+            .map_err(|e| format!("Failed to write {}: {e}", file_path.display()))?;
+        files_written += 1;
+    }
+
+    Ok(ExportResult {
+        files_written,
+        events_exported: total,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn year_from_filename_extracts_iso_year() {
+        assert_eq!(
+            year_from_filename(Path::new("Deradon-shop-log-2026-04-13.txt")),
+            2026
+        );
+    }
+
+    #[test]
+    fn year_from_filename_falls_back_to_current_year() {
+        let now = Local::now().year();
+        assert_eq!(year_from_filename(Path::new("nodate.txt")), now);
+    }
+
+    #[test]
+    fn year_from_filename_rejects_bare_5_digit_runs() {
+        // 12026 should not be read as 2026 — it's part of a longer number.
+        let now = Local::now().year();
+        assert_eq!(year_from_filename(Path::new("export-12026.txt")), now);
+    }
+
+    #[test]
+    fn year_from_filename_rejects_year_outside_2000_2099() {
+        let now = Local::now().year();
+        assert_eq!(year_from_filename(Path::new("file-1999.txt")), now);
+        assert_eq!(year_from_filename(Path::new("file-2100.txt")), now);
+    }
+
+    #[test]
+    fn sanitize_owner_replaces_path_separators() {
+        assert_eq!(sanitize_owner("foo/bar"), "foo_bar");
+        assert_eq!(sanitize_owner("foo\\bar"), "foo_bar");
+        assert_eq!(sanitize_owner("normal"), "normal");
+        assert_eq!(sanitize_owner("with:colon"), "with_colon");
+    }
 }
