@@ -444,6 +444,8 @@ Behavior:
 
 A themed calendar popover that replaces native `<input type="date">`. The motivation: WebView2's native date picker has inconsistent outside-click dismissal — the popup stays open until the input loses focus, and there's no clean DOM workaround that doesn't break in-picker interactions like month navigation. A custom popover gives full control and matches the rest of the app's dropdown styling.
 
+<img src="../screenshots/economics/stall-tracker/date-picker.png" alt="DatePicker — month grid, Today highlight, Today/Clear shortcuts" width="320" />
+
 ```vue
 <DatePicker v-model="filterDateFrom" placeholder="From date" />
 ```

@@ -1299,6 +1299,11 @@ if (typeof window !== 'undefined') {
 Use this to verify the 100k-scale target: `await stallBench.seed(100000)`
 should complete in a few seconds, tab opens should remain sub-second.
 
+<img src="../screenshots/economics/stall-tracker/dev-stallbench-helper.png" alt="DevTools console showing window.stallBench.seed/clear/bump in use" width="700" />
+
+*The helper is gated on `import.meta.env.DEV` and never ships in production
+builds. Each method logs to console for visibility during scale runs.*
+
 ---
 
 ## 15. Critical pitfalls

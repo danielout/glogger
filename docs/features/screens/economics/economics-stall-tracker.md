@@ -27,6 +27,32 @@ The Stall Tracker has three visible tabs plus a fourth view behind a modal:
 | Inventory | Estimated current shop stock reconstructed from the event log with per-tier pricing |
 | Shop Log (modal) | Full event log across all action types — a maintenance view for finding/ignoring specific events |
 
+## Visible surfaces
+
+### Sales tab
+
+<img src="../../../screenshots/economics/stall-tracker/sales.png" alt="Sales tab — stats header, filter row, paginated sortable table" width="900" />
+
+*The default landing surface. Stats header recomputes from the filtered set, not just the loaded page. Sortable on every column. The `⊘` / `○` toggle in the first column mutes a row from aggregations (still visible greyed-out in the list).*
+
+### Revenue tab
+
+<img src="../../../screenshots/economics/stall-tracker/revenue.png" alt="Revenue pivot — items as rows, dates as columns, sticky frozen corner" width="900" />
+
+*Pivot with items × periods. Daily / Weekly / Monthly granularity toggle. Periods display newest-first so today is the leftmost column after the sticky Total. Items column and Total column are both sticky-left (frozen-corner pattern).*
+
+### Inventory tab
+
+<img src="../../../screenshots/economics/stall-tracker/inventory.png" alt="Inventory tab — In Stock table with multi-tier prices, Recently Sold Out collapsible" width="900" />
+
+*Reconstructed from the event log via per-item tier-stack replay. Multi-tier price column shows `qty × price` rows when an item is listed at multiple tiers. The Recently Sold Out collapsible at the bottom uses a separate window dropdown and the dedicated `last_known_price` field so prices survive the tier-stack collapse.*
+
+### Shop Log modal
+
+<img src="../../../screenshots/economics/stall-tracker/shop-log.png" alt="Shop Log modal — all action types with colored badges" width="900" />
+
+*Maintenance view, lazy-mounted on first open. Shows all seven action buckets including the unparseable `unknown` bucket. Each action gets a distinct color tint (green=bought, blue=added, red=removed, amber=configured, cyan=visible, gold=collected). Sortable on every column. The modal persists its filter/sort/scroll state across close/reopen within the session.*
+
 ## Architecture
 
 ### Files
@@ -225,6 +251,39 @@ pub struct StallEventsFilters {
 The backend `build_filter_where()` helper turns this into a WHERE clause + bound
 parameter list. Queries with a missing/empty `owner` return empty results
 instead of leaking cross-character data.
+
+## Operations
+
+The action row in the parent view exposes Import, Export, and Clear data
+buttons. Export and Clear are gated on `hasData && currentOwner`; Import is
+always available so a fresh character can bootstrap from an exported book.
+
+### Import
+
+<img src="../../../screenshots/economics/stall-tracker/import.png" alt="Import flow — multi-file picker, per-owner result tally" width="900" />
+
+*Multi-file `.txt` picker. Each file is parsed and persisted in its own
+transaction, so a single malformed file in a 5-file batch doesn't lose the
+other 4. The summary message tallies entries per owner (with a `(claimed)`
+marker on owner-less books that fell back to the active character) and
+explicitly names any failed files.*
+
+### Export
+
+<img src="../../../screenshots/economics/stall-tracker/export.png" alt="Export flow — directory picker, per-date file output" width="900" />
+
+*Directory picker. Writes one file per `(owner, date)` in the exact in-game
+book format so any exported file is re-importable and produces identical
+rows (the UNIQUE key + INSERT OR IGNORE makes the round-trip a no-op).*
+
+### Clear data
+
+<img src="../../../screenshots/economics/stall-tracker/clear-data.png" alt="Clear data confirmation — names character, recommends Export first" width="900" />
+
+*Native warning dialog that names the active character explicitly and
+recommends Export first, since in-game shop log books only hold recent
+history. Holds `StallOpsLock` for the duration of the DELETE so a
+concurrent live-ingest batch can't write after the clear.*
 
 ## Frontend Events
 
