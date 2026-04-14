@@ -99,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick, onBeforeUnmount, watch } from 'vue'
 
 const props = withDefaults(
   defineProps<{
@@ -325,6 +325,22 @@ function onWindowEvent() {
 }
 window.addEventListener('resize', onWindowEvent)
 window.addEventListener('scroll', onWindowEvent, true)
+
+// Re-sync the visible month if the parent mutates `modelValue` while the
+// popover is open (e.g., a character switch fires `clearFilters()` mid-
+// interaction). Without this, the popover would still show whatever month
+// the user was browsing — no longer aligned with the now-empty selection.
+// When closed, we don't bother syncing because `toggle()` re-syncs on next
+// open from the current modelValue.
+watch(
+  () => props.modelValue,
+  (val) => {
+    if (!open.value) return
+    const d = fromIso(val)
+    if (d) currentMonth.value = monthStart(d)
+    else currentMonth.value = monthStart(new Date())
+  },
+)
 
 onBeforeUnmount(() => {
   close()
