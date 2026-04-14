@@ -25,11 +25,7 @@
       <template v-else>
         <StallSalesTab v-if="activeTab === 'sales'" />
         <StallRevenueTab v-else-if="activeTab === 'revenue'" />
-        <div
-          v-else
-          class="p-4 text-text-secondary text-sm">
-          <strong class="text-text-primary">{{ activeTab }}</strong> tab — coming in Phase {{ phaseForTab[activeTab] }}.
-        </div>
+        <StallInventoryTab v-else-if="activeTab === 'inventory'" />
       </template>
     </div>
   </div>
@@ -41,6 +37,7 @@ import TabBar, { type Tab } from '../Shared/TabBar.vue'
 import EmptyState from '../Shared/EmptyState.vue'
 import StallSalesTab from './StallSalesTab.vue'
 import StallRevenueTab from './StallRevenueTab.vue'
+import StallInventoryTab from './StallInventoryTab.vue'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 
 const store = useStallTrackerStore()
@@ -51,10 +48,6 @@ const tabs: Tab[] = [
   { id: 'inventory', label: 'Inventory' },
 ]
 const activeTab = ref<string>('sales')
-
-const phaseForTab: Record<string, number> = {
-  inventory: 8,
-}
 
 // Lazy: stats and filter options were preloaded at startup, but if the user
 // somehow lands here before that's done, fire one refresh.

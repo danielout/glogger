@@ -227,6 +227,10 @@ pub struct InventoryItem {
     pub avg_per_day: f64,
     pub last_sold_at: Option<String>,
     pub last_activity_at: Option<String>,
+    /// Most recent priced event seen for this item — survives `finalize_tiers`
+    /// even when all tiers drop to zero, so the Recently Sold Out view can
+    /// still display "what customers were paying when this ran out".
+    pub last_known_price: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -251,6 +255,7 @@ struct ItemState {
     period_revenue: i64,
     last_sold_at: Option<String>,
     last_activity_at: Option<String>,
+    last_known_price: Option<f64>,
 }
 
 impl ItemState {
@@ -462,10 +467,14 @@ pub fn aggregate_inventory(
             "visible" | "configured" => {
                 if let Some(price) = ev.price_unit {
                     apply_pricing(state, ev.quantity, price);
+                    state.last_known_price = Some(price);
                 }
             }
             "bought" => {
                 apply_bought(state, ev.quantity, ev.price_unit);
+                if let Some(price) = ev.price_unit {
+                    state.last_known_price = Some(price);
+                }
                 if date_in_window {
                     state.period_sold += ev.quantity;
                     if let Some(total) = ev.price_total {
@@ -517,6 +526,7 @@ pub fn aggregate_inventory(
             avg_per_day,
             last_sold_at: state.last_sold_at,
             last_activity_at: state.last_activity_at,
+            last_known_price: state.last_known_price,
         });
     }
 
@@ -856,6 +866,35 @@ mod tests {
         let item = &r.items[0];
         assert_eq!(item.last_sold_at.as_deref(), Some("2026-04-11 10:00:00"));
         assert_eq!(item.last_activity_at.as_deref(), Some("2026-04-12 11:00:00"));
+    }
+
+    #[test]
+    fn inventory_last_known_price_survives_sellout() {
+        // Buy out the entire stack — finalize_tiers drops all tiers because
+        // they're zero, but last_known_price should still hold the most recent
+        // priced event (the bought event's price_unit, in this case).
+        let events = vec![
+            inv("added", "Quality Reins", "2026-04-10 09:00:00", 3, None),
+            inv("visible", "Quality Reins", "2026-04-10 09:01:00", 3, Some(4500.0)),
+            inv("bought", "Quality Reins", "2026-04-12 10:00:00", 3, Some(4500.0)),
+        ];
+        let r = aggregate_inventory(events, 7);
+        let item = &r.items[0];
+        assert_eq!(item.quantity, 0);
+        assert!(item.price_tiers.is_empty());
+        assert_eq!(item.last_known_price, Some(4500.0));
+    }
+
+    #[test]
+    fn inventory_last_known_price_uses_most_recent_priced_event() {
+        // visible at 4500, then configured at 5000 — last_known_price = 5000.
+        let events = vec![
+            inv("added", "Quality Reins", "2026-04-10 09:00:00", 5, None),
+            inv("visible", "Quality Reins", "2026-04-10 09:01:00", 5, Some(4500.0)),
+            inv("configured", "Quality Reins", "2026-04-11 09:00:00", 5, Some(5000.0)),
+        ];
+        let r = aggregate_inventory(events, 7);
+        assert_eq!(r.items[0].last_known_price, Some(5000.0));
     }
 
     #[test]

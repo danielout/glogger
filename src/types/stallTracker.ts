@@ -122,6 +122,9 @@ export interface InventoryItem {
   avg_per_day: number;
   last_sold_at: string | null;
   last_activity_at: string | null;
+  /** Most recent priced event seen for this item — survives the sellout
+   * collapse so Recently Sold Out can still display a last price. */
+  last_known_price: number | null;
 }
 
 export interface InventoryResult {
