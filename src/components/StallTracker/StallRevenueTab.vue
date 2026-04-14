@@ -73,9 +73,9 @@
             :key="item"
             class="hover:bg-surface-hover">
             <td
-              class="sticky left-0 z-20 bg-surface-base px-2 py-1 text-text-primary border-b border-r border-border-default/60 truncate max-w-[200px]"
+              class="sticky left-0 z-20 bg-surface-base px-2 py-1 border-b border-r border-border-default/60 truncate max-w-[200px]"
               :title="item">
-              {{ item }}
+              <ItemInline :reference="item" />
             </td>
             <td
               class="sticky z-10 bg-surface-base px-2 py-1 text-right text-accent-gold border-b border-r border-border-default/60 tabular-nums"
@@ -128,6 +128,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
 import DatePicker from '../Shared/DatePicker.vue'
+import ItemInline from '../Shared/Item/ItemInline.vue'
 import type { Granularity, RevenueResult, StallRevenueParams } from '../../types/stallTracker'
 
 const store = useStallTrackerStore()
