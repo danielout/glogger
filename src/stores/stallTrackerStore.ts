@@ -141,6 +141,13 @@ export const useStallTrackerStore = defineStore('stallTracker', () => {
   // every successful batch insert. Player.log catch-up can replay many books
   // in a burst, so we debounce 500ms — a single trailing refresh is enough
   // and avoids spamming the backend with identical stats queries.
+  //
+  // The `listen()` returns an unlisten function that we deliberately discard.
+  // Pinia stores are singletons in production and live for the full app
+  // session, so there's nothing to clean up. This matches `coordinatorStore`
+  // and the rest of the codebase's listener-in-store convention. During Vite
+  // HMR the store may re-initialize and accumulate duplicate listeners — a
+  // dev-only annoyance, never a production concern.
   let coordTimer: ReturnType<typeof setTimeout> | null = null
   void listen<number>('stall-events-updated', () => {
     if (coordTimer) clearTimeout(coordTimer)
