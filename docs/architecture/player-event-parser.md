@@ -168,16 +168,16 @@ If the next line is unrelated, the pending delete is flushed as `ItemDeleted(Unk
 
 ### Encoded Value Decoding
 
-`ProcessUpdateItemCode` and `ProcessVendorUpdateItem` use a packed 32-bit value:
+`ProcessUpdateItemCode` and `ProcessVendorUpdateItem` use a packed 32-bit value. The stack size is **0-based** — add 1 for the actual count:
 
 ```
-encodedValue = (stackSize << 16) | itemTypeId
+encodedValue = ((stackSize - 1) << 16) | itemTypeId
 
-stackSize  = encodedValue >> 16      (high 16 bits)
-itemTypeId = encodedValue & 0xFFFF   (low 16 bits)
+stackSize  = (encodedValue >> 16) + 1   (high 16 bits, 0-based → add 1)
+itemTypeId = encodedValue & 0xFFFF      (low 16 bits)
 ```
 
-Example: `1642723` → stack size `25`, item type ID `4323`.
+Example: `1642723` → stack size `26` (encoded as 25), item type ID `4323`.
 
 ## Listening to Events on the Frontend
 

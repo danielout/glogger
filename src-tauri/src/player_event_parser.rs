@@ -598,12 +598,16 @@ impl PlayerEventParser {
             },
         );
 
-        // For genuinely new items, seed stack_size=1 so the subsequent
-        // ProcessUpdateItemCode computes the correct delta (N-1).
-        // For existing items loaded at session start (is_new=false), we
-        // do NOT seed — the first ProcessUpdateItemCode will establish
-        // the baseline without claiming a false gain.
-        if is_new {
+        // Seed stack tracking for genuinely new items.
+        // - slot_index >= 0 with is_new=true means a storage vault withdrawal;
+        //   do NOT seed here — ProcessRemoveFromStorageVault will seed with the
+        //   correct quantity so we don't report a false delta.
+        // - slot_index == -1 with is_new=true means a real new acquisition (loot,
+        //   craft, vendor purchase); seed to 1 so ProcessUpdateItemCode computes
+        //   the correct delta.
+        // - is_new=false is a session-start inventory load; do NOT seed — the first
+        //   ProcessUpdateItemCode will establish the baseline.
+        if is_new && slot_index < 0 {
             self.stack_sizes.insert(instance_id, 1);
         }
 
@@ -628,7 +632,9 @@ impl PlayerEventParser {
         let encoded_value: u32 = parts.get(1)?.trim().parse().ok()?;
         let from_server = parts.get(2)?.trim() == "True";
 
-        let new_stack_size = encoded_value >> 16;
+        // Encoding is 0-based: actual stack size = (encoded >> 16) + 1.
+        // Verified against JSON inventory exports where StackSize fields are 1-based.
+        let new_stack_size = (encoded_value >> 16) + 1;
         let item_type_id = (encoded_value & 0xFFFF) as u16;
 
         let had_prior = self.stack_sizes.contains_key(&instance_id);
@@ -843,7 +849,7 @@ impl PlayerEventParser {
         let encoded_value: u32 = parts.get(1)?.trim().parse().ok()?;
         let price: u32 = parts.get(2)?.trim().parse().ok()?;
 
-        let new_stack_size = encoded_value >> 16;
+        let new_stack_size = (encoded_value >> 16) + 1;
         let item_type_id = (encoded_value & 0xFFFF) as u16;
 
         Some(PlayerEvent::VendorStackUpdated {
@@ -892,7 +898,7 @@ impl PlayerEventParser {
     }
 
     /// ProcessRemoveFromStorageVault(npcId, -1, instanceId, quantity)
-    fn parse_remove_from_storage(&self, line: &str) -> Option<PlayerEvent> {
+    fn parse_remove_from_storage(&mut self, line: &str) -> Option<PlayerEvent> {
         let ts = parse_timestamp(line)?;
         let args_start =
             line.find("ProcessRemoveFromStorageVault(")? + "ProcessRemoveFromStorageVault(".len();
@@ -904,6 +910,14 @@ impl PlayerEventParser {
         // parts[1] = -1 (skip)
         let instance_id: u64 = parts.get(2)?.trim().parse().ok()?;
         let quantity: u32 = parts.get(3)?.trim().parse().ok()?;
+
+        // Seed stack size from the vault's known quantity.
+        // This covers storage withdrawals where AddItem(slot>=0, True)
+        // intentionally skipped seeding so we could use this authoritative value.
+        // If the vault item merges into an existing inventory stack (different
+        // instance_id), this seeds the vault instance which will never get an
+        // UpdateItemCode — harmless.
+        self.stack_sizes.entry(instance_id).or_insert(quantity);
 
         let vault_key = self
             .current_interaction
@@ -1565,8 +1579,8 @@ mod tests {
                 assert_eq!(item_name.as_deref(), Some("MetalSlab3"));
                 assert_eq!(*item_type_id, 4323); // 1642723 & 0xFFFF
                 assert_eq!(*old_stack_size, 20);
-                assert_eq!(*new_stack_size, 25); // 1642723 >> 16
-                assert_eq!(*delta, 5);
+                assert_eq!(*new_stack_size, 26); // (1642723 >> 16) + 1; encoding is 0-based
+                assert_eq!(*delta, 6);
                 assert!(*from_server);
             }
             _ => panic!("Expected ItemStackChanged"),
@@ -1575,10 +1589,10 @@ mod tests {
 
     #[test]
     fn test_encoded_value_decoding() {
-        // From the docs: 1642723 >> 16 = 25, 1642723 & 0xFFFF = 4323
+        // Encoding is 0-based: actual_stack = (encoded >> 16) + 1
         let encoded: u32 = 1642723;
-        assert_eq!(encoded >> 16, 25);
-        assert_eq!(encoded & 0xFFFF, 4323);
+        assert_eq!((encoded >> 16) + 1, 26); // actual stack size
+        assert_eq!(encoded & 0xFFFF, 4323); // item type ID
     }
 
     #[test]
@@ -1835,8 +1849,8 @@ mod tests {
                 ..
             } => {
                 assert_eq!(*instance_id, 115249145);
-                // 200909 >> 16 = 3, 200909 & 0xFFFF = 4301
-                assert_eq!(*new_stack_size, 3);
+                // (200909 >> 16) + 1 = 4, 200909 & 0xFFFF = 4301
+                assert_eq!(*new_stack_size, 4);
                 assert_eq!(*item_type_id, 4301);
                 assert_eq!(*price, 7);
             }
@@ -2013,8 +2027,8 @@ mod tests {
         match &events[0] {
             PlayerEvent::ItemStackChanged { item_name, old_stack_size, new_stack_size, delta, .. } => {
                 assert_eq!(item_name.as_deref(), Some("MetalSlab2"));
-                assert_eq!(*old_stack_size, 1); // 65536 >> 16
-                assert_eq!(*new_stack_size, 3); // 196608 >> 16
+                assert_eq!(*old_stack_size, 2); // (65536 >> 16) + 1
+                assert_eq!(*new_stack_size, 4); // (196608 >> 16) + 1
                 assert_eq!(*delta, 2);
             }
             _ => panic!("Expected ItemStackChanged"),
@@ -2024,23 +2038,93 @@ mod tests {
     #[test]
     fn test_new_item_seeds_stack_and_emits_change() {
         let mut parser = PlayerEventParser::new();
-        // Genuinely new item (is_new=True) — seeds stack_size=1
+        // Genuinely new item (is_new=True, slot=-1) — seeds stack_size=1
         parser.process_line(
-            r#"[16:00:00] LocalPlayer: ProcessAddItem(RoyalJelly(12345678), 5, True)"#,
+            r#"[16:00:00] LocalPlayer: ProcessAddItem(RoyalJelly(12345678), -1, True)"#,
         );
 
         // UpdateItemCode should emit change with delta = new - 1
         let events = parser.process_line(
             r#"[16:00:01] LocalPlayer: ProcessUpdateItemCode(12345678, 327697, True)"#,
         );
-        // 327697 >> 16 = 5, 327697 & 0xFFFF = 17
+        // (327697 >> 16) + 1 = 6, 327697 & 0xFFFF = 17
         assert_eq!(events.len(), 1);
         match &events[0] {
             PlayerEvent::ItemStackChanged { item_name, old_stack_size, new_stack_size, delta, .. } => {
                 assert_eq!(item_name.as_deref(), Some("RoyalJelly"));
                 assert_eq!(*old_stack_size, 1); // seeded from ProcessAddItem(is_new=True)
-                assert_eq!(*new_stack_size, 5); // 327697 >> 16
-                assert_eq!(*delta, 4);
+                assert_eq!(*new_stack_size, 6); // (327697 >> 16) + 1
+                assert_eq!(*delta, 5);
+            }
+            _ => panic!("Expected ItemStackChanged"),
+        }
+    }
+
+    #[test]
+    fn test_storage_withdrawal_seeds_stack_from_vault_quantity() {
+        let mut parser = PlayerEventParser::new();
+
+        // Storage withdrawal: AddItem with slot>=0 should NOT seed stack to 1
+        let events = parser.process_line(
+            r#"[15:46:07] LocalPlayer: ProcessAddItem(Phlogiston7(172708606), 60, True)"#,
+        );
+        assert_eq!(events.len(), 1);
+        // Stack should NOT be seeded yet (slot>=0 = storage withdrawal)
+        assert!(!parser.stack_sizes.contains_key(&172708606));
+
+        // RemoveFromStorageVault seeds the stack from vault quantity
+        let events = parser.process_line(
+            r#"[15:46:07] LocalPlayer: ProcessRemoveFromStorageVault(302055, -1, 172708606, 1000)"#,
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::StorageWithdrawal { quantity, .. } => {
+                assert_eq!(*quantity, 1000);
+            }
+            _ => panic!("Expected StorageWithdrawal"),
+        }
+        // Stack should now be seeded from vault quantity
+        assert_eq!(parser.stack_sizes.get(&172708606), Some(&1000));
+
+        // A subsequent UpdateItemCode should compute correct delta from 1000
+        let events = parser.process_line(
+            r#"[15:48:12] LocalPlayer: ProcessUpdateItemCode(172708606, 16346571, False)"#,
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::ItemStackChanged { old_stack_size, new_stack_size, delta, .. } => {
+                assert_eq!(*old_stack_size, 1000);
+                // (16346571 >> 16) + 1 = 250
+                assert_eq!(*new_stack_size, 250);
+                assert_eq!(*delta, -750);
+            }
+            _ => panic!("Expected ItemStackChanged"),
+        }
+    }
+
+    #[test]
+    fn test_storage_withdrawal_no_false_delta_on_update_item_code() {
+        let mut parser = PlayerEventParser::new();
+
+        // Withdraw IceCore stack of 10 from storage
+        parser.process_line(
+            r#"[21:17:44] LocalPlayer: ProcessAddItem(IceCore(151917070), 68, True)"#,
+        );
+        parser.process_line(
+            r#"[21:17:44] LocalPlayer: ProcessRemoveFromStorageVault(9964570, -1, 151917070, 10)"#,
+        );
+
+        // UpdateItemCode confirming stack=10 should have delta=0, not +9
+        // encoded: (9 << 16) | 1153 = 590977, actual stack = 9+1 = 10
+        let events = parser.process_line(
+            r#"[21:17:44] LocalPlayer: ProcessUpdateItemCode(151917070, 590977, True)"#,
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::ItemStackChanged { old_stack_size, new_stack_size, delta, .. } => {
+                assert_eq!(*old_stack_size, 10);
+                assert_eq!(*new_stack_size, 10); // (590977 >> 16) + 1 = 10
+                assert_eq!(*delta, 0); // No false gain!
             }
             _ => panic!("Expected ItemStackChanged"),
         }

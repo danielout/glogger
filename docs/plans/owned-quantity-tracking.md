@@ -12,8 +12,8 @@ The codebase has a robust item tracking pipeline that gives us strong foundation
 
 Three core item events are already emitted:
 
-- **ItemAdded** — from `ProcessAddItem`. Registers instance in `instance_registry`, seeds stack_size=1 for new items.
-- **ItemStackChanged** — from `ProcessUpdateItemCode`. Decodes `(stackSize << 16) | itemTypeId`, computes signed delta against previous stack. Suppresses first update for existing items (baseline establishment).
+- **ItemAdded** — from `ProcessAddItem`. Registers instance in `instance_registry`, seeds stack_size=1 for new items (`slotIndex=-1, isNew=True`). Storage withdrawals (`slotIndex>=0`) defer seeding to `ProcessRemoveFromStorageVault`.
+- **ItemStackChanged** — from `ProcessUpdateItemCode`. Decodes `((stackSize-1) << 16) | itemTypeId` (0-based encoding, +1 for actual count), computes signed delta against previous stack. Suppresses first update for existing items (baseline establishment).
 - **ItemDeleted** — from `ProcessDeleteItem`. Uses 1-line lookahead to classify context: `StorageTransfer`, `VendorSale`, `Consumed`, or `Unknown`.
 
 ### State Tracking

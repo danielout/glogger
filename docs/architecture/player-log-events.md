@@ -14,17 +14,28 @@ How the game client communicates game state through Player.log, and how to decod
 |---|---|---|
 | `InternalName` | string | CDN internal name (e.g., `MetalSlab2`, `UnrefinedSilverOre`) |
 | `instanceId` | u64 | Unique instance identifier for this specific stack/item |
-| `slotIndex` | i32 | Inventory slot (-1 = auto-placed) |
-| `isNew` | bool | True if newly acquired (loot, craft), False if loading inventory |
+| `slotIndex` | i32 | Inventory slot; see interpretation below |
+| `isNew` | bool | True if newly acquired (loot, craft, storage withdrawal), False if loading inventory |
 
 **When it fires:**
-- Login (all inventory items, `isNew=False`)
-- Looting items from the ground or containers
-- Crafting results
-- Receiving items from NPCs/quests
+- Login (all inventory items, `isNew=False`, `slotIndex=-1`)
+- Looting items from the ground or containers (`isNew=True`, `slotIndex=-1`)
+- Crafting results (`isNew=True`, `slotIndex=-1`)
+- Receiving items from NPCs/quests (`isNew=True`, `slotIndex=-1`)
+- Storage vault withdrawal (`isNew=True`, `slotIndex >= 0` = target inventory slot)
 - Item entering inventory that creates a **new stack** (item you didn't already have a stack of)
 
+**Interpreting `slotIndex`:**
+
+| slotIndex | isNew | Meaning |
+|---|---|---|
+| `-1` | `False` | Session-start inventory load |
+| `-1` | `True` | Genuine new acquisition (loot, craft, vendor purchase) |
+| `>= 0` | `True` | **Storage vault withdrawal** — always paired with `ProcessRemoveFromStorageVault` |
+
 **Key behavior:** At login, every inventory item fires a ProcessAddItem with `isNew=False`. This is how we build the **instance ID → item name mapping**. Items acquired during gameplay fire with `isNew=True`.
+
+**Stack seeding:** For genuine new items (`slotIndex=-1, isNew=True`), the parser seeds the stack to 1. For storage withdrawals (`slotIndex>=0, isNew=True`), the parser defers seeding until `ProcessRemoveFromStorageVault` provides the authoritative quantity. For session-load items (`isNew=False`), no seeding occurs — the first `ProcessUpdateItemCode` establishes the baseline.
 
 ### ProcessUpdateItemCode — Existing stack updated
 
@@ -40,24 +51,26 @@ How the game client communicates game state through Player.log, and how to decod
 
 #### Decoding `encodedValue`
 
-The second argument packs two values into a single integer:
+The second argument packs two values into a single integer. **The stack size is 0-based** — the actual count is the encoded value plus one.
 
 ```
-encodedValue = (stackSize << 16) | itemTypeId
+encodedValue = ((stackSize - 1) << 16) | itemTypeId
 ```
 
-| Bits | Mask | Value |
+| Bits | Extraction | Value |
 |---|---|---|
-| High 16 bits | `value >> 16` | **Stack size** (new quantity after the update) |
+| High 16 bits | `(value >> 16) + 1` | **Stack size** (actual quantity after the update) |
 | Low 16 bits | `value & 0xFFFF` | **Item type ID** (maps to CDN `items.id`) |
 
 **Example:**
 ```
 ProcessUpdateItemCode(136937342, 1642723, True)
 
-  1642723 >> 16    = 25       → new stack size is 25
-  1642723 & 0xFFFF = 4323     → item type ID 4323 (MetalSlab3)
+  (1642723 >> 16) + 1 = 26    → actual stack size is 26
+  1642723 & 0xFFFF    = 4323   → item type ID 4323 (MetalSlab3)
 ```
+
+> **Verified:** The 0-based encoding was confirmed by cross-referencing `ProcessUpdateItemCode` values against the game's JSON inventory export (`StackSize` field), which uses 1-based counts. Every data point shows the encoded value is exactly 1 less than the JSON value.
 
 **When it fires:**
 - Adding items to an existing stack (quantity increases)
@@ -960,7 +973,7 @@ Relevant for features that depend on weather conditions (e.g., some Fletching re
 | Field | Type | Meaning |
 |---|---|---|
 | `instanceId` | u64 | Instance ID already in vendor inventory |
-| `encodedValue` | u32 | Packed value, same encoding as ProcessUpdateItemCode: `(stackSize << 16) \| itemTypeId` |
+| `encodedValue` | u32 | Packed value, same 0-based encoding as ProcessUpdateItemCode: `((stackSize-1) << 16) \| itemTypeId` |
 | `price` | u32 | Price per unit |
 
 **When it fires:** Selling a stackable item that the vendor already has a stack of. Instead of creating a new entry (`VendorAddItem`), the existing vendor stack is updated.

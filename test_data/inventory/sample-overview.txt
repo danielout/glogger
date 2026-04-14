@@ -1,0 +1,28 @@
+Samples:
+	- .\InventoryActions.log: the player.log file from the session
+	- .\InventoryChatLog.txt: the chat logs from the session
+
+Actions taken:
+
+	1. Enter casino
+	2. Export JSONs -> .\loginState\
+	3. Travel to statehelm
+	4. open saddlebag
+	5. withdraw 2000 great phlog (2 stacks) from saddlebag
+	6. Deposit partial stack of large prism in saddlebag: 207 in inventory -> 107 inventory & 100 saddlebag
+	7. Close saddlebag
+	8. Split stack of 1000 great phlog in invetory -> 250 + 750
+	9. Drop stack of 1000 great phlog on ground.
+	10. Drop stack of 750 great phlog on ground.
+	11. Open saddlebag, widthdraw 250 great phlog from saddlebag. (current inventory count: 500 great phlog) Close saddlebag.
+	12. Pickup stack of 750 great phlog from ground. Current inventory: 1000 + 250
+	13. Pickup stack of 1000 great phlog from ground. Current inventory: 1000 + 1000 + 250
+	14. Open saddlebag, quick deposit matching item ('G' key deposit). Current invnetory: 0 great phlog
+	15. Withdraw 100 large prisms from saddlebag: current inventory: 207. Close saddlebag.
+	16. Pickup 1 egg from ground.
+	17. Sell 1 Osslar Skull to vendor for 75councils/gold.
+	18. Purcahse 5 brain from vendor for 100.
+	19. Purchase 1 brain from vendor for 20.
+	20. Purchase/buyback 1 osslar skull from vendor for 75.
+	21. Export JSONs -> .\completeSate\
+	22. Logout

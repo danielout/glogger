@@ -873,12 +873,12 @@ mod tests {
         process_line(
             &mut parser,
             &mut survey,
-            r#"[00:08:00] LocalPlayer: ProcessAddItem(BasicInk(100001), 1, True)"#,
+            r#"[00:08:00] LocalPlayer: ProcessAddItem(BasicInk(100001), -1, True)"#,
         );
         process_line(
             &mut parser,
             &mut survey,
-            r#"[00:08:00] LocalPlayer: ProcessAddItem(BasicParchment(100002), 2, True)"#,
+            r#"[00:08:00] LocalPlayer: ProcessAddItem(BasicParchment(100002), -1, True)"#,
         );
 
         // Stack changes (ingredient consumption)
@@ -926,7 +926,7 @@ mod tests {
         process_line(
             &mut parser,
             &mut survey,
-            r#"[16:17:46] LocalPlayer: ProcessAddItem(EltibuleGreenMineralSurvey(115230973), 5, True)"#,
+            r#"[16:17:46] LocalPlayer: ProcessAddItem(EltibuleGreenMineralSurvey(115230973), -1, True)"#,
         );
 
         // Using survey — emits SurveyUsed
@@ -985,7 +985,7 @@ mod tests {
         process_line(
             &mut parser,
             &mut survey,
-            r#"[00:15:44] LocalPlayer: ProcessAddItem(EltibuleGreenMineralSurvey(113654706), 5, True)"#,
+            r#"[00:15:44] LocalPlayer: ProcessAddItem(EltibuleGreenMineralSurvey(113654706), -1, True)"#,
         );
 
         // First "Using" — SurveyUsed
@@ -1151,7 +1151,7 @@ mod tests {
         process_line(
             &mut parser,
             &mut survey,
-            r#"[14:08:00] LocalPlayer: ProcessAddItem(KurMountainsGoodMetalMotherlodeMap(136709665), 5, True)"#,
+            r#"[14:08:00] LocalPlayer: ProcessAddItem(KurMountainsGoodMetalMotherlodeMap(136709665), -1, True)"#,
         );
 
         // Using motherlode map — emits SurveyUsed
@@ -1240,12 +1240,12 @@ mod tests {
         process_line(
             &mut parser,
             &mut survey,
-            r#"[14:00:00] LocalPlayer: ProcessAddItem(KurMountainsGoodMetalMotherlodeMap(100001), 5, True)"#,
+            r#"[14:00:00] LocalPlayer: ProcessAddItem(KurMountainsGoodMetalMotherlodeMap(100001), -1, True)"#,
         );
         process_line(
             &mut parser,
             &mut survey,
-            r#"[14:00:00] LocalPlayer: ProcessAddItem(MetalSlab7(100002), 3, True)"#,
+            r#"[14:00:00] LocalPlayer: ProcessAddItem(MetalSlab7(100002), -1, True)"#,
         );
 
         // Using map
@@ -1305,7 +1305,7 @@ mod tests {
         process_line(
             &mut parser,
             &mut survey,
-            r#"[14:00:00] LocalPlayer: ProcessAddItem(KurMountainsGoodMetalMotherlodeMap(100001), 5, True)"#,
+            r#"[14:00:00] LocalPlayer: ProcessAddItem(KurMountainsGoodMetalMotherlodeMap(100001), -1, True)"#,
         );
 
         // Using map
@@ -1354,7 +1354,7 @@ mod tests {
         process_line(
             &mut parser,
             &mut survey,
-            r#"[14:00:00] LocalPlayer: ProcessAddItem(KurMountainsGoodMetalMotherlodeMap(100001), 5, True)"#,
+            r#"[14:00:00] LocalPlayer: ProcessAddItem(KurMountainsGoodMetalMotherlodeMap(100001), -1, True)"#,
         );
 
         // First use — far away, locate only
@@ -1446,7 +1446,7 @@ mod tests {
         process_line(
             &mut parser,
             &mut survey,
-            r#"[14:00:00] LocalPlayer: ProcessAddItem(KurMountainsGoodMetalMotherlodeMap(100001), 5, True)"#,
+            r#"[14:00:00] LocalPlayer: ProcessAddItem(KurMountainsGoodMetalMotherlodeMap(100001), -1, True)"#,
         );
 
         // Using map
@@ -1555,14 +1555,14 @@ mod tests {
         process_line(
             &mut parser,
             &mut survey,
-            r#"[13:50:00] LocalPlayer: ProcessAddItem(Campfire0(300001), 5, True)"#,
+            r#"[13:50:00] LocalPlayer: ProcessAddItem(Campfire0(300001), -1, True)"#,
         );
 
         // Register map
         process_line(
             &mut parser,
             &mut survey,
-            r#"[14:00:00] LocalPlayer: ProcessAddItem(KurMountainsGoodMetalMotherlodeMap(100001), 5, True)"#,
+            r#"[14:00:00] LocalPlayer: ProcessAddItem(KurMountainsGoodMetalMotherlodeMap(100001), -1, True)"#,
         );
 
         // Using map
@@ -1583,7 +1583,7 @@ mod tests {
         process_line(
             &mut parser,
             &mut survey,
-            r#"[14:01:02] LocalPlayer: ProcessAddItem(MetalSlab7(200001), 3, True)"#,
+            r#"[14:01:02] LocalPlayer: ProcessAddItem(MetalSlab7(200001), -1, True)"#,
         );
         // Set initial stack so delta is meaningful
         process_line(
