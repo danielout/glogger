@@ -16,6 +16,8 @@ mod player_event_parser;
 mod replay;
 mod settings;
 mod setup_commands;
+mod shop_log_parser;
+mod stall_year_resolver;
 mod survey_parser;
 mod survey_persistence;
 mod update_check;
