@@ -17,6 +17,7 @@ mod replay;
 mod settings;
 mod setup_commands;
 mod shop_log_parser;
+mod stall_aggregations;
 mod stall_year_resolver;
 mod survey_parser;
 mod survey_persistence;
@@ -567,6 +568,8 @@ pub fn run() {
             // Stall Tracker
             db::stall_tracker_commands::get_stall_events,
             db::stall_tracker_commands::get_stall_stats,
+            db::stall_tracker_commands::get_stall_revenue,
+            db::stall_tracker_commands::get_stall_inventory,
             db::stall_tracker_commands::get_stall_filter_options,
             db::stall_tracker_commands::toggle_stall_event_ignored,
             db::stall_tracker_commands::clear_stall_events,

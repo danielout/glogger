@@ -1,4 +1,8 @@
 use super::DbPool;
+use crate::stall_aggregations::{
+    aggregate_inventory, aggregate_revenue, Granularity, InventoryEvent, InventoryResult,
+    RevenueEvent, RevenueResult,
+};
 use rusqlite::types::Value;
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
@@ -504,6 +508,151 @@ pub fn toggle_stall_event_ignored(
     )
     .map_err(|e| format!("Toggle query failed: {e}"))?;
     Ok(())
+}
+
+// ============================================================
+// Phase 4 — Aggregation commands
+// ============================================================
+
+/// Parameters for `get_stall_revenue`. Granularity is a string on the wire
+/// for natural JS interop (`"daily"` / `"weekly"` / `"monthly"`).
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StallRevenueParams {
+    pub owner: Option<String>,
+    pub granularity: Option<String>,
+    pub date_from: Option<String>,
+    pub date_to: Option<String>,
+    pub player: Option<String>,
+    pub item: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StallInventoryParams {
+    pub owner: Option<String>,
+    pub period_days: Option<i64>,
+}
+
+fn parse_granularity(s: &str) -> Granularity {
+    match s.to_ascii_lowercase().as_str() {
+        "weekly" => Granularity::Weekly,
+        "monthly" => Granularity::Monthly,
+        _ => Granularity::Daily,
+    }
+}
+
+/// Revenue pivot for the Revenue tab. Always over `bought + non-ignored`,
+/// scoped to a single owner. Date range, buyer, and item filters flow
+/// through. Returns an empty result on missing owner.
+#[tauri::command]
+pub fn get_stall_revenue(
+    db: State<'_, DbPool>,
+    params: StallRevenueParams,
+) -> Result<RevenueResult, String> {
+    let filters = StallEventsFilters {
+        owner: params.owner,
+        action: None,
+        player: params.player,
+        item: params.item,
+        date_from: params.date_from,
+        date_to: params.date_to,
+        include_ignored: Some(false),
+    };
+    let Some((where_sql, bound)) = build_filter_where(&filters, Some("bought")) else {
+        return Ok(RevenueResult {
+            periods: Vec::new(),
+            items: Vec::new(),
+            cells: Vec::new(),
+            row_totals: Vec::new(),
+            col_totals: Vec::new(),
+            grand_total: 0,
+        });
+    };
+
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
+
+    // Only rows with item AND event_at can contribute to the pivot.
+    let sql = format!(
+        "SELECT item, event_at, price_total FROM stall_events{where_sql} \
+         AND item IS NOT NULL AND event_at IS NOT NULL AND price_total IS NOT NULL"
+    );
+    let mut stmt = conn
+        .prepare(&sql)
+        .map_err(|e| format!("Failed to prepare revenue query: {e}"))?;
+    let events = stmt
+        .query_map(rusqlite::params_from_iter(bound.iter()), |row| {
+            Ok(RevenueEvent {
+                item: row.get::<_, String>(0)?,
+                event_at: row.get::<_, String>(1)?,
+                price_total: row.get::<_, i64>(2)?,
+            })
+        })
+        .map_err(|e| format!("Revenue query failed: {e}"))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Failed to read revenue results: {e}"))?;
+
+    let granularity = params
+        .granularity
+        .as_deref()
+        .map(parse_granularity)
+        .unwrap_or(Granularity::Daily);
+
+    Ok(aggregate_revenue(events, granularity))
+}
+
+/// Inventory tier-stack snapshot for the Inventory tab. Replays every
+/// non-ignored event for the owner, in `(event_at ASC, id ASC)` order so
+/// same-minute `visible` events arrive after their `added` counterpart.
+#[tauri::command]
+pub fn get_stall_inventory(
+    db: State<'_, DbPool>,
+    params: StallInventoryParams,
+) -> Result<InventoryResult, String> {
+    let Some(owner) = opt_nonempty(&params.owner).map(str::to_string) else {
+        return Ok(InventoryResult {
+            items: Vec::new(),
+            active_dates: Vec::new(),
+            estimated_value: 0,
+            total_sold: 0,
+            avg_daily_revenue: 0.0,
+        });
+    };
+
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
+
+    // CRITICAL: ORDER BY event_at ASC, id ASC. Without the id tiebreaker,
+    // `visible` events could be processed before `added` events within the
+    // same minute, leaving the tier unpriced.
+    let sql = "SELECT item, event_at, action, quantity, price_unit, price_total \
+               FROM stall_events \
+               WHERE owner = ?1 AND ignored = 0 AND item IS NOT NULL AND event_at IS NOT NULL \
+                 AND action != 'unknown' AND action != 'collected' \
+               ORDER BY event_at ASC, id ASC";
+    let mut stmt = conn
+        .prepare(sql)
+        .map_err(|e| format!("Failed to prepare inventory query: {e}"))?;
+    let events = stmt
+        .query_map(rusqlite::params![owner], |row| {
+            Ok(InventoryEvent {
+                item: row.get::<_, String>(0)?,
+                event_at: row.get::<_, String>(1)?,
+                action: row.get::<_, String>(2)?,
+                quantity: row.get::<_, i64>(3)?,
+                price_unit: row.get::<_, Option<f64>>(4)?,
+                price_total: row.get::<_, Option<i64>>(5)?,
+            })
+        })
+        .map_err(|e| format!("Inventory query failed: {e}"))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Failed to read inventory results: {e}"))?;
+
+    let period_days = params.period_days.unwrap_or(7);
+    Ok(aggregate_inventory(events, period_days))
 }
 
 /// Delete every stall event for a single character. Requires non-empty owner —
