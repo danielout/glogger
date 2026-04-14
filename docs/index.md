@@ -123,6 +123,12 @@ Per-screen documentation organized by view.
 ### Search
 - [search.md](features/screens/search.md) — Search screen: quick search overlay (Ctrl+F), dedicated search page, cross-category search composable.
 
+### Settings
+- [settings.md](features/screens/settings.md) — Settings screen: tabbed configuration for general, chat logs, user data, game data, advanced, and dev tools.
+
+### Help
+- [help.md](features/screens/help.md) — Help screen: tabbed reference hub with About, setup guide, changelog (GitHub releases), known issues, and PG News.
+
 ## Plans
 
 - [dashboard-improvements.md](plans/dashboard-improvements.md) — Dashboard cards, layout polish, and new tracker features.

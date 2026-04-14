@@ -69,8 +69,8 @@
         </button>
         <button
           class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer text-xl rounded transition-all leading-none hover:bg-surface-elevated hover:text-text-primary"
-          :class="{ 'bg-surface-elevated! text-accent-gold!': currentView === 'help' }"
-          @click="emit('navigate', 'help')"
+          :class="{ 'bg-surface-elevated! text-accent-gold!': helpOpen }"
+          @click="emit('toggleHelp')"
           title="Help">
           ?
         </button>
@@ -108,7 +108,7 @@ import CharacterPicker from "./CharacterPicker.vue";
 const settingsStore = useSettingsStore();
 const { openDevPanel } = useDevPanel();
 
-export type AppView = "dashboard" | "character" | "inventory" | "crafting" | "economics" | "chat" | "data-browser" | "search" | "settings" | "help";
+export type AppView = "dashboard" | "character" | "inventory" | "crafting" | "economics" | "chat" | "data-browser" | "search" | "settings";
 
 interface SubTab {
   id: string;
@@ -186,11 +186,13 @@ const navItems: { view: AppView; label: string }[] = [
 
 const props = defineProps<{
   currentView: AppView;
+  helpOpen?: boolean;
 }>();
 
 const emit = defineEmits<{
   navigate: [view: AppView];
   "update:subTab": [tab: string];
+  toggleHelp: [];
 }>();
 
 // Track active sub-tab per view

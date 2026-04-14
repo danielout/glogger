@@ -21,6 +21,7 @@ mod stall_aggregations;
 mod stall_year_resolver;
 mod survey_parser;
 mod survey_persistence;
+mod external_fetch;
 mod update_check;
 mod watch_rules;
 
@@ -176,6 +177,7 @@ use db::survey_sharing_commands::{
     rename_survey_import,
 };
 use replay::replay_dual_logs;
+use external_fetch::{fetch_github_releases, fetch_pg_news};
 use update_check::check_for_update;
 use settings::{
     get_server_list, get_settings_file_path, load_settings, save_settings, SettingsManager,
@@ -592,6 +594,9 @@ pub fn run() {
             db::stall_tracker_commands::seed_stall_events_dev,
             // Update check
             check_for_update,
+            // External content
+            fetch_github_releases,
+            fetch_pg_news,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

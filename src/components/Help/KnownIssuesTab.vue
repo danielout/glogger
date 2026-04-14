@@ -1,61 +1,57 @@
 <template>
-  <PaneLayout screen-key="help">
-    <div class="max-w-2xl mx-auto py-6 px-4 flex flex-col gap-8">
-      <!-- Header -->
-      <div>
-        <h1 class="text-lg font-bold text-text-primary m-0">Help & Known Issues</h1>
-        <p class="text-sm text-text-muted mt-1">
-          Glogger is currently in <span class="text-accent-gold font-medium">early alpha</span>.
-          Below are known issues and limitations we're aware of.
-        </p>
-      </div>
-
-      <!-- Known Issues -->
-      <section>
-        <h2 class="text-sm font-bold text-text-secondary uppercase tracking-wider m-0 mb-3">Known Issues</h2>
-        <div class="flex flex-col gap-2">
-          <IssueCard
-            v-for="issue in knownIssues"
-            :key="issue.id"
-            :issue="issue" />
-        </div>
-      </section>
-
-      <!-- Limitations -->
-      <section>
-        <h2 class="text-sm font-bold text-text-secondary uppercase tracking-wider m-0 mb-3">Known Limitations</h2>
-        <div class="flex flex-col gap-2">
-          <IssueCard
-            v-for="issue in limitations"
-            :key="issue.id"
-            :issue="issue" />
-        </div>
-      </section>
-
-      <!-- Tips -->
-      <section>
-        <h2 class="text-sm font-bold text-text-secondary uppercase tracking-wider m-0 mb-3">Tips</h2>
-        <div class="flex flex-col gap-2">
-          <div
-            v-for="tip in tips"
-            :key="tip"
-            class="flex gap-2 text-sm text-text-secondary px-3 py-2 bg-surface-base rounded border border-border-default">
-            <span class="text-accent-gold shrink-0">*</span>
-            <span>{{ tip }}</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Footer -->
-      <div class="text-xs text-text-dim border-t border-border-default pt-4">
-        Found a bug not listed here? Report it in the Glogger Discord or in-game.
-      </div>
+  <div class="flex flex-col gap-8">
+    <!-- Header -->
+    <div>
+      <p class="text-sm text-text-muted mt-1">
+        Glogger is currently in <span class="text-accent-gold font-medium">early alpha</span>.
+        Below are known issues and limitations we're aware of.
+      </p>
     </div>
-  </PaneLayout>
+
+    <!-- Known Issues -->
+    <section>
+      <h2 class="text-sm font-bold text-text-secondary uppercase tracking-wider m-0 mb-3">Known Issues</h2>
+      <div class="flex flex-col gap-2">
+        <IssueCard
+          v-for="issue in knownIssues"
+          :key="issue.id"
+          :issue="issue" />
+      </div>
+    </section>
+
+    <!-- Limitations -->
+    <section>
+      <h2 class="text-sm font-bold text-text-secondary uppercase tracking-wider m-0 mb-3">Known Limitations</h2>
+      <div class="flex flex-col gap-2">
+        <IssueCard
+          v-for="issue in limitations"
+          :key="issue.id"
+          :issue="issue" />
+      </div>
+    </section>
+
+    <!-- Tips -->
+    <section>
+      <h2 class="text-sm font-bold text-text-secondary uppercase tracking-wider m-0 mb-3">Tips</h2>
+      <div class="flex flex-col gap-2">
+        <div
+          v-for="tip in tips"
+          :key="tip"
+          class="flex gap-2 text-sm text-text-secondary px-3 py-2 bg-surface-base rounded border border-border-default">
+          <span class="text-accent-gold shrink-0">*</span>
+          <span>{{ tip }}</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <div class="text-xs text-text-dim border-t border-border-default pt-4">
+      Found a bug not listed here? Report it in the Glogger Discord or in-game.
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import PaneLayout from '../Shared/PaneLayout.vue'
 import IssueCard from './IssueCard.vue'
 
 interface KnownIssue {

@@ -19,8 +19,10 @@
         <MenuBar
           ref="menuBarRef"
           :currentView="currentView"
+          :helpOpen="showHelp"
           @navigate="navigateToView"
           @update:sub-tab="onSubTabChange"
+          @toggleHelp="showHelp = !showHelp"
         />
 
         <div class="flex-1 flex flex-col p-4 min-h-0 transition-[padding] duration-250 ease-out" :class="hasSubTabs ? 'pt-28' : 'pt-20'">
@@ -53,9 +55,6 @@
                 :error="error"
                 :onParseLog="parseLog" />
             </div>
-            <div v-if="visited.has('help')" v-show="currentView === 'help'" class="h-full">
-              <HelpView />
-            </div>
           </div>
         </div>
       </div>
@@ -83,6 +82,11 @@
       </div>
 
       <DataBrowserOverlay ref="dataBrowserOverlayRef" />
+      <HelpOverlay
+        :show="showHelp"
+        @update:show="showHelp = $event"
+        @navigate="showHelp = false; navigateToView($event as AppView)"
+      />
       <ToastContainer />
       <QuickSearchOverlay
         :show="showQuickSearch"
@@ -115,7 +119,7 @@ import EconomicsView from "./components/Economics/EconomicsView.vue";
 import ChatView from "./components/Chat/ChatView.vue";
 import DataBrowserOverlay from "./components/DataBrowser/DataBrowserOverlay.vue";
 import SearchView from "./components/Search/SearchView.vue";
-import HelpView from "./components/Help/HelpView.vue";
+import HelpOverlay from "./components/Help/HelpOverlay.vue";
 import Settings from "./components/Settings.vue";
 import StartupSplash from "./components/Startup/StartupSplash.vue";
 import StartupLayout from "./components/Startup/StartupLayout.vue";
@@ -149,6 +153,7 @@ const menuBarRef = ref<InstanceType<typeof MenuBar> | null>(null);
 const activeSubTab = ref("");
 
 const showQuickSearch = ref(false);
+const showHelp = ref(false);
 
 const hasSubTabs = computed(() => menuBarRef.value?.hasTabs ?? false);
 
