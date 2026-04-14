@@ -6,7 +6,7 @@
       v-else-if="result && result.items.length === 0"
       variant="panel"
       primary="No shop log data"
-      secondary="Open your shop log book in-game to import stall data." />
+      secondary="Open your shop log book in-game to start tracking, or use Import to load an exported book file." />
 
     <template v-else-if="result">
       <div class="flex items-center gap-6 flex-wrap">

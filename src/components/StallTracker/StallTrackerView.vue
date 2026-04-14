@@ -3,6 +3,12 @@
     <div class="flex items-center justify-between">
       <TabBar v-model="activeTab" :tabs="tabs" class="flex-1" />
       <div class="flex items-center gap-2 shrink-0">
+        <span
+          v-if="store.currentOwner"
+          class="text-xs text-text-muted"
+          :title="`All data scoped to ${store.currentOwner}`">
+          Viewing: <span class="text-entity-player">{{ store.currentOwner }}</span>
+        </span>
         <span v-if="importMessage" class="text-xs text-[#7ec87e]">{{ importMessage }}</span>
         <button
           v-if="hasData"

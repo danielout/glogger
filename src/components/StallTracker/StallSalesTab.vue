@@ -6,7 +6,7 @@
       v-else-if="!loading && totalCount === 0"
       variant="panel"
       primary="No sales recorded"
-      secondary="Open your shop log book in-game to import stall data." />
+      secondary="Open your shop log book in-game to start tracking, or use Import to load an exported book file." />
 
     <template v-else>
       <div class="flex gap-6 flex-wrap text-center">
@@ -35,6 +35,12 @@
         <SearchableSelect v-model="filterBuyer" :options="store.filterOptions.buyers" placeholder="All buyers" />
         <SearchableSelect v-model="filterItem" :options="store.filterOptions.items" placeholder="All items" />
         <span class="text-xs text-text-muted">Showing {{ rows.length.toLocaleString() }} of {{ totalCount.toLocaleString() }} sales</span>
+        <button
+          v-if="hasActiveFilters()"
+          class="text-xs text-text-dim hover:text-text-primary transition-colors underline"
+          @click="resetFilters">
+          Clear filters
+        </button>
       </div>
 
       <div class="overflow-auto">
@@ -229,8 +235,23 @@ function scheduleReload() {
   reloadTimer = setTimeout(() => reload(), 200)
 }
 
+function resetFilters() {
+  filterDateFrom.value = ''
+  filterDateTo.value = ''
+  filterBuyer.value = ''
+  filterItem.value = ''
+}
+
+function hasActiveFilters() {
+  return !!(filterDateFrom.value || filterDateTo.value || filterBuyer.value || filterItem.value)
+}
+
 onMounted(() => reload())
 
 watch([filterDateFrom, filterDateTo, filterBuyer, filterItem, sortKey, sortAsc], scheduleReload)
 watch(() => store.dataVersion, () => reload())
+// Reset filters when the active character changes — otherwise a buyer name
+// from character A sticks in the filter and silently returns zero rows for
+// character B.
+watch(() => store.currentOwner, resetFilters)
 </script>

@@ -6,7 +6,7 @@
       v-else-if="result && result.cells.length === 0"
       variant="panel"
       primary="No sales recorded"
-      secondary="Open your shop log book in-game to import stall data." />
+      secondary="Open your shop log book in-game to start tracking, or use Import to load an exported book file." />
 
     <template v-else-if="result">
       <div class="flex items-center gap-3 flex-wrap">
@@ -28,6 +28,12 @@
         <SearchableSelect v-model="filterDateTo" :options="store.filterOptions.dates" placeholder="To date" />
         <SearchableSelect v-model="filterBuyer" :options="store.filterOptions.buyers" placeholder="All buyers" />
         <SearchableSelect v-model="filterItem" :options="store.filterOptions.items" placeholder="All items" />
+        <button
+          v-if="hasActiveFilters()"
+          class="text-xs text-text-dim hover:text-text-primary transition-colors underline"
+          @click="resetFilters">
+          Clear filters
+        </button>
       </div>
 
       <div class="overflow-auto max-h-[70vh]">
@@ -183,10 +189,22 @@ async function reload() {
   }
 }
 
+function resetFilters() {
+  filterDateFrom.value = ''
+  filterDateTo.value = ''
+  filterBuyer.value = ''
+  filterItem.value = ''
+}
+
+function hasActiveFilters() {
+  return !!(filterDateFrom.value || filterDateTo.value || filterBuyer.value || filterItem.value)
+}
+
 onMounted(() => reload())
 
 watch([granularity, filterDateFrom, filterDateTo, filterBuyer, filterItem], () => reload())
 watch(() => store.dataVersion, () => reload())
+watch(() => store.currentOwner, resetFilters)
 
 watch([filterDateFrom, filterDateTo], ([from, to]) => {
   if (from && to && from > to) {

@@ -62,11 +62,19 @@ fn trim_day(s: String) -> String {
     s.trim().replace("  ", " ")
 }
 
-fn period_for(dt: NaiveDateTime, g: Granularity) -> (String, String) {
+/// `show_year` controls whether daily/weekly labels include the year suffix.
+/// Enabled when the dataset spans multiple calendar years so otherwise-
+/// identical labels like "Apr 13" don't collide across years.
+fn period_for(dt: NaiveDateTime, g: Granularity, show_year: bool) -> (String, String) {
     match g {
         Granularity::Daily => {
             let key = dt.format("%Y-%m-%d").to_string();
-            let label = trim_day(dt.format("%b %e").to_string());
+            let base = trim_day(dt.format("%b %e").to_string());
+            let label = if show_year {
+                format!("{} {}", base, dt.format("%Y"))
+            } else {
+                base
+            };
             (key, label)
         }
         Granularity::Weekly => {
@@ -75,14 +83,20 @@ fn period_for(dt: NaiveDateTime, g: Granularity) -> (String, String) {
             let monday = NaiveDate::from_isoywd_opt(iso.year(), iso.week(), chrono::Weekday::Mon)
                 .unwrap_or_else(|| dt.date());
             let sunday = monday + chrono::Duration::days(6);
-            let label = format!(
+            let base = format!(
                 "{} – {}",
                 trim_day(monday.format("%b %e").to_string()),
                 trim_day(sunday.format("%b %e").to_string()),
             );
+            let label = if show_year {
+                format!("{} {}", base, iso.year())
+            } else {
+                base
+            };
             (key, label)
         }
         Granularity::Monthly => {
+            // Monthly labels already include year — no change needed.
             let key = dt.format("%Y-%m").to_string();
             let label = dt.format("%b %Y").to_string();
             (key, label)
@@ -94,6 +108,14 @@ pub fn aggregate_revenue(
     events: impl IntoIterator<Item = RevenueEvent>,
     granularity: Granularity,
 ) -> RevenueResult {
+    // Collect up front so we can detect year-span before labeling.
+    let events: Vec<RevenueEvent> = events.into_iter().collect();
+    let mut years = std::collections::HashSet::new();
+    for e in &events {
+        years.insert(e.event_at.date().year());
+    }
+    let show_year = years.len() > 1;
+
     let mut cells: BTreeMap<(String, String), i64> = BTreeMap::new();
     let mut period_labels: BTreeMap<String, String> = BTreeMap::new();
     let mut row_totals: BTreeMap<String, i64> = BTreeMap::new();
@@ -101,7 +123,7 @@ pub fn aggregate_revenue(
     let mut grand_total: i64 = 0;
 
     for e in events {
-        let (pk, pl) = period_for(e.event_at, granularity);
+        let (pk, pl) = period_for(e.event_at, granularity, show_year);
         period_labels.entry(pk.clone()).or_insert(pl);
         *cells.entry((e.item.clone(), pk.clone())).or_insert(0) += e.revenue;
         *row_totals.entry(e.item).or_insert(0) += e.revenue;
