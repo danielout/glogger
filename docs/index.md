@@ -82,7 +82,7 @@ Per-screen documentation organized by view.
     - [economics-surveying-session.md](features/screens/economics/economics-surveying-session.md) — Session sub-tab: active session tracking with live loot/XP/profit.
     - [economics-surveying-historical.md](features/screens/economics/economics-surveying-historical.md) — Historical sub-tab: past session browser with loot breakdowns.
     - [economics-surveying-analytics.md](features/screens/economics/economics-surveying-analytics.md) — Analytics sub-tab: zone-grouped all-time speed bonus and loot stats.
-  - Stall Tracker — not yet implemented.
+  - [economics-stall-tracker.md](features/screens/economics/economics-stall-tracker.md) — Stall Tracker: shop log parsing, sales/revenue/inventory analytics from PlayerShopLog books.
 
 ### Chat Logs
 - [chat.md](features/screens/chat.md) — Chat Logs screen: architecture, FTS search, item linking, shared components.
@@ -109,6 +109,7 @@ Per-screen documentation organized by view.
 ## Plans
 
 - [unified-event-stream.md](plans/unified-event-stream.md) — Unifying Player.log and Chat.log into a single event stream (Phase 0+1 complete, Phase 2+ remaining).
+- [stall-tracker-implementation.md](plans/stall-tracker-implementation.md) — Stall Tracker build plan: phased Rust + Vue implementation guide with ASCII previews for every screen and modal.
 
 ## Samples
 
