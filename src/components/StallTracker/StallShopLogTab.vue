@@ -144,7 +144,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { confirm } from '@tauri-apps/plugin-dialog'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
@@ -349,4 +349,7 @@ watch(
 )
 
 onMounted(reload)
+onBeforeUnmount(() => {
+  if (filterTimer) clearTimeout(filterTimer)
+})
 </script>

@@ -123,7 +123,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
@@ -273,4 +273,7 @@ watch(
 )
 
 onMounted(reload)
+onBeforeUnmount(() => {
+  if (filterTimer) clearTimeout(filterTimer)
+})
 </script>
