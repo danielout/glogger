@@ -59,6 +59,31 @@
     </div>
   </div>
 
+  <div v-if="interestedNpcs.length" class="mt-2 pt-2 border-t border-[#2a2a3e]">
+    <div class="text-text-muted text-[0.65rem] uppercase tracking-wide mb-1">Wanted as gift by</div>
+    <div v-for="entry in interestedNpcs" :key="entry.npc.key" class="flex items-center gap-1.5 text-xs leading-relaxed">
+      <NpcInline :reference="entry.npc.key" />
+      <span
+        class="text-[0.6rem] px-1 rounded-sm font-semibold"
+        :class="entry.bestPref.desire === 'Love' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-sky-500/20 text-sky-400'"
+      >
+        {{ entry.bestPref.desire }}
+      </span>
+      <span class="text-text-dim text-[0.6rem]">+{{ entry.bestPref.pref }}</span>
+    </div>
+  </div>
+
+  <div v-if="matchingVendors.length" class="mt-2 pt-2 border-t border-[#2a2a3e]">
+    <div class="text-text-muted text-[0.65rem] uppercase tracking-wide mb-1">Vendors buying this</div>
+    <div v-for="v in matchingVendors" :key="v.npc.key" class="flex items-center gap-1.5 text-xs leading-relaxed">
+      <NpcInline :reference="v.npc.key" />
+      <span class="text-text-dim text-[0.6rem]">
+        <template v-if="v.currentGold !== null">{{ v.currentGold.toLocaleString() }} / {{ v.maxGold.toLocaleString() }}g</template>
+        <template v-else>{{ v.maxGold.toLocaleString() }}g cap</template>
+      </span>
+    </div>
+  </div>
+
   <div v-if="item.max_stack_size || ownedCount > 0" class="text-text-muted text-[0.7rem] mt-2 pt-2 border-t border-[#2a2a3e] flex justify-between">
     <span v-if="item.max_stack_size">Max Stack: {{ item.max_stack_size }}</span>
     <span v-if="ownedCount > 0" class="text-accent-gold">Owned: {{ ownedCount.toLocaleString() }}</span>
@@ -107,11 +132,15 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { useGameDataStore } from "../../../stores/gameDataStore";
 import { useGameStateStore } from "../../../stores/gameStateStore";
 import { useMarketStore } from "../../../stores/marketStore";
 import { useSettingsStore } from "../../../stores/settingsStore";
 import { formatStaleness } from "../../../composables/useTimestamp";
+import { findInterestedNpcs } from "../../../composables/useNpcGiftMatching";
+import { getStoreService, maxGoldCap } from "../../../composables/useNpcServices";
 import type { ItemInfo } from "../../../types/gameData";
+import type { NpcInfo } from "../../../types/gameData/npcs";
 import NpcInline from "../NPC/NpcInline.vue";
 
 interface VendorNpc {
@@ -132,10 +161,53 @@ const props = defineProps<{
   iconSrc: string | null;
 }>();
 
+const gameDataStore = useGameDataStore();
 const gameStateStore = useGameStateStore();
 const marketStore = useMarketStore();
 const settingsStore = useSettingsStore();
 const ownedCount = computed(() => gameStateStore.ownedItemCounts[props.item.name] ?? 0);
+
+// NPC gift matching — find NPCs interested in this item's keywords
+const allNpcs = computed<NpcInfo[]>(() => Object.values(gameDataStore.npcsByKey))
+
+const interestedNpcs = computed(() => {
+  const keywords = props.item.keywords
+  if (!keywords?.length) return []
+  return findInterestedNpcs(keywords, allNpcs.value).slice(0, 5)
+})
+
+// Vendor matching — find vendors whose store accepts this item's keywords
+const matchingVendors = computed(() => {
+  const keywords = props.item.keywords
+  if (!keywords?.length) return []
+  const keywordsLower = new Set(keywords.map(k => k.toLowerCase()))
+
+  const results: { npc: NpcInfo; currentGold: number | null; maxGold: number }[] = []
+
+  for (const npc of allNpcs.value) {
+    const store = getStoreService(npc)
+    if (!store) continue
+
+    // Check if any CapIncrease itemType matches an item keyword
+    const accepts = store.capIncreases.some(cap =>
+      cap.itemTypes.some(t => keywordsLower.has(t.toLowerCase()))
+    )
+    if (!accepts) continue
+
+    const bestCap = maxGoldCap(npc)
+    if (!bestCap) continue
+
+    const vendorState = gameStateStore.vendorByNpc[npc.key]
+    results.push({
+      npc,
+      currentGold: vendorState?.vendor_gold_available ?? null,
+      maxGold: bestCap.maxGold,
+    })
+  }
+
+  // Sort by max gold descending, show top 5
+  return results.sort((a, b) => b.maxGold - a.maxGold).slice(0, 5)
+})
 
 // Market value
 const marketEntry = computed(() => marketStore.valuesByItemId[props.item.id] ?? null);

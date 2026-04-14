@@ -662,3 +662,49 @@ pub fn remove_last_gift(
     .map_err(|e| format!("Delete error: {e}"))?;
     Ok(())
 }
+
+// ── Vendor State ───────────────────────────────────────────────────────────
+
+#[derive(Serialize)]
+pub struct GameStateVendor {
+    pub npc_key: String,
+    pub vendor_gold_available: Option<i64>,
+    pub vendor_gold_max: Option<i64>,
+    pub vendor_gold_timer_start: Option<String>,
+    pub last_interaction_at: Option<String>,
+    pub last_sell_at: Option<String>,
+    pub last_confirmed_at: String,
+}
+
+#[tauri::command]
+pub fn get_game_state_vendor(
+    db: State<'_, DbPool>,
+    character_name: String,
+    server_name: String,
+) -> Result<Vec<GameStateVendor>, String> {
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT npc_key, vendor_gold_available, vendor_gold_max, vendor_gold_timer_start, last_interaction_at, last_sell_at, last_confirmed_at
+             FROM game_state_npc_vendor WHERE character_name = ?1 AND server_name = ?2
+             ORDER BY npc_key",
+        )
+        .map_err(|e| format!("Query error: {e}"))?;
+
+    let rows = stmt
+        .query_map(rusqlite::params![character_name, server_name], |row| {
+            Ok(GameStateVendor {
+                npc_key: row.get(0)?,
+                vendor_gold_available: row.get(1)?,
+                vendor_gold_max: row.get(2)?,
+                vendor_gold_timer_start: row.get(3)?,
+                last_interaction_at: row.get(4)?,
+                last_sell_at: row.get(5)?,
+                last_confirmed_at: row.get(6)?,
+            })
+        })
+        .map_err(|e| format!("Query error: {e}"))?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Row error: {e}"))
+}

@@ -1,11 +1,25 @@
-# Widget: Current Zone
+# Widget: Zone NPCs
 
-**ID:** `current-zone` | **Default size:** Medium | **Component:** `CurrentZone.vue`
+**ID:** `zone-npcs` | **Default size:** Large | **Component:** `widgets/ZoneNpcsWidget.vue` | **Config:** `widgets/ZoneNpcsWidgetConfig.vue`
 
-Shows the player's current area and lists all friendly NPCs located there:
-- Area name displayed via `AreaInline`
-- NPC list loaded from CDN data via `getNpcsInArea()`, each rendered with `NpcInline`
-- Favor rank badge next to each NPC (color-coded by tier)
-- Updates reactively when the player transitions to a new zone
+Shows the player's current area and lists all friendly NPCs located there in a compact two-line format:
 
-**Data source:** `gameStateStore.world.area` (persistent, database), `gameDataStore.getNpcsInArea()` (CDN), `gameStateStore.favorByNpc` (persistent, database).
+- **Line 1:** NPC name (`NpcInline`), favor rank badge (color-coded), trained skills (diamond-prefixed)
+- **Line 2:** Storage status (used/total), vendor gold (available/max), gold reset timer if applicable
+
+Updates reactively when the player transitions to a new zone.
+
+### Configuration
+
+Gear icon opens a config popover with:
+- **NPC type filters:** Checkboxes for Storage NPCs, Shop NPCs, Trainers
+- **Favor range:** Min/max favor rank dropdowns
+- **Options:** Show giftable only, push NPCs without services to bottom
+
+Config is persisted in localStorage under `zoneNpcsWidget.config`.
+
+**Data sources:** `gameStateStore.world.area` (persistent, database), `gameDataStore.getNpcsInArea()` (CDN), `gameStateStore.favorByNpc` (persistent, database), `gameStateStore.vendorByNpc`, `gameStateStore.storageByVault`, `gameStateStore.storageVaultsByKey`.
+
+### History
+
+This widget replaces the previous `CurrentZone.vue` (simple NPC list) and the old card-based `ZoneNpcsWidget.vue` (detail view), merging both into a single compact configurable widget.

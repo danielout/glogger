@@ -94,7 +94,19 @@ Groups are collapsible with sticky headers showing group name and count.
 
 ### NpcDetailPanel (`src/components/Character/NpcDetailPanel.vue`)
 
-Right panel composing the header and three section sub-components. Shows header with NPC name, area (via `AreaInline`), and description. Falls back gracefully when CDN data is unavailable (shows only favor info).
+Right panel composing the header and section sub-components. Shows header with NPC name, area (via `AreaInline`), and description. Falls back gracefully when CDN data is unavailable (shows only favor info).
+
+Sections displayed in order:
+1. Header (name, area, description)
+2. NpcFavorSection (tier ladder + progress)
+3. NpcVendorSection (gold status, timer, last sell) — only if NPC has a store service
+4. NpcStorageSection (slot usage, stored items) — only if NPC has a storage service
+5. NpcInventoryGiftsSection (inventory items matching NPC preferences)
+6. NpcGiftCalculatorSection (interactive favor calculator)
+7. NpcServicesSection (vendor caps, training, barter, etc.)
+8. NpcPreferencesSection (gift preferences)
+9. NpcQuestsSection (associated quests with favor rewards)
+10. Training fallback (if not covered by services section)
 
 ### NpcFavorSection (`src/components/Character/NpcDetailSections/NpcFavorSection.vue`)
 
@@ -126,6 +138,48 @@ Gift preferences sorted by preference value (highest first). Each row shows:
 - Numeric preference value (+/-)
 
 Also shows which favor tiers unlock gifting (from `gift_favor_tiers` array).
+
+### NpcVendorSection (`src/components/Character/NpcDetailSections/NpcVendorSection.vue`)
+
+Shows vendor gold status for NPCs with a store service:
+- Gold available vs max with color coding (green when high, yellow when low, red when empty)
+- Estimated reset timer (168h from `vendor_gold_timer_start`, labeled as estimated)
+- Last sell relative timestamp
+- Falls back to "No vendor data yet" when no sell events have been tracked
+
+### NpcStorageSection (`src/components/Character/NpcDetailSections/NpcStorageSection.vue`)
+
+Shows storage usage for NPCs with a storage service:
+- Slots used / unlocked at current favor tier with percentage
+- Maximum possible slots at Soul Mates tier
+- List of stored items with ItemInline components and stack counts
+- Uses `storageVaultsByKey` and `storageByVault` from gameStateStore
+
+### NpcInventoryGiftsSection (`src/components/Character/NpcDetailSections/NpcInventoryGiftsSection.vue`)
+
+Cross-references player inventory with NPC gift preferences:
+- Lists items in inventory matching Love/Like preferences
+- Shows quantity owned, desire badge, and preference value per item
+- Estimated total favor from gifting all matching items
+- Falls back to "No matching gifts in inventory"
+
+### NpcGiftCalculatorSection (`src/components/Character/NpcDetailSections/NpcGiftCalculatorSection.vue`)
+
+Interactive gifting calculator:
+- Target tier dropdown (tiers above current)
+- Item search that filters NPC preferences by name/keyword
+- Calculates estimated items needed: sums `pointsToNextTier` for intermediate tiers, divides by preference value
+- Shows caveats about estimate accuracy
+
+### NpcQuestsSection (`src/components/Character/NpcDetailSections/NpcQuestsSection.vue`)
+
+Shows quests associated with the NPC via `gameDataStore.getQuestsForNpc()`:
+- Quest names via QuestInline component
+- Repeatable indicator for quests with `ReuseTime_Minutes` or `ReuseTime_Days`
+- Favor reward amounts
+- Sorted: non-repeatable first, then repeatable; within each group by favor reward descending
+
+This component is shared between the Character NPC screen and the Data Browser NPC detail panel.
 
 ## Shared Utilities
 
@@ -163,10 +217,12 @@ These are hardcoded in `useFavorTiers.ts` and used for progress estimation in th
 
 Some player questions can't be answered with currently available CDN/log data:
 
-- **What do NPCs sell?** — Vendor inventory is not in the CDN NPC data
+- **What do NPCs sell?** — Available in the Data Browser via vendor_prices CDN table, but not yet shown in the Character NPC detail panel
 - **Specific barter items** — Barter service exists but item specifics aren't in CDN
-- **Council pool / reset timing** — Vendor gold is tracked live via `VendorGoldChanged` events but not persisted; reset timing is a game mechanic not exposed in data
-- **Quest/task associations** — Quests are separate CDN entities not linked to NPCs in the NPC data
 - **Hangout activities** — Not in current CDN NPC data
+- **Exact favor values** — We track cumulative deltas and tier but not absolute numerical favor
 
-These may become available as we parse additional CDN data or add new event tracking.
+Previously missing data that is now available:
+- **Council pool / reset timing** — Vendor gold tracked via `game_state_vendor` table; estimated 168h reset timer shown in NpcVendorSection
+- **Quest/task associations** — Precomputed NPC-quest index in gameDataStore; shown in NpcQuestsSection
+- **Storage contents** — Tracked in `game_state_storage`; shown in NpcStorageSection

@@ -121,15 +121,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { NpcInfo } from '../../../types/gameData'
-import {
-  parseServices,
-  type StoreService,
-  type TrainingService,
-  type BarterService,
-  type ConsignmentService,
-  type StorageService,
-  type GenericService,
+import type {
+  StoreService,
+  TrainingService,
+  BarterService,
+  ConsignmentService,
+  StorageService,
+  GenericService,
 } from '../../../types/npcServices'
+import { getServices } from '../../../composables/useNpcServices'
 import { favorColor, tierDisplayName, isTierAtOrAbove } from '../../../composables/useFavorTiers'
 import SkillInline from '../../Shared/Skill/SkillInline.vue'
 
@@ -138,7 +138,7 @@ const props = defineProps<{
   playerTier: string
 }>()
 
-const services = computed(() => parseServices(props.npc.services))
+const services = computed(() => getServices(props.npc))
 
 const storeServices = computed(() =>
   services.value.filter((s): s is StoreService => s.type === 'Store')

@@ -28,25 +28,48 @@
       primary="No NPC data loaded."
       secondary="Log in to a character or import a character report to see NPC relationships." />
 
-    <!-- Two-panel layout -->
+    <!-- Three-panel layout: filters | card grid | detail -->
     <PaneLayout
       v-else
       screen-key="npcs"
-      :left-pane="{ title: 'NPC List', defaultWidth: 320, minWidth: 240, maxWidth: 500 }">
+      :left-pane="{ title: 'Filters', defaultWidth: 260, minWidth: 200, maxWidth: 400 }"
+      :right-pane="{ title: 'Details', defaultWidth: 700, minWidth: 400, maxWidth: 1200, defaultCollapsed: !selectedNpcKey }">
       <template #left>
-        <NpcListPanel
+        <NpcFilterPanel
+          ref="filterPanelRef"
           :snapshot-favor="characterStore.npcFavor"
           :favor-by-npc="gameState.favorByNpc"
-          :npcs-by-key="gameData.npcsByKey"
-          :selected-npc-key="selectedNpcKey"
-          @select="selectNpc" />
+          :npcs-by-key="gameData.npcsByKey" />
       </template>
 
-      <NpcDetailPanel
-        :npc-key="selectedNpcKey"
-        :snapshot-tier="selectedSnapshotTier"
-        :gamestate-favor="selectedGamestateFavor"
-        :cdn-data="selectedCdnData" />
+      <!-- Center: card grid -->
+      <div class="h-full overflow-y-auto p-3">
+        <div v-if="filteredNpcs.length === 0" class="flex items-center justify-center h-full">
+          <span class="text-text-dim text-sm italic">No NPCs match your filters.</span>
+        </div>
+        <div
+          v-else
+          class="grid gap-3"
+          style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))">
+          <NpcCard
+            v-for="row in filteredNpcs"
+            :key="row.npc_key"
+            :npc="row.cdnData!"
+            :favor-tier="row.effective_tier"
+            :vendor-status="gameState.vendorByNpc[row.npc_key] ?? null"
+            :selected="selectedNpcKey === row.npc_key"
+            :max-preferences="3"
+            @select="selectNpc(row.npc_key)" />
+        </div>
+      </div>
+
+      <template #right>
+        <NpcDetailPanel
+          :npc-key="selectedNpcKey"
+          :snapshot-tier="selectedSnapshotTier"
+          :gamestate-favor="selectedGamestateFavor"
+          :cdn-data="selectedCdnData" />
+      </template>
     </PaneLayout>
   </div>
 </template>
@@ -59,8 +82,9 @@ import { useGameDataStore } from '../../stores/gameDataStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import EmptyState from '../Shared/EmptyState.vue'
 import PaneLayout from '../Shared/PaneLayout.vue'
-import NpcListPanel from './NpcListPanel.vue'
+import NpcFilterPanel from './NpcFilterPanel.vue'
 import NpcDetailPanel from './NpcDetailPanel.vue'
+import NpcCard from '../Shared/NPC/NpcCard.vue'
 
 const characterStore = useCharacterStore()
 const gameState = useGameStateStore()
@@ -68,6 +92,7 @@ const gameData = useGameDataStore()
 const settingsStore = useSettingsStore()
 
 const selectedNpcKey = ref<string | null>(null)
+const filterPanelRef = ref<InstanceType<typeof NpcFilterPanel> | null>(null)
 
 const hasData = computed(() =>
   characterStore.npcFavor.length > 0 || gameState.favor.length > 0
@@ -89,6 +114,12 @@ const aboveNeutral = computed(() => {
     if (f.favor_tier && f.favor_tier !== 'Neutral') keys.add(f.npc_key)
   }
   return keys.size
+})
+
+/** Filtered NPCs from the filter panel — only include those with CDN data (needed for NpcCard) */
+const filteredNpcs = computed(() => {
+  const rows = filterPanelRef.value?.filteredRows ?? []
+  return rows.filter(r => r.cdnData !== null)
 })
 
 const selectedSnapshotTier = computed(() => {

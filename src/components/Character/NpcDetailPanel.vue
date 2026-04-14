@@ -9,7 +9,23 @@
     <template v-else-if="cdnData">
       <!-- Header -->
       <div class="flex flex-col gap-1">
-        <div class="text-accent-gold text-base font-bold">{{ cdnData.name }}</div>
+        <div class="flex items-center justify-between gap-2">
+          <div class="text-accent-gold text-base font-bold">{{ cdnData.name }}</div>
+          <button
+            class="p-0.5 rounded transition-colors shrink-0"
+            :class="pinned
+              ? 'text-accent-blue hover:text-accent-blue-bright'
+              : 'text-text-muted hover:text-text-default'"
+            :title="pinned ? 'Unpin from shelf' : 'Pin to shelf'"
+            @click.stop="togglePin"
+          >
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" :fill="pinned ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L12 12M9 4L12 2L15 4" />
+              <path d="M5 12H19" />
+              <path d="M12 12V22" />
+            </svg>
+          </button>
+        </div>
         <div v-if="cdnData.area_friendly_name" class="text-xs">
           <AreaInline :reference="cdnData.area_name ?? cdnData.area_friendly_name" />
         </div>
@@ -21,7 +37,23 @@
       <!-- Favor -->
       <NpcFavorSection
         :snapshot-tier="snapshotTier"
-        :gamestate-favor="gamestateFavor" />
+        :gamestate-favor="gamestateFavor"
+        :npc-key="npcKey"
+        :npc="cdnData" />
+
+      <!-- Vendor Status -->
+      <NpcVendorSection
+        v-if="hasVendorService"
+        :vendor-status="vendorStatus"
+        :npc="cdnData"
+        :player-tier="effectiveTier" />
+
+      <!-- Vendor Buys Summary -->
+      <div v-if="vendorCapAtTier" class="text-xs text-text-secondary px-2">
+        <span class="text-text-muted">Buys:</span>
+        {{ vendorCapAtTier.itemTypes.join(', ') }}
+        <span class="text-text-dim">(up to {{ vendorCapAtTier.maxGold.toLocaleString() }}c each)</span>
+      </div>
 
       <!-- Services -->
       <NpcServicesSection
@@ -30,6 +62,24 @@
 
       <!-- Preferences -->
       <NpcPreferencesSection :npc="cdnData" />
+
+      <!-- Giftable Items in Inventory & Storage -->
+      <NpcInventoryGiftsSection :npc="cdnData" />
+
+      <!-- Gift Calculator -->
+      <NpcGiftCalculatorSection
+        :npc="cdnData"
+        :current-favor-tier="effectiveTier" />
+
+      <!-- Quests -->
+      <NpcQuestsSection :npc-key="npcKey" />
+
+      <!-- Storage -->
+      <NpcStorageSection
+        v-if="hasStorageService"
+        :npc-key="npcKey"
+        :npc="cdnData"
+        :favor-tier="effectiveTier" />
 
       <!-- Trained Skills (if not already shown in services) -->
       <div v-if="cdnData.trains_skills?.length && !hasTrainingService" class="flex flex-col gap-1.5">
@@ -59,11 +109,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { NpcInfo } from '../../types/gameData'
-import type { GameStateFavor } from '../../types/gameState'
-import { parseServices } from '../../types/npcServices'
+import type { GameStateFavor, GameStateVendor } from '../../types/gameState'
+import { hasTraining as npcHasTraining, hasVendor, hasStorage, goldCapAtTier } from '../../composables/useNpcServices'
+import { useGameStateStore } from '../../stores/gameStateStore'
+import { useReferenceShelfStore } from '../../stores/referenceShelfStore'
 import NpcFavorSection from './NpcDetailSections/NpcFavorSection.vue'
+import NpcVendorSection from './NpcDetailSections/NpcVendorSection.vue'
+import NpcStorageSection from './NpcDetailSections/NpcStorageSection.vue'
+import NpcInventoryGiftsSection from './NpcDetailSections/NpcInventoryGiftsSection.vue'
+import NpcGiftCalculatorSection from './NpcDetailSections/NpcGiftCalculatorSection.vue'
 import NpcServicesSection from './NpcDetailSections/NpcServicesSection.vue'
 import NpcPreferencesSection from './NpcDetailSections/NpcPreferencesSection.vue'
+import NpcQuestsSection from './NpcDetailSections/NpcQuestsSection.vue'
 import SkillInline from '../Shared/Skill/SkillInline.vue'
 import AreaInline from '../Shared/Area/AreaInline.vue'
 
@@ -72,7 +129,21 @@ const props = defineProps<{
   snapshotTier: string | null
   gamestateFavor: GameStateFavor | null
   cdnData: NpcInfo | null
+  vendorStatus?: GameStateVendor | null
 }>()
+
+const gameState = useGameStateStore()
+const shelf = useReferenceShelfStore()
+
+const pinned = computed(() => {
+  if (!props.npcKey || !props.cdnData) return false
+  return shelf.isPinned('npc', props.npcKey)
+})
+
+function togglePin() {
+  if (!props.npcKey || !props.cdnData) return
+  shelf.togglePin({ type: 'npc', reference: props.npcKey, label: props.cdnData.name })
+}
 
 const effectiveTier = computed(() =>
   props.gamestateFavor?.favor_tier ?? props.snapshotTier ?? 'Neutral'
@@ -83,7 +154,28 @@ const displayName = computed(() =>
 )
 
 const hasTrainingService = computed(() => {
-  if (!props.cdnData?.services) return false
-  return parseServices(props.cdnData.services).some(s => s.type === 'Training')
+  if (!props.cdnData) return false
+  return npcHasTraining(props.cdnData)
+})
+
+const hasVendorService = computed(() => {
+  if (!props.cdnData) return false
+  return hasVendor(props.cdnData)
+})
+
+const hasStorageService = computed(() => {
+  if (!props.cdnData) return false
+  return hasStorage(props.cdnData)
+})
+
+const vendorCapAtTier = computed(() => {
+  if (!props.cdnData || !hasVendorService.value) return null
+  return goldCapAtTier(props.cdnData, effectiveTier.value)
+})
+
+const vendorStatus = computed(() => {
+  if (props.vendorStatus !== undefined) return props.vendorStatus
+  if (!props.npcKey) return null
+  return gameState.vendorByNpc[props.npcKey] ?? null
 })
 </script>

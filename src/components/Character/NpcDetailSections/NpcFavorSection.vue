@@ -36,9 +36,29 @@
         <!-- Tier name -->
         <span class="min-w-24">{{ tierDisplayName(tier) }}</span>
 
+        <!-- Storage slots at this tier -->
+        <span v-if="slotsAtTier(tier) != null" class="text-[0.6rem] text-text-dim">
+          {{ slotsAtTier(tier) }} slots
+        </span>
+
+        <!-- Vendor gold cap at this tier -->
+        <span v-if="goldCapExactAtTier(tier) != null" class="text-[0.6rem] text-text-dim">
+          {{ formatGold(goldCapExactAtTier(tier)!) }}
+        </span>
+
         <!-- Points to reach (for tiers above current) -->
         <span v-if="!isUnlocked(tier) && pointsNeeded(tier) !== null" class="text-text-dim text-[0.6rem] ml-auto">
           {{ pointsNeeded(tier) }} favor
+        </span>
+
+        <!-- Services unlocked at this tier -->
+        <span v-if="servicesUnlockedAt(tier).length" class="flex gap-1 ml-auto">
+          <span
+            v-for="svc in servicesUnlockedAt(tier)"
+            :key="svc"
+            class="text-[0.55rem] px-1 py-px rounded bg-surface-elevated text-text-dim">
+            {{ svc }}
+          </span>
         </span>
 
         <!-- Progress bar for current tier -->
@@ -57,7 +77,13 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { NpcInfo } from '../../../types/gameData'
 import type { GameStateFavor } from '../../../types/gameState'
+import { useGameStateStore } from '../../../stores/gameStateStore'
+import {
+  getServices,
+  getStoreService,
+} from '../../../composables/useNpcServices'
 import {
   FAVOR_TIERS,
   tierIndex,
@@ -71,7 +97,11 @@ import {
 const props = defineProps<{
   snapshotTier: string | null
   gamestateFavor: GameStateFavor | null
+  npcKey?: string | null
+  npc?: NpcInfo | null
 }>()
+
+const gameState = useGameStateStore()
 
 const gamestateTier = computed(() => props.gamestateFavor?.favor_tier ?? null)
 const effectiveTier = computed(() => gamestateTier.value ?? props.snapshotTier ?? 'Neutral')
@@ -96,6 +126,66 @@ function pointsNeeded(tier: string): number | null {
   if (idx >= FAVOR_TIERS.length - 1) return null
   const tierBelow = FAVOR_TIERS[idx + 1]
   return pointsToNextTier(tierBelow)
+}
+
+// ── Storage slots per tier ────────────────────────────────────────────
+
+const vaultLevels = computed<Record<string, number> | null>(() => {
+  if (!props.npcKey) return null
+  const vault = gameState.storageVaultsByKey[props.npcKey]
+  return vault?.levels ?? null
+})
+
+function slotsAtTier(tier: string): number | null {
+  if (!vaultLevels.value) return null
+  return vaultLevels.value[tier] ?? null
+}
+
+// ── Vendor gold cap per tier ──────────────────────────────────────────
+
+const capIncreasesByTier = computed<Record<string, number>>(() => {
+  if (!props.npc) return {}
+  const store = getStoreService(props.npc)
+  if (!store || !store.capIncreases.length) return {}
+  const map: Record<string, number> = {}
+  for (const cap of store.capIncreases) {
+    map[cap.tier] = cap.maxGold
+  }
+  return map
+})
+
+function goldCapExactAtTier(tier: string): number | null {
+  return capIncreasesByTier.value[tier] ?? null
+}
+
+function formatGold(amount: number): string {
+  return amount.toLocaleString() + 'c'
+}
+
+// ── Services unlocked at tier ─────────────────────────────────────────
+
+const SERVICE_LABELS: Record<string, string> = {
+  Store: 'Vendor',
+  Storage: 'Storage',
+  Training: 'Training',
+  Barter: 'Barter',
+  Consignment: 'Consignment',
+}
+
+const servicesByUnlockTier = computed<Record<string, string[]>>(() => {
+  if (!props.npc) return {}
+  const services = getServices(props.npc)
+  const map: Record<string, string[]> = {}
+  for (const svc of services) {
+    const label = SERVICE_LABELS[svc.type] ?? svc.type
+    if (!map[svc.favor]) map[svc.favor] = []
+    map[svc.favor].push(label)
+  }
+  return map
+})
+
+function servicesUnlockedAt(tier: string): string[] {
+  return servicesByUnlockTier.value[tier] ?? []
 }
 
 /** Estimated progress within current tier based on cumulative delta */

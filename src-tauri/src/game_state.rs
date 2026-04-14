@@ -34,6 +34,8 @@ pub struct GameStateManager {
     live_mode: bool,
     /// Reference to loaded CDN game data for entity resolution
     game_data: GameDataState,
+    /// NPC key of the vendor currently being interacted with (set on InteractionStarted, cleared on InteractionEnded)
+    current_vendor_npc: Option<String>,
 }
 
 impl GameStateManager {
@@ -43,6 +45,7 @@ impl GameStateManager {
             active_server: None,
             live_mode: false,
             game_data,
+            current_vendor_npc: None,
         }
     }
 
@@ -171,7 +174,7 @@ impl GameStateManager {
 
     /// Process a batch of PlayerEvents in a single SQLite transaction.
     /// Reduces DB overhead during rapid-fire events (e.g., spam-crafting).
-    pub fn process_events_batch(&self, events: &[PlayerEvent], db: &DbPool) -> ProcessResult {
+    pub fn process_events_batch(&mut self, events: &[PlayerEvent], db: &DbPool) -> ProcessResult {
         let character = match &self.active_character {
             Some(c) => c.clone(),
             None => return ProcessResult { domains_updated: vec![] },
@@ -187,7 +190,8 @@ impl GameStateManager {
                 return ProcessResult { domains_updated: vec![] };
             }
         };
-        let game_data_guard = self.game_data.try_read().ok();
+        let game_data_arc = self.game_data.clone();
+        let game_data_guard = game_data_arc.try_read().ok();
 
         let mut all_domains = Vec::new();
         conn.execute("BEGIN IMMEDIATE", []).ok();
@@ -204,7 +208,7 @@ impl GameStateManager {
     }
 
     /// Process a single PlayerEvent. Delegates to the shared inner implementation.
-    pub fn process_event(&self, event: &PlayerEvent, db: &DbPool) -> ProcessResult {
+    pub fn process_event(&mut self, event: &PlayerEvent, db: &DbPool) -> ProcessResult {
         let character = match &self.active_character {
             Some(c) => c.clone(),
             None => return ProcessResult { domains_updated: vec![] },
@@ -220,7 +224,8 @@ impl GameStateManager {
                 return ProcessResult { domains_updated: vec![] };
             }
         };
-        let game_data_guard = self.game_data.try_read().ok();
+        let game_data_arc = self.game_data.clone();
+        let game_data_guard = game_data_arc.try_read().ok();
         let mut domains = Vec::new();
         self.process_event_inner(event, &conn, &character, &server, &game_data_guard, &mut domains);
         ProcessResult { domains_updated: domains }
@@ -228,7 +233,7 @@ impl GameStateManager {
 
     /// Inner implementation shared by process_event and process_events_batch.
     fn process_event_inner(
-        &self,
+        &mut self,
         event: &PlayerEvent,
         conn: &rusqlite::Connection,
         character: &str,
@@ -757,7 +762,94 @@ impl GameStateManager {
                 }
             }
 
-            // Events that don't produce game state updates (yet)
+            PlayerEvent::InteractionStarted {
+                timestamp,
+                npc_name,
+                ..
+            } => {
+                let dt = self.to_utc(timestamp);
+                let (npc_key, _display_name) = match &game_data_guard {
+                    Some(data) => match data.resolve_npc(npc_name) {
+                        Some(info) => (info.key.clone(), info.name.clone()),
+                        None => (npc_name.clone(), npc_name.clone()),
+                    },
+                    None => (npc_name.clone(), npc_name.clone()),
+                };
+
+                self.current_vendor_npc = Some(npc_key.clone());
+
+                conn.execute(
+                    "INSERT INTO game_state_npc_vendor (character_name, server_name, npc_key, last_interaction_at, last_confirmed_at)
+                     VALUES (?1, ?2, ?3, ?4, ?4)
+                     ON CONFLICT(character_name, server_name, npc_key) DO UPDATE SET
+                        last_interaction_at = excluded.last_interaction_at,
+                        last_confirmed_at = excluded.last_confirmed_at",
+                    rusqlite::params![character, server, npc_key, dt],
+                ).ok();
+                domains.push("vendor");
+            }
+
+            PlayerEvent::InteractionEnded { .. } => {
+                self.current_vendor_npc = None;
+            }
+
+            PlayerEvent::VendorSold {
+                timestamp,
+                ..
+            } => {
+                if let Some(npc_key) = &self.current_vendor_npc {
+                    let dt = self.to_utc(timestamp);
+                    conn.execute(
+                        "INSERT INTO game_state_npc_vendor (character_name, server_name, npc_key, last_sell_at, last_confirmed_at)
+                         VALUES (?1, ?2, ?3, ?4, ?4)
+                         ON CONFLICT(character_name, server_name, npc_key) DO UPDATE SET
+                            last_sell_at = excluded.last_sell_at,
+                            last_confirmed_at = excluded.last_confirmed_at",
+                        rusqlite::params![character, server, npc_key, dt],
+                    ).ok();
+                    domains.push("vendor");
+                } else {
+                    eprintln!("[game_state] VendorSold with no current interaction NPC — skipping");
+                }
+            }
+
+            PlayerEvent::VendorGoldChanged {
+                timestamp,
+                current_gold,
+                max_gold,
+                ..
+            } => {
+                if let Some(npc_key) = &self.current_vendor_npc {
+                    let dt = self.to_utc(timestamp);
+                    if *current_gold < *max_gold {
+                        conn.execute(
+                            "INSERT INTO game_state_npc_vendor (character_name, server_name, npc_key, vendor_gold_available, vendor_gold_max, vendor_gold_timer_start, last_confirmed_at)
+                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)
+                             ON CONFLICT(character_name, server_name, npc_key) DO UPDATE SET
+                                vendor_gold_available = excluded.vendor_gold_available,
+                                vendor_gold_max = excluded.vendor_gold_max,
+                                vendor_gold_timer_start = CASE WHEN game_state_npc_vendor.vendor_gold_timer_start IS NULL THEN excluded.vendor_gold_timer_start ELSE game_state_npc_vendor.vendor_gold_timer_start END,
+                                last_confirmed_at = excluded.last_confirmed_at",
+                            rusqlite::params![character, server, npc_key, *current_gold as i64, *max_gold as i64, dt],
+                        ).ok();
+                    } else {
+                        conn.execute(
+                            "INSERT INTO game_state_npc_vendor (character_name, server_name, npc_key, vendor_gold_available, vendor_gold_max, vendor_gold_timer_start, last_confirmed_at)
+                             VALUES (?1, ?2, ?3, ?4, ?5, NULL, ?6)
+                             ON CONFLICT(character_name, server_name, npc_key) DO UPDATE SET
+                                vendor_gold_available = excluded.vendor_gold_available,
+                                vendor_gold_max = excluded.vendor_gold_max,
+                                vendor_gold_timer_start = NULL,
+                                last_confirmed_at = excluded.last_confirmed_at",
+                            rusqlite::params![character, server, npc_key, *current_gold as i64, *max_gold as i64, dt],
+                        ).ok();
+                    }
+                    domains.push("vendor");
+                } else {
+                    eprintln!("[game_state] VendorGoldChanged with no current interaction NPC — skipping");
+                }
+            }
+
             _ => {}
         }
     }

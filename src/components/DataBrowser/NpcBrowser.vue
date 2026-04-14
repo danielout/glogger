@@ -66,137 +66,68 @@
 
     <!-- Right panel: NPC detail -->
     <div
-      class="h-full overflow-y-auto border-l border-surface-elevated p-4 flex flex-col gap-4"
+      class="h-full overflow-y-auto border-l border-surface-elevated flex flex-col"
       :class="{ 'items-center justify-center': !selected }">
         <div v-if="!selected" class="text-border-default italic">
           Select an NPC to inspect
         </div>
 
         <template v-else>
-          <div class="flex gap-3 items-start">
-            <div class="flex-1 min-w-0">
-              <div class="text-accent-gold text-base font-bold mb-1">{{ selected.name }}</div>
-              <div class="text-xs text-text-dim mb-1">
-                Key: <span class="text-text-secondary font-mono">{{ selected.key }}</span>
-                <template v-if="selected.area_name">
-                  · Area:
-                  <AreaInline :reference="selected.area_name" /></template
-                >
-              </div>
-              <div v-if="selected.area_friendly_name" class="text-sm text-text-secondary mb-1">
-                📍 {{ selected.area_friendly_name }}
-              </div>
-              <div v-if="selected.desc" class="text-xs text-text-secondary italic">
-                {{ selected.desc }}
-              </div>
-            </div>
-
+          <!-- Data-browser-specific toolbar: favorite + close -->
+          <div class="flex items-center justify-end gap-1 px-4 pt-3 pb-0">
             <button
               class="bg-transparent border-none cursor-pointer px-1 py-0 text-sm shrink-0 transition-colors"
               :class="isFav ? 'text-accent-gold' : 'text-text-dim hover:text-accent-gold'"
               :title="isFav ? 'Remove from favorites' : 'Add to favorites'"
               @click="dataBrowserStore.toggleFavorite({ type: 'npc', reference: selected.key, label: selected.name })"
             >&#x2605;</button>
-            <button class="bg-transparent border-none text-text-dim cursor-pointer px-1 py-0 text-sm shrink-0 hover:text-accent-red" @click="clearSelection">✕</button>
+            <button class="bg-transparent border-none text-text-dim cursor-pointer px-1 py-0 text-sm shrink-0 hover:text-accent-red" @click="clearSelection">&#x2715;</button>
           </div>
 
-          <!-- Training Section -->
-          <div v-if="selected.trains_skills.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Trains Skills ({{ selected.trains_skills.length }})</div>
-            <div class="flex flex-wrap gap-1.5">
-              <SkillInline v-for="skill in selected.trains_skills" :key="skill" :reference="skill" />
-            </div>
-          </div>
+          <!-- Shared NPC detail panel (favor, vendor status, storage, gifts, preferences, quests, skills) -->
+          <NpcDetailPanel
+            :npc-key="selected.key"
+            :snapshot-tier="selectedSnapshotTier"
+            :gamestate-favor="selectedGamestateFavor"
+            :cdn-data="selected"
+            :vendor-status="selectedVendorStatus" />
 
-          <!-- Favor Preferences -->
-          <div v-if="selected.preferences.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Favor Preferences ({{ selected.preferences.length }})</div>
-            <div class="flex flex-col gap-1 max-h-100 overflow-y-auto border border-surface-dark p-2">
-              <div
-                v-for="(pref, idx) in selected.preferences.slice().sort((a, b) => b.pref - a.pref)"
-                :key="idx"
-                class="flex items-center gap-2 text-sm py-0.5">
-                <span
-                  class="text-[0.7rem] uppercase font-bold px-1 py-0.5 rounded-sm min-w-16 text-center shrink-0"
-                  :class="{
-                    'bg-[#4a1a3a] text-[#ff69b4] border border-[#6a2a5a]': pref.desire.toLowerCase() === 'love',
-                    'bg-[#1a3a1a] text-[#7ec8e3] border border-[#2a5a2a]': pref.desire.toLowerCase() === 'like',
-                    'bg-[#3a2a1a] text-accent-red border border-[#5a3a2a]': pref.desire.toLowerCase() === 'dislike',
-                    'bg-[#3a1a1a] text-channel-combat border border-[#5a2a2a]': pref.desire.toLowerCase() === 'hate',
-                  }">
-                  {{ pref.desire }}
-                </span>
-                <span v-if="pref.name" class="flex-1">
-                  <ItemInline :reference="pref.name" />
-                </span>
-                <span v-else-if="pref.keywords.length" class="text-text-secondary flex-1">
-                  {{ pref.keywords.join(', ') }}
-                </span>
-                <span class="text-[#7ec8e3] font-bold min-w-12 text-right shrink-0">+{{ pref.pref.toFixed(0) }}</span>
+          <!-- Data-browser extras -->
+          <div class="flex flex-col gap-4 px-4 pb-4">
+            <!-- Vendor Inventory (items they sell with prices) -->
+            <div v-if="vendorItems.length" class="flex flex-col gap-1.5">
+              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Sells Items ({{ vendorItems.length }})</div>
+              <div class="max-h-80 overflow-y-auto border border-surface-dark">
+                <table class="w-full text-xs border-collapse">
+                  <thead class="sticky top-0 bg-surface-base">
+                    <tr class="text-left text-text-dim border-b border-border-default">
+                      <th class="py-1 px-2 font-normal">Item</th>
+                      <th class="py-1 px-2 font-normal text-right">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="item in vendorItems"
+                      :key="item.item_id"
+                      class="border-b border-[#151515] hover:bg-surface-base">
+                      <td class="py-0.5 px-2">
+                        <ItemInline :reference="String(item.item_id)" />
+                      </td>
+                      <td class="py-0.5 px-2 text-right text-text-muted font-mono">
+                        <template v-if="item.value">{{ Math.ceil(item.value * 1.5) }}c</template>
+                        <span v-else class="text-text-dim">--</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
-          </div>
 
-          <!-- Gift Favor Tiers -->
-          <div v-if="selected.gift_favor_tiers.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Gives Gifts At</div>
-            <div class="flex flex-wrap gap-1.5">
-              <span
-                v-for="tier in selected.gift_favor_tiers"
-                :key="tier"
-                class="text-[0.72rem] px-1.5 py-0.5 rounded-sm border"
-                :class="favorBadgeClasses(tier)">
-                {{ tierDisplayName(tier) }}
-              </span>
+            <!-- Raw JSON -->
+            <div v-if="settingsStore.settings.showRawJsonInDataBrowser" class="flex flex-col gap-1.5">
+              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
+              <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
             </div>
-          </div>
-
-          <!-- Associated Quests -->
-          <div v-if="associatedQuests.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Associated Quests ({{ associatedQuests.length }})</div>
-            <ul class="m-0 p-0 list-none max-h-60 overflow-y-auto border border-surface-dark">
-              <li
-                v-for="quest in associatedQuests"
-                :key="quest.internal_name"
-                class="text-xs px-2 py-0.5 flex gap-2 items-center border-b border-[#151515] hover:bg-surface-base">
-                <QuestInline :reference="quest.internal_name" />
-              </li>
-            </ul>
-          </div>
-
-          <!-- Vendor Inventory -->
-          <div v-if="vendorItems.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Sells Items ({{ vendorItems.length }})</div>
-            <div class="max-h-80 overflow-y-auto border border-surface-dark">
-              <table class="w-full text-xs border-collapse">
-                <thead class="sticky top-0 bg-surface-base">
-                  <tr class="text-left text-text-dim border-b border-border-default">
-                    <th class="py-1 px-2 font-normal">Item</th>
-                    <th class="py-1 px-2 font-normal text-right">Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="item in vendorItems"
-                    :key="item.item_id"
-                    class="border-b border-[#151515] hover:bg-surface-base">
-                    <td class="py-0.5 px-2">
-                      <ItemInline :reference="String(item.item_id)" />
-                    </td>
-                    <td class="py-0.5 px-2 text-right text-text-muted font-mono">
-                      <template v-if="item.value">{{ Math.ceil(item.value * 1.5) }}c</template>
-                      <span v-else class="text-text-dim">--</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Raw JSON -->
-          <div v-if="settingsStore.settings.showRawJsonInDataBrowser" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
-            <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
           </div>
         </template>
     </div>
@@ -205,14 +136,18 @@
 
 <script setup lang="ts">
 import PaneLayout from "../Shared/PaneLayout.vue";
+import NpcDetailPanel from "../Character/NpcDetailPanel.vue";
+import ItemInline from "../Shared/Item/ItemInline.vue";
 import { ref, watch, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
+import { useGameStateStore } from "../../stores/gameStateStore";
+import { useCharacterStore } from "../../stores/characterStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useKeyboard } from "../../composables/useKeyboard";
 import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
-import type { NpcInfo, QuestInfo } from "../../types/gameData";
+import type { NpcInfo } from "../../types/gameData";
 
 interface VendorItemSummary {
   item_id: number;
@@ -220,17 +155,14 @@ interface VendorItemSummary {
   value: number | null;
   icon_id: number | null;
 }
-import QuestInline from "../Shared/Quest/QuestInline.vue";
-import SkillInline from "../Shared/Skill/SkillInline.vue";
-import AreaInline from "../Shared/Area/AreaInline.vue";
-import ItemInline from "../Shared/Item/ItemInline.vue";
-import { tierDisplayName, favorBadgeClasses } from "../../composables/useFavorTiers";
 
 const props = defineProps<{
   navTarget?: EntityNavigationTarget | null;
 }>();
 
 const store = useGameDataStore();
+const gameState = useGameStateStore();
+const characterStore = useCharacterStore();
 const settingsStore = useSettingsStore();
 const dataBrowserStore = useDataBrowserStore();
 
@@ -238,10 +170,25 @@ const isFav = computed(() =>
   selected.value ? dataBrowserStore.isFavorite("npc", selected.value.key) : false
 );
 
+const selectedSnapshotTier = computed(() => {
+  if (!selected.value) return null;
+  const snap = characterStore.npcFavor.find(f => f.npc_key === selected.value!.key);
+  return snap?.favor_level ?? null;
+});
+
+const selectedGamestateFavor = computed(() => {
+  if (!selected.value) return null;
+  return gameState.favorByNpc[selected.value.key] ?? null;
+});
+
+const selectedVendorStatus = computed(() => {
+  if (!selected.value) return null;
+  return gameState.vendorByNpc[selected.value.key] ?? null;
+});
+
 const query = ref("");
 const selectedArea = ref<string>("All Areas");
 const selected = ref<NpcInfo | null>(null);
-const associatedQuests = ref<QuestInfo[]>([]);
 const vendorItems = ref<VendorItemSummary[]>([]);
 const selectedIndex = ref(0);
 const listRef = ref<HTMLElement | null>(null);
@@ -285,15 +232,10 @@ watch([query, selectedArea, allNpcs], () => {
   selectedIndex.value = 0;
 }, { immediate: true });
 
-async function selectNpc(npc: NpcInfo) {
+function selectNpc(npc: NpcInfo) {
   selected.value = npc;
-  associatedQuests.value = [];
   dataBrowserStore.addToHistory({ type: "npc", reference: npc.key, label: npc.name });
   vendorItems.value = [];
-
-  store.getQuestsForNpc(npc.key)
-    .then(quests => { associatedQuests.value = quests; })
-    .catch(e => { console.warn("Quest cross-ref fetch failed:", e); });
 
   invoke<VendorItemSummary[]>('get_npc_vendor_items', { npcKey: npc.key })
     .then(items => { vendorItems.value = items; })
@@ -302,7 +244,6 @@ async function selectNpc(npc: NpcInfo) {
 
 function clearSelection() {
   selected.value = null;
-  associatedQuests.value = [];
   vendorItems.value = [];
 }
 

@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type {
@@ -21,6 +21,7 @@ import type {
   TsysAbilityXref,
   AbilityTsysXref,
 } from "../types/gameData";
+import { extractNpcKeyFromFavorPath } from "../utils/questDisplay";
 
 export type DataStatus = "loading" | "ready" | "error" | "empty";
 
@@ -48,6 +49,34 @@ export const useGameDataStore = defineStore("gameData", () => {
   }
 
 
+  // ── Preloaded quest data + NPC→quest index ───────────────────────────────
+  const allQuestsCache = ref<QuestInfo[]>([])
+
+  async function loadAllQuests(): Promise<void> {
+    if (allQuestsCache.value.length > 0) return
+    allQuestsCache.value = await invoke<QuestInfo[]>('get_all_quests')
+  }
+
+  const questsByNpc = computed<Map<string, QuestInfo[]>>(() => {
+    const map = new Map<string, QuestInfo[]>()
+    for (const quest of allQuestsCache.value) {
+      const favorNpc = quest.raw?.FavorNpc
+      if (!favorNpc) continue
+      const npcKey = extractNpcKeyFromFavorPath(favorNpc)
+      const existing = map.get(npcKey)
+      if (existing) {
+        existing.push(quest)
+      } else {
+        map.set(npcKey, [quest])
+      }
+    }
+    return map
+  })
+
+  function getQuestsForNpc(npcKey: string): QuestInfo[] {
+    return questsByNpc.value.get(npcKey) ?? []
+  }
+
   // Icon path cache: icon_id → local filesystem path
   const iconPaths = ref<Record<number, string>>({});
 
@@ -57,7 +86,7 @@ export const useGameDataStore = defineStore("gameData", () => {
   listen<number>("game-data-ready", async (_event) => {
     status.value = "ready";
     errorMessage.value = null;
-    await Promise.all([refreshCacheStatus(), loadAllNpcsMap()]);
+    await Promise.all([refreshCacheStatus(), loadAllNpcsMap(), loadAllQuests()]);
   });
 
   listen<string>("game-data-error", (event) => {
@@ -68,7 +97,10 @@ export const useGameDataStore = defineStore("gameData", () => {
   // Kick off an initial status check immediately (covers the case where
   // game-data-ready fires before we're listening)
   refreshCacheStatus().then(() => {
-    if (status.value === 'ready') loadAllNpcsMap()
+    if (status.value === 'ready') {
+      loadAllNpcsMap()
+      loadAllQuests()
+    }
   });
 
   // ── Cache management ───────────────────────────────────────────────────────
@@ -330,10 +362,6 @@ export const useGameDataStore = defineStore("gameData", () => {
 
   async function getNpcsTrainingSkill(skill: string): Promise<NpcInfo[]> {
     return invoke<NpcInfo[]>("get_npcs_training_skill", { skill });
-  }
-
-  async function getQuestsForNpc(npcKey: string): Promise<QuestInfo[]> {
-    return invoke<QuestInfo[]>("get_quests_for_npc", { npcKey });
   }
 
   async function getQuestsForSkill(skill: string): Promise<QuestInfo[]> {

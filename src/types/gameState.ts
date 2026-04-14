@@ -122,6 +122,16 @@ export interface GameStateStorageItem {
   source: 'log' | 'snapshot'
 }
 
+export interface GameStateVendor {
+  npc_key: string
+  vendor_gold_available: number | null
+  vendor_gold_max: number | null
+  vendor_gold_timer_start: string | null
+  last_interaction_at: string | null
+  last_sell_at: string | null
+  last_confirmed_at: string
+}
+
 export interface StorageVaultDetail {
   key: string
   id: number

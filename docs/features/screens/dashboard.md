@@ -39,7 +39,8 @@ New widgets (added in code updates) automatically append to the end of the card 
 - `src/components/Dashboard/ActivityFeed.vue` — reusable activity feed (used by 4 feed widgets)
 - `src/components/Dashboard/ContextBar.vue` — time, moon phase, weather, combat/mount, currencies
 - `src/components/Dashboard/ContextBarConfig.vue` — config panel for Status widget section toggles
-- `src/components/Dashboard/CurrentZone.vue` — current area with friendly NPCs and favor ranks
+- `src/components/Dashboard/widgets/ZoneNpcsWidget.vue` — current area with friendly NPCs, services, and configurable filters
+- `src/components/Dashboard/widgets/ZoneNpcsWidgetConfig.vue` — config panel for Zone NPCs widget
 - `src/components/Dashboard/PlayerNotes.vue` — localStorage-backed checklist
 
 **Widget wrappers** (`src/components/Dashboard/widgets/`):
@@ -81,6 +82,7 @@ Each widget is documented in its own file under `dashboard/`:
 | [Critical Resources](dashboard/widget-critical-resources.md) | Medium | Tracked item quantities |
 | [Statehelm Gifting](dashboard/widget-statehelm-summary.md) | Medium | Weekly gift progress summary |
 | [Watchword Alerts](dashboard/widget-watchword-alerts.md) | Medium | Recent watchword match feed |
+| Gift Watcher | Medium | Monitors inventory for items matching watched NPCs' gift preferences |
 
 ## Adding a New Widget
 

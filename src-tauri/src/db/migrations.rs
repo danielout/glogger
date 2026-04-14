@@ -142,6 +142,11 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 23)?;
     }
 
+    if current_version < 24 {
+        migration_v24_npc_vendor(conn)?;
+        super::record_migration(conn, 24)?;
+    }
+
     Ok(())
 }
 
@@ -221,6 +226,25 @@ fn migration_v23_stall_events(conn: &Connection) -> Result<()> {
         CREATE INDEX idx_stall_events_player          ON stall_events(player);
         CREATE INDEX idx_stall_events_item            ON stall_events(item);
         CREATE INDEX idx_stall_events_owner           ON stall_events(owner);"
+    )?;
+    Ok(())
+}
+
+fn migration_v24_npc_vendor(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS game_state_npc_vendor (
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            npc_key TEXT NOT NULL,
+            vendor_gold_available INTEGER,
+            vendor_gold_max INTEGER,
+            vendor_gold_timer_start TEXT,
+            last_interaction_at TEXT,
+            last_sell_at TEXT,
+            last_confirmed_at TEXT NOT NULL,
+            PRIMARY KEY (character_name, server_name, npc_key)
+        );
+        CREATE INDEX IF NOT EXISTS idx_gs_npc_vendor_char ON game_state_npc_vendor(character_name, server_name);"
     )?;
     Ok(())
 }

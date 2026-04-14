@@ -17,6 +17,7 @@ import {
   type GameStateCurrency,
   type GameStateEffect,
   type GameStateStorageItem,
+  type GameStateVendor,
   type StorageVaultDetail,
 } from '../types/gameState'
 import type { PlayerEvent } from '../types/playerEvents'
@@ -104,6 +105,7 @@ export const useGameStateStore = defineStore('gameState', () => {
   const currencies = ref<GameStateCurrency[]>([])
   const effects = ref<GameStateEffect[]>([])
   const storage = ref<GameStateStorageItem[]>([])
+  const vendor = ref<GameStateVendor[]>([])
 
   // CDN vault metadata (loaded once)
   const storageVaults = ref<StorageVaultDetail[]>([])
@@ -250,6 +252,13 @@ export const useGameStateStore = defineStore('gameState', () => {
 
   /** Named effects only (those with display names resolved) */
   const namedEffects = computed(() => effects.value.filter(e => e.effect_name !== null))
+
+  /** Vendor state indexed by npc_key for O(1) lookup */
+  const vendorByNpc = computed(() => {
+    const map: Record<string, GameStateVendor> = {}
+    for (const v of vendor.value) map[v.npc_key] = v
+    return map
+  })
 
   /** Storage items grouped by vault_key */
   const storageByVault = computed(() => {
@@ -702,7 +711,7 @@ export const useGameStateStore = defineStore('gameState', () => {
 
     loading.value = true
     try {
-      const [sk, attr, active, w, inv, rec, eq, fav, cur, eff, stor] = await Promise.all([
+      const [sk, attr, active, w, inv, rec, eq, fav, cur, eff, stor, vend] = await Promise.all([
         invoke<GameStateSkill[]>('get_game_state_skills', { characterName, serverName }),
         invoke<GameStateAttribute[]>('get_game_state_attributes', { characterName, serverName }),
         invoke<GameStateActiveSkills | null>('get_game_state_active_skills', { characterName, serverName }),
@@ -714,6 +723,7 @@ export const useGameStateStore = defineStore('gameState', () => {
         invoke<GameStateCurrency[]>('get_game_state_currencies', { characterName, serverName }),
         invoke<GameStateEffect[]>('get_game_state_effects', { characterName, serverName }),
         invoke<GameStateStorageItem[]>('get_game_state_storage', { characterName, serverName }),
+        invoke<GameStateVendor[]>('get_game_state_vendor', { characterName, serverName }),
       ])
       skills.value = sk
       attributes.value = attr
@@ -726,6 +736,7 @@ export const useGameStateStore = defineStore('gameState', () => {
       currencies.value = cur
       effects.value = eff
       storage.value = stor
+      vendor.value = vend
       initialized.value = true
       // Load tracked skills separately (non-blocking)
       loadTrackedSkills()
@@ -779,6 +790,9 @@ export const useGameStateStore = defineStore('gameState', () => {
           break
         case 'storage':
           storage.value = await invoke('get_game_state_storage', { characterName, serverName })
+          break
+        case 'vendor':
+          vendor.value = await invoke('get_game_state_vendor', { characterName, serverName })
           break
       }
     } catch (e) {
@@ -852,6 +866,7 @@ export const useGameStateStore = defineStore('gameState', () => {
     currencies,
     effects,
     storage,
+    vendor,
     storageVaults,
     loading,
     initialized,
@@ -868,6 +883,7 @@ export const useGameStateStore = defineStore('gameState', () => {
     currenciesByName,
     effectsById,
     namedEffects,
+    vendorByNpc,
     storageByVault,
     storageVaultsByKey,
     getVaultMaxPossibleSlots,
