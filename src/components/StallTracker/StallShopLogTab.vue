@@ -237,6 +237,7 @@ async function reload() {
   if (!store.currentOwner) {
     rows.value = []
     totalCount.value = 0
+    error.value = null
     return
   }
   const token = ++reloadToken

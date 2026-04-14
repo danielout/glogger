@@ -383,6 +383,7 @@ function buildParams(): StallInventoryParams {
 async function reload() {
   if (!store.currentOwner) {
     result.value = null
+    error.value = null
     return
   }
   const token = ++reloadToken
