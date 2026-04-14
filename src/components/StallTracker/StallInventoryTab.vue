@@ -160,16 +160,36 @@
         <table class="w-full text-xs mt-2">
           <thead>
             <tr class="text-text-secondary">
-              <th class="px-2 py-1 text-left">ITEM</th>
-              <th class="px-2 py-1 text-right">LAST PRICE</th>
-              <th class="px-2 py-1 text-right">SOLD</th>
-              <th class="px-2 py-1 text-right">AVG/DAY</th>
-              <th class="px-2 py-1 text-right">LAST ACTIVITY</th>
+              <th
+                class="px-2 py-1 text-left cursor-pointer hover:text-text-primary"
+                @click="toggleSoldOutSort('item')">
+                ITEM {{ soldOutSortIndicator('item') }}
+              </th>
+              <th
+                class="px-2 py-1 text-right cursor-pointer hover:text-text-primary"
+                @click="toggleSoldOutSort('last_known_price')">
+                LAST PRICE {{ soldOutSortIndicator('last_known_price') }}
+              </th>
+              <th
+                class="px-2 py-1 text-right cursor-pointer hover:text-text-primary"
+                @click="toggleSoldOutSort('period_sold')">
+                SOLD {{ soldOutSortIndicator('period_sold') }}
+              </th>
+              <th
+                class="px-2 py-1 text-right cursor-pointer hover:text-text-primary"
+                @click="toggleSoldOutSort('avg_per_day')">
+                AVG/DAY {{ soldOutSortIndicator('avg_per_day') }}
+              </th>
+              <th
+                class="px-2 py-1 text-right cursor-pointer hover:text-text-primary"
+                @click="toggleSoldOutSort('last_activity_at')">
+                LAST ACTIVITY {{ soldOutSortIndicator('last_activity_at') }}
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr
-              v-for="item in recentlySoldOut"
+              v-for="item in sortedRecentlySoldOut"
               :key="item.item"
               class="border-t border-border-default/40 opacity-60 hover:opacity-100 hover:bg-surface-hover">
               <td class="px-2 py-1">
@@ -251,6 +271,18 @@ type InventorySortKey =
 const sortBy = ref<InventorySortKey>('item')
 const sortDir = ref<'asc' | 'desc'>('asc')
 
+// Recently Sold Out has its own independent sort state — different default
+// (most recently sold out first) and a different column set (LAST PRICE
+// instead of QTY/EST. VALUE since sold-out items have neither).
+type SoldOutSortKey =
+  | 'item'
+  | 'last_known_price'
+  | 'period_sold'
+  | 'avg_per_day'
+  | 'last_activity_at'
+const soldOutSortBy = ref<SoldOutSortKey>('last_activity_at')
+const soldOutSortDir = ref<'asc' | 'desc'>('desc')
+
 const result = ref<InventoryResult | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -294,6 +326,37 @@ function toggleSort(col: InventorySortKey) {
 function sortIndicator(col: InventorySortKey): string {
   if (sortBy.value !== col) return ''
   return sortDir.value === 'asc' ? '▲' : '▼'
+}
+
+const sortedRecentlySoldOut = computed<InventoryItem[]>(() => {
+  const items = [...recentlySoldOut.value]
+  const dir = soldOutSortDir.value === 'asc' ? 1 : -1
+  items.sort((a, b) => {
+    const va = a[soldOutSortBy.value]
+    const vb = b[soldOutSortBy.value]
+    if (typeof va === 'string' && typeof vb === 'string') {
+      return va.localeCompare(vb) * dir
+    }
+    if (va === null && vb === null) return 0
+    if (va === null) return 1
+    if (vb === null) return -1
+    return ((va as number) - (vb as number)) * dir
+  })
+  return items
+})
+
+function toggleSoldOutSort(col: SoldOutSortKey) {
+  if (soldOutSortBy.value === col) {
+    soldOutSortDir.value = soldOutSortDir.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    soldOutSortBy.value = col
+    soldOutSortDir.value = col === 'item' ? 'asc' : 'desc'
+  }
+}
+
+function soldOutSortIndicator(col: SoldOutSortKey): string {
+  if (soldOutSortBy.value !== col) return ''
+  return soldOutSortDir.value === 'asc' ? '▲' : '▼'
 }
 
 /** Recently-sold-out: items with quantity 0 whose last activity falls within
