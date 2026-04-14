@@ -41,18 +41,42 @@
       <table class="w-full text-xs">
         <thead class="sticky top-0 bg-surface-elevated z-10">
           <tr class="text-text-secondary">
-            <th class="px-2 py-1.5 text-left">ITEM</th>
-            <th class="px-2 py-1.5 text-right">QTY</th>
+            <th
+              class="px-2 py-1.5 text-left cursor-pointer hover:text-text-primary"
+              @click="toggleSort('item')">
+              ITEM {{ sortIndicator('item') }}
+            </th>
+            <th
+              class="px-2 py-1.5 text-right cursor-pointer hover:text-text-primary"
+              @click="toggleSort('quantity')">
+              QTY {{ sortIndicator('quantity') }}
+            </th>
             <th class="px-2 py-1.5 text-right">PRICE</th>
-            <th class="px-2 py-1.5 text-right">EST. VALUE</th>
-            <th class="px-2 py-1.5 text-right">SOLD</th>
-            <th class="px-2 py-1.5 text-right">AVG/DAY</th>
-            <th class="px-2 py-1.5 text-right">LAST</th>
+            <th
+              class="px-2 py-1.5 text-right cursor-pointer hover:text-text-primary"
+              @click="toggleSort('estimated_value')">
+              EST. VALUE {{ sortIndicator('estimated_value') }}
+            </th>
+            <th
+              class="px-2 py-1.5 text-right cursor-pointer hover:text-text-primary"
+              @click="toggleSort('period_sold')">
+              SOLD {{ sortIndicator('period_sold') }}
+            </th>
+            <th
+              class="px-2 py-1.5 text-right cursor-pointer hover:text-text-primary"
+              @click="toggleSort('avg_per_day')">
+              AVG/DAY {{ sortIndicator('avg_per_day') }}
+            </th>
+            <th
+              class="px-2 py-1.5 text-right cursor-pointer hover:text-text-primary"
+              @click="toggleSort('last_activity_at')">
+              LAST {{ sortIndicator('last_activity_at') }}
+            </th>
           </tr>
         </thead>
         <tbody>
           <tr
-            v-for="item in inStockItems"
+            v-for="item in sortedInStockItems"
             :key="item.item"
             class="border-t border-border-default/40 hover:bg-surface-hover">
             <td class="px-2 py-1">
@@ -212,6 +236,21 @@ const periodDays = ref<number>(7)
 const soldOutDays = ref<number>(3)
 const soldOutOpen = ref<boolean>(false)
 
+// Frontend-only sorting for the In Stock table. Inventory is computed in
+// Rust by `aggregate_inventory` and returned all-at-once (item count is
+// bounded — usually well under 100 per character — so backend pagination
+// isn't needed). The default 'item asc' matches the BTreeMap order from the
+// aggregator.
+type InventorySortKey =
+  | 'item'
+  | 'quantity'
+  | 'estimated_value'
+  | 'period_sold'
+  | 'avg_per_day'
+  | 'last_activity_at'
+const sortBy = ref<InventorySortKey>('item')
+const sortDir = ref<'asc' | 'desc'>('asc')
+
 const result = ref<InventoryResult | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -223,6 +262,39 @@ const inStockItems = computed<InventoryItem[]>(() =>
 )
 
 const inStockCount = computed(() => inStockItems.value.length)
+
+const sortedInStockItems = computed<InventoryItem[]>(() => {
+  const items = [...inStockItems.value]
+  const dir = sortDir.value === 'asc' ? 1 : -1
+  items.sort((a, b) => {
+    const va = a[sortBy.value]
+    const vb = b[sortBy.value]
+    // String compare for item / last_activity_at, numeric otherwise.
+    if (typeof va === 'string' && typeof vb === 'string') {
+      return va.localeCompare(vb) * dir
+    }
+    if (va === null && vb === null) return 0
+    if (va === null) return 1
+    if (vb === null) return -1
+    return ((va as number) - (vb as number)) * dir
+  })
+  return items
+})
+
+function toggleSort(col: InventorySortKey) {
+  if (sortBy.value === col) {
+    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortBy.value = col
+    // Numeric / date columns default desc, text columns default asc.
+    sortDir.value = col === 'item' ? 'asc' : 'desc'
+  }
+}
+
+function sortIndicator(col: InventorySortKey): string {
+  if (sortBy.value !== col) return ''
+  return sortDir.value === 'asc' ? '▲' : '▼'
+}
 
 /** Recently-sold-out: items with quantity 0 whose last activity falls within
  * the most recent N **distinct active dates** (not calendar days). The
