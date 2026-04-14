@@ -85,11 +85,15 @@
           {{ store.favorites.length === 0 ? 'No favorites yet' : 'No matches' }}
         </div>
         <div v-else class="flex-1 overflow-y-auto">
-          <button
+          <div
             v-for="entry in filteredFavorites"
             :key="`${entry.type}:${entry.reference}`"
-            class="w-full flex items-center gap-2 px-3 py-2 bg-transparent border-none border-b border-surface-dark/50 text-left cursor-pointer text-xs transition-colors hover:bg-surface-elevated group"
+            role="button"
+            tabindex="0"
+            class="w-full flex items-center gap-2 px-3 py-2 border-b border-surface-dark/50 text-left cursor-pointer text-xs transition-colors hover:bg-surface-elevated group"
             @click="navigate(entry)"
+            @keydown.enter="navigate(entry)"
+            @keydown.space.prevent="navigate(entry)"
           >
             <span class="shrink-0 text-[0.6rem] font-mono px-1 py-0.5 rounded" :class="typeBadgeClass(entry.type)">
               {{ typeLabel(entry.type) }}
@@ -100,7 +104,7 @@
               title="Remove favorite"
               @click.stop="store.removeFavorite(entry.type, entry.reference)"
             >&#x2715;</button>
-          </button>
+          </div>
         </div>
       </template>
 
@@ -111,11 +115,15 @@
         </div>
         <template v-else>
           <div class="flex-1 overflow-y-auto">
-            <button
+            <div
               v-for="pin in shelf.pins"
               :key="`${pin.type}:${pin.reference}`"
-              class="w-full flex items-center gap-2 px-3 py-2 bg-transparent border-none border-b border-surface-dark/50 text-left cursor-pointer text-xs transition-colors hover:bg-surface-elevated group"
+              role="button"
+              tabindex="0"
+              class="w-full flex items-center gap-2 px-3 py-2 border-b border-surface-dark/50 text-left cursor-pointer text-xs transition-colors hover:bg-surface-elevated group"
               @click="navigate(pin)"
+              @keydown.enter="navigate(pin)"
+              @keydown.space.prevent="navigate(pin)"
             >
               <span class="shrink-0 text-[0.6rem] font-mono px-1 py-0.5 rounded" :class="typeBadgeClass(pin.type)">
                 {{ typeLabel(pin.type) }}
@@ -126,7 +134,7 @@
                 title="Unpin"
                 @click.stop="shelf.unpin(pin.type, pin.reference)"
               >&#x2715;</button>
-            </button>
+            </div>
           </div>
           <div class="shrink-0 border-t border-border-default px-3 py-2">
             <button
