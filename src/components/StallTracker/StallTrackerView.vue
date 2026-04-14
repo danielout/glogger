@@ -325,6 +325,10 @@ window.addEventListener('keydown', onKeydown)
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown)
   if (messageTimer) clearTimeout(messageTimer)
+  // Reset in case the user navigates away mid-import. Otherwise the flag
+  // could persist across remounts (Pinia store survives) and leave the
+  // action buttons stuck disabled with no way to recover.
+  actionInProgress.value = false
 })
 
 // Close the modal on character switch — the persisted Shop Log filters
