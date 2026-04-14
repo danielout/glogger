@@ -55,7 +55,9 @@
             v-for="item in inStockItems"
             :key="item.item"
             class="border-t border-border-default/40 hover:bg-surface-hover">
-            <td class="px-2 py-1 text-text-primary">{{ item.item }}</td>
+            <td class="px-2 py-1">
+              <ItemInline :reference="item.item" />
+            </td>
             <td class="px-2 py-1 text-right tabular-nums">{{ item.quantity }}</td>
             <td class="px-2 py-1 text-right">
               <span v-if="item.price_tiers.length === 1">
@@ -146,7 +148,9 @@
               v-for="item in recentlySoldOut"
               :key="item.item"
               class="border-t border-border-default/40 opacity-60 hover:opacity-100 hover:bg-surface-hover">
-              <td class="px-2 py-1 text-text-primary">{{ item.item }}</td>
+              <td class="px-2 py-1">
+                <ItemInline :reference="item.item" />
+              </td>
               <td class="px-2 py-1 text-right tabular-nums">
                 {{ formatLastPrice(item.last_known_price) }}
               </td>
@@ -181,6 +185,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 import StatCard from './StatCard.vue'
+import ItemInline from '../Shared/Item/ItemInline.vue'
 import type {
   InventoryItem,
   InventoryResult,

@@ -74,7 +74,14 @@
                 {{ row.action }}
               </span>
             </td>
-            <td class="px-2 py-1 text-text-primary">{{ row.item ?? '—' }}</td>
+            <td class="px-2 py-1">
+              <ItemInline
+                v-if="row.item"
+                :reference="row.item" />
+              <span
+                v-else
+                class="text-text-secondary">—</span>
+            </td>
             <td class="px-2 py-1 text-right tabular-nums">{{ row.quantity || '' }}</td>
             <td class="px-2 py-1 text-right text-accent-gold tabular-nums">
               {{ formatGold(row.price_total) }}
@@ -119,6 +126,7 @@ import { confirm } from '@tauri-apps/plugin-dialog'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
 import DatePicker from '../Shared/DatePicker.vue'
+import ItemInline from '../Shared/Item/ItemInline.vue'
 import type { StallEvent, StallEventsPage, StallEventsParams } from '../../types/stallTracker'
 
 const store = useStallTrackerStore()

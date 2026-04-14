@@ -102,7 +102,14 @@
               {{ row.event_timestamp }}
             </td>
             <td class="px-2 py-1 text-entity-player">{{ row.player }}</td>
-            <td class="px-2 py-1 text-text-primary">{{ row.item ?? '—' }}</td>
+            <td class="px-2 py-1">
+              <ItemInline
+                v-if="row.item"
+                :reference="row.item" />
+              <span
+                v-else
+                class="text-text-secondary">—</span>
+            </td>
             <td class="px-2 py-1 text-right">{{ row.quantity }}</td>
             <td class="px-2 py-1 text-right">{{ formatPrice(row.price_unit) }}</td>
             <td class="px-2 py-1 text-right text-accent-gold">
@@ -148,6 +155,7 @@ import { confirm } from '@tauri-apps/plugin-dialog'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
 import DatePicker from '../Shared/DatePicker.vue'
+import ItemInline from '../Shared/Item/ItemInline.vue'
 import StatCard from './StatCard.vue'
 import type { StallEvent, StallEventsPage, StallEventsParams } from '../../types/stallTracker'
 
