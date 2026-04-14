@@ -1,5 +1,9 @@
 # Economics — Surveying
 
+## Status
+
+> **Work in Progress:** Surveying tracking is under active development. Loot counts may not be 100% accurate due to Player.log limitations (see [Loot Quantity Correction](#loot-quantity-correction)). Povus and Vidaria surveys are not yet trackable.
+
 ## Overview
 
 Real-time session tracker for the Surveying skill. Detects survey crafting and completion from Player.log via the player-event-parser pipeline, tracks loot/XP/costs per session, and provides historical analytics with pre-computed session summaries. Supports cross-referencing with Chat.log to correct motherlode loot quantities.

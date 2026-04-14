@@ -1,5 +1,8 @@
 <template>
   <div class="flex flex-col gap-4 h-full">
+    <div class="p-3 bg-yellow-900/20 border border-yellow-700/40 rounded text-sm text-yellow-300">
+      Surveying tracking is under active development. Loot counts may not be 100% accurate, and Povus/Vidaria surveys are not yet trackable.
+    </div>
     <TabBar v-model="activeTab" :tabs="tabs" />
     <div class="flex-1 min-h-0">
       <SessionTab v-if="activeTab === 'session'" />
