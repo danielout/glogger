@@ -50,13 +50,13 @@
       <Transition name="modal" appear>
         <div
           v-show="shopLogOpen"
-          class="fixed inset-0 z-40 flex items-center justify-center p-6">
+          class="fixed inset-0 z-[60] flex items-center justify-center p-6">
           <div class="absolute inset-0 bg-black/60" @click="shopLogOpen = false" />
           <div class="relative bg-surface-base border border-border-default rounded-lg shadow-xl flex flex-col w-full max-w-[min(1400px,95vw)] h-full max-h-[90vh]">
             <div class="flex items-center justify-between px-4 py-3 border-b border-border-default">
               <h3 class="text-sm font-semibold text-text-primary">Shop Log</h3>
               <button
-                class="text-text-dim hover:text-text-primary transition-colors text-lg leading-none cursor-pointer px-2"
+                class="text-text-secondary hover:text-text-primary transition-colors text-lg leading-none cursor-pointer px-2"
                 title="Close (Esc)"
                 @click="shopLogOpen = false">
                 &times;
