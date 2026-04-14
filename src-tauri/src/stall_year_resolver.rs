@@ -94,25 +94,6 @@ pub fn base_year_for_live(oldest_ts: &str) -> i32 {
     }
 }
 
-/// Backfill helper — infers the year for a row that pre-dates the `event_at`
-/// column. Events can never be in the future at insert time, so if the parsed
-/// `(month, day)` is later than `created_at`'s month/day, the event is from
-/// the previous year.
-pub fn backfill_year(
-    event_timestamp: &str,
-    created_year: i32,
-    created_month: u32,
-    created_day: u32,
-) -> Option<String> {
-    let (month, day, hour, minute) = parse_month_day_time(event_timestamp)?;
-    let year = if (month, day) > (created_month, created_day) {
-        created_year - 1
-    } else {
-        created_year
-    };
-    format_iso(year, month, day, hour, minute)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -195,19 +176,6 @@ mod tests {
             );
             assert_eq!(base_year_for_live(&ts), now.year() - 1);
         }
-    }
-
-    #[test]
-    fn backfill_same_year() {
-        let out = backfill_year("Mon Apr 13 09:00", 2026, 4, 14);
-        assert_eq!(out, Some("2026-04-13 09:00:00".to_string()));
-    }
-
-    #[test]
-    fn backfill_previous_year() {
-        // created_at = Mar 2026, event timestamp = Dec 28 → must be Dec 2025.
-        let out = backfill_year("Mon Dec 28 09:00", 2026, 3, 15);
-        assert_eq!(out, Some("2025-12-28 09:00:00".to_string()));
     }
 
     fn month_abbr(m: u32) -> &'static str {
