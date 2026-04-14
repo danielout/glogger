@@ -96,6 +96,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useSettingsStore } from "./stores/settingsStore";
 import { useStartupStore } from "./stores/startupStore";
 import { useUpdateStore } from "./stores/updateStore";
@@ -126,9 +127,11 @@ import CharacterSelect from "./components/Startup/CharacterSelect.vue";
 import ToastContainer from "./components/Shared/ToastContainer.vue";
 import QuickSearchOverlay from "./components/Search/QuickSearchOverlay.vue";
 import ReferenceShelf from "./components/Shared/ReferenceShelf/ReferenceShelf.vue";
+import { useToast } from "./composables/useToast";
 import type { SearchResult } from "./composables/useQuickSearch";
 
 const settingsStore = useSettingsStore();
+const toast = useToast();
 const startup = useStartupStore();
 const updateStore = useUpdateStore();
 const dataBrowserStore = useDataBrowserStore();
@@ -202,9 +205,24 @@ provideEntityNavigation((target) => {
   if (tab) dataBrowserStore.open(tab);
 });
 
+let unlistenDevToast: UnlistenFn | null = null;
+
 onMounted(async () => {
   await startup.initialize();
   updateStore.startPolling();
+
+  // Listen for toast events from the dev panel window
+  unlistenDevToast = await listen<{ type: string; message: string }>("dev-toast", (event) => {
+    const { type, message } = event.payload;
+    if (type === "success") toast.success(message);
+    else if (type === "warning") toast.warn(message);
+    else if (type === "error") toast.error(message);
+    else toast.info(message);
+  });
+});
+
+onBeforeUnmount(() => {
+  unlistenDevToast?.();
 });
 
 async function parseLog() {

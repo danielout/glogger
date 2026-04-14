@@ -14,6 +14,7 @@ Small tasks and notes that don't belong in a dedicated plan.
 - investigate: we don't show current equipment anywhere - is this in the log?
   - **Investigated:** Equipment IS tracked from Player.log via `ProcessSetEquippedItems`, but it only provides `slot` + `appearance_key` — no item names, stats, or details. The data is stored in `game_state_equipment` and exposed to the frontend. A basic "current equipment" display could be built but would only show appearance slots, not full item info. Full equipment details would require the VIP JSON export.
 
+- ~~feat: dev mode toggle in the advanced settings~~ **Done.** Dev mode toggle hides dual-log/upload buttons, titlebar opens dev panel window with game state, component showcase, and toast testing tabs. See `docs/features/dev-mode.md`.
 
 
 ---

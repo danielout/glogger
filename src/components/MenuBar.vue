@@ -6,7 +6,13 @@
       <div class="flex items-center gap-4">
         <div class="flex flex-col leading-tight">
           <div class="flex items-center gap-2">
-            <span class="text-accent-gold font-bold text-lg">glogger</span>
+            <component
+              :is="settingsStore.settings.devModeEnabled ? 'button' : 'span'"
+              class="text-accent-gold font-bold text-lg"
+              :class="settingsStore.settings.devModeEnabled ? 'cursor-pointer hover:text-accent-gold-bright bg-transparent border-none p-0 font-bold transition-colors' : ''"
+              :title="settingsStore.settings.devModeEnabled ? 'Open Dev Panel' : undefined"
+              @click="settingsStore.settings.devModeEnabled && openDevPanel()"
+            >glogger</component>
             <div class="flex items-center gap-1.5">
               <span
                 class="w-2 h-2 rounded-full"
@@ -94,8 +100,13 @@
 import { computed, reactive, watch } from "vue";
 import { useCoordinatorStore } from "../stores/coordinatorStore";
 import { useDataBrowserStore } from "../stores/dataBrowserStore";
+import { useSettingsStore } from "../stores/settingsStore";
 import { useKeyboard } from "../composables/useKeyboard";
+import { useDevPanel } from "../composables/useDevPanel";
 import CharacterPicker from "./CharacterPicker.vue";
+
+const settingsStore = useSettingsStore();
+const { openDevPanel } = useDevPanel();
 
 export type AppView = "dashboard" | "character" | "inventory" | "crafting" | "economics" | "chat" | "data-browser" | "search" | "settings" | "help";
 

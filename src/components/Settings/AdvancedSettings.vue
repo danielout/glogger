@@ -100,6 +100,7 @@
       </div>
     </div>
 
+    <template v-if="devMode">
     <div class="settings-section">
       <h3>Player.log Upload</h3>
 
@@ -173,6 +174,7 @@
       <div v-if="replayResultText" class="success-box">{{ replayResultText }}</div>
       <div v-if="replayError" class="error-box">{{ replayError }}</div>
     </div>
+    </template>
   </div>
 </template>
 

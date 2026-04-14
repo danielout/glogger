@@ -58,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useSettingsStore } from "../stores/settingsStore";
 import PaneLayout from "./Shared/PaneLayout.vue";
 import GeneralSettings from "./Settings/GeneralSettings.vue";
@@ -81,7 +81,7 @@ const props = defineProps<{
 
 type TabId = 'general' | 'app' | 'chat-logs' | 'notifications' | 'user-data' | 'game-data' | 'advanced' | 'game-state' | 'about';
 
-const tabs: { id: TabId; label: string }[] = [
+const allTabs: { id: TabId; label: string; devOnly?: boolean }[] = [
   { id: 'general', label: 'General' },
   { id: 'app', label: 'App Settings' },
   { id: 'chat-logs', label: 'Chat Logs' },
@@ -89,9 +89,13 @@ const tabs: { id: TabId; label: string }[] = [
   { id: 'user-data', label: 'User Data' },
   { id: 'game-data', label: 'Game Data' },
   { id: 'advanced', label: 'Advanced' },
-  { id: 'game-state', label: 'Game State' },
+  { id: 'game-state', label: 'Game State', devOnly: true },
   { id: 'about', label: 'About' },
 ];
+
+const tabs = computed(() =>
+  allTabs.filter(t => !t.devOnly || !settingsStore.settings.devModeEnabled)
+);
 
 const activeTab = ref<TabId>('general');
 </script>

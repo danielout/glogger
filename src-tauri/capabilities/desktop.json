@@ -6,7 +6,8 @@
     "linux"
   ],
   "windows": [
-    "main"
+    "main",
+    "dev-panel"
   ],
   "permissions": [
     "window-state:default"
