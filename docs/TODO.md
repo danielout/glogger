@@ -45,7 +45,12 @@ Small tasks and notes that don't belong in a dedicated plan.
   - **Investigated:** Equipment IS tracked from Player.log via `ProcessSetEquippedItems`, but it only provides `slot` + `appearance_key` — no item names, stats, or details. The data is stored in `game_state_equipment` and exposed to the frontend. A basic "current equipment" display could be built but would only show appearance slots, not full item info. Full equipment details would require the VIP JSON export.
 - [x] feat: need a place for known glogger issues - since we're still in alpha (almost beta) this would be useful. maybe the '?' in the top right.
   - Built a HelpView with known issues, limitations, and tips. Replaced the "Coming soon" placeholder in the `?` button's help view.
-
+- fix: on login we are assuming a lot of stack sizes are 1 it seems. this feels like data we should be able to pull out of the pile of inventory messages you get when you login or change zones.
+- investigate: we really need to overhaul how we track inventory changes and find some systemic solution to resolving what source, how much, what item, and where.
+- [x] impv: for the levelling tool in crafting, a 'use current skill and xp' or something to set the xp bar to the correct amount base don what the player has. so if i'm half way through 87, it can start me there. fallback option of allowing manual setting of xp value i supposed?
+  - Added `startingXp` to the leveling state. When a skill is selected, the current XP toward next level is auto-populated from game state. A "Starting XP" input is shown next to the level input, with a "use current" button to reset to the game state value. The first plan level pre-populates `xp_accumulated` with the starting XP, and the XP progress bar reflects it. The input is editable for manual override and disabled once a plan is started (clear to change).
+- [x] bug: leveling planner → project conversion doesn't account for multi-output recipes
+  - `createProjectFromLevelingPlan` was passing craft counts directly as project quantities, but the project system interprets quantities as "desired output items" and divides by output-per-craft. Fixed by multiplying craft counts by `recipe.result_items[0].stack_size` before passing to `addEntry`. Cook's Helper is unaffected (always passes 1, which correctly resolves to 1 craft).
 
 ---
 

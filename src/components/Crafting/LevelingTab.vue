@@ -32,6 +32,27 @@
           </div>
         </div>
 
+        <!-- Starting XP (XP already earned toward current level) -->
+        <div class="flex flex-col gap-1">
+          <label class="text-text-dim text-xs">Starting XP</label>
+          <div class="flex items-center gap-1.5">
+            <input
+              v-model.number="state.startingXp"
+              type="number"
+              min="0"
+              :max="state.xpTable[baseLevel] ?? 99999"
+              class="input w-20 text-center text-xs"
+              :disabled="state.planLevels.length > 0"
+              :title="state.planLevels.length > 0 ? 'Clear your plan to change starting XP' : 'XP already earned toward current level'" />
+            <button
+              v-if="gameStateXp !== null && state.startingXp !== gameStateXp && state.planLevels.length === 0"
+              class="text-text-muted text-[0.6rem] cursor-pointer bg-transparent border-none hover:text-accent-gold underline whitespace-nowrap"
+              @click="state.startingXp = gameStateXp!">
+              use current ({{ gameStateXp!.toLocaleString() }})
+            </button>
+          </div>
+        </div>
+
         <!-- XP buff -->
         <div class="flex flex-col gap-1">
           <label class="text-text-dim text-xs">XP Buff</label>
@@ -408,6 +429,9 @@ const allRecipes = ref<EnrichedRecipe[]>([]);
 // Aggregated materials for the plan
 const aggregatedMaterials = ref<FlattenedMaterial[]>([]);
 
+// Game state XP (for "use current" button)
+const gameStateXp = ref<number | null>(null);
+
 // ── Computed ─────────────────────────────────────────────────────────────────
 
 const effectiveMultiplier = computed(() =>
@@ -443,7 +467,7 @@ const currentLevelXpNeeded = computed(() => {
 });
 
 const currentLevelXpAccumulated = computed(() => {
-  if (state.value.planLevels.length === 0) return 0;
+  if (state.value.planLevels.length === 0) return state.value.startingXp;
   return state.value.planLevels[0].xp_accumulated;
 });
 
@@ -498,6 +522,8 @@ async function onSkillChange() {
   state.value.snapshotLevel = null;
   state.value.currentLevel = 0;
   state.value.bonusLevels = 0;
+  state.value.startingXp = 0;
+  gameStateXp.value = null;
   aggregatedMaterials.value = [];
 
   if (!state.value.selectedSkill) return;
@@ -510,6 +536,8 @@ async function onSkillChange() {
     state.value.snapshotLevel = skillData.totalLevel;
     state.value.currentLevel = skillData.totalLevel;
     state.value.bonusLevels = skillData.bonusLevels;
+    state.value.startingXp = skillData.xpTowardNext;
+    gameStateXp.value = skillData.xpTowardNext;
   }
 
   // Load XP table
@@ -713,11 +741,16 @@ function ensureCurrentLevel() {
     const xpNeeded = state.value.xpTable[lvl] ?? 0;
     if (xpNeeded <= 0) return; // Can't level further
 
+    // For the very first level in the plan, pre-populate with starting XP
+    // (XP the player has already earned toward this level)
+    const isFirstLevel = state.value.planLevels.length === 0;
+    const initialXp = isFirstLevel ? state.value.startingXp : 0;
+
     state.value.planLevels.unshift({
       from_level: lvl,
       to_level: lvl + 1,
       xp_needed: xpNeeded,
-      xp_accumulated: 0,
+      xp_accumulated: Math.min(initialXp, xpNeeded),
       entries: [],
     });
   }

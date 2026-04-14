@@ -767,6 +767,8 @@ export const useCraftingStore = defineStore("crafting", () => {
     xpBuffPercent: number
     xpTable: number[]
     planLevels: LevelingPlanLevel[]
+    /** XP already earned toward the current level (from game state or manual entry) */
+    startingXp: number
   }>({
     selectedSkill: "",
     currentLevel: 0,
@@ -775,25 +777,29 @@ export const useCraftingStore = defineStore("crafting", () => {
     xpBuffPercent: 0,
     xpTable: [],
     planLevels: [],
+    startingXp: 0,
   })
 
   /**
    * Create a crafting project from the current leveling plan.
    * Aggregates entries across all levels by recipe_id, summing craft counts.
+   * Converts craft counts to desired output quantities so the project's
+   * material resolver (which divides by output-per-craft) arrives at the
+   * correct number of crafts.
    */
   async function createProjectFromLevelingPlan(planName: string): Promise<number> {
     const plan = levelingState.value.planLevels
-    // Aggregate entries across all levels by recipe_id
-    const recipeMap = new Map<number, { recipe_name: string; total_quantity: number }>()
+    // Aggregate entries across all levels by recipe_id (craft counts)
+    const recipeMap = new Map<number, { recipe_name: string; total_crafts: number }>()
     for (const lvl of plan) {
       for (const entry of lvl.entries) {
         const existing = recipeMap.get(entry.recipe_id)
         if (existing) {
-          existing.total_quantity += entry.craft_count
+          existing.total_crafts += entry.craft_count
         } else {
           recipeMap.set(entry.recipe_id, {
             recipe_name: entry.recipe_name,
-            total_quantity: entry.craft_count,
+            total_crafts: entry.craft_count,
           })
         }
       }
@@ -801,7 +807,13 @@ export const useCraftingStore = defineStore("crafting", () => {
 
     const projectId = await createProject(planName)
     for (const [recipeId, data] of recipeMap) {
-      await addEntry(projectId, recipeId, data.recipe_name, data.total_quantity)
+      // Project entries use "desired output quantity" — the material resolver
+      // divides by output-per-craft to derive craft count. Multiply craft
+      // count by the recipe's output per craft so the math round-trips.
+      const recipe = await gameData.resolveRecipe(recipeId)
+      const outputPerCraft = recipe?.result_items[0]?.stack_size ?? 1
+      const desiredQuantity = data.total_crafts * outputPerCraft
+      await addEntry(projectId, recipeId, data.recipe_name, desiredQuantity)
     }
     return projectId
   }

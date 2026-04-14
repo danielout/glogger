@@ -89,10 +89,18 @@ const areas = computed(() => {
   for (const mat of props.needs) {
     if (mat.storage_have === 0) continue;
 
-    for (const vs of mat.vault_breakdown) {
-      if (vs.quantity === 0) continue;
+    // Track how much we still need to pick up across all vault entries.
+    // For shortfall items we only need what's missing; for fully-stocked
+    // items we need the lesser of quantity_needed and what's in storage.
+    // Subtract inventory_have since those don't need pickup.
+    let remaining = Math.max(0, mat.quantity_needed - mat.inventory_have);
 
-      const pickupQty = Math.min(vs.quantity, mat.quantity_needed);
+    for (const vs of mat.vault_breakdown) {
+      if (vs.quantity === 0 || remaining <= 0) continue;
+
+      const pickupQty = Math.min(vs.quantity, remaining);
+      remaining -= pickupQty;
+
       const areaName = vaultAreaMap.value.get(vs.vault_name) ?? vs.vault_name;
       const vaultLabel = vaultLabelMap.value.get(vs.vault_name) ?? vs.vault_name;
 
