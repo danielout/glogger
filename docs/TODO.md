@@ -2,7 +2,7 @@
 
 Small tasks and notes that don't belong in a dedicated plan.
 
-*Last reviewed: 2026-04-07*
+*Last reviewed: 2026-04-17*
 
 ---
 
@@ -14,14 +14,19 @@ Small tasks and notes that don't belong in a dedicated plan.
 - investigate: we don't show current equipment anywhere - is this in the log?
   - **Investigated:** Equipment IS tracked from Player.log via `ProcessSetEquippedItems`, but it only provides `slot` + `appearance_key` — no item names, stats, or details. The data is stored in `game_state_equipment` and exposed to the frontend. A basic "current equipment" display could be built but would only show appearance slots, not full item info. Full equipment details would require the VIP JSON export.
 
-- feat: migrate the teleport machine codes off the wiki and in to a widget. 
-- feat: "garden almanac" widget that saves alamanac data when you check it in game.
-- feat: "mushrom farming" widget that tells you current good/bad mushrooms to farm and lets you do msuhroom -> substrate lookups. probably a timer to remind about checking barrels, too? wiki has more info.
+- ~~feat: migrate the teleport machine codes off the wiki and in to a widget.~~ **Done.** `TeleportCodesWidget` — searchable lookup with zone filtering, ~190 codes across 14 zones.
+- feat: "garden almanac" widget that saves almanac data when you check it in game.
+  - **Investigated:** The almanac shows daily bonus (item + zone for guaranteed double-yield), rotating at midnight EST. `ProcessBook` parser event already exists and emits `BookOpened { title, content, book_type }`, but only `PlayerShopLog` is handled in the coordinator. The almanac likely fires as a different book type. **Blocker:** need someone to read the almanac in-game and check what the `ProcessBook(...)` line looks like in Player.log. If parseable: add coordinator handler, new SQLite table for entries, frontend widget using `ItemInline`/`AreaInline`. Widget can only show data after the player reads the almanac — can't predict future bonuses unless the rotation algorithm is reverse-engineered. **Effort: Medium.**
+- ~~feat: "mushroom farming" widget — lookup tool with moon phase integration.~~ **Done.** `MushroomFarmingWidget` — 22 varieties with level, grow time, substrates, and live moon phase highlighting for robust/poor. Sortable and filterable.
+  - feat: barrel timers for mushroom farming. No log events for barrel placement/harvest, so timers would need manual user input. Needs a general-purpose timer system (reusable with brewing/cheesemaking/fletching). **Effort: Medium-High.**
 - feat: fletching/cheesemaking/brewing timer widget? what can we do there?
-- feat: add repeatable quest tracking for statehelm quests to  the statehelm character page.
-  - impv: track count of statehelm reknown possible vs earned in the statehelm widget. requires the above statehelm work first.
-- investigate: waiting on more log data, but investigate brewing tracker. consult wiki to learn more about mechanics. talk to buppis for more info.
-- feat: 'package data' feature to create zip file of game state json, player.log, chat logs, and any character/inventory exports that occured during the session. we probably should start saving the last X historical character jsons locally once we detect them to help with this, since (unlike inventory exports) they get overwritten
+  - **Investigated:** All three skills share a real-time waiting pattern. **Brewing:** un-aged casks age in caves, 1–3 hours by level, 2–3 concurrent slots. **Cheesemaking:** cheese ages in cave containers, 1–9 hours, 1–3 slots. **Fletching:** arrow shafts dry in boxes, 1–30 min, but only during daylight + sunny weather, 1–7 slots. The parser recognizes `Brew`/`Distill` as `DoDelayLoop` action types but only for the short crafting animation — the multi-hour aging/drying timers are **not in Player.log**. No fletching or cheesemaking recognition in the parser either. Without log events, these are manual-entry timer widgets. Could share a general-purpose timer system with mushroom barrel timers. Worth checking if newer game versions produce aging log events. **Effort: Medium-High.** Talk to buppis for more info on brewing specifics.
+- feat: add repeatable quest tracking for statehelm quests to the statehelm character page.
+  - **Investigated:** StatehelmView already has full gift tracking (NPC cards, favor tiers, progress dots). CDN quest data has `ReuseTime_Days/Hours/Minutes` fields for repeatable quest cooldowns and `DeltaScriptAtomicInt` renown rewards. **Blocker:** quest events (`ProcessCompleteQuest`, `ProcessAddQuest`, etc.) are listed in the parser docs as **not yet implemented** — no `QuestCompleted` variant exists in `PlayerEvent`. Needs: (1) implement quest event parsing in `PlayerEventParser`, (2) new `game_state_quest_completions` table, (3) coordinator handler, (4) extract `ReuseTime_*` from CDN quest JSON, (5) filter to Statehelm quests, (6) frontend UI with cooldown timers. **Effort: High.**
+  - impv: track count of statehelm renown possible vs earned in the statehelm widget. requires the above statehelm work first.
+    - **Investigated:** Statehelm Renown is already tracked as a currency in `game_state_currencies`. "Possible vs earned" requires summing renown rewards from completed repeatable quests against total available — fully depends on the quest tracking above being built first.
+- feat: 'package data' feature to create zip file of game state json, player.log, chat logs, and any character/inventory exports that occurred during the session. we probably should start saving the last X historical character jsons locally once we detect them to help with this, since (unlike inventory exports) they get overwritten
+  - **Investigated:** All data sources have path helpers already (`get_player_log_path()`, `get_chat_logs_dir()`, Reports/ directory). `character_snapshots` table already stores `raw_json` for every imported snapshot — **historical character JSON is already preserved in the database**, so the "save last X" concern is partially solved. Inventory snapshots also store `raw_json`. No zip/export code exists — needs `zip` crate added to Cargo.toml, a new Tauri command to gather files + DB snapshots into a zip, and a save dialog. **Effort: Low-Medium.**
 
 ---
 
