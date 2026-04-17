@@ -16,6 +16,7 @@ import RecipeItemsWidget from "./widgets/RecipeItemsWidget.vue";
 import ZoneNpcsWidget from "./widgets/ZoneNpcsWidget.vue";
 import GiftWatcherWidget from "./widgets/GiftWatcherWidget.vue";
 import TeleportCodesWidget from "./widgets/TeleportCodesWidget.vue";
+import MushroomFarmingWidget from "./widgets/MushroomFarmingWidget.vue";
 
 export type WidgetSize = "small" | "medium" | "large";
 
@@ -136,6 +137,12 @@ export const DASHBOARD_WIDGETS: DashboardWidget[] = [
     name: "Teleport Machine Codes",
     component: TeleportCodesWidget,
     defaultSize: "medium",
+  },
+  {
+    id: "mushroom-farming",
+    name: "Mushroom Farming",
+    component: MushroomFarmingWidget,
+    defaultSize: "large",
   },
 ];
 
