@@ -21,23 +21,33 @@
       </button>
     </div>
 
-    <div class="flex flex-col gap-0.5 max-h-80 overflow-y-auto">
+    <div class="flex flex-col gap-1.5 overflow-y-auto max-h-80 pr-1">
       <div
-        v-for="entry in filteredCodes"
-        :key="entry.code"
-        class="flex items-center gap-2 py-1 px-1 rounded text-sm hover:bg-surface-2">
-        <span class="font-mono text-accent-gold shrink-0 w-10">{{ entry.code }}</span>
-        <span class="text-text-secondary truncate">{{ entry.destination }}</span>
-        <span class="text-text-dim text-xs ml-auto shrink-0">{{ entry.zone }}</span>
+        v-for="group in groupedResults"
+        :key="group.zone + group.destination"
+        class="py-1 px-1 rounded hover:bg-surface-2">
+        <div class="text-sm">
+          <span class="text-text-dim">{{ group.zone }}</span>
+          <span class="text-text-dim mx-1">&mdash;</span>
+          <span class="text-text-secondary">{{ group.destination }}</span>
+        </div>
+        <div class="flex flex-wrap gap-1.5 mt-0.5">
+          <span
+            v-for="code in group.codes"
+            :key="code"
+            class="font-mono text-xs text-accent-gold bg-surface-2 px-1.5 py-0.5 rounded">
+            {{ code }}
+          </span>
+        </div>
       </div>
 
-      <div v-if="filteredCodes.length === 0" class="text-xs text-text-dim italic py-2">
+      <div v-if="groupedResults.length === 0" class="text-xs text-text-dim italic py-2">
         No codes match your search.
       </div>
     </div>
 
     <div class="text-xs text-text-dim">
-      {{ filteredCodes.length }} of {{ TELEPORT_CODES.length }} codes shown. Codes last verified March 2025.
+      {{ totalCodes }} codes across {{ groupedResults.length }} destinations. Codes last verified March 2025.
     </div>
   </div>
 </template>
@@ -52,6 +62,12 @@ interface TeleportCode {
   code: string
   destination: string
   zone: string
+}
+
+interface CodeGroup {
+  zone: string
+  destination: string
+  codes: string[]
 }
 
 const TELEPORT_CODES: TeleportCode[] = [
@@ -299,9 +315,10 @@ const zones = computed(() => {
   return [...zoneSet]
 })
 
-const filteredCodes = computed(() => {
+const groupedResults = computed(() => {
   const q = search.value.toLowerCase().trim()
-  return TELEPORT_CODES.filter(entry => {
+
+  const filtered = TELEPORT_CODES.filter(entry => {
     if (selectedZone.value && entry.zone !== selectedZone.value) return false
     if (q) {
       return (
@@ -312,5 +329,22 @@ const filteredCodes = computed(() => {
     }
     return true
   })
+
+  const groups = new Map<string, CodeGroup>()
+  for (const entry of filtered) {
+    const key = `${entry.zone}|${entry.destination}`
+    const existing = groups.get(key)
+    if (existing) {
+      existing.codes.push(entry.code)
+    } else {
+      groups.set(key, { zone: entry.zone, destination: entry.destination, codes: [entry.code] })
+    }
+  }
+
+  return [...groups.values()]
 })
+
+const totalCodes = computed(() =>
+  groupedResults.value.reduce((sum, g) => sum + g.codes.length, 0)
+)
 </script>

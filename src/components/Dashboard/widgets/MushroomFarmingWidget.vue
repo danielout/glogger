@@ -11,13 +11,20 @@
 
     <!-- Filter controls -->
     <div class="flex items-center gap-2">
-      <select
-        v-model="filterMode"
-        class="px-2 py-1 rounded bg-surface-2 border border-border text-sm text-text-primary focus:outline-none focus:border-accent-blue">
-        <option value="all">All Mushrooms</option>
-        <option value="robust">Robust Now</option>
-        <option value="poor">Avoid Now</option>
-      </select>
+      <div class="flex rounded border border-border overflow-hidden text-xs">
+        <button
+          v-for="opt in filterOptions"
+          :key="opt.value"
+          class="px-2.5 py-1 transition-colors"
+          :class="
+            filterMode === opt.value
+              ? 'bg-accent-blue text-white'
+              : 'bg-surface-2 text-text-secondary hover:bg-surface-3'
+          "
+          @click="filterMode = opt.value">
+          {{ opt.label }}
+        </button>
+      </div>
       <input
         v-model="search"
         type="text"
@@ -26,7 +33,7 @@
     </div>
 
     <!-- Mushroom table -->
-    <div class="overflow-x-auto">
+    <div class="overflow-y-auto max-h-80">
       <table class="w-full text-sm">
         <thead>
           <tr class="text-text-dim text-xs border-b border-border">
@@ -87,8 +94,8 @@
     </div>
 
     <div class="text-xs text-text-dim flex items-center gap-1">
-      <span class="text-green-400">&#9679;</span> robust (bonus yield)
-      <span class="text-red-400 ml-2">&#9679;</span> poor (reduced yield)
+      <span class="text-green-400">&#9679;</span> extra yield
+      <span class="text-red-400 ml-2">&#9679;</span> reduced yield
       <span class="ml-2">Substrate: <span class="text-accent-gold">optimal</span> / adequate</span>
     </div>
   </div>
@@ -102,8 +109,14 @@ import ItemInline from '../../Shared/Item/ItemInline.vue'
 const { phase, daysUntil } = useMoonPhase()
 
 const search = ref('')
-const filterMode = ref<'all' | 'robust' | 'poor'>('all')
+const filterMode = ref<'all' | 'robust' | 'poor'>('robust')
 const sortKey = ref<'name' | 'level' | 'growTime'>('level')
+
+const filterOptions = [
+  { value: 'all' as const, label: 'All' },
+  { value: 'robust' as const, label: 'Extra Yield' },
+  { value: 'poor' as const, label: 'Reduced Yield' },
+]
 const sortAsc = ref(true)
 
 interface MushroomInfo {

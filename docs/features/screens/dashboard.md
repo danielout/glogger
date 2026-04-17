@@ -83,6 +83,8 @@ Each widget is documented in its own file under `dashboard/`:
 | [Statehelm Gifting](dashboard/widget-statehelm-summary.md) | Medium | Weekly gift progress summary |
 | [Watchword Alerts](dashboard/widget-watchword-alerts.md) | Medium | Recent watchword match feed |
 | Gift Watcher | Medium | Monitors inventory for items matching watched NPCs' gift preferences |
+| Teleport Machine Codes | Medium | Searchable lookup for ~190 teleportation machine codes across 14 zones, grouped by zone/destination |
+| Mushroom Farming | Large | Moon-phase-aware mushroom reference table with level, grow time, substrates, and extra/reduced yield highlighting |
 
 ## Adding a New Widget
 
@@ -112,6 +114,8 @@ Each widget is documented in its own file under `dashboard/`:
 | Gift tracking | `useStatehelmTracker` composable | Persistent (database) |
 | Watch rule matches | `get_watch_rule_messages` Tauri command | Persistent (database) |
 | Moon phase | `useMoonPhase` composable (calculated) | N/A (derived) |
+| Teleport codes | Hardcoded static data in widget | N/A (static reference) |
+| Mushroom data | Hardcoded static data + `useMoonPhase` | N/A (static + derived) |
 | Player notes | `localStorage` | Persistent (browser) |
 | Widget order/visibility | `viewPreferences['dashboard']` | Persistent (settings file) |
 
