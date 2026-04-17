@@ -237,7 +237,8 @@ export const useFarmingStore = defineStore("farming", () => {
       if (session.value.pauseStartTime) {
         const pauseStart = tsToSeconds(session.value.pauseStartTime);
         const now = tsToSeconds(getCurrentTimestamp());
-        session.value.totalPausedSeconds += now - pauseStart;
+        const pauseDiff = now - pauseStart;
+        session.value.totalPausedSeconds += pauseDiff >= 0 ? pauseDiff : pauseDiff + 86400;
         session.value.pauseStartTime = null;
       }
       session.value.isPaused = false;
@@ -279,7 +280,9 @@ export const useFarmingStore = defineStore("farming", () => {
       endSeconds = tsToSeconds(getCurrentTimestamp());
     }
 
-    const totalSeconds = Math.max(0, endSeconds - start);
+    // Handle midnight rollover: if end < start, session crossed midnight
+    const rawDiff = endSeconds - start;
+    const totalSeconds = rawDiff >= 0 ? rawDiff : rawDiff + 86400;
     return Math.max(0, totalSeconds - session.value.totalPausedSeconds);
   }
 
