@@ -14,23 +14,14 @@ Small tasks and notes that don't belong in a dedicated plan.
 - investigate: we don't show current equipment anywhere - is this in the log?
   - **Investigated:** Equipment IS tracked from Player.log via `ProcessSetEquippedItems`, but it only provides `slot` + `appearance_key` — no item names, stats, or details. The data is stored in `game_state_equipment` and exposed to the frontend. A basic "current equipment" display could be built but would only show appearance slots, not full item info. Full equipment details would require the VIP JSON export.
 
-- impv: "details" side panel on the NPC Screen should open automatically when clicking a NPC
-- bug: timers for farming session/survey session don't seem to handle rollovers well.
-- impv: several font colors are hard to read (grey on grey is bad) and broadly font size is a common feedback item
-- impv: recipes widget should look at storage and inventory both
-- impv: zone NPCs widget is so tall compared to others. we need to cap its height more. 
 - feat: migrate the teleport machine codes off the wiki and in to a widget. 
-- bug: the pricing calculator for our projects page doesn't seem to be accounting for market values - it is just using vendor values, i think?
-- bug: tooltips can extend past the top/bottom of the screen - need to adjust them to ensure their content fits.
 - feat: "garden almanac" widget that saves alamanac data when you check it in game.
 - feat: "mushrom farming" widget that tells you current good/bad mushrooms to farm and lets you do msuhroom -> substrate lookups. probably a timer to remind about checking barrels, too? wiki has more info.
 - feat: fletching/cheesemaking/brewing timer widget? what can we do there?
 - feat: add repeatable quest tracking for statehelm quests to  the statehelm character page.
-  - impv: track count of statehelm reknown possible vs earned in the statehelm widget.
+  - impv: track count of statehelm reknown possible vs earned in the statehelm widget. requires the above statehelm work first.
 - investigate: waiting on more log data, but investigate brewing tracker. consult wiki to learn more about mechanics. talk to buppis for more info.
 - feat: 'package data' feature to create zip file of game state json, player.log, chat logs, and any character/inventory exports that occured during the session. we probably should start saving the last X historical character jsons locally once we detect them to help with this, since (unlike inventory exports) they get overwritten
-- bug: build planner name dropdown needs its own line
-- bug: the cow 'Stampede' ability is classified as a monster ability.
 
 ---
 
