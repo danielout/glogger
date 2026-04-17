@@ -684,7 +684,7 @@ fn insert_survey_types(
             });
 
         // Compute crafting cost from always-consumed recipe ingredients (paper & ink).
-        // Vendor buy price = item.value * 1.5 (NPC vendor markup).
+        // Estimated acquisition cost = item.value * 2 (value is what NPCs pay you).
         // Skip ingredients with partial chance_to_consume (crystals, etc.) for now.
         let crafting_cost: Option<f64> = matching_recipe.map(|recipe| {
             recipe
@@ -700,8 +700,8 @@ fn insert_survey_types(
                         .and_then(|iid| items.get(&iid))
                         .and_then(|i| i.value)
                         .unwrap_or(0.0);
-                    let vendor_price = item_value as f64 * 1.5;
-                    ing.stack_size as f64 * vendor_price
+                    let est_price = item_value as f64 * 2.0;
+                    ing.stack_size as f64 * est_price
                 })
                 .sum()
         });

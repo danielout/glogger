@@ -150,8 +150,10 @@ export interface MaterialNeed {
   vault_breakdown: VaultStock[]
   /** How many more the player needs to acquire */
   shortfall: number
-  /** Estimated vendor buy price per unit (value * 1.5) */
+  /** Estimated NPC vendor price per unit (value * 2), null if not vendor-purchasable */
   vendor_price: number | null
+  /** Best known acquisition price: market price if available, else value * 2 fallback */
+  unit_price: number | null
   /** True if this item can be crafted via a known recipe (intermediate ingredient) */
   is_craftable: boolean
   /** True if this is a wildcard/keyword slot (e.g. "Any Crystal") */

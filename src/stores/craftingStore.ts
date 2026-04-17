@@ -39,20 +39,19 @@ export const useCraftingStore = defineStore("crafting", () => {
   // ── Price helpers ──────────────────────────────────────────────────────────
 
   /**
-   * Get the best known price for an item: market price if set, otherwise vendor price * 1.5.
-   * Returns null if no price is known.
+   * Get the best known price for an item: market price if set, otherwise
+   * a rough estimate of 2× vendor buy value (what you'd get selling to an NPC).
    */
-  /** Estimated item price for recipe cost calculations (market → vendor fallback) */
   function getItemPrice(itemId: number, vendorValue: number | null | undefined): number | null {
     const market = marketStore.valuesByItemId[itemId];
     if (market) return market.market_value;
-    if (vendorValue) return vendorValue * 1.5;
+    if (vendorValue) return vendorValue * 2;
     return null;
   }
 
-  /** Vendor buy price only — for determining if an item is NPC-purchasable */
-  function getVendorBuyPrice(vendorValue: number | null | undefined): number | null {
-    if (vendorValue) return vendorValue * 1.5;
+  /** Rough acquisition cost estimate when no market price is available */
+  function getEstimatedPrice(vendorValue: number | null | undefined): number | null {
+    if (vendorValue) return vendorValue * 2;
     return null;
   }
 
@@ -480,7 +479,7 @@ export const useCraftingStore = defineStore("crafting", () => {
 
       const item = itemData[String(itemId)];
       const vendorValue = vendorSet.has(itemId) ? (item?.value ?? null) : null;
-      const price = getVendorBuyPrice(vendorValue);
+      const price = getItemPrice(itemId, item?.value);
 
       needs.push({
         item_id: itemId,
@@ -490,7 +489,8 @@ export const useCraftingStore = defineStore("crafting", () => {
         storage_have: storageQty,
         vault_breakdown: avail?.vault_breakdown ?? [],
         shortfall,
-        vendor_price: price,
+        vendor_price: vendorValue ? getEstimatedPrice(vendorValue) : null,
+        unit_price: price,
         is_craftable: mat.is_craftable,
       });
     }
@@ -540,6 +540,7 @@ export const useCraftingStore = defineStore("crafting", () => {
         vault_breakdown: combinedVaultBreakdown,
         shortfall,
         vendor_price: null,
+        unit_price: null,
         is_craftable: false,
         is_dynamic: true,
         item_keys: mat.item_keys,
@@ -1261,7 +1262,7 @@ export const useCraftingStore = defineStore("crafting", () => {
     if (shortfalls.length > 0) {
       lines.push("=== Still Needed ===")
       for (const n of shortfalls) {
-        const cost = n.vendor_price ? ` (~${Math.round(n.vendor_price * n.shortfall).toLocaleString()}g from vendor)` : ""
+        const cost = n.unit_price ? ` (~${Math.round(n.unit_price * n.shortfall).toLocaleString()}g est.)` : ""
         lines.push(`  ${n.item_name} x${n.shortfall}${cost}`)
       }
       lines.push("")

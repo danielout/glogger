@@ -41,7 +41,7 @@ export interface RecipeCostBreakdown {
  * - Use market price if available
  * - If the ingredient is craftable, recursively compute the craft cost
  *   and use min(market, craft cost) as the effective price
- * - Fall back to vendor price (value × 1.5) if no market or craft price
+ * - Fall back to estimated price (value × 2) if no market or craft price
  */
 export function useRecipeCost() {
   const gameData = useGameDataStore()
@@ -56,7 +56,7 @@ export function useRecipeCost() {
   }
 
   function getVendorPrice(vendorValue: number | null | undefined): number | null {
-    if (vendorValue) return vendorValue * 1.5
+    if (vendorValue) return vendorValue * 2
     return null
   }
 

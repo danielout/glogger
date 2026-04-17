@@ -538,7 +538,7 @@ async function loadSkills() {
 function getItemPrice(itemId: number, vendorValue: number | null | undefined): number | null {
   const market = marketStore.valuesByItemId[itemId];
   if (market) return market.market_value;
-  if (vendorValue) return vendorValue * 1.5;
+  if (vendorValue) return vendorValue * 2;
   return null;
 }
 

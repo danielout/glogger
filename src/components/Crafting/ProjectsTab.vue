@@ -321,7 +321,7 @@ async function resolvePrices(materials: Map<string, FlattenedMaterial>, gen: num
     const item = items[String(mat.item_id)];
     const marketVal = marketStore.valuesByItemId[mat.item_id];
     const marketPrice = marketVal ? marketVal.market_value : null;
-    const vendorPrice = item?.value ? item.value * 1.5 : null;
+    const vendorPrice = item?.value ? item.value * 2 : null;
 
     const candidates: { price: number; source: "market" | "vendor" }[] = [];
     if (marketPrice !== null) candidates.push({ price: marketPrice, source: "market" });

@@ -438,7 +438,7 @@ const hasShortfalls = computed(() =>
 
 const vendorCost = computed(() =>
   props.materialNeeds
-    .filter((m) => m.shortfall > 0 && m.vendor_price)
-    .reduce((sum, m) => sum + (m.vendor_price! * m.shortfall), 0)
+    .filter((m) => m.shortfall > 0 && m.unit_price)
+    .reduce((sum, m) => sum + (m.unit_price! * m.shortfall), 0)
 );
 </script>

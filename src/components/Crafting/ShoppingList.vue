@@ -46,7 +46,7 @@
         Source Elsewhere
       </h4>
       <p class="text-text-dim text-[0.65rem] -mt-2 m-0">
-        Not sold by NPC vendors — find, farm, craft, or buy from player shops.
+        No price data available — set a market price or find these in-game.
       </p>
 
       <table class="w-full text-xs">
@@ -105,7 +105,7 @@ const allShortfalls = computed((): ShoppingItem[] => {
       item_id: m.item_id,
       item_name: m.item_name,
       shortfall: m.shortfall,
-      cost: m.vendor_price ? m.vendor_price * m.shortfall : null,
+      cost: m.unit_price ? m.unit_price * m.shortfall : null,
       is_craftable: m.is_craftable,
       is_dynamic: m.is_dynamic ?? false,
     }))
