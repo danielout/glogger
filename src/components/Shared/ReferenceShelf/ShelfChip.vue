@@ -18,6 +18,7 @@
   <Teleport to="body">
     <div
       v-if="showTooltip"
+      ref="shelfTooltipEl"
       class="fixed z-[9999] min-w-62 max-w-87 bg-[#1a1a2e] border rounded-md p-3 shadow-lg pointer-events-none"
       :class="borderClass"
       :style="tooltipStyle"
@@ -29,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, shallowRef, type CSSProperties, type Component } from "vue";
+import { ref, computed, shallowRef, watch, nextTick, type CSSProperties, type Component } from "vue";
 import { useGameDataStore } from "../../../stores/gameDataStore";
 import { useReferenceShelfStore, type PinnedEntity } from "../../../stores/referenceShelfStore";
 import { useEntityNavigation, type EntityType } from "../../../composables/useEntityNavigation";
@@ -70,17 +71,40 @@ function onChipEnter() {
   if (chipEl.value) {
     chipRect.value = chipEl.value.getBoundingClientRect();
   }
+  updateTooltipPosition();
   baseEnter();
 }
 
-// Position tooltip above the chip
-const tooltipStyle = computed<CSSProperties>(() => {
-  if (!chipRect.value) return {};
+// Position tooltip above the chip, flipping below if not enough space above
+const shelfTooltipEl = ref<HTMLElement | null>(null);
+const tooltipStyle = ref<CSSProperties>({});
+
+function updateTooltipPosition() {
+  if (!chipRect.value) {
+    tooltipStyle.value = {};
+    return;
+  }
   const rect = chipRect.value;
-  return {
-    bottom: `${window.innerHeight - rect.top + 8}px`,
-    left: `${rect.left}px`,
+  const gap = 8;
+  const tooltipHeight = shelfTooltipEl.value?.offsetHeight ?? 200;
+  const tooltipWidth = shelfTooltipEl.value?.offsetWidth ?? 300;
+  const spaceAbove = rect.top - gap;
+  const spaceBelow = window.innerHeight - rect.bottom - gap;
+  const openBelow = spaceAbove < tooltipHeight && spaceBelow > spaceAbove;
+  const left = Math.max(4, Math.min(rect.left, window.innerWidth - tooltipWidth - 4));
+
+  tooltipStyle.value = {
+    left: `${left}px`,
+    ...(openBelow
+      ? { top: `${rect.bottom + gap}px` }
+      : { bottom: `${window.innerHeight - rect.top + gap}px` }),
   };
+}
+
+watch(showTooltip, (visible) => {
+  if (visible) {
+    nextTick(updateTooltipPosition);
+  }
 });
 
 const entityColorMap: Record<EntityType, string> = {

@@ -9,6 +9,7 @@
     <Teleport to="body">
       <div
         v-if="showTooltip && !disabled"
+        ref="tooltipEl"
         class="fixed z-[9999] min-w-62 max-w-87 bg-[#1a1a2e] border rounded-md p-3 shadow-lg"
         :class="[borderClass, isInteractive ? '' : 'pointer-events-none']"
         :style="tooltipStyle"
@@ -38,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, type CSSProperties } from "vue";
+import { ref, computed, watch, nextTick, type CSSProperties } from "vue";
 import { useTooltip } from "../../composables/useTooltip";
 import { useReferenceShelfStore } from "../../stores/referenceShelfStore";
 import type { EntityType } from "../../composables/useEntityNavigation";
@@ -89,8 +90,16 @@ function onMouseEnter() {
   if (anchorEl.value) {
     anchorRect.value = anchorEl.value.getBoundingClientRect();
   }
+  updateTooltipPosition();
   baseMouseEnter();
 }
+
+// Re-position after tooltip renders so we have its actual dimensions
+watch(showTooltip, (visible) => {
+  if (visible) {
+    nextTick(updateTooltipPosition);
+  }
+});
 
 function togglePin() {
   if (!props.entityType || !props.entityReference) return;
@@ -101,12 +110,28 @@ function togglePin() {
   });
 }
 
-const tooltipStyle = computed<CSSProperties>(() => {
-  if (!anchorRect.value) return {};
+const tooltipEl = ref<HTMLElement | null>(null);
+const tooltipStyle = ref<CSSProperties>({});
+
+function updateTooltipPosition() {
+  if (!anchorRect.value) {
+    tooltipStyle.value = {};
+    return;
+  }
   const rect = anchorRect.value;
-  return {
-    top: `${rect.bottom + 8}px`,
-    left: `${rect.left}px`,
+  const gap = 8;
+  const tooltipHeight = tooltipEl.value?.offsetHeight ?? 200;
+  const tooltipWidth = tooltipEl.value?.offsetWidth ?? 300;
+  const spaceBelow = window.innerHeight - rect.bottom - gap;
+  const spaceAbove = rect.top - gap;
+  const openAbove = spaceBelow < tooltipHeight && spaceAbove > spaceBelow;
+  const left = Math.max(4, Math.min(rect.left, window.innerWidth - tooltipWidth - 4));
+
+  tooltipStyle.value = {
+    left: `${left}px`,
+    ...(openAbove
+      ? { bottom: `${window.innerHeight - rect.top + gap}px` }
+      : { top: `${rect.bottom + gap}px` }),
   };
-});
+}
 </script>
