@@ -80,6 +80,7 @@ import { useCharacterStore } from '../../stores/characterStore'
 import { useGameStateStore } from '../../stores/gameStateStore'
 import { useGameDataStore } from '../../stores/gameDataStore'
 import { useSettingsStore } from '../../stores/settingsStore'
+import { useViewPrefs } from '../../composables/useViewPrefs'
 import EmptyState from '../Shared/EmptyState.vue'
 import PaneLayout from '../Shared/PaneLayout.vue'
 import NpcFilterPanel from './NpcFilterPanel.vue'
@@ -93,6 +94,12 @@ const settingsStore = useSettingsStore()
 
 const selectedNpcKey = ref<string | null>(null)
 const filterPanelRef = ref<InstanceType<typeof NpcFilterPanel> | null>(null)
+
+// Share the right pane's collapsed state so we can expand it on NPC selection
+const { prefs: rightPanePrefs, update: updateRightPane } = useViewPrefs('npcs.pane.right', {
+  collapsed: true,
+  width: 700,
+})
 
 const hasData = computed(() =>
   characterStore.npcFavor.length > 0 || gameState.favor.length > 0
@@ -140,5 +147,8 @@ const selectedCdnData = computed(() => {
 
 function selectNpc(key: string) {
   selectedNpcKey.value = key
+  if (rightPanePrefs.value.collapsed) {
+    updateRightPane({ collapsed: false })
+  }
 }
 </script>
