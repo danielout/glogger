@@ -10,6 +10,7 @@
     background: theme(--color-surface-dark);
     color: theme(--color-text-primary);
     font-family: monospace;
+    font-size: 14px;
   }
 
   button {
