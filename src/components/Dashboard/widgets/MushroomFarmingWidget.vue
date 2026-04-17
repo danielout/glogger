@@ -4,8 +4,8 @@
     <div v-if="phase" class="flex items-center gap-2 text-sm">
       <span class="text-lg">{{ phase.emoji }}</span>
       <span class="text-text-secondary">{{ phase.label }}</span>
-      <span v-if="nextFullMoon" class="text-text-dim text-xs ml-auto">
-        Full Moon in {{ nextFullMoon.days }}d
+      <span v-if="nextPhase" class="text-text-dim text-xs ml-auto">
+        {{ nextPhase.label }} in {{ nextPhase.days }}d
       </span>
     </div>
 
@@ -170,7 +170,7 @@ function phaseLabel(name: MoonPhaseName): string {
   return PHASE_LABELS[name] ?? name
 }
 
-const nextFullMoon = computed(() => daysUntil.value.find(d => d.game_phase === 'FullMoon'))
+const nextPhase = computed(() => daysUntil.value.length > 0 ? daysUntil.value[0] : null)
 
 function isRobustNow(m: MushroomInfo): boolean {
   return !!phase.value && m.robustPhases.includes(phase.value.name)
