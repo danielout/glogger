@@ -1,6 +1,6 @@
 use crate::game_data::{
     AbilityInfo, AreaInfo, GameData, ItemInfo, ItemUseInfo, QuestInfo, RecipeInfo, SkillInfo,
-    TsysClientInfo, XpTableInfo,
+    SurveyKind, TsysClientInfo, XpTableInfo,
 };
 use rusqlite::{params, Connection, OptionalExtension, Result, Transaction};
 
@@ -23,7 +23,13 @@ pub fn persist_cdn_data(conn: &mut Connection, data: &GameData) -> Result<()> {
     insert_item_uses(&tx, &data.item_uses)?;
     insert_areas(&tx, &data.areas)?;
     insert_foods(&tx, &data.items)?;
-    insert_survey_types(&tx, &data.items, &data.recipes)?;
+    insert_survey_types(&tx, &data.items, &data.recipes, &data.areas)?;
+
+    // Backfill survey_uses.area for any rows that are NULL or still hold
+    // old-style zone strings (from before the CDN ingestion started
+    // writing proper area keys). This runs on every CDN reload so newly
+    // corrected survey_types.zone values propagate to historical uses.
+    backfill_survey_use_areas(&tx)?;
 
     // Update CDN version
     tx.execute(
@@ -32,6 +38,29 @@ pub fn persist_cdn_data(conn: &mut Connection, data: &GameData) -> Result<()> {
     )?;
 
     tx.commit()?;
+    Ok(())
+}
+
+/// Patch `survey_uses.area` from `survey_types.zone` for any row where:
+/// - area is NULL, OR
+/// - area doesn't start with "Area" (old-style raw zone string like
+///   "KurMountains" or "Povus9Y" from the legacy InternalName parser)
+///
+/// Cheap UPDATE — indexed by `map_internal_name`. Called both from the
+/// one-time migration and from every CDN reload so corrections propagate.
+fn backfill_survey_use_areas(conn: &Connection) -> Result<()> {
+    conn.execute(
+        "UPDATE survey_uses
+            SET area = (
+                SELECT st.zone
+                  FROM survey_types st
+                 WHERE st.internal_name = survey_uses.map_internal_name
+                   AND st.zone IS NOT NULL
+            )
+          WHERE area IS NULL
+             OR (area NOT LIKE 'Area%' AND area != '(unknown)')",
+        [],
+    )?;
     Ok(())
 }
 
@@ -60,6 +89,10 @@ fn clear_cdn_data(tx: &Transaction) -> Result<()> {
              icon_id          INTEGER,
              survey_category  TEXT NOT NULL,
              is_motherlode    BOOLEAN NOT NULL DEFAULT 0,
+             -- Canonical kind, set from ItemInfo::survey_kind() during CDN persist.
+             -- One of 'basic' | 'motherlode' | 'multihit'. Prefer this over
+             -- is_motherlode for new code; is_motherlode kept for back-compat.
+             kind             TEXT NOT NULL DEFAULT 'basic',
              skill_req_name   TEXT,
              skill_req_level  INTEGER,
              survey_skill_req INTEGER,
@@ -70,6 +103,7 @@ fn clear_cdn_data(tx: &Transaction) -> Result<()> {
          );
          CREATE INDEX idx_survey_types_zone ON survey_types(zone);
          CREATE INDEX idx_survey_types_category ON survey_types(survey_category);
+         CREATE INDEX idx_survey_types_kind ON survey_types(kind);
          CREATE INDEX idx_survey_types_name ON survey_types(name COLLATE NOCASE);",
     )?;
     Ok(())
@@ -540,18 +574,35 @@ fn parse_food_desc(food_desc: &str) -> Option<(i64, String)> {
     Some((level, category))
 }
 
-/// Insert pre-parsed survey types derived from items with MineralSurvey or MiningSurvey keywords
+/// Insert pre-parsed survey types derived from items with MineralSurvey or MiningSurvey keywords.
+///
+/// `zone` is resolved from the item's `Description` field by matching zone
+/// friendly names against the `areas` map. The stored value is the area key
+/// (e.g. `"AreaSerbule2"`), which the frontend resolves to a display name
+/// via `AreaInline` — consistent with how every other screen shows areas.
 fn insert_survey_types(
     tx: &Transaction,
     items: &std::collections::HashMap<u32, ItemInfo>,
     recipes: &std::collections::HashMap<u32, RecipeInfo>,
+    areas: &std::collections::HashMap<String, crate::game_data::AreaInfo>,
 ) -> Result<()> {
+    // Build a lookup from area-friendly-name → area-key. Longest names
+    // first so "Serbule Hills" matches before "Serbule" when scanning.
+    let mut friendly_to_key: Vec<(String, String)> = areas
+        .iter()
+        .filter_map(|(key, info)| {
+            info.friendly_name
+                .as_ref()
+                .map(|fn_| (fn_.clone(), key.clone()))
+        })
+        .collect();
+    friendly_to_key.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
     let mut stmt = tx.prepare(
         "INSERT INTO survey_types (item_id, internal_name, name, zone, icon_id,
-                                   survey_category, is_motherlode, skill_req_name,
+                                   survey_category, is_motherlode, kind, skill_req_name,
                                    skill_req_level, survey_skill_req, recipe_id,
                                    survey_xp, survey_xp_first_time, crafting_cost)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
     )?;
 
     for (id, item) in items {
@@ -569,6 +620,14 @@ fn insert_survey_types(
 
         let survey_category = if is_mineral { "mineral" } else { "mining" };
         let is_motherlode = item.keywords.contains(&"MotherlodeMap".to_string());
+        // Canonical kind via the ItemInfo classifier. Falls back to "basic"
+        // if the keyword check above passed but the classifier disagrees
+        // (shouldn't happen given the predicate, but defensive).
+        let kind = match item.survey_kind() {
+            Some(SurveyKind::Motherlode) => "motherlode",
+            Some(SurveyKind::Multihit) => "multihit",
+            Some(SurveyKind::Basic) | None => "basic",
+        };
 
         // Extract skill requirement — Geology for mineral surveys, Mining for mining surveys
         let (skill_req_name, skill_req_level) = if is_mineral {
@@ -603,8 +662,26 @@ fn insert_survey_types(
         let survey_xp = matching_recipe.and_then(|r| r.reward_skill_xp);
         let survey_xp_first_time = matching_recipe.and_then(|r| r.reward_skill_xp_first_time);
 
-        // Parse zone from internal_name
-        let zone = parse_survey_zone(&internal_name);
+        // Resolve zone: find the area key whose friendly name appears in
+        // the item's Description field. Descriptions follow patterns like
+        // "Records the location of a mineral deposit in or around X." where
+        // X is a zone's FriendlyName. We check longest names first so e.g.
+        // "Serbule Hills" matches before "Serbule".
+        let zone: Option<String> = item
+            .description
+            .as_ref()
+            .and_then(|desc| {
+                friendly_to_key
+                    .iter()
+                    .find(|(fname, _)| desc.contains(fname.as_str()))
+                    .map(|(_, key)| key.clone())
+            })
+            .or_else(|| {
+                // Fallback: derive from internal name (camel-case zone).
+                // Gives "KurMountains" not "AreaKurMountains" — acceptable
+                // for older CDN snapshots that might lack descriptions.
+                parse_survey_zone(&internal_name)
+            });
 
         // Compute crafting cost from always-consumed recipe ingredients (paper & ink).
         // Vendor buy price = item.value * 1.5 (NPC vendor markup).
@@ -637,6 +714,7 @@ fn insert_survey_types(
             item.icon_id,
             survey_category,
             is_motherlode,
+            kind,
             skill_req_name,
             skill_req_level,
             survey_skill_req,

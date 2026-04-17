@@ -579,7 +579,7 @@ Relevant for features that depend on weather conditions (e.g., some Fletching re
 
 **When it fires:** Survey results, resource discoveries, and other map-pinned events.
 
-**NOT YET PARSED** (but consumed by `SurveyParser` from raw lines).
+**NOT YET PARSED** by `PlayerEventParser`. The legacy survey parser used to consume these from raw lines; the new `SurveySessionAggregator` does not need them (it works off `PlayerEvent::ItemDeleted` / `ItemAdded` with `ItemProvenance::SurveyMapUse`).
 
 ### ProcessSetAreaSettings — Area configuration
 

@@ -13,6 +13,7 @@ Core structure, patterns, and standards used across the app.
 - [live-event-streams.md](architecture/live-event-streams.md) — Unified reference for all live game events: Player.log and Chat.log data flow, all event streams, how features subscribe, timestamp handling, and how to extend both parsers.
 - [player-event-parser.md](architecture/player-event-parser.md) — PlayerEventParser: event types, internal state, pending delete buffer, encoded value decoding, frontend listening, and how to extend.
 - [player-log-events.md](architecture/player-log-events.md) — Complete reference for all Player.log event types: item, skill, NPC, vendor, storage, and screen events with encoding formats and practical patterns.
+- [survey-mechanics.md](architecture/survey-mechanics.md) — Behavioral catalog of the three survey-map kinds (Basic, Motherlode, Multihit): use mechanics, loot patterns, map lists per area, and parser disambiguation rules.
 - [game-state.md](architecture/game-state.md) — Centralized game state system: design principles, database schema, GameStateManager, frontend store API, and domain catalog.
 - [cdn-data-parsing.md](architecture/cdn-data-parsing.md) — How CDN JSON files are deserialized, typed, and stored with raw JSON preservation.
 - [cdn-field-schemas.json](architecture/cdn-field-schemas.json) — Machine-readable field inventory for all 27 CDN data types.
@@ -94,10 +95,7 @@ Per-screen documentation organized by view.
 - [economics.md](features/screens/economics.md) — Economics screen: architecture, component hierarchy, market/farming/surveying.
   - [economics-market.md](features/screens/economics/economics-market.md) — Market Prices tab: player-maintained price database.
   - [economics-farming.md](features/screens/economics/economics-farming.md) — Farming tab: session-based profitability tracking.
-  - [economics-surveying.md](features/screens/economics/economics-surveying.md) — Surveying tab: architecture, event pipeline, database schema, shared infrastructure.
-    - [economics-surveying-session.md](features/screens/economics/economics-surveying-session.md) — Session sub-tab: active session tracking with live loot/XP/profit.
-    - [economics-surveying-historical.md](features/screens/economics/economics-surveying-historical.md) — Historical sub-tab: past session browser with loot breakdowns.
-    - [economics-surveying-analytics.md](features/screens/economics/economics-surveying-analytics.md) — Analytics sub-tab: zone-grouped all-time speed bonus and loot stats.
+  - [economics-surveying.md](features/screens/economics/economics-surveying.md) — Surveying tab (Session / Session History / Analytics): survey tracker on the provenance pipeline, schema, commands, A3 stitching.
   - [economics-stall-tracker.md](features/screens/economics/economics-stall-tracker.md) — Stall Tracker: shop log parsing, sales/revenue/inventory analytics from PlayerShopLog books.
 
 ### Chat Logs
@@ -135,6 +133,8 @@ Per-screen documentation organized by view.
 - [quick-reference-system.md](plans/quick-reference-system.md) — Reference Shelf: pinnable entity tooltips in a bottom tray (Phase 1 complete).
 - [unified-event-stream.md](plans/unified-event-stream.md) — Unifying Player.log and Chat.log into a single event stream (Phase 0+1 complete, Phase 2+ remaining).
 - [stall-tracker-implementation.md](plans/stall-tracker-implementation.md) — Stall Tracker build plan: phased Rust + Vue implementation guide with ASCII previews for every screen and modal.
+- [item-provenance-overhaul.md](plans/item-provenance-overhaul.md) — Attribute every inventory gain to a source context (mining, survey, corpse, vendor, etc.); use chat `[Status]` as authoritative quantity.
+- [survey-tracker-rewrite.md](plans/survey-tracker-rewrite.md) — Phase 5 implementation plan: nuke-and-pave the survey tracker on top of the provenance pipeline; new `src-tauri/src/survey/` module, schema v26, A3 stitching.
 
 ## Samples
 

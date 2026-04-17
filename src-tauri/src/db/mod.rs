@@ -20,11 +20,13 @@ pub mod migrations;
 pub mod player_commands;
 #[allow(dead_code)]
 pub mod price_helper_commands;
-pub mod player_commands_survey_events;
 pub mod queries;
 pub mod stall_tracker_commands;
+// Reads survey_types (CDN-populated reference table) — useful raw material
+// for the future Analytics rebuild. No active consumer right now since the
+// legacy survey screen was removed; allow dead_code until that work lands.
+#[allow(dead_code)]
 pub mod survey_commands;
-pub mod survey_sharing_commands;
 
 pub type DbPool = r2d2::Pool<SqliteConnectionManager>;
 pub type DbConnection = r2d2::PooledConnection<SqliteConnectionManager>;

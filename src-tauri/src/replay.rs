@@ -3,7 +3,6 @@
 ///
 /// This enables cross-referencing between the two log streams (e.g., correcting
 /// motherlode loot quantities from Chat.log [Status] messages) using archived logs.
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
 use std::path::PathBuf;
@@ -20,8 +19,7 @@ use crate::db::DbPool;
 use crate::game_state::GameStateManager;
 use crate::parsers::{chat_local_to_utc, parse_skill_update, parse_timestamp};
 use crate::player_event_parser::PlayerEventParser;
-use crate::survey_parser::{KnownSurveyType, SurveyParser};
-use crate::survey_persistence::SurveySessionTracker;
+use crate::survey::aggregator::SurveySessionAggregator;
 
 /// A timestamped event from either log source, used for interleaving.
 #[derive(Debug)]
@@ -84,9 +82,7 @@ pub struct ReplayResult {
     pub player_lines_processed: usize,
     pub chat_messages_processed: usize,
     pub player_events_emitted: usize,
-    pub survey_events_emitted: usize,
     pub chat_status_events_emitted: usize,
-    pub loot_corrections_applied: usize,
 }
 
 /// Parse Player.log into timestamped lines.
@@ -337,22 +333,17 @@ fn run_replay(
     }
 
     // --- Phase 4: Process through coordinator pipeline ---
-    let conn = db.get().map_err(|e| format!("Database error: {}", e))?;
-    let known_surveys = load_known_surveys(&conn);
-    drop(conn);
-
     let mut player_parser = PlayerEventParser::new();
-    let mut survey_parser = SurveyParser::new(known_surveys);
-    let mut survey_tracker = SurveySessionTracker::new();
-    let mut game_state = GameStateManager::new(game_data);
+    let mut game_state = GameStateManager::new(game_data.clone());
+    game_state.set_base_date(base_date);
+    let mut survey_aggregator = SurveySessionAggregator::new(game_data);
+    survey_aggregator.set_base_date(base_date);
 
     let mut result = ReplayResult {
         player_lines_processed: 0,
         chat_messages_processed: 0,
         player_events_emitted: 0,
-        survey_events_emitted: 0,
         chat_status_events_emitted: 0,
-        loot_corrections_applied: 0,
     };
 
     let progress_interval = (total_events / 100).max(50); // emit ~100 progress events
@@ -403,21 +394,18 @@ fn run_replay(
                 }
 
                 // Player events
-                let p_events = player_parser.process_line(line);
+                let mut p_events = player_parser.process_line(line);
 
-                // Survey events
-                let s_events = survey_parser.process_events(&p_events, line);
-                for se in &s_events {
-                    let sr = survey_tracker.process_event(se, db);
-                    app.emit("survey-event", se).ok();
-                    emits_since_yield += 1;
-                    result.survey_events_emitted += 1;
-
-                    if sr.session_ended {
-                        if let Some(sid) = sr.session_id {
-                            app.emit("survey-session-ended", sid).ok();
-                            emits_since_yield += 1;
-                        }
+                // Survey aggregator runs first so any survey_use_id it
+                // injects into provenance reaches item_transactions via
+                // game_state. Matches the live coordinator ordering.
+                let active_char = game_state.get_active_character().map(String::from);
+                let active_server = game_state.get_active_server().map(String::from);
+                for pe in p_events.iter_mut() {
+                    if let (Some(character), Some(server), Ok(conn)) =
+                        (&active_char, &active_server, db.get())
+                    {
+                        let _ = survey_aggregator.process_event(pe, &conn, character, server, None);
                     }
                 }
 
@@ -438,38 +426,8 @@ fn run_replay(
             TimedEvent::ChatMessage { msg, .. } => {
                 result.chat_messages_processed += 1;
 
-                // Status channel → ChatStatusParser → loot correction
+                // Status channel → ChatStatusParser
                 if let Some(status_event) = parse_status_message(msg) {
-                    // Diagnostic: log every ItemGained with qty > 1 entering the correction path
-                    if let crate::chat_status_parser::ChatStatusEvent::ItemGained {
-                        ref item_name,
-                        quantity,
-                        ..
-                    } = status_event
-                    {
-                        if quantity > 1 {
-                            eprintln!(
-                                "[replay] ItemGained entering correction: {} x{} (current_session={:?}, last_session={:?})",
-                                item_name, quantity,
-                                survey_tracker.current_session_id(),
-                                survey_tracker.last_session_id(),
-                            );
-                        }
-                    }
-
-                    // Try loot correction — works for both active and recently-ended sessions
-                    // (correct_loot_from_chat_status falls back to last_session_id)
-                    if let Some(correction) =
-                        survey_tracker.correct_loot_from_chat_status(&status_event, db)
-                    {
-                        eprintln!(
-                            "[replay] Loot correction: {} qty {} → {}",
-                            correction.item_name, correction.old_quantity, correction.new_quantity
-                        );
-                        app.emit("survey-loot-correction", &correction).ok();
-                        emits_since_yield += 1;
-                        result.loot_corrections_applied += 1;
-                    }
                     app.emit("chat-status-event", &status_event).ok();
                     emits_since_yield += 1;
                     result.chat_status_events_emitted += 1;
@@ -506,10 +464,8 @@ fn run_replay(
             current: total_events,
             total: total_events,
             detail: format!(
-                "Done: {} player events, {} chat messages, {} corrections",
-                result.player_events_emitted,
-                result.chat_messages_processed,
-                result.loot_corrections_applied,
+                "Done: {} player events, {} chat messages",
+                result.player_events_emitted, result.chat_messages_processed,
             ),
         },
     )
@@ -518,38 +474,6 @@ fn run_replay(
     Ok(result)
 }
 
-/// Load known survey types from DB (same as coordinator helper).
-fn load_known_surveys(conn: &rusqlite::Connection) -> HashMap<String, KnownSurveyType> {
-    let mut map = HashMap::new();
-    let mut stmt = match conn.prepare("SELECT internal_name, name, is_motherlode FROM survey_types")
-    {
-        Ok(s) => s,
-        Err(_) => return map,
-    };
-
-    let rows = stmt.query_map([], |row| {
-        Ok((
-            row.get::<_, String>(0)?,
-            row.get::<_, String>(1)?,
-            row.get::<_, bool>(2)?,
-        ))
-    });
-
-    if let Ok(rows) = rows {
-        for row in rows.flatten() {
-            let (internal_name, display_name, is_motherlode) = row;
-            map.insert(
-                internal_name,
-                KnownSurveyType {
-                    display_name,
-                    is_motherlode,
-                },
-            );
-        }
-    }
-
-    map
-}
 
 // ============================================================
 // Tauri Command

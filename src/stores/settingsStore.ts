@@ -35,6 +35,7 @@ export interface AppSettings {
   timestampDisplayMode: 'local' | 'server' | 'utc';
   timezoneOffsetSeconds: number | null;
   manualTimezoneOverride: number | null;
+  autoStartSurveySessions: boolean;
   viewPreferences: Record<string, Record<string, unknown>>;
 }
 
@@ -71,6 +72,7 @@ interface BackendSettings {
   timestamp_display_mode: string;
   timezone_offset_seconds: number | null;
   manual_timezone_override: number | null;
+  auto_start_survey_sessions: boolean;
   view_preferences: Record<string, Record<string, unknown>>;
 }
 
@@ -108,6 +110,7 @@ function toBackendSettings(settings: AppSettings): BackendSettings {
     timestamp_display_mode: settings.timestampDisplayMode,
     timezone_offset_seconds: settings.timezoneOffsetSeconds,
     manual_timezone_override: settings.manualTimezoneOverride,
+    auto_start_survey_sessions: settings.autoStartSurveySessions,
     view_preferences: settings.viewPreferences,
   };
 }
@@ -150,6 +153,7 @@ function fromBackendSettings(settings: BackendSettings): AppSettings {
     timestampDisplayMode: (settings.timestamp_display_mode ?? 'local') as 'local' | 'server' | 'utc',
     timezoneOffsetSeconds: settings.timezone_offset_seconds ?? null,
     manualTimezoneOverride: settings.manual_timezone_override ?? null,
+    autoStartSurveySessions: settings.auto_start_survey_sessions ?? true,
     viewPreferences: settings.view_preferences ?? {},
   };
 }
@@ -188,6 +192,7 @@ function getDefaultSettings(): AppSettings {
     timestampDisplayMode: 'local' as const,
     timezoneOffsetSeconds: null,
     manualTimezoneOverride: null,
+    autoStartSurveySessions: true,
     viewPreferences: {},
   };
 }

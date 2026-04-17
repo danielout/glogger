@@ -45,7 +45,11 @@ pub use abilities::AbilityInfo;
 pub use areas::AreaInfo;
 pub use effects::EffectInfo;
 pub use item_uses::ItemUseInfo;
-pub use items::ItemInfo;
+// Re-exported primarily for test harnesses that want to load real CDN
+// `items.json` snapshots without depending on the items module being public.
+// Renamed to make the call site self-documenting at use locations.
+#[allow(unused_imports)]
+pub use items::{parse as parse_items_json, ItemInfo, SurveyKind};
 pub use lorebooks::LorebookCategoryInfo;
 pub use lorebooks::LorebookEntry;
 pub use npcs::NpcInfo;

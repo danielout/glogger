@@ -18,6 +18,10 @@ Parse historical log files without watching them in real-time. Useful for:
 2. Switch to Advanced tab
 3. Click "Parse Selected Log File"
 
+**Date handling:** Player.log lines carry only `HH:MM:SS` (no date). The solo reparse path uses the file's modification time (converted to UTC) as the date for all events. Dual-log replay derives the date from the chat log filename / first chat timestamp instead. If you copy a Player.log between machines in a way that clobbers the mtime, the resulting rows will be dated accordingly — use dual-log replay (paired with the matching chat log) whenever possible for an authoritative date. See [time.md](../architecture/time.md) for the full rules.
+
+Survey-session start/end times are always recomputed from the first and last attributed event timestamps on session end, so reparsed sessions land with accurate bounds regardless of when the end actually fires.
+
 ### 2. Database Statistics
 
 View real-time statistics about your local database:

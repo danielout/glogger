@@ -1,182 +1,141 @@
 # Economics — Surveying
 
-## Status
+Survey tracker built on the provenance pipeline. Three sub-tabs (Session, Session History, Analytics), all read-only views over `survey_sessions` + `survey_uses` + `item_transactions`. Backend owns session state; the frontend is a thin reader.
 
-> **Work in Progress:** Surveying tracking is under active development. Loot counts may not be 100% accurate due to Player.log limitations (see [Loot Quantity Correction](#loot-quantity-correction)). Povus and Vidaria surveys are not yet trackable.
-
-## Overview
-
-Real-time session tracker for the Surveying skill. Detects survey crafting and completion from Player.log via the player-event-parser pipeline, tracks loot/XP/costs per session, and provides historical analytics with pre-computed session summaries. Supports cross-referencing with Chat.log to correct motherlode loot quantities.
-
-The surveying feature has three sub-tabs, each documented separately:
-
-- [Session](economics-surveying-session.md) — active session tracking with live loot/XP/profit
-- [Historical](economics-surveying-historical.md) — browse and review past sessions
-- [Analytics](economics-surveying-analytics.md) — all-time aggregate stats organized by zone
+For the full design rationale and history of the rewrite, see:
+- [item-provenance-overhaul.md](../../../plans/item-provenance-overhaul.md) — parent plan
+- [survey-tracker-rewrite.md](../../../plans/survey-tracker-rewrite.md) — Phase 5 plan (complete)
+- [survey-mechanics.md](../../../architecture/survey-mechanics.md) — Basic / Motherlode / Multihit behavior
 
 ## Architecture
 
 ### Files
 
-**Backend (Rust):**
-- `src-tauri/src/survey_parser.rs` — survey event detection from PlayerEvents
-- `src-tauri/src/survey_persistence.rs` — SurveySessionTracker: synchronous DB persistence
-- `src-tauri/src/chat_status_parser.rs` — Status channel event parsing for loot corrections
-- `src-tauri/src/replay.rs` — dual-log replay engine
-- `src-tauri/src/db/survey_commands.rs` — survey type data
-- `src-tauri/src/db/player_commands_survey_events.rs` — survey event logging, historical queries, analytics aggregation
+**Backend (`src-tauri/src/survey/`):**
+- `aggregator.rs` — `SurveySessionAggregator`; subscribes to `PlayerEventParsed` events in the coordinator, stitches `SurveyMapUse` → `Mining` attribution, manages sessions
+- `persistence.rs` — CRUD for `survey_sessions` and `survey_uses`
+- `multihit_state.rs` — DB-backed open multihit nodes (survives restart)
+- `commands.rs` — all `survey_tracker_*` Tauri commands (status, start/end, detail, historical, analytics, notes, delete)
+- `types.rs` — `SurveySession`, `SurveyUse`, `SurveyUseKind`, `SurveyUseStatus`
+- `replay_tests.rs` — integration tests against paired log datasets
 
-**Frontend (Vue/TS):**
-- `src/stores/surveyStore.ts` — session lifecycle, loot/profit tracking, XP baselines
-- `src/components/Economics/EconomicsSurveyView.vue` — tab container (Session / Historical / Analytics)
-- `src/components/Surveying/SessionTab.vue` — active session view
-- `src/components/Surveying/SessionSidebar.vue` — stats, XP, economics sidebar
-- `src/components/Surveying/SurveyTypeAccordion.vue` — per-survey-type breakdown table
-- `src/components/Surveying/SurveyLootGrid.vue` — loot display with counts/percentages
-- `src/components/Surveying/SurveyLog.vue` — activity log
-- `src/components/Surveying/HistoricalTab.vue` — past sessions browser
-- `src/components/Surveying/AnalyticsTab.vue` — aggregated analytics
+**Frontend:**
+- `src/stores/surveyTrackerStore.ts` — reads/caches backend state; subscribes to events
+- `src/components/Economics/EconomicsSurveyView.vue` — three-tab container (Session / Session History / Analytics)
+- `src/components/Surveying/SurveyTrackerView.vue` — Session tab (PaneLayout: recent sessions / live detail / selected session)
+- `src/components/Surveying/HistoricalTab.vue` — expandable session list with notes + delete; each row shows cost / revenue / profit inline
+- `src/components/Surveying/AnalyticsTab.vue` — PaneLayout: `AnalyticsNav` on the left, view components in the center, `ItemCostCalculator` on the right
+- `src/components/Surveying/SessionSummary.vue` — shared detail block rendered by both the active-session view and any historical session expansion
+- `src/components/Surveying/StatCard.vue`, `SurveyLootGrid.vue`, `ZoneRewardsCard.vue`, `CrossZoneComparison.vue` — reusable pieces used across the three tabs
+- `src/components/Surveying/AnalyticsOverviewView.vue`, `AnalyticsZoneView.vue`, `AnalyticsTypeView.vue` — Analytics center-pane views
 
-## Event Pipeline
-
-### Live Tailing
+### Data flow
 
 ```
-Player.log -> PlayerLogWatcher -> PlayerEventParser -> SurveyParser -> SurveySessionTracker -> DB
-                                                                            |
-                                                              Frontend (survey-event emit)
-
-Chat.log -> ChatLogWatcher -> ChatStatusParser -> SurveySessionTracker.correct_loot_from_chat_status()
-                                                        |
-                                              Frontend (survey-loot-correction emit)
+Player.log ──► PlayerEventParser ──► PlayerEvent { provenance } ──┐
+                                                                   ├──► coordinator ──► SurveySessionAggregator
+Chat.log ────► ChatStatusParser ────────────────────────────────┘                            │
+                                                                                              ▼
+                                                                             survey_sessions, survey_uses,
+                                                                             open_multihit_nodes, item_transactions
+                                                                                              │
+                                                                                              ▼
+                                                                               Tauri commands ──► frontend (read-only)
 ```
 
-### Pipeline Stages
+Live updates emit as `survey-tracker-session-started/ended`, `survey-tracker-use-recorded/completed`, `survey-tracker-multihit-opened/closed`. The frontend subscribes and refreshes affected views.
 
-1. **PlayerEventParser** — parses raw `ProcessXxx` lines into structured `PlayerEvent`s
-2. **SurveyParser** — consumes PlayerEvents to detect survey-specific events:
-   - `MapCrafted` — detected when `ItemAdded` matches a known survey internal name; includes consumed ingredients
-   - `SurveyUsed` — detected from `DelayLoopStarted` with "Using ... Survey/Map" label
-   - `Completed` — detected from `ScreenText(ImportantInfo, "...collected!...")` with parsed loot items and speed bonus detection
-   - `MotherlodeCompleted` — detected via motherlode mining interaction tracking
-3. **ChatStatusParser** — stateless parser converting `[Status]` messages into `ChatStatusEvent`s (ItemGained, XpGained, LevelUp, etc.)
-4. **SurveySessionTracker** — synchronous DB persistence: creates/updates sessions, logs events and loot, auto-ends sessions, corrects loot quantities from Chat.log
+### Attribution (A3 stitching)
 
-### Survey Parser State Machine
+Every gain transaction carries a `source_kind` + `source_details` JSON. When the aggregator classifies a survey use, subsequent gains that fall in its window are tagged with `survey_use_id` in `source_details`. The Analytics and Historical queries join back through this key — no separate loot tables needed.
 
-1. `UsingSurvey` pending state waits for: `ProcessMapFx` (locate), `ItemDeleted` for map (→ `AwaitingLoot`), `ScreenText` "collected!" (→ emit `Completed`), or timeout (15 lines)
-2. `AwaitingLoot` pending state waits for: `ScreenText` "collected!" (→ emit `Completed`) or timeout
-3. **Crafting window tracking** — opens on "Surveying" `DelayLoopStarted`, records all `ItemStackChanged`/`ItemDeleted` during window, drains when survey map `ItemAdded` detected
+Window semantics per kind:
 
-### Motherlode Handling
+| Kind | Window | Notes |
+|---|---|---|
+| Basic | Same tick as consumption | Direct `SurveyMapUse` provenance |
+| Motherlode | One Mining cycle within 60s of consumption | Chains consumption → mining context |
+| Multihit | Until the player mines a different `entity_id` OR 30 minutes pass | `open_multihit_nodes` tracks the active node |
 
-- Motherlode surveys end in "Map" (vs "Survey" for regular)
-- They don't produce `Completed` events (spawn a mineable node instead)
-- Excluded from auto-end count (`completable_maps` only counts non-motherlode)
-- Speed bonuses never apply to motherlode surveys
+A tie-breaker in `compute_provenance` picks `Mining` over passive overlapping contexts (CorpseSearch, VendorBrowsing, StorageBrowsing) with `Probable` confidence — this is what lifted Multihit attribution from ~60% to ~99% on the povus validation set.
 
-## Loot Quantity Correction
+## Database schema
 
-Player.log's `ProcessAddItem` records quantity=1 for new item stacks (the real stack size is in `UpdateItemCode`). Chat.log's `[Status]` channel provides the real quantity: `"Gypsum x9 added to inventory."`.
+Migration **v26** introduced:
 
-### How It Works
+- `survey_sessions` — session header (started_at, ended_at, start_trigger, crafted_count, consumed_count, notes)
+- `survey_uses` — one row per map use (session_id FK, kind, area, status, loot_qty, used_at, map_internal_name, map_display_name)
+- `open_multihit_nodes` — per-character open multihit attributions keyed by `node_entity_id`
 
-1. ChatStatusParser parses `[Status]` messages into `ChatStatusEvent::ItemGained { item_name, quantity }`
-2. SurveySessionTracker finds the most recent matching loot row where `quantity < chat_quantity` and updates it
-3. A `LootCorrection` is emitted to the frontend as `survey-loot-correction`
-4. The frontend's `handleLootCorrection` applies the delta to running totals
+Migration **v27** dropped the legacy `survey_loot_items` / `survey_events` / `survey_session_stats` / `survey_imports` tables. The `survey_types` CDN reference table is retained (wiped and reloaded on CDN update).
 
-### Session Fallback
+`item_transactions.source_details` carries the `survey_use_id` field for gains attributed to a survey — this is the join key for all downstream queries.
 
-When a session auto-ends, `current_session_id` is cleared. But chat corrections for the last motherlode may still be in-flight. The tracker maintains `last_session_id` as a fallback.
+## Tabs
 
-### Name Matching Limitation
+### Session (unified view)
 
-Player.log uses internal names (e.g., `MetalSlab7`) while Chat.log uses display names (e.g., `Astounding Metal Slab`). Corrections only work when both logs use the same name — works for some minerals (Gypsum, Paladium) but not metal slabs. Known limitation.
+`SurveyTrackerView.vue` — `PaneLayout` with three panels that serve both active and historical sessions in one view (the previous "Session History" tab has been merged in):
 
-## Dual-Log Replay
+- **Left pane**: "Start New Session" button (disabled when active exists) + "Auto-start sessions" checkbox (persisted in `AppSettings.auto_start_survey_sessions`). Below: the active session card pinned at top with a green border, then filter/sort controls (`SearchableSelect` for zone, sort by date/profit/duration/surveys via `useViewPrefs`), then historical session cards. Each `SessionCard.vue` shows: editable name, zone(s) via `AreaInline`, survey count, reactive profit/hr, date + duration.
+- **Center pane**: rich detail for the selected session, laid out as:
+  - Top row (grid 2/5 + 2/5 + 1/5): `LootOverviewPanel.vue` (item table with `ItemMinicard` + bonus split + inline market editing), `LootDonutChart.vue` (`VueUiDonut` of loot distribution, items <3% bucketed into "Other"), `TimeBreakdownPanel.vue` (start/end times respecting user overrides, total/craft/prep/survey durations, avg per survey — live-ticking for active sessions).
+  - Second row: `LootByTypePanel.vue` (accordion per survey type showing use count, avg loot, expandable per-item primary + bonus breakdown with `ItemInline`).
+  - Open multihit nodes shown below for active sessions.
+- **Right pane**: editable session name + notes, craft material cost breakdown (`CraftMaterialRow` from `recipe_ingredients` joined through `survey_types.recipe_id`, each ingredient shown via `ItemInline` with quantity and cost), revenue + revenue/hr, profit + profit/hr (both total-session-time and survey-only-time rates, color-coded), and delete button. All economics reactive via `useLiveValuation`.
 
-The replay engine (`src-tauri/src/replay.rs`) processes archived Player.log and Chat.log files together, interleaving events by UTC timestamp. This enables cross-referencing features using historical logs.
+Selecting a session in the left list loads its `SurveySessionDetail` into both the center and right panels. The active session auto-selects on load.
 
-### Interleaving Strategy
+New backend columns (migration v29) support the richer session data: `name`, `user_started_at`/`user_ended_at` (user-adjustable time overrides), `first_craft_at`/`last_craft_at` (craft timing), `first_loot_at`/`last_loot_at` (loot timing). New commands: `survey_tracker_update_session_name`, `survey_tracker_update_session_times`.
 
-Events are stable-sorted by `(utc_second, source_order)`:
+### Analytics
 
-| source_order | Event Type | Rationale |
-|:---:|---|---|
-| 0 | ChatLogin | Timezone offset must be applied first |
-| 1 | PlayerLine | Player.log loot rows must exist in DB before chat corrections |
-| 2 | ChatMessage | Chat corrections reference loot rows from PlayerLine events |
+`AnalyticsTab.vue` — `PaneLayout` with three slots:
 
-### Timezone Handling
+- **Left pane** (`AnalyticsNav.vue`): buttons for Overview, each zone, each survey type. Counts are shown inline; the currently-selected view is marked with a gold left-border.
+- **Center pane**: one of three views depending on selection.
+  - `AnalyticsOverviewView.vue` — top stat cards (total surveys, speed-bonus rate, bonus items, zones), cross-zone comparison table (`CrossZoneComparison.vue`, sortable), and an all-survey-types table. Both tables are clickable to drill into the zone or type view.
+  - `AnalyticsZoneView.vue` — zone-scope stat cards, one `ZoneRewardsCard` per survey type used in the zone, plus a zone-wide items rollup.
+  - `AnalyticsTypeView.vue` — per-type stat cards, the type's item breakdown, and matching same-map entries in other zones when present.
+- **Right pane** (`ItemCostCalculator.vue`): picks an item, desired quantity, sell price, and a sort mode (Cost / Time / Profit/hr); ranks the survey types that drop the item accordingly. The best row is highlighted with a gold border + "BEST" badge. Footer lines show the primary/bonus breakdown per row.
 
-- Chat.log timestamps are UTC; Player.log timestamps are local time
-- Chat login line provides timezone offset for UTC conversion
-- Base date derived from chat log filename or first message
+Data sources:
+- Center-pane views read from `survey_tracker_analytics()`, which already carries per-zone and per-type item breakdowns.
+- The calculator reads from `survey_tracker_item_cost_analysis()`, a dedicated command that returns one row per (item, survey type, zone) with primary/bonus splits and the per-type average survey duration.
 
-## Database Schema
+All metrics derive from the `item_transactions` ↔ `survey_uses` join. Speed-bonus rates and bonus-item totals come from the `is_speed_bonus` flag in `source_details`, which the aggregator sets when a `ProcessScreenText` "(speed bonus!)" marker arrives after the gain rows are written.
 
-### `survey_types` — CDN-derived reference data
-Survey item metadata: name, zone, skill requirements, crafting cost, icon, category, motherlode flag.
+### Speed-bonus attribution
 
-### `survey_session_stats` — Pre-computed session summaries
-Key columns: id, name, notes, start/end time, maps_started, surveys_completed, XP gains (surveying/mining/geology), revenue/cost/profit, elapsed_seconds, speed_bonus_count, survey_types_used, maps_used_summary.
+Basic surveys can grant bonus drops; the game signals this with a ScreenText line like `"Blue Spinel collected! Also found Rubywall Crystal x2 (speed bonus!)"` that arrives after the `ProcessAddItem` events. The aggregator's ScreenText handler parses this line with `parsers::parse_loot_items`, looks up the most recent Basic `survey_use_id`, and patches `item_transactions.source_details` for each bonus-item row to set `is_speed_bonus: true`. Analytics queries read the flag via `json_extract`, giving per-zone / per-type bonus rates and primary/bonus splits for free — no separate tables needed.
 
-### `survey_events` — Individual event log
-Columns: id, timestamp, session_id (FK), event_type, map_type, survey_type, speed_bonus_earned.
+## Economics
 
-### `survey_loot_items` — Individual loot drops
-Columns: id, event_id (FK), item_id, item_name, quantity, is_speed_bonus, is_primary.
+Each session carries a precomputed `SessionEconomics` rollup that both the Session tab and the History expansion render via the shared `SessionSummary.vue` component:
 
-## Frontend Events
+- **Cost** — sum of `survey_types.crafting_cost` for each consumed map. The CDN ingestion step populates `crafting_cost` using nominal vendor-buy pricing of fully-consumed recipe ingredients (see `cdn_persistence::insert_survey_types`).
+- **Revenue** — `Σ(item_transactions.quantity × market_values.market_value)` over this session's gains, left-joined so unpriced items contribute zero and the UI can flag the gap.
+- **Bonus revenue** — same sum but restricted to rows where `source_details.is_speed_bonus = true`. Lets the UI show how much of the profit came from bonus drops.
+- **Profit** = revenue − cost.
+- **Priced / unpriced counts** — surfaced in the UI so users know how much of the revenue estimate is tentative.
 
-| Event | Payload | Purpose |
-|-------|---------|---------|
-| `survey-event` | SurveyEvent | Each parsed survey event |
-| `survey-session-ended` | `session_id` | Backend session auto-ended |
-| `survey-loot-correction` | LootCorrection | Chat.log corrected a loot quantity |
-| `skill-update` | SkillUpdate | XP changes (Surveying/Mining/Geology) |
+The UI derives **profit-per-hour** and **ETA** on the frontend from the economics + live elapsed time — no backend work per tick.
 
-## Tauri Commands
+For the History rollup, `survey_tracker_historical_sessions` runs the same economics helper per session (one loot-summary + one cost query each, both indexed) so each row can show cost/revenue/profit inline without needing a detail fetch.
 
-| Command | Purpose |
-|---------|---------|
-| `get_all_survey_types` | List all survey types from CDN data |
-| `patch_survey_session` | Patch frontend-known fields (elapsed, XP, manual) onto finalized session. Uses the larger of frontend-computed or DB-computed elapsed to prevent imported sessions from getting ~1s durations |
-| `update_survey_session` | Update user-provided name and notes |
-| `update_survey_session_times` | Update start/end timestamps and re-finalize economics (for correcting imported session timing) |
-| `get_historical_sessions` | Query pre-computed session stats |
-| `get_speed_bonus_stats` | Aggregate speed bonus metrics (optional session filter) |
-| `get_loot_breakdown` | Aggregate loot by item for a session |
-| `get_survey_type_metrics` | Per-survey-type stats |
-| `get_zone_analytics` | Zone-grouped analytics with per-category speed bonus and per-survey-type loot stats |
-| `replay_dual_logs` | Dual-log replay for offline analysis |
+## Known follow-ups
 
-## Time Handling
+- **Cost model preference** — current cost uses nominal vendor-buy pricing. A future enhancement could offer "use market value of ingredients" as an alternative, toggleable like the Crafting view's valuation modes.
+- **Remaining off-by-1 misses** — the povus multihit dataset still has 3 items off by 1 (Gold Nugget 14/15, Expert-Quality Metal Slab 0/1, Amazing Metal Slab 0/1) — likely `UpdateItemCode`-as-baseline edge cases for rare single-instance drops. All 5 basic survey datasets now achieve **100.0% accuracy**. Overall accuracy is 99.9% across all 6 datasets (101/104 items exact).
 
-Surveying follows the app-wide time standards defined in [time.md](../../../architecture/time.md).
+## Time handling
 
-### Backend
+Follows the app-wide conventions in [time.md](../../../architecture/time.md). All timestamps in `survey_sessions` and `survey_uses` are UTC strings (`YYYY-MM-DD HH:MM:SS`). Player.log timestamps are already UTC; chat timestamps pass through `chat_local_to_utc()` using the detected timezone offset before any survey logic runs.
 
-- All `survey_events.timestamp` and `survey_session_stats.start_time`/`end_time` values are stored as UTC strings (`YYYY-MM-DD HH:MM:SS`).
-- Player.log timestamps are already UTC — `SurveySessionTracker::to_utc()` delegates to `to_utc_datetime()` in `parsers.rs` which just adds today's UTC date.
-- Chat.log timestamps are local time — converted to UTC via `chat_local_to_utc()` using the detected timezone offset before entering the pipeline.
+### Session bounds are computed from events, not wall-clock
 
-### Frontend
+`started_at` and `ended_at` on `survey_sessions` are not sampled from `Utc::now()` at start/end time. Instead, when a session closes (manual end, auto-end on crafting-count match, or the dual-log replay equivalent), the aggregator calls `recompute_session_bounds_and_end()` — this re-derives both bounds from the first and last event timestamps actually attributed to the session via `survey_uses.used_at` and `item_transactions.timestamp` (joined by `source_details->>'survey_use_id'`). The wall-clock moment of the end event is only used as a fallback when a session had no uses at all.
 
-- **Active session timing** uses epoch milliseconds (`Date.now()`) for `startTime`, `endTime`, `pauseStartTime`, and `completionTimestamps`. This is internal-only state for live timer math — not persisted directly.
-- **Elapsed display** uses `formatDuration()` from `useTimestamp.ts` with `alwaysShowSeconds: true` for the live timer.
-- **Average survey time** also uses `formatDuration()` with `alwaysShowSeconds: true`.
-- **Start/end timestamps** displayed in the sidebar and session card use `formatTimeFull()` (converts epoch ms → ISO → timezone-aware `HH:MM:SS`).
-- **Historical sessions** display timestamps via `formatDateTimeShort()` and durations via `formatDuration()` (without seconds, since precision isn't needed for completed sessions).
-- **Activity log** timestamps pass through `formatAnyTimestamp()` which handles both full UTC datetime strings (from DB events) and bare `HH:MM:SS` strings (from live Player.log events).
-
-## Known Issues & Improvement Plans
-
-### Planned Improvements
-- Per-zone speed bonus analytics (min/max/avg per item type, value tracking, split by mineral/metal)
-- XP-to-level estimates during active surveying (crafting + completion XP)
-- Player ability to ignore incorrectly attributed loot from a session
-- Internal→display name resolution for loot corrections (would fix metal slab corrections)
-- Buffered corrections for timing edge cases (chat correction arrives before loot row persisted)
-- Replay throttling for large log files (PostMessage queue limit)
+This matters for two cases:
+- **Live**: bounds are slightly tighter — they reflect when real activity started/stopped rather than when the user clicked the button.
+- **Replay / old-log reparse**: `Utc::now()` is meaningless, so the recompute is what produces correct historical bounds. The replay path additionally sets a `base_date` override on `GameStateManager` and `SurveySessionAggregator` so `HH:MM:SS` Player.log times get stamped with the replayed date during event ingestion.

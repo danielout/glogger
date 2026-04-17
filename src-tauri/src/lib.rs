@@ -19,8 +19,7 @@ mod setup_commands;
 mod shop_log_parser;
 mod stall_aggregations;
 mod stall_year_resolver;
-mod survey_parser;
-mod survey_persistence;
+mod survey;
 mod external_fetch;
 mod update_check;
 mod watch_rules;
@@ -162,19 +161,8 @@ use db::market_commands::{
     import_market_values, set_market_value,
 };
 use db::player_commands::{
-    add_market_price, add_sale, get_historical_sessions, get_market_prices_for_item,
-    get_recent_events, get_recent_sales, log_event, patch_survey_session,
-    save_survey_session_stats, update_survey_session, update_survey_session_times, delete_survey_session,
-};
-use db::player_commands_survey_events::{
-    get_loot_breakdown, get_speed_bonus_stats, get_survey_events, get_survey_loot_items,
-    get_item_cost_analysis, get_survey_type_metrics, get_zone_analytics, log_survey_event,
-    log_survey_loot_item,
-};
-use db::survey_commands::get_all_survey_types;
-use db::survey_sharing_commands::{
-    delete_survey_import, export_survey_data, get_survey_imports, import_survey_data_from_file,
-    rename_survey_import,
+    add_market_price, add_sale, get_market_prices_for_item, get_recent_events, get_recent_sales,
+    log_event,
 };
 use replay::replay_dual_logs;
 use external_fetch::{fetch_github_releases, fetch_pg_news};
@@ -417,30 +405,6 @@ pub fn run() {
             // Player data - Sales
             add_sale,
             get_recent_sales,
-            // Player data - Survey session stats
-            save_survey_session_stats,
-            patch_survey_session,
-            get_historical_sessions,
-            update_survey_session,
-            update_survey_session_times,
-            delete_survey_session,
-            // Player data - Survey events
-            log_survey_event,
-            get_survey_events,
-            log_survey_loot_item,
-            get_survey_loot_items,
-            // Player data - Survey analytics
-            get_speed_bonus_stats,
-            get_loot_breakdown,
-            get_survey_type_metrics,
-            get_zone_analytics,
-            get_item_cost_analysis,
-            // Player data - Survey sharing
-            export_survey_data,
-            import_survey_data_from_file,
-            get_survey_imports,
-            delete_survey_import,
-            rename_survey_import,
             // Player data - Event log
             log_event,
             get_recent_events,
@@ -483,6 +447,19 @@ pub fn run() {
             stop_chat_tailing,
             get_coordinator_status,
             poll_watchers,
+            // Survey tracker (Phase 5)
+            survey::commands::survey_tracker_status,
+            survey::commands::survey_tracker_start_session,
+            survey::commands::survey_tracker_end_session,
+            survey::commands::survey_tracker_recent_sessions,
+            survey::commands::survey_tracker_session_detail,
+            survey::commands::survey_tracker_historical_sessions,
+            survey::commands::survey_tracker_update_session_notes,
+            survey::commands::survey_tracker_update_session_name,
+            survey::commands::survey_tracker_update_session_times,
+            survey::commands::survey_tracker_delete_session,
+            survey::commands::survey_tracker_analytics,
+            survey::commands::survey_tracker_item_cost_analysis,
             // Character import
             import_character_report,
             get_characters,
@@ -511,7 +488,6 @@ pub fn run() {
             get_gourmand_eaten_foods,
             export_text_file,
             import_latest_gourmand_report,
-            get_all_survey_types,
             // Farming calculator
             save_farming_session,
             get_farming_sessions,

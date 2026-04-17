@@ -18,9 +18,6 @@ Player.log line
       │        ▼
       │   Vec<PlayerEvent>
       │        │
-      ├── SurveyParser::process_events(&player_events, raw_line)
-      │        ← consumes PlayerEvents + raw line for ProcessMapFx
-      │
       └── LogEvent::PlayerEventParsed(PlayerEvent)
              │
              ▼
@@ -33,7 +30,7 @@ Player.log line
 
 Every line from Player.log is fed through `process_line()`. The parser maintains internal state (instance registry, stack sizes, interaction context) so it can resolve item identities and compute deltas. It returns zero or more `PlayerEvent`s per line.
 
-The `SurveyParser` is a downstream consumer — it receives the structured `PlayerEvent`s from this module rather than parsing raw lines itself. This avoids duplicating parse logic and ensures the survey feature benefits from identity resolution and encoded value decoding.
+The `SurveySessionAggregator` (in `src-tauri/src/survey/aggregator.rs`) is a downstream consumer in the coordinator — it receives the structured `PlayerEvent`s from this module rather than parsing raw lines itself. This avoids duplicating parse logic and ensures the survey feature benefits from identity resolution, encoded value decoding, and the `ItemProvenance` attribution already attached to each gain event.
 
 ## Event Types
 
@@ -43,8 +40,8 @@ The `PlayerEvent` enum uses `#[serde(tag = "kind")]` — when serialized to the 
 
 | Event | Log Source | Key Fields |
 |---|---|---|
-| `ItemAdded` | `ProcessAddItem` | `item_name`, `instance_id`, `slot_index`, `is_new` |
-| `ItemStackChanged` | `ProcessUpdateItemCode` | `instance_id`, `item_type_id`, `old_stack_size`, `new_stack_size`, `delta`, `from_server`. **Only emitted when the parser has a prior stack observation** — the first `ProcessUpdateItemCode` for an existing item (loaded at session start) establishes a baseline and is suppressed. New items (`is_new=True`) seed stack=1 so their first update emits correctly. |
+| `ItemAdded` | `ProcessAddItem` | `item_name`, `instance_id`, `slot_index`, `is_new`, `provenance` (see below) |
+| `ItemStackChanged` | `ProcessUpdateItemCode` | `instance_id`, `item_type_id`, `old_stack_size`, `new_stack_size`, `delta`, `from_server`, `provenance`. **Only emitted when the parser has a prior stack observation** — the first `ProcessUpdateItemCode` for an existing item (loaded at session start) establishes a baseline and is suppressed. New items (`is_new=True`) seed stack=1 so their first update emits correctly. |
 | `ItemDeleted` | `ProcessDeleteItem` | `instance_id`, `item_name`, `context` (see below) |
 
 **Delete Context** — `ItemDeleted` includes a `context` field that classifies _why_ the item was removed:
@@ -55,6 +52,19 @@ The `PlayerEvent` enum uses `#[serde(tag = "kind")]` — when serialized to the 
 | `VendorSale` | Sold to NPC vendor | `ProcessDeleteItem` followed by `ProcessVendorAddItem` or `ProcessVendorUpdateItem` |
 | `Consumed` | Used up (crafting, quest, gift) | Reserved for future context detection |
 | `Unknown` | Context not determined | Delete was not followed by a storage/vendor line |
+
+**Item Provenance** — `ItemAdded`, `ItemStackChanged`, and `StorageWithdrawal` each carry a `provenance` field identifying where the item came from, derived from the parser's [Activity Context Stack](#activity-context-stack) at the event's timestamp:
+
+| Provenance | When Emitted |
+|---|---|
+| `Attributed { source, confidence }` | Exactly one activity context is active, or the withdrawal's vault matches an open `StorageBrowsing` context. `confidence` is `Confident` today; `Probable`/`Weak` are reserved for future heuristics. |
+| `Uncertain { candidates }` | Multiple contexts are active and no tie-breaker applies — the full candidate list is preserved so consumers can classify or filter as they like. |
+| `UnknownSource` | No active context when the gain fired. Expected to be a sizeable bucket; do not design features that require this to be empty. |
+| `NotApplicable` | Event is not a gain — session-load `AddItem` (`is_new=false`), or `ItemStackChanged` with a zero/negative delta (consumption, split, etc.). Aggregates over gains should filter these out. |
+
+Attribution rules are deliberately conservative in Phase 2 — single active context → `Attributed`, multiple → `Uncertain`. Richer item-type-aware heuristics are reserved for later phases once real-world attribution data can tune them.
+
+**Transaction ledger persistence** — `ItemProvenance::to_columns()` projects a provenance value into three database columns (`source_kind`, `source_details`, `confidence`) added to `item_transactions` by migration v25. The `source_kind` taxonomy is stable: `"mining"`, `"survey_map_use"`, `"survey_map_craft"`, `"general_craft"`, `"corpse_search"`, `"vendor_browsing"`, `"storage_browsing"`, `"uncertain"`, `"unknown"`, or `"not_applicable"`. `source_details` carries source-specific JSON (node name, NPC name, candidate list, etc.). Per-source aggregates ("total mining yield this week", "vendor spend by NPC") can query against `source_kind` directly; filter out `'not_applicable'` to exclude session-load reloads and consumption deltas.
 
 ### Skill Events
 
@@ -85,7 +95,7 @@ Each `SkillSnapshot` contains: `skill_type`, `raw`, `bonus`, `xp`, `tnl` (i32, -
 | Event | Log Source | Key Fields |
 |---|---|---|
 | `StorageDeposit` | `ProcessAddToStorageVault` | `npc_id`, `slot`, `item_name`, `instance_id`, `vault_key` |
-| `StorageWithdrawal` | `ProcessRemoveFromStorageVault` | `npc_id`, `instance_id`, `quantity`, `vault_key` |
+| `StorageWithdrawal` | `ProcessRemoveFromStorageVault` | `npc_id`, `instance_id`, `quantity`, `vault_key`, `provenance` |
 
 **Vault Key Enrichment** — Both storage events include a `vault_key` field populated from `current_interaction.npc_name` (set by the preceding `ProcessVendorScreen`). This provides the CDN-compatible key (e.g., `"NPC_Joe"`) since the `npc_id` in the log line is a game entity ID that doesn't match `storagevaults.json` IDs. The `GameStateManager` uses `vault_key` to persist storage items keyed by their CDN vault.
 
@@ -151,9 +161,57 @@ The parser is stateful. It tracks:
 | State | Type | Purpose |
 |---|---|---|
 | `instance_registry` | `HashMap<u64, InstanceInfo>` | Maps instance IDs to item names and type IDs. Built from `ProcessAddItem` events at login. |
-| `stack_sizes` | `HashMap<u64, u32>` | Last known stack size per instance ID. Used to compute deltas on `ProcessUpdateItemCode`. Seeded to 1 for new items (`is_new=True`); not seeded for existing items, so the first `ProcessUpdateItemCode` establishes a baseline without emitting a false delta. |
+| `stack_sizes` | `HashMap<u64, u32>` | Last known stack size per instance ID. Used to compute deltas on `ProcessUpdateItemCode`. Seeded from the chat-gain buffer when a match is available (see below), otherwise seeded to 1 for genuine new items. Not seeded for session-loaded items, so the first `ProcessUpdateItemCode` establishes a baseline without emitting a false delta. |
 | `current_interaction` | `Option<InteractionContext>` | Tracks which NPC the player is currently interacting with. Set by `ProcessStartInteraction`. |
 | `pending_deletes` | `Vec<PendingDelete>` | 1-line lookahead buffer for `ProcessDeleteItem` events awaiting context resolution. |
+| `activity_contexts` | `Vec<ActivityContext>` | Stack of currently-active player activities that could be item sources (mining, survey map use, corpse search, vendor/storage browsing, general crafting). See [Activity Context Stack](#activity-context-stack) below. |
+| `pending_interaction` | `Option<PendingInteractionMeta>` | Short-lived enrichment metadata from `ProcessStartInteraction`. Consumed by subsequent screen-specific events (`ProcessVendorScreen`, etc.) to populate NPC names. |
+| `pending_chat_gains` | `Vec<PendingChatGain>` | Short-lived buffer of chat-log `[Status] X added to inventory` events awaiting correlation with an upcoming `ProcessAddItem`. See [Chat-primary Quantity Seeding](#chat-primary-quantity-seeding) below. |
+
+### Activity Context Stack
+
+The parser reconstructs what the player is currently *doing* at any point in the log, so future phases can attribute each item gain to a source (mining node, survey map, vendor purchase, corpse loot, etc.).
+
+**Reliable signals** open contexts:
+
+| Signal | Context opened |
+|---|---|
+| `ProcessDoDelayLoop(_, ChopLumber, "Mining..." or "Mining ...")` | `Mining { node_entity_id, node_name }` — both fields are `Option` because many motherlode/world nodes have an empty `ProcessStartInteraction` name in real logs |
+| `ProcessDoDelayLoop(_, UseTeleportationCircle, "Surveying")` | `SurveyMapCraft` |
+| `ProcessDoDelayLoop(_, _, "Using <X> Survey" or "Using <X> Motherlode Map")` | `SurveyMapUse { survey_map_internal_name }` |
+| `ProcessDoDelayLoop(_, <Cook/Brew/Distill/Refine/…>, <label>)` | `GeneralCraft { action_type, label }` |
+| `ProcessTalkScreen(id, "Search Corpse of <X>", …, Corpse)` | `CorpseSearch { entity_id, corpse_name }` |
+| `ProcessVendorScreen(npc_id, …)` | `VendorBrowsing { npc_entity_id, npc_name }` (name enriched from recent `StartInteraction`) |
+| `ProcessShowStorageVault(owner_id, _, vault_name, …)` | `StorageBrowsing { vault_owner_entity_id, vault_name }` |
+
+**Enrichment-only signals** are attached when present but never required:
+- `ProcessStartInteraction` name — frequently empty for mining nodes; used to populate the optional `node_name` on `Mining` contexts and `npc_name` on vendor/storage contexts.
+- Screen bodies (e.g., corpse TalkScreen text) may be mined for extra hints in future phases but Phase 1 does not use them.
+- `ProcessFirstEverInteraction` is explicitly **ignored** — it fires unpredictably in real logs and cannot be relied on.
+
+**Contexts close on:**
+- `ProcessEndInteraction(id)` matching the context's `entity_id` (explicit close).
+- Timeout: `close_deadline_secs = started_at_secs + (delay_loop_duration_ceil) + 2s` for delay-loop-derived contexts; a `DEFAULT_CONTEXT_LIFETIME_SECS` (30s) upper bound for screen-derived contexts. Expiry runs at the start of every `process_line`, keyed on the line's timestamp.
+
+**Deduplication**: repeated `DoDelayLoop` events for the same activity (some loops re-emit on every tick) refresh the existing context's deadline in place rather than stacking duplicates. Matching is by source kind + entity_id.
+
+**Overlapping contexts are expected.** A common real-world sequence is: mining is interrupted by combat, the player kills the attacker, then searches the corpse — all before the mining delay-loop times out. Both contexts coexist on the stack during the overlap. Future attribution logic will decide which (if either) to credit for a given gain event.
+
+**Phase 1 scope**: the stack is built and exposed via `active_activities()` for tests/inspection, but no `PlayerEvent` is tagged with provenance yet. That's Phase 2. See [docs/plans/item-provenance-overhaul.md](../plans/item-provenance-overhaul.md).
+
+### Chat-primary Quantity Seeding
+
+`ProcessAddItem` doesn't carry a stack quantity — the game fires it once per new inventory stack regardless of how many items are actually in that stack. A pickup of `Brain x5` looks identical in Player.log to a pickup of `Brain x1`. Chat's `[Status] Brain x5 added to inventory` is the only source of the real quantity.
+
+To close this gap, the coordinator pushes chat `ItemGained` events into the parser via `PlayerLogWatcher::feed_chat_gain(internal_name, quantity, timestamp)` (defined on `PlayerEventParser`). Display-name-to-internal-name resolution (chat says `"Rubywall Crystal"`, player.log uses `"RedCrystal"`) happens in the coordinator where CDN access is available.
+
+On `ProcessAddItem(item, -1, True)` (a genuine new stack), the parser looks for a pending chat gain whose internal name matches and whose timestamp is within **±2 seconds** of the AddItem. A match is consumed on a first-match basis (closest-in-time wins) and the stack is seeded from the chat quantity instead of the fallback 1.
+
+- **No match** → seed to 1 (prior behavior, correct for single-item pickups)
+- **Match found** → seed to chat quantity; subsequent `ProcessUpdateItemCode` computes correct deltas from this baseline
+- **Storage-withdrawal AddItems** (`slot >= 0`) intentionally skip the chat buffer — their quantity comes from `ProcessRemoveFromStorageVault` which is authoritative. A buffered chat gain destined for a later pickup is left untouched.
+
+Unmatched chat gains age out after `CHAT_GAIN_BUFFER_LIFETIME_SECS` (10s) so stale entries don't cross-pollinate unrelated later AddItems.
 
 ### Pending Delete Buffer
 

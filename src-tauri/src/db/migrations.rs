@@ -147,6 +147,31 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 24)?;
     }
 
+    if current_version < 25 {
+        migration_v25_item_transaction_provenance(conn)?;
+        super::record_migration(conn, 25)?;
+    }
+
+    if current_version < 26 {
+        migration_v26_survey_tracker_rewrite(conn)?;
+        super::record_migration(conn, 26)?;
+    }
+
+    if current_version < 27 {
+        migration_v27_drop_legacy_survey_tables(conn)?;
+        super::record_migration(conn, 27)?;
+    }
+
+    if current_version < 28 {
+        migration_v28_backfill_survey_use_areas(conn)?;
+        super::record_migration(conn, 28)?;
+    }
+
+    if current_version < 29 {
+        migration_v29_session_name_and_timestamps(conn)?;
+        super::record_migration(conn, 29)?;
+    }
+
     Ok(())
 }
 
@@ -245,6 +270,187 @@ fn migration_v24_npc_vendor(conn: &Connection) -> Result<()> {
             PRIMARY KEY (character_name, server_name, npc_key)
         );
         CREATE INDEX IF NOT EXISTS idx_gs_npc_vendor_char ON game_state_npc_vendor(character_name, server_name);"
+    )?;
+    Ok(())
+}
+
+/// Migration V25: Item transaction provenance — attach source attribution to
+/// every item gain recorded in `item_transactions`.
+///
+/// - `source_kind` — taxonomy string like `"mining"`, `"survey_map_use"`,
+///   `"corpse_search"`, `"vendor_browsing"`, `"storage_browsing"`,
+///   `"general_craft"`, `"survey_map_craft"`, `"uncertain"`, `"unknown"`,
+///   `"not_applicable"`. Mirrors `ItemProvenance`/`ActivitySource` in the
+///   Rust parser.
+/// - `source_details` — JSON blob with source-kind-specific fields
+///   (node_name, npc_name, recipe label, candidate list for uncertain, etc.).
+/// - `confidence` — `"confident"`, `"probable"`, `"weak"`, or NULL when not
+///   applicable.
+///
+/// All three columns are nullable so existing rows (pre-v25) read as NULL,
+/// and so transactions inserted before provenance propagates through a
+/// feature continue to work without code-churn.
+fn migration_v25_item_transaction_provenance(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "ALTER TABLE item_transactions ADD COLUMN source_kind TEXT;
+         ALTER TABLE item_transactions ADD COLUMN source_details TEXT;
+         ALTER TABLE item_transactions ADD COLUMN confidence TEXT;
+         CREATE INDEX IF NOT EXISTS idx_item_tx_source_kind
+            ON item_transactions(source_kind);",
+    )?;
+    Ok(())
+}
+
+/// Migration V26: Survey tracker rewrite (Phase 5 of item-provenance overhaul).
+///
+/// Replaces the old `survey_session_stats` / `survey_events` / `survey_loot_items`
+/// schema with a cleaner shape that integrates with the unified provenance
+/// pipeline. Per-use loot is no longer denormalized into its own table — it's
+/// queried from `item_transactions` filtered by `source_kind` and the
+/// `source_details->>'survey_use_id'` JSON field added by the new aggregator.
+///
+/// See docs/plans/survey-tracker-rewrite.md for the full design.
+///
+/// **Destructive**: drops the old tables. Beta users may briefly lose
+/// historical survey session data; this is acceptable per the user's framing.
+fn migration_v26_survey_tracker_rewrite(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "
+        -- NOTE: the old survey_session_stats / survey_events / survey_loot_items
+        -- tables are intentionally NOT dropped in this migration. They stay in
+        -- place alongside the new tables during the cutover so the legacy
+        -- survey screen and its supporting Tauri commands keep working until
+        -- the frontend rewrite lands. A follow-up migration (v27 most likely)
+        -- will drop them once the new frontend is in place and validated.
+
+        -- Per-session header. One session = one start→end span.
+        CREATE TABLE survey_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            started_at TEXT NOT NULL,
+            ended_at TEXT,
+            -- 'manual' | 'crafting' | 'first_use'
+            start_trigger TEXT NOT NULL,
+            -- only set when start_trigger='crafting': how many maps were crafted
+            -- in this session. Auto-end fires when consumed_count >= crafted_count
+            -- AND no pending_loot uses remain.
+            crafted_count INTEGER,
+            consumed_count INTEGER NOT NULL DEFAULT 0,
+            notes TEXT
+        );
+        CREATE INDEX idx_survey_sessions_char
+            ON survey_sessions(character_name, server_name);
+        -- Partial index for the common 'is there an active session?' query.
+        CREATE INDEX idx_survey_sessions_active
+            ON survey_sessions(character_name, server_name, ended_at)
+            WHERE ended_at IS NULL;
+
+        -- One row per survey-map use. Loot gains link back to this row via
+        -- item_transactions.source_details->>'survey_use_id'.
+        CREATE TABLE survey_uses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER REFERENCES survey_sessions(id) ON DELETE SET NULL,
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            used_at TEXT NOT NULL,
+            map_internal_name TEXT NOT NULL,
+            map_display_name TEXT NOT NULL,
+            -- 'basic' | 'motherlode' | 'multihit'
+            kind TEXT NOT NULL,
+            -- live-tracked area where the use happened. Falls back to the area
+            -- token parsed from map_internal_name if live area is unavailable.
+            area TEXT,
+            -- 'pending_loot' | 'completed' | 'aborted' | 'unknown'
+            status TEXT NOT NULL DEFAULT 'pending_loot',
+            -- denormalized convenience: total loot quantity attributed to this
+            -- use. Updated as item_transactions are inserted; not the source
+            -- of truth (item_transactions is).
+            loot_qty INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX idx_survey_uses_session ON survey_uses(session_id);
+        CREATE INDEX idx_survey_uses_char_used
+            ON survey_uses(character_name, server_name, used_at);
+        -- Partial index for the 'find pending uses to time-out' sweep.
+        CREATE INDEX idx_survey_uses_pending
+            ON survey_uses(status) WHERE status = 'pending_loot';
+
+        -- Multihit nodes the player is actively mining. Persisted (not
+        -- in-memory) so the 30-minute window survives app restart — losing
+        -- this state would lose real loot attribution.
+        CREATE TABLE open_multihit_nodes (
+            node_entity_id INTEGER NOT NULL,
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            survey_use_id INTEGER NOT NULL REFERENCES survey_uses(id) ON DELETE CASCADE,
+            opened_at TEXT NOT NULL,
+            last_hit_at TEXT NOT NULL,
+            PRIMARY KEY (character_name, server_name, node_entity_id)
+        );
+        CREATE INDEX idx_open_multihit_nodes_use
+            ON open_multihit_nodes(survey_use_id);
+        ",
+    )?;
+    Ok(())
+}
+
+/// Migration V27: Drop the legacy survey tables that v26 intentionally left
+/// in place during cutover.
+///
+/// Order of operations across Phase 5:
+///   v25 — added source_kind/source_details/confidence to item_transactions
+///   v26 — created survey_sessions / survey_uses / open_multihit_nodes
+///         (legacy tables intentionally kept alive so the legacy survey screen
+///         could keep functioning)
+///   v27 — drops the legacy tables now that the frontend's Historical and
+///         Analytics tabs have been rewritten on the new ledger
+///
+/// The legacy schema served the old `SurveySessionTracker` and the History/
+/// Analytics tabs that read from it. Both of those code paths are gone now.
+/// Any historical session data written to the old tables is permanently lost
+/// at this migration — beta users were warned (per the user's framing for
+/// this overhaul).
+fn migration_v27_drop_legacy_survey_tables(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "DROP TABLE IF EXISTS survey_loot_items;
+         DROP TABLE IF EXISTS survey_events;
+         DROP TABLE IF EXISTS survey_session_stats;
+         -- Survey-sharing tables (also no longer reachable; legacy import/
+         -- export was tied to the old per-session schema).
+         DROP TABLE IF EXISTS survey_imports;",
+    )?;
+    Ok(())
+}
+
+/// Backfill `survey_uses.area` for rows where it's NULL. Joins
+/// `survey_types.zone` (populated at CDN-import time from the item's
+/// Description field + the areas map). This catches all historical uses
+/// recorded before the aggregator started pulling zone from survey_types.
+fn migration_v28_backfill_survey_use_areas(conn: &Connection) -> Result<()> {
+    conn.execute(
+        "UPDATE survey_uses
+            SET area = (
+                SELECT st.zone
+                  FROM survey_types st
+                 WHERE st.internal_name = survey_uses.map_internal_name
+            )
+          WHERE area IS NULL",
+        [],
+    )?;
+    Ok(())
+}
+
+/// Add session name, user-adjusted start/end overrides, and craft/loot
+/// timing columns. All nullable so existing rows survive unchanged.
+fn migration_v29_session_name_and_timestamps(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "ALTER TABLE survey_sessions ADD COLUMN name TEXT;
+         ALTER TABLE survey_sessions ADD COLUMN user_started_at TEXT;
+         ALTER TABLE survey_sessions ADD COLUMN user_ended_at TEXT;
+         ALTER TABLE survey_sessions ADD COLUMN first_craft_at TEXT;
+         ALTER TABLE survey_sessions ADD COLUMN last_craft_at TEXT;
+         ALTER TABLE survey_sessions ADD COLUMN first_loot_at TEXT;
+         ALTER TABLE survey_sessions ADD COLUMN last_loot_at TEXT;",
     )?;
     Ok(())
 }

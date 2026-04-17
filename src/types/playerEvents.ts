@@ -2,6 +2,34 @@
 
 // === Item Events ===
 
+// Source attribution for inventory gains. See Rust ItemProvenance in
+// src-tauri/src/player_event_parser.rs for full semantics.
+export type ActivitySource =
+  | { kind: 'Mining'; node_entity_id: number | null; node_name: string | null }
+  | { kind: 'SurveyMapUse'; survey_map_internal_name: string | null }
+  | { kind: 'SurveyMapCraft' }
+  | { kind: 'GeneralCraft'; action_type: string; label: string }
+  | { kind: 'CorpseSearch'; entity_id: number; corpse_name: string }
+  | { kind: 'VendorBrowsing'; npc_entity_id: number; npc_name: string | null }
+  | { kind: 'StorageBrowsing'; vault_owner_entity_id: number; vault_name: string }
+
+export type AttributionConfidence = 'Confident' | 'Probable' | 'Weak'
+
+export type ItemProvenance =
+  | {
+      kind: 'Attributed'
+      source: ActivitySource
+      confidence: AttributionConfidence
+      // A3 stitching link: when set, this gain belongs to the named survey_uses row.
+      // Only ever populated by feature aggregators (survey tracker today); the
+      // backend parser leaves it absent. Field is omitted from the JSON entirely
+      // when None on the Rust side, hence optional here.
+      survey_use_id?: number
+    }
+  | { kind: 'Uncertain'; candidates: ActivitySource[] }
+  | { kind: 'UnknownSource' }
+  | { kind: 'NotApplicable' }
+
 export interface ItemAddedEvent {
   kind: 'ItemAdded'
   timestamp: string
@@ -9,6 +37,7 @@ export interface ItemAddedEvent {
   instance_id: number
   slot_index: number
   is_new: boolean
+  provenance: ItemProvenance
 }
 
 export interface ItemStackChangedEvent {
@@ -21,6 +50,7 @@ export interface ItemStackChangedEvent {
   new_stack_size: number
   delta: number
   from_server: boolean
+  provenance: ItemProvenance
 }
 
 export type DeleteContext = 'StorageTransfer' | 'VendorSale' | 'Consumed' | 'Unknown'
@@ -108,6 +138,7 @@ export interface StorageWithdrawalEvent {
   vault_key: string | null
   instance_id: number
   quantity: number
+  provenance: ItemProvenance
 }
 
 // === Action Events ===

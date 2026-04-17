@@ -25,11 +25,6 @@ PlayerLogWatcher::poll()                    ChatLogWatcher::poll()
     |       |                                    |       |
     |       v                                    |       v
     |   Vec<PlayerEvent>                         |   Vec<LogEvent::ChatMessage>
-    |       |                                    |
-    +-- SurveyParser::process_events()           |
-    |       |                                    |
-    |       v                                    |
-    |   Vec<LogEvent::SurveyParsed>              |
     |                                            |
     v                                            v
 DataIngestCoordinator                       DataIngestCoordinator
@@ -40,11 +35,11 @@ DataIngestCoordinator                       DataIngestCoordinator
     |       |                                    |       v
     |       +-- accumulate domains               |   Option<ChatStatusEvent>
     |                                            |       |
-    +-- SurveySessionTracker                     |       +-- emit "chat-status-event"
-    |     .process_event()                       |
+    +-- SurveySessionAggregator                  |       +-- emit "chat-status-event"
+    |     .handle_event()                        |
     |       |                                    +-- insert_chat_messages()
-    |       +-- emit "survey-event"              |     (excluded_channels applied here)
-    |       +-- emit "survey-session-ended"      |
+    |       +-- stitches SurveyMapUse → Mining   |     (excluded_channels applied here)
+    |       +-- emit survey-tracker-* events     |
     |                                            +-- evaluate_rules()
     +-- accumulate PlayerEvents                        |
     +-- flush batches ──┐                              +-- emit "watch-rule-triggered"
@@ -139,13 +134,15 @@ Not a raw event stream — this is a **domain notification**. When `GameStateMan
 
 Full details: [`game-state.md`](game-state.md)
 
-### Stream: `"survey-event"` / `"survey-session-ended"`
+### Stream: `"survey-tracker-*"`
 
-**Source:** Player.log via [`SurveyParser`](../../src-tauri/src/survey_parser.rs) + [`SurveySessionTracker`](../../src-tauri/src/survey_persistence.rs)
+**Source:** [`SurveySessionAggregator`](../../src-tauri/src/survey/aggregator.rs) consuming `PlayerEvent`s in the coordinator.
 
-Downstream consumer of `PlayerEvent`s. The survey parser is **stateful** — it tracks survey sessions, loot, and XP across multiple log lines.
+Downstream consumer of `PlayerEvent`s. The aggregator is **stateful** — it tracks survey sessions, stitches `SurveyMapUse` → `Mining` attribution, and manages open multihit nodes (persisted to DB).
 
-Full details: [`surveying-tracker.md`](../features/surveying-tracker.md)
+Events emitted: `survey-tracker-session-started`, `survey-tracker-session-ended`, `survey-tracker-use-recorded`, `survey-tracker-use-completed`, `survey-tracker-multihit-opened`, `survey-tracker-multihit-closed`.
+
+Full details: [`economics-surveying.md`](../features/screens/economics/economics-surveying.md)
 
 ### Other signals
 
@@ -297,7 +294,7 @@ All timestamps are **UTC internally**. The frontend converts to local time for d
 
 | Source | Raw Format | How it becomes UTC |
 |---|---|---|
-| Player.log | `[HH:MM:SS]` (already UTC, no date) | Combined with today's UTC date via `to_utc_datetime()` in [`parsers.rs`](../../src-tauri/src/parsers.rs) — no offset needed |
+| Player.log | `[HH:MM:SS]` (already UTC, no date) | Combined with a caller-supplied UTC base date via `to_utc_datetime_with_base()` in [`parsers.rs`](../../src-tauri/src/parsers.rs) — today's date for live, chat-derived date for replay, file mtime for solo reparse |
 | Chat.log | `YY-MM-DD HH:MM:SS` (player's local time) | Converted to UTC via `chat_local_to_utc()` in [`parsers.rs`](../../src-tauri/src/parsers.rs) using the detected timezone offset |
 | Timezone offset | `Timezone Offset -07:00:00` in chat login line | Parsed by `parse_timezone_offset()` in [`chat_parser.rs`](../../src-tauri/src/chat_parser.rs), stored in settings, used for Chat.log timestamp conversion |
 
@@ -389,8 +386,8 @@ cargo test player_event_parser
 # Chat status parser tests
 cargo test chat_status_parser
 
-# Survey parser tests
-cargo test survey_parser
+# Survey tracker tests (aggregator, persistence, commands)
+cargo test --lib survey::
 
 # Chat parser tests (line parsing, login detection)
 cargo test chat_parser

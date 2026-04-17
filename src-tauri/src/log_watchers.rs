@@ -1,7 +1,6 @@
 use crate::chat_parser::{parse_chat_lines, parse_chat_login_line, ChatMessage};
 use crate::parsers::{parse_skill_update, SkillUpdate};
 use crate::player_event_parser::{PlayerEvent, PlayerEventParser};
-use crate::survey_parser::{KnownSurveyType, SurveyEvent, SurveyParser};
 use chrono::NaiveDateTime;
 /// Log file watching infrastructure
 ///
@@ -10,7 +9,6 @@ use chrono::NaiveDateTime;
 /// - LogFileWatcher trait for unified file watching
 /// - PlayerLogWatcher for monitoring Player.log
 /// - ChatLogWatcher for monitoring chat log files
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Seek, SeekFrom};
 use std::path::PathBuf;
@@ -75,9 +73,6 @@ pub enum LogEvent {
     /// Skill update (ProcessUpdateSkill line)
     SkillUpdated(SkillUpdate),
 
-    /// Survey event (crafting started, survey completed with loot)
-    SurveyParsed(SurveyEvent),
-
     /// Player log event (items, skills, NPC interactions, vendor, storage, etc.)
     PlayerEventParsed(PlayerEvent),
 
@@ -122,13 +117,12 @@ pub struct PlayerLogWatcher {
     active_character: Option<String>,
     current_chat_log: Option<PathBuf>,
     pattern_matchers: Vec<PatternMatcher>,
-    survey_parser: SurveyParser,
     player_event_parser: PlayerEventParser,
 }
 
 impl PlayerLogWatcher {
     /// Create a new PlayerLogWatcher with default pattern matchers
-    pub fn new(file_path: PathBuf, known_surveys: HashMap<String, KnownSurveyType>) -> Self {
+    pub fn new(file_path: PathBuf) -> Self {
         let mut watcher = Self {
             file_path,
             current_position: 0,
@@ -136,7 +130,6 @@ impl PlayerLogWatcher {
             active_character: None,
             current_chat_log: None,
             pattern_matchers: Vec::new(),
-            survey_parser: SurveyParser::new(known_surveys),
             player_event_parser: PlayerEventParser::new(),
         };
 
@@ -145,11 +138,7 @@ impl PlayerLogWatcher {
     }
 
     /// Create from existing position (resume from database)
-    pub fn from_position(
-        file_path: PathBuf,
-        position: u64,
-        known_surveys: HashMap<String, KnownSurveyType>,
-    ) -> Self {
+    pub fn from_position(file_path: PathBuf, position: u64) -> Self {
         let mut watcher = Self {
             file_path,
             current_position: position,
@@ -157,7 +146,6 @@ impl PlayerLogWatcher {
             active_character: None,
             current_chat_log: None,
             pattern_matchers: Vec::new(),
-            survey_parser: SurveyParser::new(known_surveys),
             player_event_parser: PlayerEventParser::new(),
         };
 
@@ -193,6 +181,25 @@ impl PlayerLogWatcher {
     /// Get the current chat log path
     pub fn get_chat_log_path(&self) -> Option<&PathBuf> {
         self.current_chat_log.as_ref()
+    }
+
+    /// Feed a resolved chat `[Status] ItemGained` event into the player event
+    /// parser's correlation buffer. The coordinator calls this when it sees
+    /// a chat gain so upcoming `ProcessAddItem`s can seed their stack size
+    /// from the authoritative chat quantity.
+    ///
+    /// `item_internal_name` must already be resolved (chat's display name
+    /// mapped to the CDN internal name); the parser does the final match and
+    /// has no CDN access of its own. `timestamp_hms` should be UTC in
+    /// "HH:MM:SS" form to align with player.log timestamps.
+    pub fn feed_chat_gain(
+        &mut self,
+        item_internal_name: String,
+        quantity: u32,
+        timestamp_hms: &str,
+    ) {
+        self.player_event_parser
+            .feed_chat_gain(item_internal_name, quantity, timestamp_hms);
     }
 
     /// Parse a single line from Player.log
@@ -316,16 +323,6 @@ impl LogFileWatcher for PlayerLogWatcher {
 
                     // Feed every line through the player event parser first
                     let player_events = self.player_event_parser.process_line(&line_content);
-
-                    // Feed player events + raw line into the survey parser
-                    // (raw line still needed for ProcessMapFx which is survey-specific)
-                    let survey_events = self
-                        .survey_parser
-                        .process_events(&player_events, &line_content);
-                    for se in survey_events {
-                        events.push(LogEvent::SurveyParsed(se));
-                    }
-
                     for pe in player_events {
                         events.push(LogEvent::PlayerEventParsed(pe));
                     }
@@ -562,7 +559,7 @@ mod tests {
 
     #[test]
     fn test_parse_character_login() {
-        let mut watcher = PlayerLogWatcher::new(PathBuf::from("test.log"), HashMap::new());
+        let mut watcher = PlayerLogWatcher::new(PathBuf::from("test.log"));
 
         let event = watcher.parse_line("Logged in as character [TestCharacter]");
         assert!(event.is_some());
@@ -578,7 +575,7 @@ mod tests {
 
     #[test]
     fn test_parse_chat_log_path() {
-        let mut watcher = PlayerLogWatcher::new(PathBuf::from("test.log"), HashMap::new());
+        let mut watcher = PlayerLogWatcher::new(PathBuf::from("test.log"));
 
         let event = watcher.parse_line("Logging chat to C:/Users/Test/ChatLogs/Chat-26-03-06.log");
         assert!(event.is_some());
@@ -594,7 +591,7 @@ mod tests {
 
     #[test]
     fn test_parse_area_transition() {
-        let mut watcher = PlayerLogWatcher::new(PathBuf::from("test.log"), HashMap::new());
+        let mut watcher = PlayerLogWatcher::new(PathBuf::from("test.log"));
 
         let event = watcher.parse_line("LOADING LEVEL AreaCasino");
         assert!(event.is_some());
@@ -684,7 +681,7 @@ mod tests {
 
     #[test]
     fn test_custom_pattern_registration() {
-        let mut watcher = PlayerLogWatcher::new(PathBuf::from("test.log"), HashMap::new());
+        let mut watcher = PlayerLogWatcher::new(PathBuf::from("test.log"));
 
         fn match_xp_gain(line: &str, _watcher: &mut PlayerLogWatcher) -> Option<LogEvent> {
             if line.contains("You gain") && line.contains("experience in") {
@@ -713,7 +710,7 @@ mod tests {
 
     #[test]
     fn test_pattern_registration_order() {
-        let mut watcher = PlayerLogWatcher::new(PathBuf::from("test.log"), HashMap::new());
+        let mut watcher = PlayerLogWatcher::new(PathBuf::from("test.log"));
 
         let event1 = watcher.parse_line("Logged in as character [TestChar]");
         assert!(matches!(event1, Some(LogEvent::CharacterLogin { .. })));

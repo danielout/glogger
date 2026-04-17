@@ -106,7 +106,6 @@ import { useStartupStore } from "./stores/startupStore";
 import { useUpdateStore } from "./stores/updateStore";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useGameStateStore } from "./stores/gameStateStore";
-import { useSurveyStore } from "./stores/surveyStore";
 import { provideEntityNavigation } from "./composables/useEntityNavigation";
 import { useDataBrowserStore, entityTypeToTab } from "./stores/dataBrowserStore";
 import { provideViewNavigation } from "./composables/useViewNavigation";
@@ -233,9 +232,7 @@ onBeforeUnmount(() => {
 async function parseLog() {
   error.value = "";
   const gameStateStore = useGameStateStore();
-  const surveyStore = useSurveyStore();
   gameStateStore.resetSessionSkills();
-  surveyStore.reset();
   parsing.value = true;
   try {
     const path = settingsStore.settings.logFilePath || settingsStore.getPlayerLogPath();

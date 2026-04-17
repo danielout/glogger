@@ -144,6 +144,11 @@ pub struct AppSettings {
     /// over the auto-detected offset. Advanced setting for edge cases.
     #[serde(default)]
     pub manual_timezone_override: Option<i32>,
+
+    /// When true (default), survey sessions auto-start on crafting or
+    /// first-use detection. When false, sessions only start manually.
+    #[serde(default = "default_true")]
+    pub auto_start_survey_sessions: bool,
 }
 
 fn default_timestamp_display_mode() -> String {
@@ -284,6 +289,7 @@ impl Default for AppSettings {
             timestamp_display_mode: default_timestamp_display_mode(),
             timezone_offset_seconds: None,
             manual_timezone_override: None,
+            auto_start_survey_sessions: true,
         }
     }
 }

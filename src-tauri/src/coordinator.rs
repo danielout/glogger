@@ -13,8 +13,7 @@ use crate::log_watchers::{ChatLogWatcher, LogEvent, LogFileWatcher, PlayerLogWat
 use crate::parsers::chat_local_to_utc;
 use crate::player_event_parser::PlayerEvent;
 use crate::settings::SettingsManager;
-use crate::survey_parser::KnownSurveyType;
-use crate::survey_persistence::SurveySessionTracker;
+use crate::survey::aggregator::{SurveyAggregatorEvent, SurveySessionAggregator};
 use crate::watch_rules::evaluate_rules;
 use chrono::{Datelike, Local};
 use serde::Serialize;
@@ -26,7 +25,6 @@ use serde::Serialize;
 /// - Operation locking to prevent conflicts
 /// - Database write coordination
 /// - Progress event emission to frontend
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
@@ -89,7 +87,12 @@ pub struct DataIngestCoordinator {
     db_pool: DbPool,
     settings: Arc<SettingsManager>,
     app_handle: AppHandle,
-    survey_tracker: SurveySessionTracker,
+    /// Phase 5 survey tracker. Owned by the coordinator so its state survives
+    /// screen navigation per the backend-owned-state rule. Subscribes to
+    /// PlayerEvents in the live event loop, persists per-use rows to
+    /// `survey_uses`, and stitches the survey_use_id link into provenance for
+    /// downstream item_transactions writes.
+    survey_aggregator: SurveySessionAggregator,
     game_state: GameStateManager,
     game_data: GameDataState,
     /// Current area name, updated from AreaTransition events.
@@ -121,7 +124,8 @@ impl DataIngestCoordinator {
             game_state.set_active_server_name(server_name);
         }
 
-        let survey_tracker = SurveySessionTracker::new();
+        let mut survey_aggregator = SurveySessionAggregator::new(game_data_clone.clone());
+        survey_aggregator.auto_start_enabled = settings.get().auto_start_survey_sessions;
 
         Ok(Self {
             player_watcher: None,
@@ -130,7 +134,7 @@ impl DataIngestCoordinator {
             db_pool,
             settings,
             app_handle,
-            survey_tracker,
+            survey_aggregator,
             game_state,
             game_data: game_data_clone,
             current_area: None,
@@ -164,6 +168,27 @@ impl DataIngestCoordinator {
             }),
             operation: operation_str.to_string(),
         }
+    }
+
+    /// Active (character, server) pair, if known. Used by feature commands
+    /// (notably the survey tracker) that scope all writes by character/server.
+    pub fn active_character_server(&self) -> Option<(String, String)> {
+        let c = self.game_state.get_active_character()?;
+        let s = self.game_state.get_active_server()?;
+        Some((c.to_string(), s.to_string()))
+    }
+
+    /// Read access to the DB pool. Feature commands need this to issue
+    /// queries without going through the GameStateManager.
+    pub fn db_pool(&self) -> &DbPool {
+        &self.db_pool
+    }
+
+    /// Mutable access to the survey aggregator. Lets command handlers issue
+    /// session start/end and other lifecycle operations without exposing the
+    /// full coordinator surface.
+    pub fn survey_aggregator_mut(&mut self) -> &mut SurveySessionAggregator {
+        &mut self.survey_aggregator
     }
 
     /// Start player log tailing
@@ -232,8 +257,6 @@ impl DataIngestCoordinator {
             self.game_state.set_active_server_name(server_name);
         }
 
-        // Load known survey types for the survey parser
-        let known_surveys = load_known_surveys(&conn);
         drop(conn);
 
         // Create watcher
@@ -242,7 +265,7 @@ impl DataIngestCoordinator {
                 "Starting Player.log catch-up from byte position {}",
                 position
             );
-            let mut w = PlayerLogWatcher::from_position(player_log_path, position, known_surveys);
+            let mut w = PlayerLogWatcher::from_position(player_log_path, position);
 
             // Seed identity from the saved position so we know who's playing
             // even if no new login line appears in the resumed log content.
@@ -253,7 +276,7 @@ impl DataIngestCoordinator {
             w
         } else {
             startup_log!("Starting Player.log from beginning (no saved position)");
-            PlayerLogWatcher::new(player_log_path, known_surveys)
+            PlayerLogWatcher::new(player_log_path)
         };
 
         // Start watching
@@ -574,45 +597,7 @@ impl DataIngestCoordinator {
                 LogEvent::SkillUpdated(update) => {
                     self.app_handle.emit("skill-update", &update).ok();
                 }
-                LogEvent::SurveyParsed(survey_event) => {
-                    // Persist to DB synchronously first, then emit to frontend
-                    let result = self
-                        .survey_tracker
-                        .process_event(&survey_event, &self.db_pool);
-
-                    // Warn loudly if session creation failed — frontend will see
-                    // events but no data will be persisted
-                    if result.session_id.is_none() {
-                        eprintln!(
-                            "[coordinator] WARNING: survey event processed but session_id is None \
-                             (event: {:?}, tracker current_session={:?}, last_session={:?})",
-                            std::mem::discriminant(&survey_event),
-                            self.survey_tracker.current_session_id(),
-                            self.survey_tracker.last_session_id(),
-                        );
-                    }
-
-                    // Wrap the event with session_id so the frontend can track it
-                    let mut payload = serde_json::to_value(&survey_event).unwrap_or_default();
-                    if let (serde_json::Value::Object(ref mut map), Some(sid)) =
-                        (&mut payload, result.session_id)
-                    {
-                        map.insert(
-                            "session_id".to_string(),
-                            serde_json::Value::Number(sid.into()),
-                        );
-                    }
-                    self.app_handle.emit("survey-event", &payload).ok();
-
-                    // If the session auto-ended, notify frontend so it can patch in
-                    // elapsed/XP data that only the frontend knows about
-                    if result.session_ended {
-                        if let Some(sid) = result.session_id {
-                            self.app_handle.emit("survey-session-ended", sid).ok();
-                        }
-                    }
-                }
-                LogEvent::PlayerEventParsed(player_event) => {
+                LogEvent::PlayerEventParsed(mut player_event) => {
                     // Side-channel: intercept PlayerShopLog books for Stall Tracker
                     // ingestion before the event gets batched. The live path stamps
                     // the active character as owner unconditionally — the game only
@@ -627,6 +612,35 @@ impl DataIngestCoordinator {
                     {
                         if book_type == "PlayerShopLog" {
                             self.ingest_shop_log(timestamp, title, content);
+                        }
+                    }
+
+                    // Phase 5 survey aggregator. Runs *before* game_state
+                    // persists the event so any survey_use_id it injects into
+                    // provenance reaches item_transactions.source_details.
+                    // Failure to acquire a DB connection is non-fatal — the
+                    // aggregator's writes are deferrable, and skipping a tick
+                    // is better than dropping the event entirely.
+                    let active_char = self
+                        .game_state
+                        .get_active_character()
+                        .map(String::from);
+                    let active_server = self
+                        .game_state
+                        .get_active_server()
+                        .map(String::from);
+                    if let (Some(character), Some(server), Ok(conn)) =
+                        (active_char, active_server, self.db_pool.get())
+                    {
+                        let agg_events = self.survey_aggregator.process_event(
+                            &mut player_event,
+                            &conn,
+                            &character,
+                            &server,
+                            self.current_area.as_deref(),
+                        );
+                        for ev in agg_events {
+                            self.emit_survey_aggregator_event(&ev);
                         }
                     }
 
@@ -679,20 +693,13 @@ impl DataIngestCoordinator {
 
                     // Run Status channel messages through the structured parser
                     if let Some(status_event) = parse_status_message(&msg) {
-                        // Cross-reference with survey tracker for loot quantity correction.
-                        // No active-session gate — correct_loot_from_chat_status falls back
-                        // to last_session_id so corrections work after session auto-end.
-                        if let Some(correction) = self
-                            .survey_tracker
-                            .correct_loot_from_chat_status(&status_event, &self.db_pool)
-                        {
-                            self.app_handle
-                                .emit("survey-loot-correction", &correction)
-                                .ok();
-                        }
-
                         // Cross-reference with general inventory for stack correction
                         // and record item transactions from chat status events.
+                        // (Loot-quantity correction for the survey tracker happens
+                        // inside the SurveySessionAggregator on the player-event side
+                        // now — chat ItemGained events feed feed_chat_gain so the
+                        // parser can seed AddItem stack sizes correctly. No separate
+                        // post-hoc correction is needed.)
                         match &status_event {
                             ChatStatusEvent::ItemGained {
                                 item_name,
@@ -709,6 +716,31 @@ impl DataIngestCoordinator {
                                     _ => "loot",
                                 };
 
+                                // Feed the chat quantity into the player event parser's
+                                // correlation buffer. Upcoming ProcessAddItem events within
+                                // a small time window will seed their stack size from this
+                                // chat quantity instead of the fallback 1. The parser needs
+                                // the internal name (player.log uses internal names) so we
+                                // resolve here where we have CDN access.
+                                let internal_name = self
+                                    .game_data
+                                    .try_read()
+                                    .ok()
+                                    .and_then(|gd| {
+                                        gd.resolve_item(item_name)
+                                            .and_then(|info| info.internal_name.clone())
+                                    });
+                                if let (Some(internal), Some(watcher)) =
+                                    (internal_name, self.player_watcher.as_mut())
+                                {
+                                    // timestamp is "YYYY-MM-DD HH:MM:SS" UTC — extract the time portion
+                                    let hms = timestamp
+                                        .split_whitespace()
+                                        .nth(1)
+                                        .unwrap_or(timestamp);
+                                    watcher.feed_chat_gain(internal, *quantity, hms);
+                                }
+
                                 // Correct inventory/storage stack sizes
                                 let corrected_domains = self.game_state.correct_stack_from_chat(
                                     item_name,
@@ -721,7 +753,13 @@ impl DataIngestCoordinator {
                                         .ok();
                                 }
 
-                                // Record in transaction ledger
+                                // Record in transaction ledger.
+                                // Chat-status-sourced rows do not carry
+                                // ItemProvenance — the correlated player.log
+                                // event (inserted separately) is the
+                                // provenance-bearing row. Leaving source_kind
+                                // NULL on these chat rows avoids double-counting
+                                // any future per-source aggregates.
                                 if let Ok(conn) = self.db_pool.get() {
                                     if let (Some(character), Some(server)) = (
                                         self.game_state.get_active_character(),
@@ -1068,6 +1106,80 @@ impl DataIngestCoordinator {
         Ok(())
     }
 
+    /// Translate a [`SurveyAggregatorEvent`] into a Tauri event emit. Each
+    /// variant maps to a frontend-visible event name; payloads are serialized
+    /// to JSON via serde so the frontend can destructure with a matching type.
+    fn emit_survey_aggregator_event(&self, event: &SurveyAggregatorEvent) {
+        match event {
+            SurveyAggregatorEvent::SessionStarted {
+                session_id,
+                trigger,
+            } => {
+                let payload = serde_json::json!({
+                    "session_id": session_id,
+                    "trigger": trigger.as_str(),
+                });
+                self.app_handle
+                    .emit("survey-tracker-session-started", &payload)
+                    .ok();
+            }
+            SurveyAggregatorEvent::SessionEnded { session_id, reason } => {
+                let payload = serde_json::json!({
+                    "session_id": session_id,
+                    "reason": reason,
+                });
+                self.app_handle
+                    .emit("survey-tracker-session-ended", &payload)
+                    .ok();
+            }
+            SurveyAggregatorEvent::UseRecorded {
+                use_id,
+                session_id,
+                map_internal_name,
+                kind,
+            } => {
+                let payload = serde_json::json!({
+                    "use_id": use_id,
+                    "session_id": session_id,
+                    "map_internal_name": map_internal_name,
+                    "kind": kind.as_str(),
+                });
+                self.app_handle
+                    .emit("survey-tracker-use-recorded", &payload)
+                    .ok();
+            }
+            SurveyAggregatorEvent::UseCompleted { use_id } => {
+                self.app_handle
+                    .emit("survey-tracker-use-completed", use_id)
+                    .ok();
+            }
+            SurveyAggregatorEvent::MultihitNodeOpened {
+                use_id,
+                node_entity_id,
+            } => {
+                let payload = serde_json::json!({
+                    "use_id": use_id,
+                    "node_entity_id": node_entity_id,
+                });
+                self.app_handle
+                    .emit("survey-tracker-multihit-opened", &payload)
+                    .ok();
+            }
+            SurveyAggregatorEvent::MultihitNodeClosed {
+                use_id,
+                node_entity_id,
+            } => {
+                let payload = serde_json::json!({
+                    "use_id": use_id,
+                    "node_entity_id": node_entity_id,
+                });
+                self.app_handle
+                    .emit("survey-tracker-multihit-closed", &payload)
+                    .ok();
+            }
+        }
+    }
+
     /// Parse a PlayerShopLog book body and persist its entries to the
     /// `stall_events` table, stamped with the active character as owner.
     ///
@@ -1207,40 +1319,3 @@ pub fn poll_watchers(
 // Helpers
 // ============================================================
 
-/// Load known survey types from the database for the survey parser.
-/// Returns a HashMap keyed by internal_name.
-fn load_known_surveys(conn: &rusqlite::Connection) -> HashMap<String, KnownSurveyType> {
-    let mut map = HashMap::new();
-    let mut stmt = match conn.prepare("SELECT internal_name, name, is_motherlode FROM survey_types")
-    {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("[coordinator] Failed to load survey types: {e}");
-            return map;
-        }
-    };
-
-    let rows = stmt.query_map([], |row| {
-        Ok((
-            row.get::<_, String>(0)?,
-            row.get::<_, String>(1)?,
-            row.get::<_, bool>(2)?,
-        ))
-    });
-
-    if let Ok(rows) = rows {
-        for row in rows.flatten() {
-            let (internal_name, display_name, is_motherlode) = row;
-            map.insert(
-                internal_name,
-                KnownSurveyType {
-                    display_name,
-                    is_motherlode,
-                },
-            );
-        }
-    }
-
-    startup_log!("Loaded {} known survey types", map.len());
-    map
-}

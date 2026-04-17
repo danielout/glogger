@@ -22,8 +22,20 @@ The app ingests timestamps from two sources with different raw formats:
 
 | Source | Raw Format | Conversion |
 |---|---|---|
-| Player.log | `[HH:MM:SS]` — UTC, no date | Combined with today's UTC date via [`to_utc_datetime()`](../../src-tauri/src/parsers.rs) — no offset needed |
+| Player.log | `[HH:MM:SS]` — UTC, no date | Combined with a UTC base date via [`to_utc_datetime_with_base()`](../../src-tauri/src/parsers.rs) — no offset needed |
 | Chat.log | `YY-MM-DD HH:MM:SS` — player's local time | Converted to UTC via [`chat_local_to_utc()`](../../src-tauri/src/parsers.rs) using the detected timezone offset |
+
+### Player.log base date
+
+Because Player.log doesn't carry a date, the caller supplies one:
+
+| Mode | Base date |
+|---|---|
+| Live tailing | `None` → today's UTC date (`Utc::now().date_naive()`) |
+| Dual-log replay | Derived from the chat log filename (`Chat-YY-MM-DD.log`), falling back to the first chat timestamp, falling back to today |
+| Solo `parse_log` (old-log reparse in Advanced Settings) | The Player.log file's modification time converted to UTC (`SystemTime` → `DateTime<Utc>`) |
+
+`GameStateManager` and `SurveySessionAggregator` both expose `set_base_date()` for the replay and reparse paths; live tailing leaves the override unset.
 
 ### Timezone Offset Detection
 
@@ -33,7 +45,7 @@ Users can also set `manual_timezone_override` in settings, which takes precedenc
 
 ## Backend (Rust)
 
-- Use `to_utc_datetime(time_str)` from [`parsers.rs`](../../src-tauri/src/parsers.rs) to convert Player.log `HH:MM:SS` times to full UTC datetime strings (Player.log is already UTC, just needs a date).
+- Use `to_utc_datetime_with_base(time_str, base_date)` from [`parsers.rs`](../../src-tauri/src/parsers.rs) to convert Player.log `HH:MM:SS` times to full UTC datetime strings. Pass `None` for live (uses today's UTC date); replay / old-log reparse passes the date they derived from chat log / file mtime.
 - Use `chat_local_to_utc(dt, tz_offset_seconds)` from [`parsers.rs`](../../src-tauri/src/parsers.rs) to convert Chat.log `NaiveDateTime` from local time to UTC.
 - Use `chrono::Utc::now()` when generating timestamps from the system clock.
 - Never store local time in the database.
@@ -131,3 +143,4 @@ When a snapshot import and a log event conflict on the same row, **the most rece
 - Do not use `toLocaleTimeString()` or similar browser APIs — they bypass the display mode setting.
 - Do not add external date libraries (dayjs, date-fns, moment). The app uses native `Date` plus the custom composable intentionally.
 - Do not parse Player.log timestamps directly in feature code — let the backend convert them to UTC before they reach the database.
+- Do not stamp session `started_at` / `ended_at` from `Utc::now()` and leave them — survey sessions recompute both from the first/last attributed event timestamp at end time (see [`recompute_session_bounds_and_end`](../../src-tauri/src/survey/persistence.rs)), which makes replayed and live bounds equally accurate.

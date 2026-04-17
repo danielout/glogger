@@ -1,6 +1,6 @@
 use crate::cdn_commands::GameDataState;
 use crate::db::DbPool;
-use crate::parsers::to_utc_datetime;
+use crate::parsers::to_utc_datetime_with_base;
 /// Game State Manager — persists derived game state from PlayerEvents to SQLite.
 ///
 /// Follows the SurveySessionTracker pattern: lightweight struct that receives
@@ -36,6 +36,10 @@ pub struct GameStateManager {
     game_data: GameDataState,
     /// NPC key of the vendor currently being interacted with (set on InteractionStarted, cleared on InteractionEnded)
     current_vendor_npc: Option<String>,
+    /// When set, overrides the UTC date used to stamp Player.log `HH:MM:SS`
+    /// timestamps. Used by replay and old-log reparse so events are written
+    /// with the date of the original capture, not today.
+    base_date_override: Option<chrono::NaiveDate>,
 }
 
 impl GameStateManager {
@@ -46,7 +50,15 @@ impl GameStateManager {
             live_mode: false,
             game_data,
             current_vendor_npc: None,
+            base_date_override: None,
         }
+    }
+
+    /// Stamp Player.log times with an explicit UTC date instead of today's.
+    /// Live tailing leaves this unset; replay / old-log reparse sets it so
+    /// DB writes carry the correct historical date.
+    pub fn set_base_date(&mut self, date: chrono::NaiveDate) {
+        self.base_date_override = Some(date);
     }
 
     /// Mark that catch-up replay is complete and future logins are live.
@@ -89,8 +101,9 @@ impl GameStateManager {
 
     /// Convert a Player.log HH:MM:SS timestamp to a full UTC datetime string.
     /// Player.log timestamps are already UTC — just needs a date component added.
+    /// Uses `base_date_override` when set (replay / old-log reparse).
     fn to_utc(&self, ts: &str) -> String {
-        to_utc_datetime(ts)
+        to_utc_datetime_with_base(ts, self.base_date_override)
     }
 
     /// Update the active character.
@@ -411,6 +424,8 @@ impl GameStateManager {
                 instance_id,
                 slot_index,
                 is_new,
+                initial_quantity,
+                provenance,
             } => {
                 let dt = self.to_utc(timestamp);
                 // Resolve item_type_id and display name from CDN game data
@@ -421,13 +436,14 @@ impl GameStateManager {
                 let display_name = resolved.map(|info| info.name.as_str());
                 conn.execute(
                     "INSERT INTO game_state_inventory (character_name, server_name, instance_id, item_name, item_type_id, stack_size, slot_index, last_confirmed_at, source)
-                     VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6, ?7, 'log')
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'log')
                      ON CONFLICT(character_name, server_name, instance_id) DO UPDATE SET
                         item_name = excluded.item_name,
                         item_type_id = COALESCE(excluded.item_type_id, game_state_inventory.item_type_id),
+                        stack_size = excluded.stack_size,
                         slot_index = excluded.slot_index,
                         last_confirmed_at = excluded.last_confirmed_at",
-                    rusqlite::params![character, server, *instance_id as i64, item_name, item_type_id, slot_index, dt],
+                    rusqlite::params![character, server, *instance_id as i64, item_name, item_type_id, *initial_quantity, slot_index, dt],
                 ).ok();
                 // Record transaction (only for genuinely new items, not login reloads)
                 if *is_new {
@@ -439,11 +455,12 @@ impl GameStateManager {
                         display_name.unwrap_or(item_name),
                         Some(item_name),
                         item_type_id,
-                        1, // initial stack_size; corrected later by chat or ItemStackChanged
+                        *initial_quantity as i32,
                         "loot",
                         "player_log",
                         Some(*instance_id),
                         None,
+                        Some(provenance.to_columns()),
                     );
                 }
                 domains.push("inventory");
@@ -455,6 +472,8 @@ impl GameStateManager {
                 item_name,
                 item_type_id,
                 new_stack_size,
+                delta,
+                provenance,
                 ..
             } => {
                 let dt = self.to_utc(timestamp);
@@ -469,6 +488,37 @@ impl GameStateManager {
                         last_confirmed_at = excluded.last_confirmed_at",
                     rusqlite::params![character, server, *instance_id as i64, name, *item_type_id as i32, new_stack_size, dt],
                 ).ok();
+
+                // Record a gain transaction for positive deltas so the ledger
+                // captures stack merges (same-item pickups on top of an existing
+                // stack never fire ItemAdded). Negative deltas are handled by
+                // ItemDeleted when the stack empties; partial decrements don't
+                // currently surface as transactions.
+                if *delta > 0 {
+                    // Resolve the display name so transaction rows use the
+                    // same name format as ItemAdded and ScreenText markers —
+                    // this is what lets the speed-bonus patch find them.
+                    let resolved = item_name
+                        .as_deref()
+                        .and_then(|n| game_data_guard.as_ref().and_then(|gd| gd.resolve_item(n)));
+                    let display_name = resolved.map(|info| info.name.as_str()).unwrap_or(name);
+                    let item_type_id_i64 = if *item_type_id != 0 { Some(*item_type_id as i64) } else { None };
+                    Self::record_transaction(
+                        &conn,
+                        character,
+                        server,
+                        &dt,
+                        display_name,
+                        item_name.as_deref(),
+                        item_type_id_i64,
+                        *delta,
+                        "loot",
+                        "player_log",
+                        Some(*instance_id),
+                        None,
+                        Some(provenance.to_columns()),
+                    );
+                }
                 domains.push("inventory");
             }
 
@@ -517,6 +567,10 @@ impl GameStateManager {
                     tx_context,
                     "player_log",
                     Some(*instance_id),
+                    None,
+                    // Deletes carry DeleteContext (storage/vendor/consumed/unknown)
+                    // on the event itself rather than ItemProvenance. Not a "gain",
+                    // so source_kind is left NULL.
                     None,
                 );
                 domains.push("inventory");
@@ -715,6 +769,10 @@ impl GameStateManager {
                         "player_log",
                         Some(*instance_id),
                         Some(vk),
+                        // Deposits move items between player-owned storages
+                        // (inventory ↔ vault). Not a "gain" and not ascribed to
+                        // any activity context.
+                        None,
                     );
                     domains.push("storage");
                 }
@@ -725,6 +783,7 @@ impl GameStateManager {
                 vault_key,
                 instance_id,
                 quantity,
+                provenance,
                 ..
             } => {
                 if let Some(vk) = vault_key {
@@ -757,6 +816,12 @@ impl GameStateManager {
                         "player_log",
                         Some(*instance_id),
                         Some(vk),
+                        // Negative quantity here represents the vault side of
+                        // a withdrawal; pair with the inventory gain from
+                        // ProcessAddItem that carries the provenance proper.
+                        // Still attach provenance so the withdrawal row can be
+                        // grouped with its counterpart gain when querying.
+                        Some(provenance.to_columns()),
                     );
                     domains.push("storage");
                 }
@@ -925,6 +990,13 @@ impl GameStateManager {
     }
 
     /// Record an item transaction in the ledger.
+    ///
+    /// `provenance_columns` is `None` for transactions that don't have
+    /// ItemProvenance attached (e.g., chat-status-sourced rows inserted
+    /// directly by the coordinator without parser context). Callers with a
+    /// PlayerEvent in hand should pass `Some(event_provenance.to_columns())`
+    /// so downstream aggregates can filter and group by source.
+    #[allow(clippy::too_many_arguments)]
     fn record_transaction(
         conn: &Connection,
         character: &str,
@@ -938,10 +1010,15 @@ impl GameStateManager {
         source: &str,
         instance_id: Option<u64>,
         vault_key: Option<&str>,
+        provenance_columns: Option<crate::player_event_parser::ProvenanceColumns>,
     ) {
+        let (source_kind, source_details, confidence) = match provenance_columns {
+            Some(p) => (p.source_kind, p.source_details, p.confidence),
+            None => (None, None, None),
+        };
         conn.execute(
-            "INSERT INTO item_transactions (timestamp, character_name, server_name, item_name, internal_name, item_type_id, quantity, context, source, instance_id, vault_key)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            "INSERT INTO item_transactions (timestamp, character_name, server_name, item_name, internal_name, item_type_id, quantity, context, source, instance_id, vault_key, source_kind, source_details, confidence)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
             rusqlite::params![
                 dt,
                 character,
@@ -954,6 +1031,9 @@ impl GameStateManager {
                 source,
                 instance_id.map(|id| id as i64),
                 vault_key,
+                source_kind,
+                source_details,
+                confidence,
             ],
         )
         .ok();

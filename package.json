@@ -10,7 +10,8 @@
     "tauri": "tauri",
     "tauri:build": "tauri build --config src-tauri/tauri.release.conf.json",
     "version:bump": "bash scripts/bump-version.sh",
-    "changelog": "bash scripts/generate-changelog.sh"
+    "changelog": "bash scripts/generate-changelog.sh",
+    "survey-test": "cd src-tauri && cargo test --lib survey::replay_tests::accuracy_report -- --ignored --nocapture"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",

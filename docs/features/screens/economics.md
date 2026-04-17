@@ -11,21 +11,21 @@ The economics screen consolidates tools for tracking wealth, market prices, farm
 **Backend (Rust):**
 - `src-tauri/src/db/market_commands.rs` — market value CRUD, import/export
 - `src-tauri/src/db/farming_commands.rs` — farming session persistence
-- `src-tauri/src/db/survey_commands.rs` — survey type data
-- `src-tauri/src/db/player_commands_survey_events.rs` — survey event logging
+- `src-tauri/src/db/survey_commands.rs` — survey type CDN reference data (read)
+- `src-tauri/src/survey/` — survey tracker module (aggregator, persistence, commands) on the provenance pipeline
 
 **Frontend (Vue/TS):**
 - `src/components/Economics/EconomicsView.vue` — 4-tab container
 - `src/components/Market/MarketView.vue` — market price management
 - `src/components/Economics/EconomicsFarmingView.vue` — farming session wrapper
 - `src/components/Farming/` — farming session components
-- `src/components/Economics/EconomicsSurveyView.vue` — surveying session wrapper
-- `src/components/Surveying/` — surveying session components
+- `src/components/Economics/EconomicsSurveyView.vue` — surveying 3-tab wrapper
+- `src/components/Surveying/` — SurveyTrackerView, HistoricalTab, AnalyticsTab
 
 **Stores:**
 - `marketStore` — market value CRUD, import/export, valuation modes
 - `farmingStore` — farming session lifecycle, live event tracking
-- `surveyStore` — survey session lifecycle, loot/profit tracking
+- `surveyTrackerStore` — read-through cache over the backend survey tracker
 
 ### Component Hierarchy
 
@@ -35,14 +35,11 @@ EconomicsView.vue                   — 4-tab container
 ├── EconomicsFarmingView.vue        — farming wrapper
 │   ├── FarmingSessionCard.vue      — active session with live tracking
 │   └── HistoricalTab.vue           — past session browser
-├── EconomicsSurveyView.vue         — surveying wrapper
-│   ├── SessionTab.vue              — active survey session
-│   │   ├── SessionSidebar.vue      — stats, XP, economics
-│   │   ├── SurveyTypeAccordion.vue — per-survey-type breakdown
-│   │   └── SurveyLog.vue           — activity log
-│   ├── HistoricalTab.vue           — past sessions
-│   └── AnalyticsTab.vue            — aggregated analytics
-└── EmptyState                      — Stall Tracker (stub)
+├── EconomicsSurveyView.vue         — surveying 3-tab wrapper
+│   ├── SurveyTrackerView.vue       — Session: live tracker over backend state
+│   ├── HistoricalTab.vue           — Session History: expandable session list
+│   └── AnalyticsTab.vue            — Zones / Survey Types / Items views
+└── StallTrackerView.vue            — stall tracker (shop log analytics)
 ```
 
 ## Per-Tab Documentation
