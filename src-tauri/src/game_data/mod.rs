@@ -1117,7 +1117,15 @@ fn build_all_indices(
                 .trim()
                 .to_string();
 
-            let is_monster_ability = base.keywords.iter().any(|k| k == "Lint_MonsterAbility");
+            // Only mark as monster ability if ALL tiers have the tag.
+            // Some families (e.g. Cow Stampede) have a monster-only base tier
+            // but player-usable higher tiers that lack the tag.
+            let is_monster_ability = tier_ids.iter().all(|tid| {
+                abilities
+                    .get(tid)
+                    .map(|a| a.keywords.iter().any(|k| k == "Lint_MonsterAbility"))
+                    .unwrap_or(false)
+            });
 
             let family = abilities::AbilityFamily {
                 base_internal_name: base_internal_name.clone(),
