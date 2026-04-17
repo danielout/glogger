@@ -12,8 +12,7 @@
     <!-- NPC compact list -->
     <div
       v-else
-      class="flex flex-col gap-1.5 overflow-y-auto"
-      :class="displayNpcs.length > 8 ? 'max-h-120' : ''"
+      class="flex flex-col gap-1.5 overflow-y-auto max-h-80"
     >
       <div
         v-for="entry in displayNpcs"
