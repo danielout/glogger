@@ -3109,6 +3109,21 @@ pub async fn find_recipe_items_in_inventory(
         .filter_map(|r: Result<_, rusqlite::Error>| r.ok())
         .collect();
 
+    // Get all storage items
+    let mut storage_stmt = conn.prepare(
+        "SELECT item_name, item_type_id, stack_size
+         FROM game_state_storage
+         WHERE character_name = ?1 AND server_name = ?2"
+    ).map_err(|e| format!("Query error: {e}"))?;
+
+    let storage_items: Vec<(String, Option<i64>, i32)> = storage_stmt
+        .query_map(rusqlite::params![character_name, server_name], |row: &rusqlite::Row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, Option<i64>>(1)?, row.get::<_, i32>(2)?))
+        })
+        .map_err(|e| format!("Query error: {e}"))?
+        .filter_map(|r: Result<_, rusqlite::Error>| r.ok())
+        .collect();
+
     // Get known recipes
     let mut recipe_stmt = conn.prepare(
         "SELECT recipe_id FROM game_state_recipes
@@ -3139,9 +3154,9 @@ pub async fn find_recipe_items_in_inventory(
         .filter_map(|r: Result<_, rusqlite::Error>| r.ok())
         .collect();
 
-    // Aggregate by item type — sum stack sizes for same type_id
+    // Aggregate by item type — sum stack sizes across inventory and storage
     let mut type_stacks = std::collections::HashMap::<u32, (String, i32)>::new();
-    for entry in &inv_items {
+    for entry in inv_items.iter().chain(storage_items.iter()) {
         if let Some(type_id) = entry.1 {
             let id = type_id as u32;
             let ts = type_stacks.entry(id).or_insert_with(|| (entry.0.clone(), 0));

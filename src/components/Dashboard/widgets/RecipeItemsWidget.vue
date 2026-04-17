@@ -130,6 +130,7 @@ async function load() {
 
 onMounted(load)
 
-// Reload when inventory changes
+// Reload when inventory or storage changes
 watch(() => gameState.inventory, load, { deep: true })
+watch(() => gameState.storage, load, { deep: true })
 </script>
