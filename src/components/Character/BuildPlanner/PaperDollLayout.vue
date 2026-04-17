@@ -1,37 +1,39 @@
 <template>
   <div class="flex flex-col h-full min-h-0 gap-3 px-2 py-2">
-    <!-- Build selector row -->
-    <div class="flex items-center gap-2 shrink-0">
+    <!-- Build selector -->
+    <div class="flex flex-col gap-1.5 shrink-0">
       <StyledSelect
         :model-value="String(store.activePreset?.id ?? '')"
         :options="presetOptions"
         placeholder="Select a build..."
         size="sm"
-        class="flex-1 min-w-0"
+        class="w-full"
         @update:model-value="onPresetChange" />
-      <button
-        class="px-2 py-1 text-xs bg-accent-gold/20 border border-accent-gold/40 text-accent-gold rounded cursor-pointer hover:bg-accent-gold/30 shrink-0"
-        @click="showCreate = true">
-        + New
-      </button>
-      <button
-        v-if="store.activePreset"
-        class="px-1.5 py-1 text-xs bg-surface-elevated border border-border-default text-text-secondary rounded cursor-pointer hover:bg-surface-hover shrink-0"
-        @click="showRename = true">
-        Rename
-      </button>
-      <button
-        v-if="store.activePreset"
-        class="px-1.5 py-1 text-xs bg-surface-elevated border border-border-default text-text-secondary rounded cursor-pointer hover:bg-surface-hover shrink-0"
-        @click="showClone = true">
-        Clone
-      </button>
-      <button
-        v-if="store.activePreset"
-        class="px-1.5 py-1 text-xs bg-red-900/20 border border-red-700/40 text-red-400 rounded cursor-pointer hover:bg-red-900/30 shrink-0"
-        @click="showDelete = true">
-        Del
-      </button>
+      <div class="flex items-center gap-2">
+        <button
+          class="px-2 py-1 text-xs bg-accent-gold/20 border border-accent-gold/40 text-accent-gold rounded cursor-pointer hover:bg-accent-gold/30 shrink-0"
+          @click="showCreate = true">
+          + New
+        </button>
+        <button
+          v-if="store.activePreset"
+          class="px-1.5 py-1 text-xs bg-surface-elevated border border-border-default text-text-secondary rounded cursor-pointer hover:bg-surface-hover shrink-0"
+          @click="showRename = true">
+          Rename
+        </button>
+        <button
+          v-if="store.activePreset"
+          class="px-1.5 py-1 text-xs bg-surface-elevated border border-border-default text-text-secondary rounded cursor-pointer hover:bg-surface-hover shrink-0"
+          @click="showClone = true">
+          Clone
+        </button>
+        <button
+          v-if="store.activePreset"
+          class="px-1.5 py-1 text-xs bg-red-900/20 border border-red-700/40 text-red-400 rounded cursor-pointer hover:bg-red-900/30 shrink-0"
+          @click="showDelete = true">
+          Del
+        </button>
+      </div>
     </div>
 
     <!-- Import/Export row -->
