@@ -15,6 +15,7 @@ import DeathTrackerWidget from "./widgets/DeathTrackerWidget.vue";
 import RecipeItemsWidget from "./widgets/RecipeItemsWidget.vue";
 import ZoneNpcsWidget from "./widgets/ZoneNpcsWidget.vue";
 import GiftWatcherWidget from "./widgets/GiftWatcherWidget.vue";
+import TeleportCodesWidget from "./widgets/TeleportCodesWidget.vue";
 
 export type WidgetSize = "small" | "medium" | "large";
 
@@ -128,6 +129,12 @@ export const DASHBOARD_WIDGETS: DashboardWidget[] = [
     id: "gift-watcher",
     name: "Gift Watcher",
     component: GiftWatcherWidget,
+    defaultSize: "medium",
+  },
+  {
+    id: "teleport-codes",
+    name: "Teleport Machine Codes",
+    component: TeleportCodesWidget,
     defaultSize: "medium",
   },
 ];
