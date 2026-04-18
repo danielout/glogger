@@ -182,6 +182,53 @@
       class="text-xs text-text-dim italic bg-surface-base border border-surface-elevated rounded px-3 py-2">
       No discoveries for this recipe yet. Click "Scan Snapshots" to extract brewing data from your inventory exports.
     </div>
+
+    <!-- Try Next suggestions -->
+    <div v-if="suggestions.length > 0">
+      <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
+        Try Next
+        <span class="normal-case tracking-normal text-text-dim ml-1">(untried combos you have ingredients for)</span>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <div
+          v-for="(sug, i) in suggestions"
+          :key="i"
+          class="flex items-center gap-2 bg-surface-base border rounded px-3 py-1.5"
+          :class="sug.ownedCount === sug.totalCount
+            ? 'border-accent-green/40'
+            : sug.ownedCount > 0
+              ? 'border-accent-gold/25'
+              : 'border-surface-elevated'">
+          <span
+            v-if="sug.ownedCount === sug.totalCount"
+            class="text-[0.55rem] text-accent-green font-semibold shrink-0 w-12">
+            ✓ Ready
+          </span>
+          <span
+            v-else
+            class="text-[0.55rem] text-text-dim font-mono shrink-0 w-12">
+            {{ sug.ownedCount }}/{{ sug.totalCount }}
+          </span>
+          <div class="flex flex-wrap gap-x-2 gap-y-0.5">
+            <span
+              v-for="ingId in sug.ingredientIds"
+              :key="ingId"
+              class="text-xs inline-flex items-center gap-0.5">
+              <span
+                class="w-1.5 h-1.5 rounded-full inline-block shrink-0"
+                :class="hasItem(ingId) ? 'bg-accent-green' : 'bg-surface-elevated border border-border-light'" />
+              <ItemInline :reference="String(ingId)" />
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="text-[0.6rem] text-text-dim mt-1">
+        {{ discoveredCombos.size }} of {{ discoveredCombos.size + suggestions.length }} combos discovered
+        <template v-if="totalUntriedCount > suggestions.length">
+          · showing top {{ suggestions.length }} of {{ totalUntriedCount }} untried
+        </template>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -223,5 +270,91 @@ function getOwnedCount(itemTypeId: number): number {
   const ingredient = props.ingredientById.get(itemTypeId);
   if (!ingredient) return 0;
   return gameState.ownedItemCounts[ingredient.name] ?? 0;
+}
+
+function hasItem(itemTypeId: number): boolean {
+  return getOwnedCount(itemTypeId) > 0;
+}
+
+// ── "Try Next" suggestions ──────────────────────────────────────────────────
+
+/** Set of sorted ingredient ID arrays that have already been discovered */
+const discoveredCombos = computed(() => {
+  const set = new Set<string>();
+  for (const d of props.discoveries) {
+    const key = [...d.ingredient_ids].sort((a, b) => a - b).join(",");
+    set.add(key);
+  }
+  return set;
+});
+
+interface Suggestion {
+  ingredientIds: number[];
+  ownedCount: number;
+  totalCount: number;
+}
+
+/** Generate untried combos, prioritized by ingredient availability. Capped to avoid explosion. */
+const suggestions = computed((): Suggestion[] => {
+  const slots = props.recipe.variable_slots;
+  if (slots.length === 0) return [];
+
+  // Get valid item IDs for each slot
+  const slotOptions = slots.map((s) => s.valid_item_ids);
+
+  // Guard against combinatorial explosion — if total combos > 500, skip
+  const totalCombos = slotOptions.reduce((acc, opts) => acc * Math.max(opts.length, 1), 1);
+  if (totalCombos > 500) return [];
+
+  // Generate all combos via cartesian product
+  const allCombos: number[][] = cartesian(slotOptions);
+
+  // Filter out already-discovered combos
+  const untried: Suggestion[] = [];
+  for (const combo of allCombos) {
+    const sorted = [...combo].sort((a, b) => a - b);
+    const key = sorted.join(",");
+    if (discoveredCombos.value.has(key)) continue;
+
+    const ownedCount = combo.filter((id) => hasItem(id)).length;
+    untried.push({
+      ingredientIds: combo,
+      ownedCount,
+      totalCount: combo.length,
+    });
+  }
+
+  // Sort: most owned ingredients first, then by first ingredient ID for stability
+  untried.sort((a, b) => {
+    if (b.ownedCount !== a.ownedCount) return b.ownedCount - a.ownedCount;
+    return a.ingredientIds[0] - b.ingredientIds[0];
+  });
+
+  // Return top suggestions
+  return untried.slice(0, 5);
+});
+
+/** Total count of untried combos (for the "showing X of Y" message) */
+const totalUntriedCount = computed(() => {
+  const slots = props.recipe.variable_slots;
+  if (slots.length === 0) return 0;
+  const slotOptions = slots.map((s) => s.valid_item_ids);
+  const totalCombos = slotOptions.reduce((acc, opts) => acc * Math.max(opts.length, 1), 1);
+  if (totalCombos > 500) return 0;
+  return totalCombos - discoveredCombos.value.size;
+});
+
+/** Cartesian product of arrays */
+function cartesian(arrays: number[][]): number[][] {
+  if (arrays.length === 0) return [[]];
+  const [first, ...rest] = arrays;
+  const restProduct = cartesian(rest);
+  const result: number[][] = [];
+  for (const item of first) {
+    for (const combo of restProduct) {
+      result.push([item, ...combo]);
+    }
+  }
+  return result;
 }
 </script>
