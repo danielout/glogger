@@ -7,7 +7,7 @@
       defaultWidth: 380,
       minWidth: 280,
       maxWidth: 600,
-      defaultCollapsed: !selectedSessionId,
+      defaultCollapsed: false,
     }"
   >
     <!-- ═══ LEFT: controls + unified session list ═══ -->
