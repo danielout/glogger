@@ -118,8 +118,8 @@ use db::brewing_commands::{
 };
 use chat_commands::{
     delete_all_chat_messages, get_chat_channel_stats, get_chat_channels, get_chat_messages,
-    get_chat_stats, get_tell_conversations, get_watch_rule_messages, purge_chat_messages,
-    scan_chat_log_file, scan_chat_logs, tail_chat_log,
+    get_chat_messages_around, get_chat_stats, get_tell_conversations, get_watch_rule_messages,
+    purge_chat_messages, scan_chat_log_file, scan_chat_logs, tail_chat_log,
 };
 use commands::parse_log;
 use coordinator::{
@@ -459,6 +459,7 @@ pub fn run() {
             scan_chat_logs,
             scan_chat_log_file,
             get_chat_messages,
+            get_chat_messages_around,
             get_chat_channels,
             get_chat_channel_stats,
             get_chat_stats,

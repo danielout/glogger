@@ -128,13 +128,12 @@ pub fn get_chat_messages(
     conn: &DbConnection,
     filter: &ChatMessageFilter,
 ) -> Result<Vec<ChatMessageRow>> {
+    eprintln!("[DEBUG] get_chat_messages filter: {:?}", filter);
+
     // Build the query using a consistent approach for all filter combos
     let mut conditions: Vec<String> = Vec::new();
     let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
     let mut param_idx = 1;
-
-    // Use FTS join if search_text is provided
-    let use_fts = filter.search_text.is_some();
 
     // Tell partner filter: automatically sets channel to Tell and sender to partner
     if let Some(partner) = &filter.tell_partner {
@@ -147,13 +146,13 @@ pub fn get_chat_messages(
         param_idx += 1;
     } else {
         if let Some(channel) = &filter.channel {
-            conditions.push(format!("cm.channel = ?{}", param_idx));
+            conditions.push(format!("cm.channel = ?{} COLLATE NOCASE", param_idx));
             params.push(Box::new(channel.clone()));
             param_idx += 1;
         }
 
         if let Some(sender) = &filter.sender {
-            conditions.push(format!("cm.sender = ?{}", param_idx));
+            conditions.push(format!("cm.sender = ?{} COLLATE NOCASE", param_idx));
             params.push(Box::new(sender.clone()));
             param_idx += 1;
         }
@@ -194,23 +193,19 @@ pub fn get_chat_messages(
         param_idx += 1;
     }
 
-    // Build the full query
-    let from_clause = if use_fts {
-        let raw_search = filter.search_text.as_ref().unwrap();
-        // Sanitize for FTS5: wrap each word in double quotes to force literal matching.
-        // This prevents FTS5 syntax characters (*, ", +, -, etc.) from causing errors.
-        let sanitized: Vec<String> = raw_search
-            .split_whitespace()
-            .map(|word| format!("\"{}\"", word.replace('"', "")))
-            .collect();
-        let fts_query = sanitized.join(" ");
-        conditions.insert(0, format!("fts MATCH ?{}", param_idx));
-        params.push(Box::new(fts_query));
-        // param_idx not needed after this
-        "FROM chat_messages cm JOIN chat_messages_fts fts ON cm.id = fts.rowid".to_string()
-    } else {
-        "FROM chat_messages cm".to_string()
-    };
+    // Text search: use LIKE for each word (case-insensitive substring matching)
+    if let Some(search_text) = &filter.search_text {
+        for word in search_text.split_whitespace() {
+            let clean: String = word.chars().filter(|c| *c != '%' && *c != '_').collect();
+            if !clean.is_empty() {
+                conditions.push(format!("cm.message LIKE ?{}", param_idx));
+                params.push(Box::new(format!("%{}%", clean)));
+                param_idx += 1;
+            }
+        }
+    }
+
+    let from_clause = "FROM chat_messages cm";
 
     let where_clause = if conditions.is_empty() {
         String::new()
@@ -224,6 +219,8 @@ pub fn get_chat_messages(
          {} {} ORDER BY cm.timestamp {} LIMIT {} OFFSET {}",
         from_clause, where_clause, order_dir, filter.limit, filter.offset
     );
+
+    eprintln!("[DEBUG] Chat query: {}", query);
 
     let params_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
 
@@ -277,6 +274,61 @@ fn get_item_links_for_message(
     }
 
     Ok(links)
+}
+
+/// Get messages around a specific message for context viewing.
+/// Returns `context_count` messages before and after the target message
+/// in the same channel, ordered chronologically.
+pub fn get_messages_around(
+    conn: &DbConnection,
+    message_id: i64,
+    context_count: i64,
+) -> Result<Vec<ChatMessageRow>> {
+    let query = "
+        WITH target AS (
+            SELECT timestamp, channel FROM chat_messages WHERE id = ?1
+        )
+        SELECT cm.id, cm.timestamp, cm.channel, cm.sender, cm.message, cm.is_system, cm.from_player
+        FROM chat_messages cm, target t
+        WHERE cm.channel = t.channel
+          AND (
+            (cm.timestamp < t.timestamp AND cm.id IN (
+                SELECT id FROM chat_messages
+                WHERE channel = t.channel AND timestamp <= t.timestamp AND id != ?1
+                ORDER BY timestamp DESC LIMIT ?2
+            ))
+            OR cm.id = ?1
+            OR (cm.timestamp > t.timestamp AND cm.id IN (
+                SELECT id FROM chat_messages
+                WHERE channel = t.channel AND timestamp >= t.timestamp AND id != ?1
+                ORDER BY timestamp ASC LIMIT ?2
+            ))
+          )
+        ORDER BY cm.timestamp ASC
+    ";
+
+    let mut stmt = conn.prepare(query)?;
+    let rows = stmt.query_map(rusqlite::params![message_id, context_count], |row| {
+        Ok(ChatMessageRow {
+            id: row.get(0)?,
+            timestamp: row.get(1)?,
+            channel: row.get(2)?,
+            sender: row.get(3)?,
+            message: row.get(4)?,
+            is_system: row.get(5)?,
+            from_player: row.get(6)?,
+            item_links: Vec::new(),
+        })
+    })?;
+
+    let mut messages = Vec::new();
+    for row in rows {
+        let mut msg = row?;
+        msg.item_links = get_item_links_for_message(conn, msg.id)?;
+        messages.push(msg);
+    }
+
+    Ok(messages)
 }
 
 /// Get unique channels

@@ -110,6 +110,7 @@ async function loadMessages() {
     }
 
     hasMore.value = newMessages.length === LIMIT
+    offset.value += newMessages.length
   } catch (e) {
     console.error('Failed to load messages:', e)
   } finally {
@@ -118,7 +119,7 @@ async function loadMessages() {
 }
 
 function loadMore() {
-  offset.value += LIMIT
+  if (loading.value) return
   loadMessages()
 }
 

@@ -151,6 +151,7 @@ const viewTabs: Partial<Record<AppView, SubTab[]>> = {
     { id: "stall-tracker", label: "Stall Tracker" },
   ],
   chat: [
+    { id: "search", label: "Search" },
     { id: "channels", label: "Channels" },
     { id: "tells", label: "Tells" },
     { id: "party", label: "Party" },
@@ -168,7 +169,7 @@ const defaultSubTabs: Partial<Record<AppView, string>> = {
   inventory: "live",
   crafting: "quick-calc",
   economics: "market",
-  chat: "channels",
+  chat: "search",
 };
 
 const coordinatorStore = useCoordinatorStore();

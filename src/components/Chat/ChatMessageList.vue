@@ -61,11 +61,15 @@
         <div
           v-for="msg in messages"
           :key="msg.id"
+          :ref="(el) => { if (highlightId === msg.id) highlightEl = el as HTMLElement }"
           class="flex gap-2 p-2 mb-1 rounded leading-relaxed transition-colors hover:bg-surface-card"
           :class="{
             'opacity-70': msg.is_system,
-            'bg-accent-blue/5 hover:bg-accent-blue/10': msg.from_player === true
+            'bg-accent-blue/5 hover:bg-accent-blue/10': msg.from_player === true && highlightId !== msg.id,
+            'cursor-pointer': clickable,
+            'bg-accent-gold/10 border-l-2 border-accent-gold': highlightId === msg.id,
           }"
+          @click="clickable ? emit('message-click', msg) : undefined"
         >
           <span class="shrink-0 whitespace-nowrap text-text-muted text-sm font-mono">{{ formatTime(msg.timestamp) }}</span>
           <span
@@ -113,6 +117,8 @@ const props = defineProps<{
   hasMore?: boolean
   autoScroll?: boolean
   sortOrder?: 'asc' | 'desc'
+  clickable?: boolean
+  highlightId?: number
 }>()
 
 const isTellView = computed(() => {
@@ -124,10 +130,14 @@ const isTellView = computed(() => {
 const emit = defineEmits<{
   'load-more': []
   'toggle-sort': []
+  'message-click': [msg: ChatMessage]
 }>()
 
 const messagesContainer = ref<HTMLElement>()
+const highlightEl = ref<HTMLElement | null>(null)
 const showJumpToPresent = ref(false)
+
+let loadMoreEmitted = false
 
 function onScroll() {
   if (!messagesContainer.value) return
@@ -137,14 +147,22 @@ function onScroll() {
   // Show "Jump to Present" when scrolled more than 300px from the top
   showJumpToPresent.value = el.scrollTop > 300
 
-  if (props.loading || !props.hasMore) return
+  if (props.loading || !props.hasMore || loadMoreEmitted) return
   const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
 
   // Trigger load when within 200px of the bottom
   if (distanceFromBottom < 200) {
+    loadMoreEmitted = true
     emit('load-more')
   }
 }
+
+// Reset emit guard when loading state changes
+watch(() => props.loading, (isLoading) => {
+  if (!isLoading) {
+    loadMoreEmitted = false
+  }
+})
 
 function jumpToPresent() {
   if (!messagesContainer.value) return
@@ -181,6 +199,10 @@ watch(() => props.messages.length, async () => {
   if (props.autoScroll && messagesContainer.value) {
     await nextTick()
     messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+  }
+  if (props.highlightId) {
+    await nextTick()
+    highlightEl.value?.scrollIntoView({ block: 'center', behavior: 'smooth' })
   }
 })
 </script>

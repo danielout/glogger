@@ -196,7 +196,7 @@ pub async fn scan_chat_log_file(
     })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn get_chat_messages(
     channel: Option<String>,
     sender: Option<String>,
@@ -211,6 +211,8 @@ pub async fn get_chat_messages(
     sort_order: Option<String>,
     db_pool: State<'_, DbPool>,
 ) -> Result<Vec<chat_commands::ChatMessageRow>, String> {
+    eprintln!("[DEBUG] get_chat_messages command: channel={:?} sender={:?} search_text={:?} sort_order={:?}", channel, sender, search_text, sort_order);
+
     let conn = db_pool.get().map_err(|e| format!("Database error: {e}"))?;
 
     let filter = chat_commands::ChatMessageFilter {
@@ -229,6 +231,19 @@ pub async fn get_chat_messages(
 
     chat_commands::get_chat_messages(&conn, &filter)
         .map_err(|e| format!("Failed to get messages: {e}"))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub async fn get_chat_messages_around(
+    message_id: i64,
+    context_count: Option<i64>,
+    db_pool: State<'_, DbPool>,
+) -> Result<Vec<chat_commands::ChatMessageRow>, String> {
+    let conn = db_pool.get().map_err(|e| format!("Database error: {e}"))?;
+    let count = context_count.unwrap_or(25);
+
+    chat_commands::get_messages_around(&conn, message_id, count)
+        .map_err(|e| format!("Failed to get messages around: {e}"))
 }
 
 #[tauri::command]

@@ -15,10 +15,12 @@ A full chat log browser that imports, indexes, and displays all in-game chat wit
 - `src-tauri/src/db/chat_commands.rs` — database query layer
 
 **Frontend (Vue/TS):**
-- `src/components/Chat/ChatView.vue` — 8-tab container
+- `src/components/Chat/ChatView.vue` — 9-tab container
 - `src/components/Chat/ChatMessageList.vue` — shared paginated message renderer
+- `src/components/Chat/ChatSearchView.vue` — unified search with context navigation
 - `src/components/Chat/ChatMessage.vue` — individual message display
 - `src/components/Chat/MessageWithItemLinks.vue` — item link detection and rendering
+- `src/utils/parseSearchQuery.ts` — search query parser for `from:`/`in:` operators
 - Channel views: `ChannelView`, `TellsView`, `PartyView`, `NearbyView`, `GuildView`, `SystemView`, `AllMessagesView`, `WatchwordsView`
 
 **Stores:**
@@ -28,7 +30,8 @@ A full chat log browser that imports, indexes, and displays all in-game chat wit
 ### Component Hierarchy
 
 ```
-ChatView.vue                        — 8-tab container
+ChatView.vue                        — 9-tab container
+├── ChatSearchView.vue              — unified search (default tab)
 ├── ChannelView.vue                 — public/custom channels with sidebar
 ├── TellsView.vue                   — direct messages with conversation list
 ├── PartyView.vue                   — party channel
@@ -58,7 +61,8 @@ Shared:
 Generic message list renderer used by all tabs:
 - **Standard layout** — timestamp, channel badge (optional), sender name, message body
 - **Tell/bubble layout** — chat bubbles with player messages on right, others on left
-- **Pagination** — infinite scroll (auto-loads at 200px from bottom), with fallback "Load More" button. 100 messages per page. Loading indicator is inline, preserving scroll position.
+- **Pagination** — infinite scroll (auto-loads at 200px from bottom), with fallback "Load More" button. 100 messages per page. Loading indicator is inline, preserving scroll position. Race-condition guarded (emit guard in scroll handler + loading check in parent).
+- **Clickable messages** — optional `clickable` prop enables click-to-view-context; `highlightId` prop highlights a specific message with gold border and auto-scrolls to it
 - **Timestamps** — short format for today, full format for older messages
 
 ### MessageWithItemLinks
@@ -82,6 +86,7 @@ Parses message text to detect `[Item: ItemName]` patterns and renders them as `I
 
 ### Query
 - `get_chat_messages(ChatFilter) → Vec<ChatMessage>` — filtered message query
+- `get_chat_messages_around(message_id, context_count?) → Vec<ChatMessage>` — messages surrounding a target message in the same channel (default 25 before/after)
 - `get_chat_channels() → Vec<String>` — list all channels
 - `get_chat_channel_stats() → Vec<ChannelStat>` — per-channel message counts
 - `get_tell_conversations() → Vec<ChannelStat>` — list conversation partners
@@ -116,3 +121,5 @@ interface ChatFilter {
 - **Watchword rules in settings** — rules persist in `settingsStore` (app settings file) rather than the database, keeping them lightweight and portable.
 - **Deduplication** — `INSERT OR IGNORE` prevents duplicate messages when re-importing or tailing overlapping ranges.
 - **Offset pagination** — simple offset/limit pagination rather than cursor-based, sufficient for chat browsing patterns.
+- **Structured search syntax** — `from:player` and `in:channel` operators parsed on the frontend and mapped to existing backend filter fields. Remaining text goes to FTS5.
+- **Context navigation** — clicking a search result loads surrounding messages via `get_chat_messages_around`, allowing users to see the conversation context.

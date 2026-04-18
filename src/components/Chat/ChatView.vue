@@ -3,7 +3,8 @@
     <div class="flex flex-col h-full bg-surface-base rounded-lg overflow-hidden">
       <!-- Tab Content -->
       <div class="flex-1 overflow-hidden flex flex-col">
-        <ChannelView v-if="activeTab === 'channels'" />
+        <ChatSearchView v-if="activeTab === 'search'" />
+        <ChannelView v-else-if="activeTab === 'channels'" />
         <TellsView v-else-if="activeTab === 'tells'" />
         <PartyView v-else-if="activeTab === 'party'" />
         <NearbyView v-else-if="activeTab === 'nearby'" />
@@ -18,6 +19,7 @@
 
 <script setup lang="ts">
 import PaneLayout from '../Shared/PaneLayout.vue'
+import ChatSearchView from './ChatSearchView.vue'
 import ChannelView from './ChannelView.vue'
 import TellsView from './TellsView.vue'
 import PartyView from './PartyView.vue'
