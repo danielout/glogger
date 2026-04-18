@@ -33,6 +33,10 @@ Small tasks and notes that don't belong in a dedicated plan.
 ## Quick Wins (Small Effort, Noticeable Value)
 
 
+- [ ] Investigate and fix project tracking in Crafting -> Projects
+  - The "Start Tracking" button was removed from `ProjectMaterialsPanel.vue` because it wasn't working well. The `startProjectTracking()` method still exists in `craftingStore`. Need to investigate what's broken and re-implement properly.
+  - **Effort: Medium | Impact: Medium**
+
 - [ ] Save page state of projects page when navigating off it
   - Active project and group selection are ephemeral reactive refs in `craftingStore`. Pane widths already persist via `useViewPrefs()`. Just need to persist `activeProject`/`activeGroupName` the same way.
   - **Effort: Small | Impact: Medium (annoyance)**
