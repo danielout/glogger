@@ -6,14 +6,31 @@
     <!-- Collapsed strip (left pane: strip on left, right pane: strip on right) -->
     <div
       v-show="collapsed && !isFixed"
-      class="w-7 shrink-0 flex flex-col items-center justify-center cursor-pointer border-border-default hover:bg-surface-card transition-colors"
+      class="w-7 shrink-0 flex flex-col items-center justify-between cursor-pointer border-border-default bg-surface-card/50 hover:bg-surface-card transition-colors group py-2"
       :class="side === 'left' ? 'border-r' : 'border-l'"
       @click="toggle">
-      <span
-        class="text-text-muted text-xs select-none tracking-wider py-4"
-        :class="side === 'left' ? '[writing-mode:vertical-lr] rotate-180' : '[writing-mode:vertical-rl]'">
-        {{ title }}
-      </span>
+      <!-- Top chevrons — edge of bar -->
+      <div class="flex flex-col items-center gap-0.5 text-accent-gold select-none">
+        <span class="text-lg leading-none">{{ side === 'left' ? '\u25B8' : '\u25C2' }}</span>
+        <span class="text-lg leading-none">{{ side === 'left' ? '\u25B8' : '\u25C2' }}</span>
+        <span class="text-lg leading-none">{{ side === 'left' ? '\u25B8' : '\u25C2' }}</span>
+      </div>
+      <!-- Center: chevron + title + chevron -->
+      <div class="flex flex-col items-center gap-1">
+        <span class="text-accent-gold text-sm leading-none select-none">{{ side === 'left' ? '\u25B8' : '\u25C2' }}</span>
+        <span
+          class="text-accent-gold text-xs select-none tracking-wider py-1"
+          :class="side === 'left' ? '[writing-mode:vertical-lr] rotate-180' : '[writing-mode:vertical-rl]'">
+          {{ title }}
+        </span>
+        <span class="text-accent-gold text-sm leading-none select-none">{{ side === 'left' ? '\u25B8' : '\u25C2' }}</span>
+      </div>
+      <!-- Bottom chevrons — edge of bar -->
+      <div class="flex flex-col items-center gap-0.5 text-accent-gold select-none">
+        <span class="text-lg leading-none">{{ side === 'left' ? '\u25B8' : '\u25C2' }}</span>
+        <span class="text-lg leading-none">{{ side === 'left' ? '\u25B8' : '\u25C2' }}</span>
+        <span class="text-lg leading-none">{{ side === 'left' ? '\u25B8' : '\u25C2' }}</span>
+      </div>
     </div>
 
     <!-- Drag handle (right pane: handle on the left/interior edge) -->

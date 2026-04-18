@@ -28,10 +28,7 @@ Small tasks and notes that don't belong in a dedicated plan.
 - feat: 'package data' feature to create zip file of game state json, player.log, chat logs, and any character/inventory exports that occurred during the session. we probably should start saving the last X historical character jsons locally once we detect them to help with this, since (unlike inventory exports) they get overwritten
   - **Investigated:** All data sources have path helpers already (`get_player_log_path()`, `get_chat_logs_dir()`, Reports/ directory). `character_snapshots` table already stores `raw_json` for every imported snapshot — **historical character JSON is already preserved in the database**, so the "save last X" concern is partially solved. Inventory snapshots also store `raw_json`. No zip/export code exists — needs `zip` crate added to Cargo.toml, a new Tauri command to gather files + DB snapshots into a zip, and a save dialog. **Effort: Low-Medium.**
 
-- fix: user reports the live skill tracker is showing the wrong levels. "Actually what seems to be happening is that the base level is x synergy below what it SHOULD be, and then synergy level is being added twice.
-E.G. Endurance is 58, but it's 54+4, not 50+4 (or 50+[4x2])"
 
-- impv: a lot of people seem 
 ---
 
 ## Quick Wins (Small Effort, Noticeable Value)
