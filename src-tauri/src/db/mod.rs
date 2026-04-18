@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 pub mod admin_commands;
 pub mod aggregate_commands;
+pub mod brewing_commands;
 pub mod build_planner_commands;
 pub mod cdn_persistence;
 pub mod character_commands;

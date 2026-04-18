@@ -60,6 +60,8 @@ use cdn_commands::{
     get_recipes_for_item,
     get_recipes_for_skill,
     get_recipes_producing_items,
+    get_brewing_recipes,
+    get_brewing_ingredients,
     get_recipes_using_item,
     get_vendor_purchasable_item_ids,
     get_npc_vendor_items,
@@ -69,6 +71,7 @@ use cdn_commands::{
     get_storage_vault_zones,
     get_all_tsys,
     get_tsys_power_info,
+    get_tsys_power_info_batch,
     get_tsys_powers_for_slot,
     get_tsys_profiles,
     get_tsys_for_ability,
@@ -105,6 +108,12 @@ use cdn_commands::{
     get_recipes_for_keyword,
     find_recipe_items_in_inventory,
     GameDataState,
+};
+use db::brewing_commands::{
+    get_brewing_discoveries,
+    import_brewing_discoveries_csv,
+    scan_all_snapshots_for_brewing,
+    scan_snapshot_for_brewing_discoveries,
 };
 use chat_commands::{
     delete_all_chat_messages, get_chat_channel_stats, get_chat_channels, get_chat_messages,
@@ -358,6 +367,13 @@ pub fn run() {
             search_recipes,
             get_recipes_for_skill,
             get_recipes_producing_items,
+            // Brewing queries
+            get_brewing_recipes,
+            get_brewing_ingredients,
+            get_brewing_discoveries,
+            scan_snapshot_for_brewing_discoveries,
+            scan_all_snapshots_for_brewing,
+            import_brewing_discoveries_csv,
             // Quest queries
             get_all_quests,
             search_quests,
@@ -370,6 +386,7 @@ pub fn run() {
             get_effect,
             resolve_effect_descs,
             get_tsys_power_info,
+            get_tsys_power_info_batch,
             // TSys browser queries
             get_all_tsys,
             search_tsys,

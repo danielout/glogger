@@ -12,9 +12,9 @@ use serde_json::Value;
 use crate::cdn;
 use crate::db::DbPool;
 use crate::game_data::{
-    self, AbilityFamily, AbilityInfo, AreaInfo, EffectInfo, GameData, ItemInfo, LorebookCategoryInfo,
-    LorebookEntry, NpcInfo, PlayerTitleInfo, QuestInfo, RecipeInfo, SkillInfo, SourceEntry,
-    TsysClientInfo, TsysTierInfo,
+    self, AbilityFamily, AbilityInfo, AreaInfo, BrewingIngredient, BrewingRecipe, EffectInfo,
+    GameData, ItemInfo, LorebookCategoryInfo, LorebookEntry, NpcInfo, PlayerTitleInfo, QuestInfo,
+    RecipeInfo, SkillInfo, SourceEntry, TsysClientInfo, TsysTierInfo,
 };
 
 /// Timestamped log line for startup diagnostics.
@@ -1837,6 +1837,72 @@ pub async fn get_tsys_power_info(
     }))
 }
 
+/// Batch-resolve multiple TSys powers at once.
+/// Input: array of [powerName, tier] pairs.
+/// Returns a map of "powerName:tier" → TsysPowerInfo.
+#[tauri::command]
+pub async fn get_tsys_power_info_batch(
+    powers: Vec<(String, i64)>,
+    state: State<'_, GameDataState>,
+) -> Result<HashMap<String, TsysPowerInfo>, String> {
+    let data = state.read().await;
+    let mut result = HashMap::new();
+
+    for (power_name, tier) in powers {
+        let entry = data
+            .tsys
+            .client_info
+            .values()
+            .find(|info| info.internal_name.as_deref() == Some(&power_name));
+
+        let Some(info) = entry else { continue; };
+
+        let tier_key = format!("id_{}", tier);
+        let mut tier_effects = Vec::new();
+        let mut tier_effects_structured = Vec::new();
+        let mut icon_id: Option<u32> = None;
+
+        if let Some(tier_info) = info.tiers.get(&tier_key) {
+            for desc in &tier_info.effect_descs {
+                if let Some(resolved) = resolve_single_effect(desc, &data) {
+                    if icon_id.is_none() {
+                        icon_id = resolved.icon_id;
+                    }
+                    tier_effects.push(resolved.formatted.clone());
+                    tier_effects_structured.push(resolved);
+                } else {
+                    tier_effects.push(desc.to_string());
+                    tier_effects_structured.push(ResolvedEffect {
+                        label: desc.to_string(),
+                        value: String::new(),
+                        display_type: String::new(),
+                        formatted: desc.to_string(),
+                        icon_id: None,
+                    });
+                }
+            }
+        }
+
+        let resolved_skill = info.skill.as_deref().and_then(|s| {
+            data.resolve_skill(s).map(|si| si.name.clone())
+        }).or_else(|| info.skill.clone());
+
+        let key = format!("{}:{}", power_name, tier);
+        result.insert(key, TsysPowerInfo {
+            internal_name: power_name,
+            skill: resolved_skill,
+            prefix: info.prefix.clone(),
+            suffix: info.suffix.clone(),
+            slots: info.slots.clone(),
+            tier_effects,
+            tier_effects_structured,
+            icon_id,
+        });
+    }
+
+    Ok(result)
+}
+
 // ── Storage Vault query commands ─────────────────────────────────────────────
 
 #[derive(serde::Serialize)]
@@ -3330,4 +3396,22 @@ pub async fn search_lorebooks(
         a_title.cmp(b_title)
     });
     Ok(results)
+}
+
+// ── Brewing commands ────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn get_brewing_recipes(
+    state: State<'_, GameDataState>,
+) -> Result<Vec<BrewingRecipe>, String> {
+    let data = state.read().await;
+    Ok(data.brewing_recipes.clone())
+}
+
+#[tauri::command]
+pub async fn get_brewing_ingredients(
+    state: State<'_, GameDataState>,
+) -> Result<Vec<BrewingIngredient>, String> {
+    let data = state.read().await;
+    Ok(data.brewing_ingredients.clone())
 }

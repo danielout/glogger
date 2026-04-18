@@ -23,6 +23,7 @@ mod advancement_tables;
 mod ai;
 mod areas;
 mod attributes;
+pub mod brewing;
 mod directed_goals;
 mod effects;
 mod item_uses;
@@ -58,6 +59,7 @@ pub use quests::QuestInfo;
 pub use recipes::RecipeInfo;
 pub use skills::SkillInfo;
 pub use sources::SourceEntry;
+pub use brewing::{BrewingIngredient, BrewingRecipe};
 pub use tsys::TsysClientInfo;
 pub use tsys::TsysTierInfo;
 pub use xp_tables::XpTableInfo;
@@ -151,6 +153,11 @@ pub struct GameData {
     pub sources: sources::SourcesData,
     pub storage_vaults: HashMap<String, storage_vaults::StorageVaultInfo>,
     pub tsys: tsys::TsysData,
+
+    // ── Brewing (derived from recipes + items) ────────────────────────
+    pub brewing_recipes: Vec<brewing::BrewingRecipe>,
+    pub brewing_ingredients: Vec<brewing::BrewingIngredient>,
+    pub brewing_keyword_to_items: HashMap<String, Vec<u32>>,
 
     // ── Cross-type indices ─────────────────────────────────────────────
     pub item_name_index: HashMap<String, u32>,
@@ -272,6 +279,9 @@ impl GameData {
             sources: sources::SourcesData::empty(),
             storage_vaults: HashMap::new(),
             tsys: tsys::TsysData::empty(),
+            brewing_recipes: Vec::new(),
+            brewing_ingredients: Vec::new(),
+            brewing_keyword_to_items: HashMap::new(),
             item_name_index: HashMap::new(),
             item_internal_name_index: HashMap::new(),
             skill_name_index: HashMap::new(),
@@ -741,6 +751,11 @@ pub async fn load_from_cache_with_progress(
             idx
         };
 
+        // Build brewing data (derived from recipes + items)
+        let (brewing_recipes, brewing_ingredients, brewing_keyword_to_items) =
+            brewing::build_brewing_data(&recipes, &items);
+        startup_log!("  brewing: {} recipes, {} ingredients", brewing_recipes.len(), brewing_ingredients.len());
+
         Ok(GameData {
             version,
             items,
@@ -765,6 +780,9 @@ pub async fn load_from_cache_with_progress(
             sources,
             storage_vaults,
             tsys,
+            brewing_recipes,
+            brewing_ingredients,
+            brewing_keyword_to_items,
             item_name_index: indices.item_name_index,
             item_internal_name_index: indices.item_internal_name_index,
             skill_name_index: indices.skill_name_index,
