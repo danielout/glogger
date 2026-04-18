@@ -141,14 +141,14 @@
         </div>
 
         <!-- Top row: Loot table (2/5) | Donut chart (2/5) | Time breakdown (1/5) -->
-        <div class="grid grid-cols-5 gap-3" style="min-height: 280px">
-          <div class="col-span-2">
+        <div class="grid grid-cols-5 gap-3 shrink-0" style="height: 600px">
+          <div class="col-span-2 min-h-0 overflow-hidden">
             <LootOverviewPanel :rows="liveRows" />
           </div>
-          <div class="col-span-2">
+          <div class="col-span-2 min-h-0 overflow-hidden">
             <LootDonutChart :rows="liveRows" />
           </div>
-          <div class="col-span-1">
+          <div class="col-span-1 min-h-0 overflow-hidden">
             <TimeBreakdownPanel
               :session="selectedDetail.session"
               :is-active="isSelectedActive"
