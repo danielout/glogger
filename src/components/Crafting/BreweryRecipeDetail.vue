@@ -249,6 +249,9 @@ const props = defineProps<{
 const store = useBreweryStore();
 const gameState = useGameStateStore();
 
+// Session-stable random seed for shuffling suggestions
+const sessionSeed = Math.random();
+
 const categoryLabel = computed(() => CATEGORY_LABELS[props.recipe.category]);
 
 const dedupedPools = computed(() => {
@@ -324,10 +327,11 @@ const suggestions = computed((): Suggestion[] => {
     });
   }
 
-  // Sort: most owned ingredients first, then by first ingredient ID for stability
+  // Sort: most owned ingredients first, then shuffle within each tier
+  // using a seeded hash so it's stable per session but varies between sessions
   untried.sort((a, b) => {
     if (b.ownedCount !== a.ownedCount) return b.ownedCount - a.ownedCount;
-    return a.ingredientIds[0] - b.ingredientIds[0];
+    return seededHash(a.ingredientIds) - seededHash(b.ingredientIds);
   });
 
   // Return top suggestions
@@ -356,5 +360,14 @@ function cartesian(arrays: number[][]): number[][] {
     }
   }
   return result;
+}
+
+/** Simple seeded hash for stable-per-session shuffling */
+function seededHash(ids: number[]): number {
+  let h = sessionSeed * 2147483647;
+  for (const id of ids) {
+    h = ((h * 31) + id) % 2147483647;
+  }
+  return h;
 }
 </script>
