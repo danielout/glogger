@@ -93,3 +93,86 @@ export interface BrewingScanResult {
   updated_discoveries: number;
   total_brewing_items: number;
 }
+
+// ── Effect pool labels ──────────────────────────────────────────────────────
+
+/** Strip the trailing number from a pool name to get the base category */
+export function parsePoolName(pool: string): { base: string; weight: number } {
+  const match = pool.match(/^(.+?)(\d+)$/);
+  if (match) {
+    return { base: match[1], weight: parseInt(match[2]) };
+  }
+  return { base: pool, weight: 0 };
+}
+
+/** Human-friendly labels for effect pool base categories */
+const POOL_LABELS: Record<string, { label: string; description: string }> = {
+  Partying: {
+    label: "Party & Dance",
+    description: "Dance appreciation, alcohol tolerance, and social effects",
+  },
+  Gathering: {
+    label: "Gathering",
+    description: "Bonuses to foraging, lumberjack, mining, and other gathering skills",
+  },
+  SkillSpecificPowerCosts: {
+    label: "Ability Costs",
+    description: "Reduced power costs for specific combat skill abilities",
+  },
+  Endurance: {
+    label: "Endurance",
+    description: "Max health, max power, sprint speed, and survival effects",
+  },
+  RacialBonuses: {
+    label: "Racial Bonuses",
+    description: "Race-specific effects — may be restricted to certain races!",
+  },
+  BasicMitigation: {
+    label: "Mitigation",
+    description: "Damage mitigation against various damage types",
+  },
+  DamageVsAnatomy: {
+    label: "Damage vs Creatures",
+    description: "Bonus damage against specific creature types (orcs, undead, etc.)",
+  },
+  DirectDamageBoosts: {
+    label: "Direct Damage",
+    description: "Flat increases to damage dealt by specific skills",
+  },
+  EliteFighting: {
+    label: "Elite Combat",
+    description: "Bonuses when fighting elite and boss enemies",
+  },
+  Angling: {
+    label: "Fishing",
+    description: "Fishing-related bonuses",
+  },
+  CorpseActions: {
+    label: "Corpse Actions",
+    description: "Bonuses to burial, autopsy, and other corpse interactions",
+  },
+  FishAndGame: {
+    label: "Fish & Game",
+    description: "Hunting, fishing, and animal-related bonuses",
+  },
+  SkillBaseDamage: {
+    label: "Skill Damage",
+    description: "Base damage boosts for specific combat skills",
+  },
+  TBD: {
+    label: "Placeholder",
+    description: "Effects not yet implemented by the developers",
+  },
+};
+
+/** Get a friendly label for an effect pool name like "Partying4" */
+export function getPoolLabel(pool: string): string {
+  const { base } = parsePoolName(pool);
+  return POOL_LABELS[base]?.label ?? base;
+}
+
+/** Get a description for an effect pool name */
+export function getPoolDescription(pool: string): string {
+  const { base } = parsePoolName(pool);
+  return POOL_LABELS[base]?.description ?? "";
+}

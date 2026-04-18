@@ -77,29 +77,31 @@
     <!-- Effect Pool Info -->
     <div v-if="recipe.brew_item_effect">
       <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
-        Effect Pools
-        <span class="normal-case tracking-normal text-text-dim ml-1">(possible effect categories for this recipe)</span>
+        Possible Effect Categories
+        <span class="normal-case tracking-normal text-text-dim ml-1">(your brew will get one of these)</span>
       </div>
       <div class="flex flex-wrap gap-1.5">
         <span
           v-for="pool in dedupedPools"
           :key="pool"
+          :title="getPoolDescription(pool)"
           :class="[
-            'text-[0.6rem] px-2 py-0.5 rounded border',
+            'text-[0.6rem] px-2 py-0.5 rounded border cursor-default',
             isPlaceholderPool(pool)
               ? 'border-accent-warning/30 text-accent-warning bg-accent-warning/5'
-              : 'border-border-light text-text-secondary bg-surface-base',
+              : pool.startsWith('RacialBonuses')
+                ? 'border-accent-red/30 text-accent-red/80 bg-accent-red/5'
+                : 'border-border-light text-text-secondary bg-surface-base',
           ]">
-          {{ pool }}
-          <span v-if="isPlaceholderPool(pool)" class="ml-1 opacity-60">(placeholder)</span>
+          {{ getPoolLabel(pool) }}
+          <span v-if="isPlaceholderPool(pool)" class="ml-1 opacity-60">(not yet implemented)</span>
+          <span v-if="pool.startsWith('RacialBonuses')" class="ml-1 opacity-60">(may be race-locked)</span>
         </span>
       </div>
       <div class="text-[0.6rem] text-text-dim mt-1.5">
         Tier {{ recipe.brew_item_effect.tier }}
         <span class="mx-1 opacity-30">·</span>
-        {{ recipe.brew_item_effect.ingredient_slots.length }} variable slot{{ recipe.brew_item_effect.ingredient_slots.length === 1 ? '' : 's' }} determine the effect
-        <span class="mx-1 opacity-30">·</span>
-        {{ dedupedPools.length }} unique pool{{ dedupedPools.length === 1 ? '' : 's' }}
+        {{ recipe.brew_item_effect.ingredient_slots.length }} variable slot{{ recipe.brew_item_effect.ingredient_slots.length === 1 ? '' : 's' }} determine which effect you get
       </div>
     </div>
 
@@ -185,7 +187,7 @@ import { computed, ref, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 import type { BrewingRecipe, BrewingIngredient, BrewingDiscovery } from "../../types/gameData/brewing";
-import { CATEGORY_LABELS } from "../../types/gameData/brewing";
+import { CATEGORY_LABELS, getPoolLabel, getPoolDescription } from "../../types/gameData/brewing";
 
 interface TsysPowerInfo {
   internal_name: string;
