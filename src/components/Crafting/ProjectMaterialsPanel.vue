@@ -295,8 +295,6 @@ function onCustomerProvidesChange(key: string, maxQty: number, event: Event) {
 }
 
 const craftingStore = useCraftingStore();
-const tracker = computed(() => craftingStore.tracker);
-
 const displayName = computed(() =>
   props.activeGroupName ?? props.activeProject?.name ?? null,
 );
