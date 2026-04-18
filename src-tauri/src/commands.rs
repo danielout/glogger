@@ -2,13 +2,14 @@ use std::fs::{self, File};
 use std::io::BufRead;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::cdn_commands::GameDataState;
 use crate::db::DbPool;
 use crate::game_state::GameStateManager;
 use crate::parsers::parse_skill_update;
-use crate::player_event_parser::PlayerEventParser;
+use crate::player_event_parser::{PlayerEvent, PlayerEventParser};
 use crate::settings::SettingsManager;
 use crate::survey::aggregator::SurveySessionAggregator;
 
@@ -67,6 +68,17 @@ pub async fn parse_log(path: String, app: AppHandle) -> Result<(), String> {
         };
         let reader = std::io::BufReader::new(file);
 
+        // Batch player events and domain updates to reduce PostMessage calls,
+        // matching the coordinator's batching strategy.
+        const BATCH_MAX_SIZE: usize = 50;
+        const BATCH_MAX_AGE: Duration = Duration::from_millis(100);
+
+        let mut player_event_batch: Vec<PlayerEvent> = Vec::new();
+        let mut domains_batch: Vec<&'static str> = Vec::new();
+        let mut batch_start = Instant::now();
+        let mut emits_since_yield: u32 = 0;
+        let mut last_yield = Instant::now();
+
         for line in reader.lines() {
             let l = match line {
                 Ok(l) => l.trim_end().to_string(),
@@ -78,31 +90,92 @@ pub async fn parse_log(path: String, app: AppHandle) -> Result<(), String> {
 
             if let Some(update) = parse_skill_update(&l) {
                 app.emit("skill-update", update).ok();
+                emits_since_yield += 1;
             }
 
             let mut events = player_parser.process_line(&l);
-            dispatch_events(
-                &app,
-                &db,
-                &mut game_state,
-                &mut survey_aggregator,
-                active_char.as_deref(),
-                active_server.as_deref(),
-                &mut events,
-            );
+
+            // Run survey aggregator before batching
+            for pe in events.iter_mut() {
+                if let (Some(character), Some(server), Ok(conn)) =
+                    (active_char.as_deref(), active_server.as_deref(), db.get())
+                {
+                    let _ = survey_aggregator.process_event(pe, &conn, character, server, None);
+                }
+            }
+            player_event_batch.extend(events);
+
+            // Flush when batch is full or old enough
+            if player_event_batch.len() >= BATCH_MAX_SIZE
+                || (!player_event_batch.is_empty() && batch_start.elapsed() >= BATCH_MAX_AGE)
+            {
+                let batch_result = game_state.process_events_batch(&player_event_batch, &db);
+                domains_batch.extend(batch_result.domains_updated);
+
+                app.emit("player-events-batch", &player_event_batch).ok();
+                player_event_batch.clear();
+                emits_since_yield += 1;
+
+                if !domains_batch.is_empty() {
+                    domains_batch.sort_unstable();
+                    domains_batch.dedup();
+                    app.emit("game-state-updated", &domains_batch).ok();
+                    domains_batch.clear();
+                    emits_since_yield += 1;
+                }
+                batch_start = Instant::now();
+
+                // Yield so the webview JS event loop can drain
+                if emits_since_yield >= 4 {
+                    std::thread::sleep(Duration::from_millis(15));
+                    last_yield = Instant::now();
+                    emits_since_yield = 0;
+                }
+            }
+
+            // Extra yield for non-batched events (skill-update)
+            if emits_since_yield >= 20 && last_yield.elapsed() < Duration::from_millis(50) {
+                std::thread::sleep(Duration::from_millis(15));
+                last_yield = Instant::now();
+                emits_since_yield = 0;
+            } else if last_yield.elapsed() >= Duration::from_millis(50) {
+                last_yield = Instant::now();
+                emits_since_yield = 0;
+            }
         }
 
-        // Flush any pending events buffered in the parser.
+        // Flush remaining batch
+        if !player_event_batch.is_empty() {
+            let batch_result = game_state.process_events_batch(&player_event_batch, &db);
+            domains_batch.extend(batch_result.domains_updated);
+            app.emit("player-events-batch", &player_event_batch).ok();
+            player_event_batch.clear();
+        }
+        if !domains_batch.is_empty() {
+            domains_batch.sort_unstable();
+            domains_batch.dedup();
+            app.emit("game-state-updated", &domains_batch).ok();
+        }
+
+        // Flush pending events from the parser itself
         let mut flush_events = player_parser.flush_all_pending();
-        dispatch_events(
-            &app,
-            &db,
-            &mut game_state,
-            &mut survey_aggregator,
-            active_char.as_deref(),
-            active_server.as_deref(),
-            &mut flush_events,
-        );
+        if !flush_events.is_empty() {
+            for pe in flush_events.iter_mut() {
+                if let (Some(character), Some(server), Ok(conn)) =
+                    (active_char.as_deref(), active_server.as_deref(), db.get())
+                {
+                    let _ = survey_aggregator.process_event(pe, &conn, character, server, None);
+                }
+            }
+            let batch_result = game_state.process_events_batch(&flush_events, &db);
+            app.emit("player-events-batch", &flush_events).ok();
+            if !batch_result.domains_updated.is_empty() {
+                let mut domains = batch_result.domains_updated;
+                domains.sort_unstable();
+                domains.dedup();
+                app.emit("game-state-updated", &domains).ok();
+            }
+        }
     });
 
     Ok(())
@@ -118,24 +191,3 @@ fn file_mtime_utc_date(path: &PathBuf) -> Option<chrono::NaiveDate> {
     Some(dt.date_naive())
 }
 
-fn dispatch_events(
-    app: &AppHandle,
-    db: &DbPool,
-    game_state: &mut GameStateManager,
-    survey_aggregator: &mut SurveySessionAggregator,
-    active_char: Option<&str>,
-    active_server: Option<&str>,
-    events: &mut [crate::player_event_parser::PlayerEvent],
-) {
-    for pe in events.iter_mut() {
-        if let (Some(character), Some(server), Ok(conn)) = (active_char, active_server, db.get()) {
-            let _ = survey_aggregator.process_event(pe, &conn, character, server, None);
-        }
-
-        let gs_result = game_state.process_event(pe, db);
-        if !gs_result.domains_updated.is_empty() {
-            app.emit("game-state-updated", &gs_result.domains_updated).ok();
-        }
-        app.emit("player-event", &*pe).ok();
-    }
-}

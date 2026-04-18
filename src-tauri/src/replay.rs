@@ -18,7 +18,7 @@ use crate::chat_status_parser::parse_status_message;
 use crate::db::DbPool;
 use crate::game_state::GameStateManager;
 use crate::parsers::{chat_local_to_utc, parse_skill_update, parse_timestamp};
-use crate::player_event_parser::PlayerEventParser;
+use crate::player_event_parser::{PlayerEvent, PlayerEventParser};
 use crate::survey::aggregator::SurveySessionAggregator;
 
 /// A timestamped event from either log source, used for interleaving.
@@ -348,12 +348,49 @@ fn run_replay(
 
     let progress_interval = (total_events / 100).max(50); // emit ~100 progress events
 
-    // Throttle event emission to avoid flooding the Windows message queue.
-    // PostMessage has a per-thread queue limit (~10,000 messages); without pacing,
-    // a tight emit loop overflows it with error 0x80070718.
-    let mut last_yield = Instant::now();
-    let yield_interval = Duration::from_millis(50);
+    // Use the same batching strategy as the live coordinator to avoid
+    // flooding the Windows message queue. Accumulate player events and
+    // domain updates, then flush in consolidated emissions. This
+    // dramatically reduces the number of PostMessage calls compared to
+    // per-event emission.
+    const BATCH_MAX_SIZE: usize = 50;
+    const BATCH_MAX_AGE: Duration = Duration::from_millis(100);
+
+    let mut player_event_batch: Vec<PlayerEvent> = Vec::new();
+    let mut domains_batch: Vec<&'static str> = Vec::new();
+    let mut batch_start = Instant::now();
     let mut emits_since_yield: u32 = 0;
+    let mut last_yield = Instant::now();
+
+    /// Flush accumulated player events and domain updates to the frontend.
+    /// Yields briefly after each flush so the message queue can drain.
+    macro_rules! flush_batches {
+        ($app:expr, $gs:expr, $pe:expr, $dom:expr, $start:expr, $emits:expr, $last_yield:expr) => {
+            if !$pe.is_empty() {
+                let batch_result = $gs.process_events_batch(&$pe, &db);
+                $dom.extend(batch_result.domains_updated);
+
+                $app.emit("player-events-batch", &$pe).ok();
+                $emits += 1;
+                $pe.clear();
+            }
+            if !$dom.is_empty() {
+                $dom.sort_unstable();
+                $dom.dedup();
+                $app.emit("game-state-updated", &$dom).ok();
+                $emits += 1;
+                $dom.clear();
+            }
+            $start = Instant::now();
+
+            // Yield so the webview JS event loop can process the batch
+            if $emits >= 4 {
+                std::thread::sleep(Duration::from_millis(15));
+                $last_yield = Instant::now();
+                $emits = 0;
+            }
+        };
+    }
 
     for (i, event) in all_events.iter().enumerate() {
         // Progress updates
@@ -376,6 +413,9 @@ fn run_replay(
                 character_name,
                 ..
             } => {
+                // Flush pending batches before identity change
+                flush_batches!(app, game_state, player_event_batch, domains_batch, batch_start, emits_since_yield, last_yield);
+
                 game_state.set_active_character_name(character_name);
                 game_state.set_active_server_name(server_name);
 
@@ -409,18 +449,8 @@ fn run_replay(
                     }
                 }
 
-                // Game state + player event emission
-                for pe in &p_events {
-                    let gs_result = game_state.process_event(pe, db);
-                    if !gs_result.domains_updated.is_empty() {
-                        app.emit("game-state-updated", &gs_result.domains_updated)
-                            .ok();
-                        emits_since_yield += 1;
-                    }
-                    app.emit("player-event", pe).ok();
-                    emits_since_yield += 1;
-                    result.player_events_emitted += 1;
-                }
+                result.player_events_emitted += p_events.len();
+                player_event_batch.extend(p_events);
             }
 
             TimedEvent::ChatMessage { msg, .. } => {
@@ -435,25 +465,42 @@ fn run_replay(
             }
         }
 
-        // Periodically yield so the Windows message queue can drain.
-        // Only sleep when we've actually been emitting AND enough wall-clock
-        // time hasn't naturally elapsed (avoids unnecessary sleeps when DB
-        // writes already provide enough breathing room).
-        if emits_since_yield >= 100 && last_yield.elapsed() < yield_interval {
-            std::thread::sleep(Duration::from_millis(5));
+        // Flush when batch is full or old enough
+        if player_event_batch.len() >= BATCH_MAX_SIZE
+            || (!player_event_batch.is_empty() && batch_start.elapsed() >= BATCH_MAX_AGE)
+        {
+            flush_batches!(app, game_state, player_event_batch, domains_batch, batch_start, emits_since_yield, last_yield);
+        }
+
+        // Extra yield if we've been emitting a lot of non-batched events
+        // (skill-update, chat-status-event, character-login, etc.)
+        if emits_since_yield >= 20 && last_yield.elapsed() < Duration::from_millis(50) {
+            std::thread::sleep(Duration::from_millis(15));
             last_yield = Instant::now();
             emits_since_yield = 0;
-        } else if last_yield.elapsed() >= yield_interval {
+        } else if last_yield.elapsed() >= Duration::from_millis(50) {
             last_yield = Instant::now();
             emits_since_yield = 0;
         }
     }
 
-    // Flush pending player events
+    // Flush any remaining batched events
+    flush_batches!(app, game_state, player_event_batch, domains_batch, batch_start, emits_since_yield, last_yield);
+
+    // Flush pending player events from the parser itself
     let flush_events = player_parser.flush_all_pending();
-    for pe in &flush_events {
-        app.emit("player-event", pe).ok();
-        result.player_events_emitted += 1;
+    if !flush_events.is_empty() {
+        let batch_result = game_state.process_events_batch(&flush_events, db);
+        app.emit("player-events-batch", &flush_events).ok();
+        result.player_events_emitted += flush_events.len();
+
+        if !batch_result.domains_updated.is_empty() {
+            let mut domains = batch_result.domains_updated;
+            domains.sort_unstable();
+            domains.dedup();
+            app.emit("game-state-updated", &domains).ok();
+        }
+        std::thread::sleep(Duration::from_millis(15));
     }
 
     // Final progress
