@@ -182,6 +182,11 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 31)?;
     }
 
+    if current_version < 32 {
+        migration_v32_brewing_discoveries(conn)?;
+        super::record_migration(conn, 32)?;
+    }
+
     Ok(())
 }
 
@@ -1882,6 +1887,29 @@ fn migration_v31_abilities_internal_name(conn: &Connection) -> Result<()> {
          CREATE INDEX idx_abilities_name ON abilities(name COLLATE NOCASE);
          CREATE INDEX idx_abilities_skill ON abilities(skill);
          CREATE INDEX idx_abilities_damage_type ON abilities(damage_type);",
+    )?;
+
+    Ok(())
+}
+
+fn migration_v32_brewing_discoveries(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS brewing_discoveries (
+             id INTEGER PRIMARY KEY,
+             character TEXT NOT NULL,
+             recipe_id INTEGER NOT NULL,
+             ingredient_ids TEXT NOT NULL,
+             power TEXT NOT NULL,
+             power_tier INTEGER NOT NULL,
+             effect_label TEXT,
+             race_restriction TEXT,
+             item_name TEXT,
+             first_seen_at TEXT NOT NULL,
+             last_seen_at TEXT NOT NULL,
+             UNIQUE(character, recipe_id, ingredient_ids)
+         );
+         CREATE INDEX IF NOT EXISTS idx_brewing_disc_char ON brewing_discoveries(character);
+         CREATE INDEX IF NOT EXISTS idx_brewing_disc_recipe ON brewing_discoveries(recipe_id);",
     )?;
 
     Ok(())

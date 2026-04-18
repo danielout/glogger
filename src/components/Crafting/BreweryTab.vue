@@ -57,15 +57,35 @@
                   : 'bg-transparent text-text-secondary hover:bg-surface-base'"
                 @click="store.selectRecipe(recipe.recipe_id)">
                 <span class="truncate">{{ recipe.name }}</span>
-                <span class="text-text-muted font-mono shrink-0 ml-2 text-[0.6rem]">Lv{{ recipe.skill_level_req }}</span>
+                <span class="flex items-center gap-1.5 shrink-0 ml-2">
+                  <span
+                    v-if="store.discoveryCountByRecipe.get(recipe.recipe_id)"
+                    class="text-[0.55rem] font-mono text-accent-green">
+                    {{ store.discoveryCountByRecipe.get(recipe.recipe_id) }}
+                  </span>
+                  <span class="text-text-muted font-mono text-[0.6rem]">Lv{{ recipe.skill_level_req }}</span>
+                </span>
               </button>
             </div>
           </template>
         </div>
 
-        <!-- Count footer -->
-        <div v-if="!store.loading" class="text-[0.6rem] text-text-muted px-2 py-1 border-t border-surface-card">
-          {{ store.filteredCount }} recipes
+        <!-- Footer with counts + scan button -->
+        <div v-if="!store.loading" class="flex items-center justify-between px-2 py-1 border-t border-surface-card">
+          <span class="text-[0.6rem] text-text-muted">
+            {{ store.filteredCount }} recipes
+            <template v-if="store.totalDiscoveries > 0">
+              · {{ store.totalDiscoveries }} discovered
+            </template>
+          </span>
+          <button
+            v-if="characterName"
+            class="text-[0.6rem] px-1.5 py-0.5 rounded border border-border-light text-text-muted hover:text-accent-gold hover:border-accent-gold/40 cursor-pointer transition-colors bg-transparent"
+            :disabled="store.scanning"
+            @click="handleScan"
+            title="Scan all inventory snapshots for brewing discoveries">
+            {{ store.scanning ? 'Scanning...' : 'Scan Snapshots' }}
+          </button>
         </div>
       </div>
     </template>
@@ -76,7 +96,7 @@
         v-if="!store.loading && !store.selectedRecipe"
         variant="panel"
         primary="Select a recipe"
-        secondary="Choose a brewing recipe from the list to view its ingredients and variable slots." />
+        secondary="Choose a brewing recipe from the list to view its ingredients and discoveries." />
 
       <EmptyState
         v-else-if="store.loading"
@@ -87,7 +107,8 @@
       <BreweryRecipeDetail
         v-else-if="store.selectedRecipe"
         :recipe="store.selectedRecipe"
-        :ingredient-by-id="store.ingredientById" />
+        :ingredient-by-id="store.ingredientById"
+        :discoveries="store.selectedRecipeDiscoveries" />
     </div>
   </PaneLayout>
 </template>
@@ -98,10 +119,16 @@ import PaneLayout from "../Shared/PaneLayout.vue";
 import EmptyState from "../Shared/EmptyState.vue";
 import BreweryRecipeDetail from "./BreweryRecipeDetail.vue";
 import { useBreweryStore } from "../../stores/breweryStore";
+import { useSettingsStore } from "../../stores/settingsStore";
+import { useToast as useToastComposable } from "../../composables/useToast";
 import { CATEGORY_LABELS } from "../../types/gameData/brewing";
 import type { BrewingCategory } from "../../types/gameData/brewing";
 
 const store = useBreweryStore();
+const settingsStore = useSettingsStore();
+const toast = useToastComposable();
+
+const characterName = computed(() => settingsStore.settings.activeCharacterName);
 
 const categoryOptions = computed(() => {
   const options: { value: BrewingCategory | "all"; label: string; count: number }[] = [
@@ -118,7 +145,26 @@ const categoryOptions = computed(() => {
   return options;
 });
 
-onMounted(() => {
-  store.loadBrewingData();
+async function handleScan() {
+  if (!characterName.value) return;
+  const result = await store.scanAllSnapshots(characterName.value);
+  if (result) {
+    if (result.new_discoveries > 0) {
+      toast.success(
+        `Found ${result.new_discoveries} new brewing discovery${result.new_discoveries === 1 ? '' : 'ies'} across ${result.total_brewing_items} brewed items.`
+      );
+    } else if (result.total_brewing_items > 0) {
+      toast.info(`Scanned ${result.total_brewing_items} brewed items — no new discoveries.`);
+    } else {
+      toast.info("No brewed items found in inventory snapshots.");
+    }
+  }
+}
+
+onMounted(async () => {
+  await store.loadBrewingData();
+  if (characterName.value) {
+    store.loadDiscoveries(characterName.value);
+  }
 });
 </script>

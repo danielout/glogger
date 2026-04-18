@@ -71,3 +71,25 @@ export const CATEGORY_ORDER: BrewingCategory[] = [
   "LiquorFinished",
   "Utility",
 ];
+
+// ── Discovery types ─────────────────────────────────────────────────────────
+
+export interface BrewingDiscovery {
+  id: number;
+  character: string;
+  recipe_id: number;
+  ingredient_ids: number[];
+  power: string;
+  power_tier: number;
+  effect_label: string | null;
+  race_restriction: string | null;
+  item_name: string | null;
+  first_seen_at: string;
+  last_seen_at: string;
+}
+
+export interface BrewingScanResult {
+  new_discoveries: number;
+  updated_discoveries: number;
+  total_brewing_items: number;
+}

@@ -108,6 +108,11 @@ use cdn_commands::{
     find_recipe_items_in_inventory,
     GameDataState,
 };
+use db::brewing_commands::{
+    get_brewing_discoveries,
+    scan_all_snapshots_for_brewing,
+    scan_snapshot_for_brewing_discoveries,
+};
 use chat_commands::{
     delete_all_chat_messages, get_chat_channel_stats, get_chat_channels, get_chat_messages,
     get_chat_stats, get_tell_conversations, get_watch_rule_messages, purge_chat_messages,
@@ -363,6 +368,9 @@ pub fn run() {
             // Brewing queries
             get_brewing_recipes,
             get_brewing_ingredients,
+            get_brewing_discoveries,
+            scan_snapshot_for_brewing_discoveries,
+            scan_all_snapshots_for_brewing,
             // Quest queries
             get_all_quests,
             search_quests,

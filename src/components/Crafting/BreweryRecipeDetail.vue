@@ -108,18 +108,70 @@
       class="text-xs text-text-dim italic bg-surface-base border border-surface-elevated rounded px-3 py-2">
       This recipe has no variable ingredient slots — the output is always the same.
     </div>
+
+    <!-- Discoveries -->
+    <div v-if="discoveries.length > 0">
+      <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
+        Your Discoveries
+        <span class="normal-case tracking-normal text-text-dim ml-1">({{ discoveries.length }} found)</span>
+      </div>
+      <table class="text-xs w-full">
+        <thead>
+          <tr class="text-[0.6rem] uppercase tracking-wider text-text-dim">
+            <th class="text-left pb-1 font-normal">Ingredients</th>
+            <th class="text-left pb-1 font-normal">Effect</th>
+            <th class="text-left pb-1 font-normal">Race</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="disc in discoveries"
+            :key="disc.id"
+            class="border-t border-surface-card">
+            <td class="py-1.5 pr-2">
+              <div class="flex flex-wrap gap-1">
+                <ItemInline
+                  v-for="ingId in disc.ingredient_ids"
+                  :key="ingId"
+                  :reference="String(ingId)" />
+              </div>
+            </td>
+            <td class="py-1.5 pr-2">
+              <span v-if="disc.effect_label" class="text-accent-gold">{{ disc.effect_label }}</span>
+              <span v-else class="text-text-secondary">{{ disc.power }}</span>
+              <div class="text-[0.6rem] text-text-dim">{{ disc.power }} (T{{ disc.power_tier }})</div>
+            </td>
+            <td class="py-1.5">
+              <span
+                v-if="disc.race_restriction"
+                class="text-[0.6rem] px-1.5 py-0.5 rounded bg-accent-red/10 text-accent-red border border-accent-red/20">
+                {{ disc.race_restriction }} only
+              </span>
+              <span v-else class="text-text-dim">—</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- No discoveries yet prompt -->
+    <div v-else-if="recipe.variable_slots.length > 0"
+      class="text-xs text-text-dim italic bg-surface-base border border-surface-elevated rounded px-3 py-2">
+      No discoveries for this recipe yet. Click "Scan Snapshots" to extract brewing data from your inventory exports.
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
-import type { BrewingRecipe, BrewingIngredient } from "../../types/gameData/brewing";
+import type { BrewingRecipe, BrewingIngredient, BrewingDiscovery } from "../../types/gameData/brewing";
 import { CATEGORY_LABELS } from "../../types/gameData/brewing";
 
 const props = defineProps<{
   recipe: BrewingRecipe;
   ingredientById: Map<number, BrewingIngredient>;
+  discoveries: BrewingDiscovery[];
 }>();
 
 const categoryLabel = computed(() => CATEGORY_LABELS[props.recipe.category]);

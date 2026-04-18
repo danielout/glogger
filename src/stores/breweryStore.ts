@@ -5,6 +5,8 @@ import type {
   BrewingRecipe,
   BrewingIngredient,
   BrewingCategory,
+  BrewingDiscovery,
+  BrewingScanResult,
 } from "../types/gameData/brewing";
 import { CATEGORY_ORDER, CATEGORY_LABELS } from "../types/gameData/brewing";
 
@@ -13,8 +15,10 @@ export const useBreweryStore = defineStore("brewery", () => {
 
   const recipes = ref<BrewingRecipe[]>([]);
   const ingredients = ref<BrewingIngredient[]>([]);
+  const discoveries = ref<BrewingDiscovery[]>([]);
   const loading = ref(false);
   const loaded = ref(false);
+  const scanning = ref(false);
   const error = ref<string | null>(null);
 
   const selectedRecipeId = ref<number | null>(null);
@@ -30,6 +34,36 @@ export const useBreweryStore = defineStore("brewery", () => {
       map.set(ing.item_id, ing);
     }
     return map;
+  });
+
+  /** Discoveries grouped by recipe ID */
+  const discoveriesByRecipe = computed(() => {
+    const map = new Map<number, BrewingDiscovery[]>();
+    for (const d of discoveries.value) {
+      if (!map.has(d.recipe_id)) {
+        map.set(d.recipe_id, []);
+      }
+      map.get(d.recipe_id)!.push(d);
+    }
+    return map;
+  });
+
+  /** Discovery count per recipe (for showing in recipe list) */
+  const discoveryCountByRecipe = computed(() => {
+    const map = new Map<number, number>();
+    for (const [recipeId, discs] of discoveriesByRecipe.value) {
+      map.set(recipeId, discs.length);
+    }
+    return map;
+  });
+
+  /** Total discoveries across all recipes */
+  const totalDiscoveries = computed(() => discoveries.value.length);
+
+  /** Discoveries for the currently selected recipe */
+  const selectedRecipeDiscoveries = computed(() => {
+    if (selectedRecipeId.value === null) return [];
+    return discoveriesByRecipe.value.get(selectedRecipeId.value) ?? [];
   });
 
   /** Recipes grouped by category */
@@ -121,6 +155,37 @@ export const useBreweryStore = defineStore("brewery", () => {
     }
   }
 
+  async function loadDiscoveries(character: string) {
+    try {
+      discoveries.value = await invoke<BrewingDiscovery[]>(
+        "get_brewing_discoveries",
+        { character }
+      );
+    } catch (e) {
+      console.error("Failed to load brewing discoveries:", e);
+    }
+  }
+
+  async function scanAllSnapshots(character: string): Promise<BrewingScanResult | null> {
+    if (scanning.value) return null;
+    scanning.value = true;
+    try {
+      const result = await invoke<BrewingScanResult>(
+        "scan_all_snapshots_for_brewing",
+        { character }
+      );
+      // Reload discoveries after scanning
+      await loadDiscoveries(character);
+      return result;
+    } catch (e) {
+      console.error("Failed to scan snapshots for brewing:", e);
+      error.value = `Scan failed: ${e}`;
+      return null;
+    } finally {
+      scanning.value = false;
+    }
+  }
+
   function selectRecipe(recipeId: number) {
     selectedRecipeId.value = recipeId;
   }
@@ -133,14 +198,20 @@ export const useBreweryStore = defineStore("brewery", () => {
     // State
     recipes,
     ingredients,
+    discoveries,
     loading,
     loaded,
+    scanning,
     error,
     selectedRecipeId,
     searchQuery,
     categoryFilter,
     // Computed
     ingredientById,
+    discoveriesByRecipe,
+    discoveryCountByRecipe,
+    totalDiscoveries,
+    selectedRecipeDiscoveries,
     recipesByCategory,
     categoryCounts,
     filteredRecipesByCategory,
@@ -148,6 +219,8 @@ export const useBreweryStore = defineStore("brewery", () => {
     filteredCount,
     // Actions
     loadBrewingData,
+    loadDiscoveries,
+    scanAllSnapshots,
     selectRecipe,
     clearSelection,
   };
