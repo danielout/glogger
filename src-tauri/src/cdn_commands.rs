@@ -12,9 +12,9 @@ use serde_json::Value;
 use crate::cdn;
 use crate::db::DbPool;
 use crate::game_data::{
-    self, AbilityFamily, AbilityInfo, AreaInfo, EffectInfo, GameData, ItemInfo, LorebookCategoryInfo,
-    LorebookEntry, NpcInfo, PlayerTitleInfo, QuestInfo, RecipeInfo, SkillInfo, SourceEntry,
-    TsysClientInfo, TsysTierInfo,
+    self, AbilityFamily, AbilityInfo, AreaInfo, BrewingIngredient, BrewingRecipe, EffectInfo,
+    GameData, ItemInfo, LorebookCategoryInfo, LorebookEntry, NpcInfo, PlayerTitleInfo, QuestInfo,
+    RecipeInfo, SkillInfo, SourceEntry, TsysClientInfo, TsysTierInfo,
 };
 
 /// Timestamped log line for startup diagnostics.
@@ -3330,4 +3330,22 @@ pub async fn search_lorebooks(
         a_title.cmp(b_title)
     });
     Ok(results)
+}
+
+// ── Brewing commands ────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn get_brewing_recipes(
+    state: State<'_, GameDataState>,
+) -> Result<Vec<BrewingRecipe>, String> {
+    let data = state.read().await;
+    Ok(data.brewing_recipes.clone())
+}
+
+#[tauri::command]
+pub async fn get_brewing_ingredients(
+    state: State<'_, GameDataState>,
+) -> Result<Vec<BrewingIngredient>, String> {
+    let data = state.read().await;
+    Ok(data.brewing_ingredients.clone())
 }

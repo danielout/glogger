@@ -60,6 +60,8 @@ use cdn_commands::{
     get_recipes_for_item,
     get_recipes_for_skill,
     get_recipes_producing_items,
+    get_brewing_recipes,
+    get_brewing_ingredients,
     get_recipes_using_item,
     get_vendor_purchasable_item_ids,
     get_npc_vendor_items,
@@ -358,6 +360,9 @@ pub fn run() {
             search_recipes,
             get_recipes_for_skill,
             get_recipes_producing_items,
+            // Brewing queries
+            get_brewing_recipes,
+            get_brewing_ingredients,
             // Quest queries
             get_all_quests,
             search_quests,
