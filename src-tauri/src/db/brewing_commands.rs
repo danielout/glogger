@@ -85,6 +85,19 @@ fn extract_effect_label(item_name: &str, base_name: &str) -> Option<String> {
     Some(item_name.to_string())
 }
 
+// ── Delete a discovery ──────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn delete_brewing_discovery(
+    discovery_id: i64,
+    db: State<'_, DbPool>,
+) -> Result<(), String> {
+    let conn = db.get().map_err(|e| format!("DB error: {e}"))?;
+    conn.execute("DELETE FROM brewing_discoveries WHERE id = ?1", params![discovery_id])
+        .map_err(|e| format!("Delete error: {e}"))?;
+    Ok(())
+}
+
 // ── Scan a snapshot's raw JSON for brewing discoveries ──────────────────────
 
 #[tauri::command]

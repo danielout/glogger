@@ -335,6 +335,16 @@ export const useBreweryStore = defineStore("brewery", () => {
     }
   }
 
+  async function deleteDiscovery(discoveryId: number) {
+    try {
+      await invoke("delete_brewing_discovery", { discoveryId });
+      discoveries.value = discoveries.value.filter((d) => d.id !== discoveryId);
+    } catch (e) {
+      console.error("Failed to delete discovery:", e);
+      error.value = `Delete failed: ${e}`;
+    }
+  }
+
   function selectRecipe(recipeId: number) {
     selectedRecipeId.value = recipeId;
     selectedEffect.value = null; // clear effect selection when picking a recipe
@@ -412,6 +422,7 @@ export const useBreweryStore = defineStore("brewery", () => {
     importCsv,
     selectRecipe,
     clearSelection,
+    deleteDiscovery,
     selectEffect,
     clearEffectSelection,
     onInventoryImported,

@@ -112,6 +112,7 @@ use cdn_commands::{
 use db::brewing_commands::{
     get_brewing_discoveries,
     import_brewing_discoveries_csv,
+    delete_brewing_discovery,
     scan_all_snapshots_for_brewing,
     scan_snapshot_for_brewing_discoveries,
 };
@@ -374,6 +375,7 @@ pub fn run() {
             scan_snapshot_for_brewing_discoveries,
             scan_all_snapshots_for_brewing,
             import_brewing_discoveries_csv,
+            delete_brewing_discovery,
             // Quest queries
             get_all_quests,
             search_quests,

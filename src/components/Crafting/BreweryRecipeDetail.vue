@@ -123,30 +123,42 @@
       <table class="text-xs">
         <thead>
           <tr class="text-xs uppercase tracking-wider text-text-dim">
-            <th class="text-left pb-1 font-normal">Ingredients</th>
+            <th
+              v-for="(slot, si) in recipe.variable_slots"
+              :key="si"
+              class="text-left pb-1 font-normal w-36"
+              :title="slot.keyword">
+              Slot {{ si + 1 }}
+            </th>
             <th class="text-left pb-1 font-normal">Effect</th>
             <th class="text-left pb-1 font-normal">Req</th>
             <th class="text-left pb-1 font-normal">Race</th>
+            <th class="w-6"></th>
           </tr>
         </thead>
         <tbody>
           <tr
             v-for="disc in discoveries"
             :key="disc.id"
-            class="border-t border-surface-card align-top">
-            <td class="py-1.5 pr-3">
-              <div class="flex flex-wrap gap-1">
-                <ItemInline
-                  v-for="ingId in disc.ingredient_ids"
-                  :key="ingId"
-                  :reference="String(ingId)" />
-              </div>
+            class="border-t border-surface-card align-top group">
+            <td
+              v-for="(ingId, si) in paddedIngredients(disc)"
+              :key="si"
+              class="py-1.5 pr-2 w-36">
+              <template v-if="ingId !== null">
+                <div class="inline-flex items-center gap-0.5">
+                  <ItemInline :reference="String(ingId)" />
+                  <span v-if="getOwnedCount(ingId) > 0" class="text-xs text-accent-green font-mono">
+                    ×{{ getOwnedCount(ingId) }}
+                  </span>
+                </div>
+              </template>
+              <span v-else class="text-text-dim">—</span>
             </td>
             <td class="py-1.5 pr-3">
               <div class="flex flex-col gap-0.5">
                 <span v-if="disc.effect_label" class="text-accent-gold font-semibold">{{ disc.effect_label }}</span>
                 <span v-else class="text-text-secondary">{{ disc.power }}</span>
-                <!-- Resolved effect descriptions from TSys -->
                 <template v-if="getPowerInfo(disc)">
                   <div
                     v-for="(effect, ei) in getPowerInfo(disc)!.tier_effects"
@@ -164,13 +176,21 @@
               </span>
               <span v-else class="text-text-dim">—</span>
             </td>
-            <td class="py-1.5">
+            <td class="py-1.5 pr-1">
               <span
                 v-if="disc.race_restriction"
                 class="text-xs px-1.5 py-0.5 rounded bg-accent-red/10 text-accent-red border border-accent-red/20 whitespace-nowrap">
-                {{ disc.race_restriction }} only
+                {{ disc.race_restriction }}
               </span>
               <span v-else class="text-text-dim">—</span>
+            </td>
+            <td class="py-1.5">
+              <button
+                class="text-text-dim hover:text-accent-red cursor-pointer bg-transparent border-none opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                title="Delete this discovery"
+                @click="confirmDelete(disc)">
+                ✕
+              </button>
             </td>
           </tr>
         </tbody>
@@ -234,6 +254,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { confirm } from "@tauri-apps/plugin-dialog";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 import type { BrewingRecipe, BrewingIngredient, BrewingDiscovery } from "../../types/gameData/brewing";
 import { CATEGORY_LABELS, getPoolLabel, getPoolDescription } from "../../types/gameData/brewing";
@@ -277,6 +298,25 @@ function getOwnedCount(itemTypeId: number): number {
 
 function hasItem(itemTypeId: number): boolean {
   return getOwnedCount(itemTypeId) > 0;
+}
+
+/** Pad ingredient IDs to match the number of variable slots */
+function paddedIngredients(disc: BrewingDiscovery): (number | null)[] {
+  const slotCount = props.recipe.variable_slots.length;
+  const result: (number | null)[] = [...disc.ingredient_ids];
+  while (result.length < slotCount) result.push(null);
+  return result;
+}
+
+async function confirmDelete(disc: BrewingDiscovery) {
+  const label = disc.effect_label ?? disc.power;
+  const ok = await confirm(`Delete discovery "${label}"? This cannot be undone.`, {
+    title: "Delete Discovery",
+    kind: "warning",
+  });
+  if (ok) {
+    store.deleteDiscovery(disc.id);
+  }
 }
 
 // ── "Try Next" suggestions ──────────────────────────────────────────────────
