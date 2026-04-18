@@ -3184,22 +3184,17 @@ pub async fn find_recipe_items_in_inventory(
         for recipe_val in bestow_recipes {
             if let Some(recipe_key) = recipe_val.as_str() {
                 recipe_keys.push(recipe_key.to_string());
-                // Parse recipe ID from key like "recipe_1234"
-                let recipe_id: Option<u32> = recipe_key
-                    .split('_')
-                    .last()
-                    .and_then(|s| s.parse().ok());
-
-                if let Some(rid) = recipe_id {
-                    if !known_recipe_ids.contains(&rid) {
+                // BestowRecipes values are internal names (e.g. "BasicBeetleSkewer"),
+                // resolve via the unified lookup to get the numeric ID
+                if let Some(recipe_info) = data.resolve_recipe(recipe_key) {
+                    if !known_recipe_ids.contains(&recipe_info.id) {
                         all_known = false;
                     }
-                    // Get recipe display name
-                    if let Some(recipe_info) = data.recipes.get(&rid) {
-                        recipe_names.push(recipe_info.name.clone());
-                    } else {
-                        recipe_names.push(recipe_key.to_string());
-                    }
+                    recipe_names.push(recipe_info.name.clone());
+                } else {
+                    // Unknown recipe — treat as not known
+                    all_known = false;
+                    recipe_names.push(recipe_key.to_string());
                 }
             }
         }

@@ -82,6 +82,7 @@ Each widget is documented in its own file under `dashboard/`:
 | [Critical Resources](dashboard/widget-critical-resources.md) | Medium | Tracked item quantities |
 | [Statehelm Gifting](dashboard/widget-statehelm-summary.md) | Medium | Weekly gift progress summary |
 | [Watchword Alerts](dashboard/widget-watchword-alerts.md) | Medium | Recent watchword match feed |
+| [Recipe Items](dashboard/widget-recipe-items.md) | Medium | Recipe scrolls/skill books in inventory, classified by learnability |
 | Gift Watcher | Medium | Monitors inventory for items matching watched NPCs' gift preferences |
 | Teleport Machine Codes | Medium | Searchable lookup for ~190 teleportation machine codes across 14 zones, grouped by zone/destination |
 | Mushroom Farming | Large | Moon-phase-aware mushroom reference table with level, grow time, substrates, and extra/reduced yield highlighting |
