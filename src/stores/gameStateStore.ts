@@ -392,6 +392,7 @@ export const useGameStateStore = defineStore('gameState', () => {
   function handleSkillUpdate(payload: {
     skill_type: string
     level: number
+    bonus: number
     xp: number
     tnl: number
     timestamp: string

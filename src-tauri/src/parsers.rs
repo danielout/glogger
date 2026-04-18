@@ -4,6 +4,7 @@
 pub struct SkillUpdate {
     pub skill_type: String,
     pub level: u32,
+    pub bonus: u32,
     pub xp: u32,
     pub tnl: u32,
     pub timestamp: String, // e.g. "00:08:37"
@@ -16,13 +17,15 @@ pub fn parse_skill_update(line: &str) -> Option<SkillUpdate> {
 
     let timestamp = parse_timestamp(line)?;
     let skill_type = extract_field(line, "type=")?;
-    let level: u32 = extract_field(line, "raw=")?.parse().ok()?;
+    let raw: u32 = extract_field(line, "raw=")?.parse().ok()?;
+    let bonus: u32 = extract_field(line, "bonus=")?.parse().ok()?;
     let xp: u32 = extract_field(line, "xp=")?.parse().ok()?;
     let tnl: u32 = extract_field(line, "tnl=")?.parse().ok()?;
 
     Some(SkillUpdate {
         skill_type,
-        level,
+        level: raw + bonus,
+        bonus,
         xp,
         tnl,
         timestamp,

@@ -595,6 +595,47 @@ impl DataIngestCoordinator {
                     self.app_handle.emit("area-transition", &area).ok();
                 }
                 LogEvent::SkillUpdated(update) => {
+                    // Persist skill level/xp changes to game state DB so the
+                    // persistent view stays current between ProcessLoadSkills dumps.
+                    if let (Some(character), Some(server)) = (
+                        self.game_state.get_active_character(),
+                        self.game_state.get_active_server(),
+                    ) {
+                        if let Ok(conn) = self.db_pool.get() {
+                            // Resolve skill name → canonical ID + display name
+                            let (skill_id, display_name) = {
+                                let guard = self.game_data.blocking_read();
+                                match guard.resolve_skill(&update.skill_type) {
+                                    Some(info) => (info.id as i64, info.name.clone()),
+                                    None => (0i64, update.skill_type.clone()),
+                                }
+                            };
+                            let base_level = update.level as i32 - update.bonus as i32;
+                            conn.execute(
+                                "INSERT INTO game_state_skills (character_name, server_name, skill_id, skill_name, level, base_level, bonus_levels, xp, tnl, max_level, last_confirmed_at, source)
+                                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 0, datetime('now'), 'log')
+                                 ON CONFLICT(character_name, server_name, skill_id) DO UPDATE SET
+                                    level = excluded.level,
+                                    base_level = excluded.base_level,
+                                    bonus_levels = excluded.bonus_levels,
+                                    xp = excluded.xp,
+                                    tnl = excluded.tnl,
+                                    last_confirmed_at = excluded.last_confirmed_at",
+                                rusqlite::params![
+                                    character,
+                                    server,
+                                    skill_id,
+                                    display_name,
+                                    update.level as i32,  // total = raw + bonus
+                                    base_level,
+                                    update.bonus as i32,
+                                    update.xp,
+                                    update.tnl,
+                                ],
+                            ).ok();
+                            domains_batch.push("skills");
+                        }
+                    }
                     self.app_handle.emit("skill-update", &update).ok();
                 }
                 LogEvent::PlayerEventParsed(mut player_event) => {
