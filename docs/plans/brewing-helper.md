@@ -13,20 +13,44 @@ for the raw investigation data that informed this plan.
 
 ## Table of Contents
 
-1. [Goals & non-goals](#1-goals--non-goals)
-2. [Background — how brewing works](#2-background--how-brewing-works)
-3. [Data sources](#3-data-sources)
-4. [Build order](#4-build-order)
-5. [Phase 1 — CDN brewing data extraction](#5-phase-1--cdn-brewing-data-extraction)
-6. [Phase 2 — Discovery journal (item JSON import)](#6-phase-2--discovery-journal-item-json-import)
-7. [Phase 3 — Frontend store & Brewery tab shell](#7-phase-3--frontend-store--brewery-tab-shell)
-8. [Phase 4 — Discovery view](#8-phase-4--discovery-view)
-9. [Phase 5 — Aging tracker](#9-phase-5--aging-tracker)
-10. [Phase 6 — Live brew tracking (Player.log)](#10-phase-6--live-brew-tracking-playerlog)
-11. [Phase 7 — Brew session summary](#11-phase-7--brew-session-summary)
-12. [Phase 8 — Polish & empty states](#12-phase-8--polish--empty-states)
-13. [Future ideas](#13-future-ideas)
-14. [Open questions](#14-open-questions)
+- [Brewery — Implementation Plan](#brewery--implementation-plan)
+  - [Table of Contents](#table-of-contents)
+  - [1. Goals \& non-goals](#1-goals--non-goals)
+  - [2. Background — how brewing works](#2-background--how-brewing-works)
+    - [Three drink categories](#three-drink-categories)
+    - [The BrewItem system](#the-brewitem-system)
+    - [Race restrictions \& skill requirements](#race-restrictions--skill-requirements)
+    - [Data available per crafted drink (from item JSON)](#data-available-per-crafted-drink-from-item-json)
+  - [3. Data sources](#3-data-sources)
+  - [4. Build order](#4-build-order)
+  - [5. Phase 1 — CDN brewing data extraction](#5-phase-1--cdn-brewing-data-extraction)
+    - [Tasks](#tasks)
+    - [Key data structures](#key-data-structures)
+  - [6. Phase 2 — Discovery journal (item JSON import)](#6-phase-2--discovery-journal-item-json-import)
+    - [Tasks](#tasks-1)
+    - [Schema](#schema)
+  - [7. Phase 3 — Frontend store \& Brewery tab shell](#7-phase-3--frontend-store--brewery-tab-shell)
+    - [Tasks](#tasks-2)
+  - [8. Phase 4 — Discovery view](#8-phase-4--discovery-view)
+    - [Discovery Matrix](#discovery-matrix)
+    - [Discovery List](#discovery-list)
+    - [Effect Scaling](#effect-scaling)
+    - [Considerations](#considerations)
+  - [9. Phase 5 — Aging tracker](#9-phase-5--aging-tracker)
+    - [Wine aging](#wine-aging)
+    - [Liquor aging](#liquor-aging)
+    - [Schema addition](#schema-addition)
+    - [Considerations](#considerations-1)
+  - [10. Phase 6 — Live brew tracking (Player.log)](#10-phase-6--live-brew-tracking-playerlog)
+    - [Event sequence to detect](#event-sequence-to-detect)
+    - [Tasks](#tasks-3)
+    - [Considerations](#considerations-2)
+  - [11. Phase 7 — Brew session summary](#11-phase-7--brew-session-summary)
+    - [Display](#display)
+  - [12. Phase 8 — Polish \& empty states](#12-phase-8--polish--empty-states)
+  - [13. Future ideas](#13-future-ideas)
+  - [14. Open questions](#14-open-questions)
+  - [random notes](#random-notes)
 
 ---
 
@@ -531,3 +555,7 @@ These are not in scope for the initial build but are worth considering:
    (e.g., `BrewingMaxHealthElf` → Elf). Is this reliable? Are there
    race-restricted effects whose power names don't contain the race? The CDN
    result item keywords include `AlcoholLevel` but may also contain race info.
+
+
+## random notes
+- what about a 'make this next' generator? we could do it globally and by specific recipe. finds a combo of ingredients you haven't used, but own. 
