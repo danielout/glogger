@@ -220,31 +220,7 @@ impl GameStateManager {
         ProcessResult { domains_updated: all_domains }
     }
 
-    /// Process a single PlayerEvent. Delegates to the shared inner implementation.
-    pub fn process_event(&mut self, event: &PlayerEvent, db: &DbPool) -> ProcessResult {
-        let character = match &self.active_character {
-            Some(c) => c.clone(),
-            None => return ProcessResult { domains_updated: vec![] },
-        };
-        let server = match &self.active_server {
-            Some(s) => s.clone(),
-            None => return ProcessResult { domains_updated: vec![] },
-        };
-        let conn = match db.get() {
-            Ok(c) => c,
-            Err(e) => {
-                eprintln!("[game_state] DB error on process_event: {e}");
-                return ProcessResult { domains_updated: vec![] };
-            }
-        };
-        let game_data_arc = self.game_data.clone();
-        let game_data_guard = game_data_arc.try_read().ok();
-        let mut domains = Vec::new();
-        self.process_event_inner(event, &conn, &character, &server, &game_data_guard, &mut domains);
-        ProcessResult { domains_updated: domains }
-    }
-
-    /// Inner implementation shared by process_event and process_events_batch.
+    /// Inner implementation shared by process_events_batch (and formerly process_event).
     fn process_event_inner(
         &mut self,
         event: &PlayerEvent,

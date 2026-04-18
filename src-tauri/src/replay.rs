@@ -486,6 +486,8 @@ fn run_replay(
 
     // Flush any remaining batched events
     flush_batches!(app, game_state, player_event_batch, domains_batch, batch_start, emits_since_yield, last_yield);
+    // Suppress unused-assignment warnings from the final macro expansion
+    let _ = (batch_start, emits_since_yield, last_yield);
 
     // Flush pending player events from the parser itself
     let flush_events = player_parser.flush_all_pending();

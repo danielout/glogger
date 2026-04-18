@@ -861,7 +861,7 @@ impl DataIngestCoordinator {
                     settings.active_server_name = Some(server_name.clone());
                     self.settings.update(settings).ok();
 
-                    // Update game state so process_event doesn't early-return
+                    // Update game state so process_events_batch doesn't early-return
                     self.game_state.set_active_server_name(&server_name);
 
                     // Emit to frontend
