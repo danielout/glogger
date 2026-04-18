@@ -130,8 +130,23 @@ const groupedProjects = computed(() => {
   }
 
   const groups = Array.from(groupMap.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
     .map(([name, projects]) => ({ name, projects }));
+
+  switch (sortMode.value) {
+    case 'az':
+      groups.sort((a, b) => a.name.localeCompare(b.name));
+      break;
+    case 'za':
+      groups.sort((a, b) => b.name.localeCompare(a.name));
+      break;
+    default:
+      // "recent": sort groups by most recently updated project within each group
+      groups.sort((a, b) => {
+        const aMax = Math.max(...a.projects.map(p => new Date(p.updated_at).getTime()));
+        const bMax = Math.max(...b.projects.map(p => new Date(p.updated_at).getTime()));
+        return bMax - aMax;
+      });
+  }
 
   return { groups, ungrouped };
 });
