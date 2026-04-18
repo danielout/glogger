@@ -353,6 +353,26 @@ export const useBreweryStore = defineStore("brewery", () => {
     selectedEffect.value = null;
   }
 
+  /**
+   * Called after an inventory import to auto-scan for new brewing discoveries.
+   * Only does work if the brewery store has been loaded (user has visited the tab).
+   */
+  async function onInventoryImported(character: string) {
+    if (!loaded.value) return;
+    try {
+      const result = await invoke<BrewingScanResult>(
+        "scan_all_snapshots_for_brewing",
+        { character }
+      );
+      if (result.new_discoveries > 0) {
+        await loadDiscoveries(character);
+        console.log(`Brewery: auto-scan found ${result.new_discoveries} new discoveries`);
+      }
+    } catch (e) {
+      console.warn("Brewery auto-scan failed:", e);
+    }
+  }
+
   return {
     // State
     recipes,
@@ -394,5 +414,6 @@ export const useBreweryStore = defineStore("brewery", () => {
     clearSelection,
     selectEffect,
     clearEffectSelection,
+    onInventoryImported,
   };
 });

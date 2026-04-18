@@ -266,6 +266,12 @@ export const useCharacterStore = defineStore('character', () => {
         if (inventorySnapshots.value.length > 0) {
           await selectInventorySnapshot(inventorySnapshots.value[0])
         }
+        // Auto-scan for new brewing discoveries (non-blocking)
+        if (!invResult.was_duplicate) {
+          import('./breweryStore').then(({ useBreweryStore }) => {
+            useBreweryStore().onInventoryImported(invResult.character_name)
+          })
+        }
       }
     } catch (e) {
       console.warn('Inventory watch poll error:', e)
@@ -323,6 +329,10 @@ export const useCharacterStore = defineStore('character', () => {
           gameState.refreshDomain('storage'),
           gameState.refreshDomain('inventory'),
         ])
+
+        // Auto-scan for new brewing discoveries (non-blocking)
+        const { useBreweryStore } = await import('./breweryStore')
+        useBreweryStore().onInventoryImported(result.character_name)
       }
 
       return result
@@ -370,7 +380,13 @@ export const useCharacterStore = defineStore('character', () => {
 
     // Try auto-import
     try {
-      await invoke('import_latest_inventory_for_character', { characterName, serverName: serverName || undefined })
+      const invResult = await invoke<InventoryImportResult | null>('import_latest_inventory_for_character', { characterName, serverName: serverName || undefined })
+      // Auto-scan for new brewing discoveries (non-blocking)
+      if (invResult && !invResult.was_duplicate) {
+        import('./breweryStore').then(({ useBreweryStore }) => {
+          useBreweryStore().onInventoryImported(invResult.character_name)
+        })
+      }
     } catch (e) {
       console.warn('Auto-import inventory:', e)
     }

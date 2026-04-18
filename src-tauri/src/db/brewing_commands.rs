@@ -272,6 +272,13 @@ fn scan_snapshot_internal(
             Some(id) => id as u32,
             None => continue,
         };
+
+        // Only count items crafted by this character — skip other players' brews
+        let crafter = item.get("Crafter").and_then(|v| v.as_str()).unwrap_or("");
+        if !crafter.eq_ignore_ascii_case(&character) {
+            continue;
+        }
+
         let recipe = match result_to_recipe.get(&type_id) {
             Some(r) => r,
             None => continue,
