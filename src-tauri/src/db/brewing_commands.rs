@@ -343,3 +343,198 @@ fn scan_snapshot_internal(
         total_brewing_items,
     })
 }
+
+// ── CSV import ──────────────────────────────────────────────────────────────
+
+/// Import brewing discoveries from a CSV file.
+///
+/// CSV format (header required):
+///   ingredient1,ingredient2,ingredient3,ingredient4,power,power_tier,item_name,type_id
+///
+/// Ingredient columns use display names (e.g., "Corn", "Groxmax Powder").
+/// ingredient4 can be empty for 3-ingredient recipes.
+/// power is the TSysPower internal name (e.g., "BrewingLumberjack").
+/// item_name is the full drink name (e.g., "Lumberjack's Dwarven Stout").
+/// type_id is the CDN item TypeID of the result drink.
+#[tauri::command]
+pub async fn import_brewing_discoveries_csv(
+    file_path: String,
+    character: String,
+    db: State<'_, DbPool>,
+    game_data: State<'_, GameDataState>,
+) -> Result<BrewingScanResult, String> {
+    let data = game_data.read().await;
+    let conn = db.get().map_err(|e| format!("DB error: {e}"))?;
+
+    let csv_content =
+        std::fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {e}"))?;
+
+    // Build item name → ID lookup (case-insensitive)
+    let mut name_to_id: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+    for (id, item) in &data.items {
+        name_to_id.insert(item.name.to_lowercase(), *id);
+        if let Some(ref iname) = item.internal_name {
+            name_to_id.insert(iname.to_lowercase(), *id);
+        }
+    }
+
+    // Build result_item_id → recipe mapping
+    let mut result_to_recipe: std::collections::HashMap<u32, &crate::game_data::brewing::BrewingRecipe> =
+        std::collections::HashMap::new();
+    for recipe in &data.brewing_recipes {
+        if let Some(result_id) = recipe.result_item_id {
+            result_to_recipe.insert(result_id, recipe);
+        }
+    }
+
+    let mut insert_stmt = conn
+        .prepare(
+            "INSERT INTO brewing_discoveries (
+                character, recipe_id, ingredient_ids, power, power_tier,
+                effect_label, race_restriction, item_name, first_seen_at, last_seen_at
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)
+             ON CONFLICT(character, recipe_id, ingredient_ids) DO UPDATE SET
+                last_seen_at = ?9",
+        )
+        .map_err(|e| format!("Failed to prepare insert: {e}"))?;
+
+    let timestamp = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
+
+    let mut new_discoveries = 0u32;
+    let mut updated_discoveries = 0u32;
+    let mut total_brewing_items = 0u32;
+    let mut skipped_lines = Vec::new();
+
+    for (line_num, line) in csv_content.lines().enumerate() {
+        // Skip header
+        if line_num == 0 && line.to_lowercase().contains("ingredient") {
+            continue;
+        }
+
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+
+        let fields: Vec<&str> = line.split(',').collect();
+        if fields.len() < 6 {
+            skipped_lines.push(format!("Line {}: too few fields", line_num + 1));
+            continue;
+        }
+
+        // Resolve ingredient names to IDs
+        let mut ingredient_ids: Vec<u32> = Vec::new();
+        let mut resolve_failed = false;
+        for i in 0..4 {
+            let name = fields.get(i).map(|s| s.trim()).unwrap_or("");
+            if name.is_empty() {
+                continue;
+            }
+            match name_to_id.get(&name.to_lowercase()) {
+                Some(id) => ingredient_ids.push(*id),
+                None => {
+                    skipped_lines.push(format!(
+                        "Line {}: unknown ingredient \"{}\"",
+                        line_num + 1,
+                        name
+                    ));
+                    resolve_failed = true;
+                    break;
+                }
+            }
+        }
+        if resolve_failed || ingredient_ids.is_empty() {
+            continue;
+        }
+
+        let power = fields.get(4).map(|s| s.trim()).unwrap_or("");
+        let power_tier: i64 = fields
+            .get(5)
+            .and_then(|s| s.trim().parse().ok())
+            .unwrap_or(0);
+        let item_name = fields.get(6).map(|s| s.trim()).unwrap_or("");
+        let type_id: Option<u32> = fields.get(7).and_then(|s| s.trim().parse().ok());
+
+        if power.is_empty() {
+            skipped_lines.push(format!("Line {}: missing power", line_num + 1));
+            continue;
+        }
+
+        // Resolve recipe from type_id
+        let recipe_id = if let Some(tid) = type_id {
+            result_to_recipe.get(&tid).map(|r| r.recipe_id)
+        } else {
+            None
+        };
+
+        let recipe_id = match recipe_id {
+            Some(id) => id,
+            None => {
+                skipped_lines.push(format!(
+                    "Line {}: could not match type_id {} to a brewing recipe",
+                    line_num + 1,
+                    type_id.unwrap_or(0)
+                ));
+                continue;
+            }
+        };
+
+        total_brewing_items += 1;
+
+        ingredient_ids.sort();
+        let ing_ids_json = serde_json::to_string(&ingredient_ids).unwrap_or_default();
+
+        // Get base name for effect label extraction
+        let base_name = type_id
+            .and_then(|tid| data.items.get(&tid))
+            .map(|i| i.name.as_str())
+            .unwrap_or("");
+        let effect_label = extract_effect_label(item_name, base_name);
+        let race_restriction = detect_race_restriction(power);
+
+        let changes = insert_stmt
+            .execute(params![
+                character,
+                recipe_id,
+                ing_ids_json,
+                power,
+                power_tier,
+                effect_label,
+                race_restriction,
+                item_name,
+                timestamp,
+            ])
+            .map_err(|e| format!("Failed to insert discovery: {e}"))?;
+
+        if changes > 0 {
+            let disc_id = conn.last_insert_rowid();
+            let is_new: bool = conn
+                .query_row(
+                    "SELECT first_seen_at = last_seen_at FROM brewing_discoveries WHERE rowid = ?1",
+                    params![disc_id],
+                    |row| row.get(0),
+                )
+                .unwrap_or(true);
+
+            if is_new {
+                new_discoveries += 1;
+            } else {
+                updated_discoveries += 1;
+            }
+        }
+    }
+
+    if !skipped_lines.is_empty() {
+        eprintln!(
+            "Brewing CSV import: {} lines skipped:\n{}",
+            skipped_lines.len(),
+            skipped_lines.join("\n")
+        );
+    }
+
+    Ok(BrewingScanResult {
+        new_discoveries,
+        updated_discoveries,
+        total_brewing_items,
+    })
+}

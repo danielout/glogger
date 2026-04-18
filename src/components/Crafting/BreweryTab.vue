@@ -78,14 +78,22 @@
               · {{ store.totalDiscoveries }} discovered
             </template>
           </span>
-          <button
-            v-if="characterName"
-            class="text-[0.6rem] px-1.5 py-0.5 rounded border border-border-light text-text-muted hover:text-accent-gold hover:border-accent-gold/40 cursor-pointer transition-colors bg-transparent"
-            :disabled="store.scanning"
-            @click="handleScan"
-            title="Scan all inventory snapshots for brewing discoveries">
-            {{ store.scanning ? 'Scanning...' : 'Scan Snapshots' }}
-          </button>
+          <div v-if="characterName" class="flex gap-1">
+            <button
+              class="text-[0.6rem] px-1.5 py-0.5 rounded border border-border-light text-text-muted hover:text-accent-gold hover:border-accent-gold/40 cursor-pointer transition-colors bg-transparent"
+              :disabled="store.scanning"
+              @click="handleScan"
+              title="Scan all inventory snapshots for brewing discoveries">
+              {{ store.scanning ? 'Scanning...' : 'Scan' }}
+            </button>
+            <button
+              class="text-[0.6rem] px-1.5 py-0.5 rounded border border-border-light text-text-muted hover:text-accent-gold hover:border-accent-gold/40 cursor-pointer transition-colors bg-transparent"
+              :disabled="store.scanning"
+              @click="handleCsvImport"
+              title="Import discoveries from a CSV file">
+              Import CSV
+            </button>
+          </div>
         </div>
       </div>
     </template>
@@ -157,6 +165,22 @@ async function handleScan() {
       toast.info(`Scanned ${result.total_brewing_items} brewed items — no new discoveries.`);
     } else {
       toast.info("No brewed items found in inventory snapshots.");
+    }
+  }
+}
+
+async function handleCsvImport() {
+  if (!characterName.value) return;
+  const result = await store.importCsv(characterName.value);
+  if (result) {
+    if (result.new_discoveries > 0) {
+      toast.success(
+        `Imported ${result.new_discoveries} new discovery${result.new_discoveries === 1 ? '' : 'ies'} from CSV.`
+      );
+    } else if (result.total_brewing_items > 0) {
+      toast.info(`CSV had ${result.total_brewing_items} entries — all already known.`);
+    } else {
+      toast.warn("No valid brewing entries found in CSV. Check the format.");
     }
   }
 }

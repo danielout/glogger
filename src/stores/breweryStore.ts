@@ -186,6 +186,33 @@ export const useBreweryStore = defineStore("brewery", () => {
     }
   }
 
+  async function importCsv(character: string): Promise<BrewingScanResult | null> {
+    if (scanning.value) return null;
+
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const filePath = await open({
+      filters: [{ name: "CSV", extensions: ["csv"] }],
+      multiple: false,
+    });
+    if (!filePath) return null;
+
+    scanning.value = true;
+    try {
+      const result = await invoke<BrewingScanResult>(
+        "import_brewing_discoveries_csv",
+        { filePath, character }
+      );
+      await loadDiscoveries(character);
+      return result;
+    } catch (e) {
+      console.error("Failed to import brewing CSV:", e);
+      error.value = `CSV import failed: ${e}`;
+      return null;
+    } finally {
+      scanning.value = false;
+    }
+  }
+
   function selectRecipe(recipeId: number) {
     selectedRecipeId.value = recipeId;
   }
@@ -221,6 +248,7 @@ export const useBreweryStore = defineStore("brewery", () => {
     loadBrewingData,
     loadDiscoveries,
     scanAllSnapshots,
+    importCsv,
     selectRecipe,
     clearSelection,
   };
