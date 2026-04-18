@@ -82,7 +82,7 @@
       </div>
       <div class="flex flex-wrap gap-1.5">
         <span
-          v-for="pool in recipe.brew_item_effect.effect_pools"
+          v-for="pool in dedupedPools"
           :key="pool"
           :class="[
             'text-[0.6rem] px-2 py-0.5 rounded border',
@@ -115,11 +115,12 @@
         Your Discoveries
         <span class="normal-case tracking-normal text-text-dim ml-1">({{ discoveries.length }} found)</span>
       </div>
-      <table class="text-xs w-full">
+      <table class="text-xs">
         <thead>
           <tr class="text-[0.6rem] uppercase tracking-wider text-text-dim">
             <th class="text-left pb-1 font-normal">Ingredients</th>
             <th class="text-left pb-1 font-normal">Effect</th>
+            <th class="text-left pb-1 font-normal">Req</th>
             <th class="text-left pb-1 font-normal">Race</th>
           </tr>
         </thead>
@@ -127,8 +128,8 @@
           <tr
             v-for="disc in discoveries"
             :key="disc.id"
-            class="border-t border-surface-card">
-            <td class="py-1.5 pr-2">
+            class="border-t border-surface-card align-top">
+            <td class="py-1.5 pr-3">
               <div class="flex flex-wrap gap-1">
                 <ItemInline
                   v-for="ingId in disc.ingredient_ids"
@@ -136,15 +137,32 @@
                   :reference="String(ingId)" />
               </div>
             </td>
-            <td class="py-1.5 pr-2">
-              <span v-if="disc.effect_label" class="text-accent-gold">{{ disc.effect_label }}</span>
-              <span v-else class="text-text-secondary">{{ disc.power }}</span>
-              <div class="text-[0.6rem] text-text-dim">{{ disc.power }} (T{{ disc.power_tier }})</div>
+            <td class="py-1.5 pr-3">
+              <div class="flex flex-col gap-0.5">
+                <span v-if="disc.effect_label" class="text-accent-gold font-semibold">{{ disc.effect_label }}</span>
+                <span v-else class="text-text-secondary">{{ disc.power }}</span>
+                <!-- Resolved effect descriptions from TSys -->
+                <template v-if="getPowerInfo(disc)">
+                  <div
+                    v-for="(effect, ei) in getPowerInfo(disc)!.tier_effects"
+                    :key="ei"
+                    class="text-[0.6rem] text-text-secondary leading-snug">
+                    {{ effect }}
+                  </div>
+                </template>
+                <div v-else class="text-[0.6rem] text-text-dim">{{ disc.power }} (T{{ disc.power_tier }})</div>
+              </div>
+            </td>
+            <td class="py-1.5 pr-3">
+              <span v-if="getPowerInfo(disc)?.skill" class="text-[0.6rem] text-text-muted whitespace-nowrap">
+                {{ getPowerInfo(disc)!.skill }}
+              </span>
+              <span v-else class="text-text-dim">—</span>
             </td>
             <td class="py-1.5">
               <span
                 v-if="disc.race_restriction"
-                class="text-[0.6rem] px-1.5 py-0.5 rounded bg-accent-red/10 text-accent-red border border-accent-red/20">
+                class="text-[0.6rem] px-1.5 py-0.5 rounded bg-accent-red/10 text-accent-red border border-accent-red/20 whitespace-nowrap">
                 {{ disc.race_restriction }} only
               </span>
               <span v-else class="text-text-dim">—</span>
@@ -163,10 +181,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
+import { invoke } from "@tauri-apps/api/core";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 import type { BrewingRecipe, BrewingIngredient, BrewingDiscovery } from "../../types/gameData/brewing";
 import { CATEGORY_LABELS } from "../../types/gameData/brewing";
+
+interface TsysPowerInfo {
+  internal_name: string;
+  skill: string | null;
+  prefix: string | null;
+  suffix: string | null;
+  tier_effects: string[];
+  icon_id: number | null;
+}
 
 const props = defineProps<{
   recipe: BrewingRecipe;
@@ -184,4 +212,49 @@ const dedupedPools = computed(() => {
 function isPlaceholderPool(pool: string): boolean {
   return pool.startsWith("TBD");
 }
+
+// ── TSys power info lookups ─────────────────────────────────────────────────
+
+const powerInfoCache = ref<Map<string, TsysPowerInfo>>(new Map());
+
+/** Unique power+tier combos from current discoveries */
+const uniquePowerKeys = computed(() => {
+  const keys = new Set<string>();
+  for (const d of props.discoveries) {
+    keys.add(`${d.power}:${d.power_tier}`);
+  }
+  return keys;
+});
+
+/** Look up cached power info for a discovery */
+function getPowerInfo(disc: BrewingDiscovery): TsysPowerInfo | undefined {
+  return powerInfoCache.value.get(`${disc.power}:${disc.power_tier}`);
+}
+
+/** Fetch TSys power info for all unique powers in discoveries */
+async function fetchPowerInfos() {
+  for (const key of uniquePowerKeys.value) {
+    if (powerInfoCache.value.has(key)) continue;
+    const [powerName, tierStr] = key.split(":");
+    const tier = parseInt(tierStr);
+    try {
+      const info = await invoke<TsysPowerInfo | null>("get_tsys_power_info", {
+        powerName,
+        tier,
+      });
+      if (info) {
+        powerInfoCache.value.set(key, info);
+      }
+    } catch {
+      // silently skip — CDN may not have this power
+    }
+  }
+}
+
+// Fetch when discoveries change
+watch(
+  () => props.discoveries,
+  () => { fetchPowerInfos(); },
+  { immediate: true }
+);
 </script>
