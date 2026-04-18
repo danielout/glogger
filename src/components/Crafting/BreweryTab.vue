@@ -44,7 +44,7 @@
           <template v-else>
             <div v-for="group in store.filteredRecipesByCategory" :key="group.category">
               <!-- Category header -->
-              <div class="text-[0.6rem] uppercase tracking-widest text-text-dim px-2 pt-2 pb-0.5 border-b border-surface-card sticky top-0 bg-surface-base z-10">
+              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim px-2 pt-2 pb-0.5 border-b border-surface-card sticky top-0 bg-surface-base z-10">
                 {{ group.label }}
               </div>
 
@@ -61,19 +61,19 @@
                 <span class="flex items-center gap-1.5 shrink-0 ml-2">
                   <span
                     v-if="store.discoveryCountByRecipe.get(recipe.recipe_id)"
-                    class="text-[0.55rem] font-mono text-accent-green">
+                    class="text-xs font-mono text-accent-green">
                     {{ store.discoveryCountByRecipe.get(recipe.recipe_id) }}
                   </span>
-                  <span class="text-text-muted font-mono text-[0.6rem]">Lv{{ recipe.skill_level_req }}</span>
+                  <span class="text-text-muted font-mono text-xs">Lv{{ recipe.skill_level_req }}</span>
                 </span>
               </button>
             </div>
           </template>
         </div>
 
-        <!-- Footer with counts + scan button -->
-        <div v-if="!store.loading" class="flex items-center justify-between px-2 py-1 border-t border-surface-card">
-          <span class="text-[0.6rem] text-text-muted">
+        <!-- Footer with counts + action buttons -->
+        <div v-if="!store.loading" class="flex items-center justify-between px-2 py-1.5 border-t border-surface-card">
+          <span class="text-xs text-text-muted">
             {{ store.filteredCount }} recipes
             <template v-if="store.totalDiscoveries > 0">
               · {{ store.totalDiscoveries }} discovered
@@ -81,19 +81,60 @@
           </span>
           <div v-if="characterName" class="flex gap-1">
             <button
-              class="text-[0.6rem] px-1.5 py-0.5 rounded border border-border-light text-text-muted hover:text-accent-gold hover:border-accent-gold/40 cursor-pointer transition-colors bg-transparent"
+              class="text-xs px-1.5 py-0.5 rounded border border-border-light text-text-muted hover:text-accent-gold hover:border-accent-gold/40 cursor-pointer transition-colors bg-transparent"
               :disabled="store.scanning"
               @click="handleScan"
               title="Scan all inventory snapshots for brewing discoveries">
               {{ store.scanning ? 'Scanning...' : 'Scan' }}
             </button>
             <button
-              class="text-[0.6rem] px-1.5 py-0.5 rounded border border-border-light text-text-muted hover:text-accent-gold hover:border-accent-gold/40 cursor-pointer transition-colors bg-transparent"
+              class="text-xs px-1.5 py-0.5 rounded border border-border-light text-text-muted hover:text-accent-gold hover:border-accent-gold/40 cursor-pointer transition-colors bg-transparent"
               :disabled="store.scanning"
               @click="handleCsvImport"
               title="Import discoveries from a CSV file">
-              Import CSV
+              Import
             </button>
+            <button
+              class="text-xs px-1 py-0.5 rounded border border-border-light text-text-muted hover:text-accent-blue hover:border-accent-blue/40 cursor-pointer transition-colors bg-transparent"
+              @click="showCsvHelp = true"
+              title="CSV format help">
+              ?
+            </button>
+            <button
+              v-if="store.totalDiscoveries > 0"
+              class="text-xs px-1.5 py-0.5 rounded border border-border-light text-text-muted hover:text-accent-gold hover:border-accent-gold/40 cursor-pointer transition-colors bg-transparent"
+              @click="handleCsvExport"
+              title="Export discoveries to CSV">
+              Export
+            </button>
+          </div>
+        </div>
+
+        <!-- CSV Help Modal -->
+        <div v-if="showCsvHelp" class="absolute inset-0 z-20 flex items-center justify-center bg-black/50" @click.self="showCsvHelp = false">
+          <div class="bg-surface-card border border-border-default rounded-lg p-4 max-w-lg shadow-lg">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-bold text-text-primary m-0">CSV Import Format</h3>
+              <button class="text-text-dim hover:text-text-secondary cursor-pointer bg-transparent border-none" @click="showCsvHelp = false">✕</button>
+            </div>
+            <div class="text-xs text-text-secondary flex flex-col gap-2">
+              <p class="m-0"><strong>Required columns:</strong> <code class="text-accent-gold">recipe_name</code> and at least one ingredient column.</p>
+              <p class="m-0"><strong>Ingredient columns:</strong> <code class="text-accent-gold">ingredient1</code> through <code class="text-accent-gold">ingredient4</code> — use in-game item names (e.g., "Corn", "Groxmax Powder"). Empty cells are fine for recipes with fewer slots.</p>
+              <p class="m-0"><strong>Optional columns:</strong></p>
+              <ul class="m-0 pl-4 flex flex-col gap-0.5">
+                <li><code class="text-accent-gold">effect_name</code> — what you got, e.g., "Partier's" or "Lumberjack's"</li>
+                <li><code class="text-accent-gold">power</code> — internal TSysPower name (e.g., "BrewingLumberjack")</li>
+                <li><code class="text-accent-gold">power_tier</code> — tier number</li>
+                <li><code class="text-accent-gold">type_id</code> — CDN item TypeID of the result drink</li>
+                <li><code class="text-accent-gold">item_name</code> — full drink name</li>
+              </ul>
+              <p class="m-0 text-text-dim">The more columns you provide, the more accurate the import. At minimum, <code>recipe_name</code> + ingredients lets us record what you tried. Adding <code>effect_name</code> lets us record what you got.</p>
+              <div class="bg-surface-base rounded p-2 mt-1 font-mono text-[0.65rem] text-text-dim overflow-x-auto">
+                recipe_name,ingredient1,ingredient2,ingredient3,ingredient4,effect_name<br>
+                Dwarven Stout,Corn,Green Apple,Groxmax Powder,Cinnamon,of Elfinity<br>
+                Rice Wine,Rattus Root,Tomato,Walnuts,Pansy,Forager's
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -101,6 +142,12 @@
 
     <!-- Center: detail panel -->
     <div class="h-full overflow-y-auto">
+      <!-- Experimental banner -->
+      <div class="bg-accent-warning/10 border-b border-accent-warning/20 px-4 py-1.5 text-xs text-accent-warning flex items-center gap-2">
+        <span class="font-bold">Experimental</span>
+        <span class="text-accent-warning/70">This feature is prone to bugs, and the layout/interface is likely to change significantly between versions.</span>
+      </div>
+
       <EmptyState
         v-if="store.loading"
         variant="panel"
@@ -133,7 +180,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed } from "vue";
+import { onMounted, computed, ref } from "vue";
+import { invoke } from "@tauri-apps/api/core";
 import PaneLayout from "../Shared/PaneLayout.vue";
 import EmptyState from "../Shared/EmptyState.vue";
 import BreweryRecipeDetail from "./BreweryRecipeDetail.vue";
@@ -148,6 +196,7 @@ import type { BrewingCategory } from "../../types/gameData/brewing";
 const store = useBreweryStore();
 const settingsStore = useSettingsStore();
 const toast = useToastComposable();
+const showCsvHelp = ref(false);
 
 const characterName = computed(() => settingsStore.settings.activeCharacterName);
 
@@ -196,6 +245,54 @@ async function handleCsvImport() {
       toast.warn("No valid brewing entries found in CSV. Check the format.");
     }
   }
+}
+
+async function handleCsvExport() {
+  if (store.discoveries.length === 0) return;
+
+  const { save } = await import("@tauri-apps/plugin-dialog");
+  const filePath = await save({
+    filters: [{ name: "CSV", extensions: ["csv"] }],
+    defaultPath: "brewing_discoveries.csv",
+  });
+  if (!filePath) return;
+
+  // Build CSV content
+  const header = "recipe_name,ingredient1,ingredient2,ingredient3,ingredient4,effect_name,power,power_tier,item_name,type_id";
+  const lines = [header];
+
+  for (const disc of store.discoveries) {
+    const recipe = store.recipeById.get(disc.recipe_id);
+    const recipeName = recipe?.name ?? "";
+    const typeId = recipe?.result_item_id ?? "";
+    const ingredients = disc.ingredient_ids.map((id) => store.ingredientById.get(id)?.name ?? String(id));
+    while (ingredients.length < 4) ingredients.push("");
+
+    const row = [
+      csvEscape(recipeName),
+      ...ingredients.map(csvEscape),
+      csvEscape(disc.effect_label ?? ""),
+      csvEscape(disc.power),
+      String(disc.power_tier),
+      csvEscape(disc.item_name ?? ""),
+      String(typeId),
+    ].join(",");
+    lines.push(row);
+  }
+
+  try {
+    await invoke("export_text_file", { filePath, content: lines.join("\n") });
+    toast.success(`Exported ${store.discoveries.length} discoveries to CSV.`);
+  } catch (e) {
+    toast.error(`Export failed: ${e}`);
+  }
+}
+
+function csvEscape(value: string): string {
+  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
 }
 
 onMounted(async () => {

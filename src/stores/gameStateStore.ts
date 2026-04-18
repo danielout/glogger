@@ -185,13 +185,29 @@ export const useGameStateStore = defineStore('gameState', () => {
     return map
   })
 
-  /** Total owned count per item name (merges DB inventory + live inventory) */
-  const ownedItemCounts = computed(() => {
+  /** Items carried in inventory (merges DB inventory + live inventory, excludes storage) */
+  const inventoryItemCounts = computed(() => {
     const counts: Record<string, number> = {}
     for (const item of inventory.value) {
       counts[item.item_name] = (counts[item.item_name] ?? 0) + item.stack_size
     }
     for (const item of liveItemMap.value.values()) {
+      counts[item.item_name] = (counts[item.item_name] ?? 0) + item.stack_size
+    }
+    return counts
+  })
+
+  /** Items held on the player (inventory + saddlebag when we track it) */
+  const heldItemCounts = computed(() => {
+    // Currently the same as inventoryItemCounts — when saddlebag tracking
+    // is added, merge it in here.
+    return inventoryItemCounts.value
+  })
+
+  /** Total owned count per item name (inventory + storage) */
+  const ownedItemCounts = computed(() => {
+    const counts: Record<string, number> = { ...inventoryItemCounts.value }
+    for (const item of storage.value) {
       counts[item.item_name] = (counts[item.item_name] ?? 0) + item.stack_size
     }
     return counts
@@ -874,6 +890,8 @@ export const useGameStateStore = defineStore('gameState', () => {
     // Persisted computed
     skillsByName,
     skillTotalLevel,
+    inventoryItemCounts,
+    heldItemCounts,
     ownedItemCounts,
     attributesByName,
     recipesById,

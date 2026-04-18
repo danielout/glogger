@@ -164,7 +164,9 @@ Loaded via parallel `invoke()` calls in `loadAll()`, refreshed per-domain via `r
 |---|---|---|
 | `skillsByName` | `Record<string, GameStateSkill>` | O(1) skill lookup |
 | `attributesByName` | `Record<string, number>` | O(1) attribute lookup |
-| `ownedItemCounts` | `Record<string, number>` | Merges DB inventory + live inventory |
+| `inventoryItemCounts` | `Record<string, number>` | Items in inventory (DB + live), excludes storage |
+| `heldItemCounts` | `Record<string, number>` | Items on the player (inventory + saddlebag when tracked) |
+| `ownedItemCounts` | `Record<string, number>` | Total owned across inventory + storage |
 | `recipesById` | `Record<number, GameStateRecipe>` | O(1) recipe lookup |
 | `recipeCompletions` | `Record<string, number>` | Keyed by `"Recipe_{id}"` for CDN compat |
 | `knownRecipeKeys` | `Set<string>` | Recipe keys with count > 0 |

@@ -90,7 +90,7 @@ function searchPlayerData(query: string, cap: number): SearchCategory[] {
   }
 
   // 1. Backpack / live inventory (current character)
-  for (const [name, count] of Object.entries(gameState.ownedItemCounts)) {
+  for (const [name, count] of Object.entries(gameState.inventoryItemCounts)) {
     if (yourItems.length >= cap) break
     if (name.toLowerCase().includes(query)) {
       seen.add(name)

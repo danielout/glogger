@@ -12,7 +12,7 @@
           <span v-if="recipe.usage_delay_message" class="text-text-dim">{{ recipe.usage_delay_message }}</span>
         </div>
       </div>
-      <span class="text-[0.6rem] uppercase tracking-widest text-text-dim border border-border-light rounded px-2 py-0.5">
+      <span class="text-xs uppercase tracking-widest text-text-dim border border-border-light rounded px-2 py-0.5">
         {{ categoryLabel }}
       </span>
     </div>
@@ -34,11 +34,11 @@
           class="flex items-center gap-2 text-xs">
           <span class="font-mono text-text-muted w-6 text-right shrink-0">{{ ing.stack_size }}x</span>
           <ItemInline :reference="String(ing.item_id)" />
-          <span v-if="getOwnedCount(ing.item_id) > 0" class="text-[0.55rem] text-accent-green font-mono">
+          <span v-if="getOwnedCount(ing.item_id) > 0" class="text-xs text-accent-green font-mono">
             (×{{ getOwnedCount(ing.item_id) }})
           </span>
           <span v-if="ing.chance_to_consume != null && ing.chance_to_consume < 1"
-            class="text-text-dim text-[0.6rem]">
+            class="text-text-dim text-xs">
             ({{ Math.round(ing.chance_to_consume * 100) }}% consumed)
           </span>
         </div>
@@ -54,10 +54,10 @@
       <div class="flex flex-col gap-3">
         <div v-for="(slot, i) in recipe.variable_slots" :key="i" class="bg-surface-base border border-surface-elevated rounded px-3 py-2">
           <div class="flex items-center gap-2 mb-1.5">
-            <span class="text-[0.6rem] font-mono text-accent-gold bg-accent-gold/10 rounded px-1.5 py-0.5">
+            <span class="text-xs font-mono text-accent-gold bg-accent-gold/10 rounded px-1.5 py-0.5">
               {{ slot.keyword }}
             </span>
-            <span class="text-text-muted text-[0.6rem]">{{ slot.stack_size }}x needed</span>
+            <span class="text-text-muted text-xs">{{ slot.stack_size }}x needed</span>
           </div>
           <div class="flex flex-wrap gap-x-2 gap-y-1">
             <span
@@ -65,7 +65,7 @@
               :key="itemId"
               class="text-xs inline-flex items-center gap-0.5">
               <ItemInline :reference="String(itemId)" />
-              <span v-if="getOwnedCount(itemId) > 0" class="text-[0.55rem] text-accent-green font-mono">
+              <span v-if="getOwnedCount(itemId) > 0" class="text-xs text-accent-green font-mono">
                 (×{{ getOwnedCount(itemId) }})
               </span>
             </span>
@@ -89,7 +89,7 @@
           :key="pool"
           :title="getPoolDescription(pool)"
           :class="[
-            'text-[0.6rem] px-2 py-0.5 rounded border cursor-default',
+            'text-xs px-2 py-0.5 rounded border cursor-default',
             isPlaceholderPool(pool)
               ? 'border-accent-warning/30 text-accent-warning bg-accent-warning/5'
               : pool.startsWith('RacialBonuses')
@@ -101,7 +101,7 @@
           <span v-if="pool.startsWith('RacialBonuses')" class="ml-1 opacity-60">(may be race-locked)</span>
         </span>
       </div>
-      <div class="text-[0.6rem] text-text-dim mt-1.5">
+      <div class="text-xs text-text-dim mt-1.5">
         Tier {{ recipe.brew_item_effect.tier }}
         <span class="mx-1 opacity-30">·</span>
         {{ recipe.brew_item_effect.ingredient_slots.length }} variable slot{{ recipe.brew_item_effect.ingredient_slots.length === 1 ? '' : 's' }} determine which effect you get
@@ -122,7 +122,7 @@
       </div>
       <table class="text-xs">
         <thead>
-          <tr class="text-[0.6rem] uppercase tracking-wider text-text-dim">
+          <tr class="text-xs uppercase tracking-wider text-text-dim">
             <th class="text-left pb-1 font-normal">Ingredients</th>
             <th class="text-left pb-1 font-normal">Effect</th>
             <th class="text-left pb-1 font-normal">Req</th>
@@ -151,15 +151,15 @@
                   <div
                     v-for="(effect, ei) in getPowerInfo(disc)!.tier_effects"
                     :key="ei"
-                    class="text-[0.6rem] text-text-secondary leading-snug">
+                    class="text-xs text-text-secondary leading-snug">
                     {{ effect }}
                   </div>
                 </template>
-                <div v-else class="text-[0.6rem] text-text-dim">{{ disc.power }} (T{{ disc.power_tier }})</div>
+                <div v-else class="text-xs text-text-dim">{{ disc.power }} (T{{ disc.power_tier }})</div>
               </div>
             </td>
             <td class="py-1.5 pr-3">
-              <span v-if="getPowerInfo(disc)?.skill" class="text-[0.6rem] text-text-muted whitespace-nowrap">
+              <span v-if="getPowerInfo(disc)?.skill" class="text-xs text-text-muted whitespace-nowrap">
                 {{ getPowerInfo(disc)!.skill }}
               </span>
               <span v-else class="text-text-dim">—</span>
@@ -167,7 +167,7 @@
             <td class="py-1.5">
               <span
                 v-if="disc.race_restriction"
-                class="text-[0.6rem] px-1.5 py-0.5 rounded bg-accent-red/10 text-accent-red border border-accent-red/20 whitespace-nowrap">
+                class="text-xs px-1.5 py-0.5 rounded bg-accent-red/10 text-accent-red border border-accent-red/20 whitespace-nowrap">
                 {{ disc.race_restriction }} only
               </span>
               <span v-else class="text-text-dim">—</span>
@@ -201,12 +201,12 @@
               : 'border-surface-elevated'">
           <span
             v-if="sug.ownedCount === sug.totalCount"
-            class="text-[0.55rem] text-accent-green font-semibold shrink-0 w-12">
+            class="text-xs text-accent-green font-semibold shrink-0 w-12">
             ✓ Ready
           </span>
           <span
             v-else
-            class="text-[0.55rem] text-text-dim font-mono shrink-0 w-12">
+            class="text-xs text-text-dim font-mono shrink-0 w-12">
             {{ sug.ownedCount }}/{{ sug.totalCount }}
           </span>
           <div class="flex flex-wrap gap-x-2 gap-y-0.5">
@@ -222,7 +222,7 @@
           </div>
         </div>
       </div>
-      <div class="text-[0.6rem] text-text-dim mt-1">
+      <div class="text-xs text-text-dim mt-1">
         {{ discoveredCombos.size }} of {{ discoveredCombos.size + suggestions.length }} combos discovered
         <template v-if="totalUntriedCount > suggestions.length">
           · showing top {{ suggestions.length }} of {{ totalUntriedCount }} untried

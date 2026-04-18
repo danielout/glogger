@@ -112,21 +112,8 @@ const resolvedItems = ref<Record<string, ItemInfo>>({})
 
 // Collect all unique item names from inventory and storage
 const allItemNames = computed<string[]>(() => {
-  const names = new Set<string>()
   const owned = gameState.ownedItemCounts
-  if (owned) {
-    for (const name of Object.keys(owned)) {
-      if (owned[name] > 0) names.add(name)
-    }
-  }
-  const allVaults = gameState.storageByVault
-  for (const items of Object.values(allVaults)) {
-    if (!items) continue
-    for (const item of items) {
-      names.add(item.item_name)
-    }
-  }
-  return Array.from(names)
+  return Object.keys(owned).filter(name => owned[name] > 0)
 })
 
 // Resolve items whenever the item names list changes
@@ -176,7 +163,7 @@ const giftPrefs = computed(() => {
 })
 
 const matchingGifts = computed<MatchingGift[]>(() => {
-  const owned = gameState.ownedItemCounts
+  const owned = gameState.inventoryItemCounts
   if (!owned || !giftPrefs.value.length) return []
 
   const results: MatchingGift[] = []

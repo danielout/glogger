@@ -128,7 +128,7 @@ export const useCooksHelperStore = defineStore('cooksHelper', () => {
 
   const selectionCount = computed(() => selectedRecipeIds.value.size)
 
-  /** Check how many of a food the player currently owns (inventory + storage) */
+  /** Check how many of a food the player currently owns (inventory + storage) — total across all locations */
   function ownedCount(foodName: string): number {
     return gameStateStore.ownedItemCounts[foodName] ?? 0
   }

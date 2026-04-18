@@ -183,7 +183,7 @@ function resolveNpcName(key: string): string {
 
 // ── Item resolution ──────────────────────────────────────────────────────────
 
-const inventoryItemNames = computed(() => Object.keys(gameState.ownedItemCounts))
+const inventoryItemNames = computed(() => Object.keys(gameState.inventoryItemCounts))
 
 async function resolveInventoryItems() {
   const names = inventoryItemNames.value
@@ -212,7 +212,7 @@ interface NpcMatchEntry {
 }
 
 const npcMatches = computed<NpcMatchEntry[]>(() => {
-  const counts = gameState.ownedItemCounts
+  const counts = gameState.inventoryItemCounts
   const items: { name: string; keywords: string[] }[] = []
 
   for (const [name, count] of Object.entries(counts)) {

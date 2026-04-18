@@ -14,7 +14,7 @@
       <div class="text-text-dim text-xs italic">
         No effects discovered yet.
       </div>
-      <div class="text-text-dim text-[0.6rem] mt-1">
+      <div class="text-text-dim text-xs mt-1">
         Scan snapshots or import a CSV to populate.
       </div>
     </div>
@@ -27,9 +27,7 @@
         class="flex flex-col gap-0.5 px-2 py-1.5 text-left cursor-pointer border-none w-full border-b border-surface-card"
         :class="store.selectedEffect === effect.power
           ? 'bg-accent-gold/15'
-          : effect.raceRestriction
-            ? 'bg-transparent hover:bg-surface-base'
-            : 'bg-transparent hover:bg-surface-base'"
+          : 'bg-transparent hover:bg-surface-base'"
         @click="store.selectEffect(effect.power)">
         <!-- Effect label + count -->
         <div class="flex items-center justify-between w-full">
@@ -40,11 +38,11 @@
                 ? 'text-accent-red/70'
                 : 'text-text-secondary'">
             {{ effect.effectLabel ?? effect.power }}
-            <span v-if="effect.raceRestriction" class="text-[0.55rem] opacity-70 ml-0.5">
+            <span v-if="effect.raceRestriction" class="text-xs opacity-70 ml-0.5">
               ({{ effect.raceRestriction }})
             </span>
           </span>
-          <span class="text-text-dim font-mono text-[0.55rem] shrink-0 ml-1">
+          <span class="text-text-dim font-mono text-xs shrink-0 ml-1">
             {{ effect.discoveryCount }}
           </span>
         </div>
@@ -53,12 +51,12 @@
           <span
             v-for="(desc, i) in effect.descriptions"
             :key="i"
-            class="text-[0.55rem] text-text-dim leading-tight truncate">
+            class="text-xs text-text-dim leading-tight truncate">
             {{ desc }}
           </span>
         </div>
         <!-- Required skill -->
-        <span v-if="effect.skill" class="text-[0.5rem] text-text-dim">
+        <span v-if="effect.skill" class="text-xs text-text-dim">
           Requires {{ effect.skill }}
         </span>
       </button>
@@ -69,7 +67,7 @@
     </div>
 
     <!-- Footer -->
-    <div class="text-[0.6rem] text-text-muted px-2 py-1 border-t border-surface-card">
+    <div class="text-xs text-text-muted px-2 py-1 border-t border-surface-card">
       {{ store.effectEntries.length }} effects
     </div>
   </div>

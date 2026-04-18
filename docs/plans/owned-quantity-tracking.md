@@ -38,7 +38,9 @@ Three core item events are already emitted:
 
 - **`liveItemMap`** — in-memory per-session inventory state.
 - **`liveEventLog`** — last 50 inventory events.
-- **`ownedItemCounts`** — computed property merging DB + live inventory into `Record<itemName, totalQuantity>`.
+- **`inventoryItemCounts`** — computed property merging DB + live inventory into `Record<itemName, totalQuantity>` (excludes storage).
+- **`heldItemCounts`** — items on the player (inventory + saddlebag when tracked).
+- **`ownedItemCounts`** — total owned across inventory + storage.
 
 ### Snapshot Import (`src-tauri/src/db/inventory_commands.rs`)
 

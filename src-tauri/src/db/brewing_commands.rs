@@ -355,14 +355,11 @@ fn scan_snapshot_internal(
 
 /// Import brewing discoveries from a CSV file.
 ///
-/// CSV format (header required):
-///   ingredient1,ingredient2,ingredient3,ingredient4,power,power_tier,item_name,type_id
+/// Flexible header-based format. Required: `recipe_name` + at least one `ingredientN`.
+/// Optional: `effect_name`, `power`, `power_tier`, `item_name`, `type_id`.
 ///
-/// Ingredient columns use display names (e.g., "Corn", "Groxmax Powder").
-/// ingredient4 can be empty for 3-ingredient recipes.
-/// power is the TSysPower internal name (e.g., "BrewingLumberjack").
-/// item_name is the full drink name (e.g., "Lumberjack's Dwarven Stout").
-/// type_id is the CDN item TypeID of the result drink.
+/// If `power` is missing, we store `effect_name` as the label with power="unknown".
+/// If `type_id` is missing, we match `recipe_name` against CDN recipe names.
 #[tauri::command]
 pub async fn import_brewing_discoveries_csv(
     file_path: String,
@@ -376,7 +373,36 @@ pub async fn import_brewing_discoveries_csv(
     let csv_content =
         std::fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {e}"))?;
 
-    // Build item name → ID lookup (case-insensitive)
+    let mut lines = csv_content.lines();
+
+    // Parse header to find column indices
+    let header_line = lines.next().ok_or("CSV file is empty")?;
+    let headers: Vec<String> = header_line.split(',').map(|s| s.trim().to_lowercase()).collect();
+
+    let col = |name: &str| -> Option<usize> { headers.iter().position(|h| h == name) };
+
+    // Required: recipe_name OR type_id, plus ingredients
+    let col_recipe_name = col("recipe_name");
+    let col_ing1 = col("ingredient1").or_else(|| col("ingredient_1"));
+    let col_ing2 = col("ingredient2").or_else(|| col("ingredient_2"));
+    let col_ing3 = col("ingredient3").or_else(|| col("ingredient_3"));
+    let col_ing4 = col("ingredient4").or_else(|| col("ingredient_4"));
+    let col_effect_name = col("effect_name").or_else(|| col("effect"));
+    let col_power = col("power");
+    let col_power_tier = col("power_tier");
+    let col_item_name = col("item_name");
+    let col_type_id = col("type_id");
+
+    let ingredient_cols = [col_ing1, col_ing2, col_ing3, col_ing4];
+
+    if col_recipe_name.is_none() && col_type_id.is_none() {
+        return Err("CSV must have a 'recipe_name' or 'type_id' column".to_string());
+    }
+    if ingredient_cols.iter().all(|c| c.is_none()) {
+        return Err("CSV must have at least one ingredient column (ingredient1..ingredient4)".to_string());
+    }
+
+    // Build lookups
     let mut name_to_id: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
     for (id, item) in &data.items {
         name_to_id.insert(item.name.to_lowercase(), *id);
@@ -385,12 +411,38 @@ pub async fn import_brewing_discoveries_csv(
         }
     }
 
-    // Build result_item_id → recipe mapping
+    // recipe name → recipe (case-insensitive, match base name without "(One Glass)" etc.)
+    let mut recipe_name_to_recipe: std::collections::HashMap<String, &crate::game_data::brewing::BrewingRecipe> =
+        std::collections::HashMap::new();
     let mut result_to_recipe: std::collections::HashMap<u32, &crate::game_data::brewing::BrewingRecipe> =
         std::collections::HashMap::new();
     for recipe in &data.brewing_recipes {
+        let name_lower = recipe.name.to_lowercase();
+        recipe_name_to_recipe.insert(name_lower.clone(), recipe);
+        // Also index without parenthetical suffixes: "Dwarven Stout (One Glass)" → "dwarven stout"
+        if let Some(pos) = name_lower.find('(') {
+            let short = name_lower[..pos].trim().to_string();
+            recipe_name_to_recipe.entry(short).or_insert(recipe);
+        }
+        if let Some(iname) = &recipe.internal_name {
+            recipe_name_to_recipe.insert(iname.to_lowercase(), recipe);
+        }
         if let Some(result_id) = recipe.result_item_id {
             result_to_recipe.insert(result_id, recipe);
+        }
+    }
+
+    // TSys prefix/suffix → power name (for resolving effect names like "Partier's")
+    let mut label_to_power: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    for info in data.tsys.client_info.values() {
+        if let Some(ref iname) = info.internal_name {
+            if !iname.starts_with("Brewing") { continue; }
+            if let Some(ref prefix) = info.prefix {
+                label_to_power.insert(prefix.to_lowercase(), iname.clone());
+            }
+            if let Some(ref suffix) = info.suffix {
+                label_to_power.insert(suffix.to_lowercase(), iname.clone());
+            }
         }
     }
 
@@ -412,103 +464,114 @@ pub async fn import_brewing_discoveries_csv(
     let mut total_brewing_items = 0u32;
     let mut skipped_lines = Vec::new();
 
-    for (line_num, line) in csv_content.lines().enumerate() {
-        // Skip header
-        if line_num == 0 && line.to_lowercase().contains("ingredient") {
-            continue;
-        }
-
+    for (line_num, line) in lines.enumerate() {
+        let line_display = line_num + 2; // +2 because header is line 1 and enumerate starts at 0
         let line = line.trim();
-        if line.is_empty() {
-            continue;
-        }
+        if line.is_empty() { continue; }
 
         let fields: Vec<&str> = line.split(',').collect();
-        if fields.len() < 6 {
-            skipped_lines.push(format!("Line {}: too few fields", line_num + 1));
-            continue;
-        }
 
-        // Resolve ingredient names to IDs
+        let get_field = |col_idx: Option<usize>| -> &str {
+            col_idx.and_then(|i| fields.get(i)).map(|s| s.trim()).unwrap_or("")
+        };
+
+        // Resolve ingredients
         let mut ingredient_ids: Vec<u32> = Vec::new();
         let mut resolve_failed = false;
-        for i in 0..4 {
-            let name = fields.get(i).map(|s| s.trim()).unwrap_or("");
-            if name.is_empty() {
-                continue;
-            }
+        for col_opt in &ingredient_cols {
+            let name = get_field(*col_opt);
+            if name.is_empty() { continue; }
             match name_to_id.get(&name.to_lowercase()) {
                 Some(id) => ingredient_ids.push(*id),
                 None => {
-                    skipped_lines.push(format!(
-                        "Line {}: unknown ingredient \"{}\"",
-                        line_num + 1,
-                        name
-                    ));
+                    skipped_lines.push(format!("Line {}: unknown ingredient \"{}\"", line_display, name));
                     resolve_failed = true;
                     break;
                 }
             }
         }
-        if resolve_failed || ingredient_ids.is_empty() {
-            continue;
-        }
+        if resolve_failed || ingredient_ids.is_empty() { continue; }
 
-        let power = fields.get(4).map(|s| s.trim()).unwrap_or("");
-        let power_tier: i64 = fields
-            .get(5)
-            .and_then(|s| s.trim().parse().ok())
-            .unwrap_or(0);
-        let item_name = fields.get(6).map(|s| s.trim()).unwrap_or("");
-        let type_id: Option<u32> = fields.get(7).and_then(|s| s.trim().parse().ok());
+        // Resolve recipe: try type_id first, then recipe_name
+        let type_id_str = get_field(col_type_id);
+        let type_id: Option<u32> = if type_id_str.is_empty() { None } else { type_id_str.parse().ok() };
 
-        if power.is_empty() {
-            skipped_lines.push(format!("Line {}: missing power", line_num + 1));
-            continue;
-        }
-
-        // Resolve recipe from type_id
-        let recipe_id = if let Some(tid) = type_id {
-            result_to_recipe.get(&tid).map(|r| r.recipe_id)
+        let recipe = if let Some(tid) = type_id {
+            result_to_recipe.get(&tid).copied()
         } else {
             None
-        };
+        }.or_else(|| {
+            let name = get_field(col_recipe_name);
+            if name.is_empty() { return None; }
+            recipe_name_to_recipe.get(&name.to_lowercase()).copied()
+        });
 
-        let recipe_id = match recipe_id {
-            Some(id) => id,
+        let recipe = match recipe {
+            Some(r) => r,
             None => {
-                skipped_lines.push(format!(
-                    "Line {}: could not match type_id {} to a brewing recipe",
-                    line_num + 1,
-                    type_id.unwrap_or(0)
-                ));
+                skipped_lines.push(format!("Line {}: could not match recipe", line_display));
                 continue;
             }
         };
+
+        // Resolve power: try explicit power field, then effect_name → TSys lookup
+        let mut power = get_field(col_power).to_string();
+        let effect_name = get_field(col_effect_name).to_string();
+
+        if power.is_empty() && !effect_name.is_empty() {
+            // Try to resolve effect_name to a power via TSys prefix/suffix
+            let label_lower = effect_name.to_lowercase();
+            if let Some(resolved) = label_to_power.get(&label_lower) {
+                power = resolved.clone();
+            } else {
+                // Try matching with "of " prefix stripped or "'s" suffix stripped
+                let stripped = label_lower
+                    .strip_prefix("of ")
+                    .unwrap_or(&label_lower)
+                    .to_string();
+                if let Some(resolved) = label_to_power.get(&stripped) {
+                    power = resolved.clone();
+                }
+            }
+        }
+
+        // If we still don't have a power, use "unknown" — we at least record the combo
+        if power.is_empty() {
+            power = "unknown".to_string();
+        }
+
+        let power_tier: i64 = get_field(col_power_tier).parse().unwrap_or(0);
+        let item_name = get_field(col_item_name);
 
         total_brewing_items += 1;
 
         ingredient_ids.sort();
         let ing_ids_json = serde_json::to_string(&ingredient_ids).unwrap_or_default();
 
-        // Get base name for effect label extraction
-        let base_name = type_id
-            .and_then(|tid| data.items.get(&tid))
-            .map(|i| i.name.as_str())
-            .unwrap_or("");
-        let effect_label = extract_effect_label(item_name, base_name);
-        let race_restriction = detect_race_restriction(power);
+        let effect_label = if !effect_name.is_empty() {
+            Some(effect_name.clone())
+        } else if !item_name.is_empty() {
+            let base_name = type_id
+                .and_then(|tid| data.items.get(&tid))
+                .map(|i| i.name.as_str())
+                .unwrap_or("");
+            extract_effect_label(item_name, base_name)
+        } else {
+            None
+        };
+
+        let race_restriction = detect_race_restriction(&power);
 
         let changes = insert_stmt
             .execute(params![
                 character,
-                recipe_id,
+                recipe.recipe_id,
                 ing_ids_json,
                 power,
                 power_tier,
                 effect_label,
                 race_restriction,
-                item_name,
+                if item_name.is_empty() { &effect_name } else { item_name },
                 timestamp,
             ])
             .map_err(|e| format!("Failed to insert discovery: {e}"))?;
