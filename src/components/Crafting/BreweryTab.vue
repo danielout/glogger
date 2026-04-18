@@ -1,7 +1,8 @@
 <template>
   <PaneLayout
     screen-key="crafting-brewery"
-    :left-pane="{ title: 'Recipes', defaultWidth: 280, minWidth: 200, maxWidth: 420 }">
+    :left-pane="{ title: 'Recipes', defaultWidth: 280, minWidth: 200, maxWidth: 420 }"
+    :right-pane="{ title: 'Effects', defaultWidth: 300, minWidth: 220, maxWidth: 500 }">
     <template #left>
       <div class="flex flex-col gap-1 h-full min-h-0">
         <!-- Search -->
@@ -118,6 +119,11 @@
         :ingredient-by-id="store.ingredientById"
         :discoveries="store.selectedRecipeDiscoveries" />
     </div>
+
+    <!-- Right pane: effect search -->
+    <template #right>
+      <BreweryEffectPanel @navigate-recipe="store.selectRecipe" />
+    </template>
   </PaneLayout>
 </template>
 
@@ -126,6 +132,7 @@ import { onMounted, computed } from "vue";
 import PaneLayout from "../Shared/PaneLayout.vue";
 import EmptyState from "../Shared/EmptyState.vue";
 import BreweryRecipeDetail from "./BreweryRecipeDetail.vue";
+import BreweryEffectPanel from "./BreweryEffectPanel.vue";
 import { useBreweryStore } from "../../stores/breweryStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useToast as useToastComposable } from "../../composables/useToast";

@@ -25,6 +25,10 @@ export const useBreweryStore = defineStore("brewery", () => {
   const searchQuery = ref("");
   const categoryFilter = ref<BrewingCategory | "all">("all");
 
+  // Right panel state
+  const effectSearchQuery = ref("");
+  const selectedEffect = ref<string | null>(null);
+
   // ── Computed ───────────────────────────────────────────────────────────────
 
   /** Ingredient lookup by item ID */
@@ -132,6 +136,77 @@ export const useBreweryStore = defineStore("brewery", () => {
     );
   });
 
+  // ── Effect search computed ──────────────────────────────────────────────
+
+  /** All unique effects discovered, with metadata */
+  const uniqueEffects = computed(() => {
+    const map = new Map<string, {
+      power: string;
+      effectLabel: string | null;
+      raceRestriction: string | null;
+      recipeCount: number;
+      discoveryCount: number;
+      recipeIds: Set<number>;
+    }>();
+
+    for (const d of discoveries.value) {
+      const existing = map.get(d.power);
+      if (existing) {
+        existing.discoveryCount++;
+        existing.recipeIds.add(d.recipe_id);
+        existing.recipeCount = existing.recipeIds.size;
+        // Prefer a non-null label
+        if (!existing.effectLabel && d.effect_label) {
+          existing.effectLabel = d.effect_label;
+        }
+      } else {
+        map.set(d.power, {
+          power: d.power,
+          effectLabel: d.effect_label,
+          raceRestriction: d.race_restriction,
+          recipeCount: 1,
+          discoveryCount: 1,
+          recipeIds: new Set([d.recipe_id]),
+        });
+      }
+    }
+
+    return [...map.values()].sort((a, b) => {
+      // Sort: non-race-restricted first, then by label/power name
+      if (a.raceRestriction && !b.raceRestriction) return 1;
+      if (!a.raceRestriction && b.raceRestriction) return -1;
+      const aName = a.effectLabel ?? a.power;
+      const bName = b.effectLabel ?? b.power;
+      return aName.localeCompare(bName);
+    });
+  });
+
+  /** Filtered effects based on search query */
+  const filteredEffects = computed(() => {
+    const q = effectSearchQuery.value.toLowerCase().trim();
+    if (!q) return uniqueEffects.value;
+    return uniqueEffects.value.filter((e) => {
+      const label = e.effectLabel?.toLowerCase() ?? "";
+      const power = e.power.toLowerCase();
+      return label.includes(q) || power.includes(q);
+    });
+  });
+
+  /** Discoveries for the selected effect (across all recipes) */
+  const selectedEffectDiscoveries = computed(() => {
+    if (!selectedEffect.value) return [];
+    return discoveries.value.filter((d) => d.power === selectedEffect.value);
+  });
+
+  /** Recipe lookup by ID for the right panel */
+  const recipeById = computed(() => {
+    const map = new Map<number, BrewingRecipe>();
+    for (const r of recipes.value) {
+      map.set(r.recipe_id, r);
+    }
+    return map;
+  });
+
   // ── Actions ────────────────────────────────────────────────────────────────
 
   async function loadBrewingData() {
@@ -221,6 +296,14 @@ export const useBreweryStore = defineStore("brewery", () => {
     selectedRecipeId.value = null;
   }
 
+  function selectEffect(power: string) {
+    selectedEffect.value = power;
+  }
+
+  function clearEffectSelection() {
+    selectedEffect.value = null;
+  }
+
   return {
     // State
     recipes,
@@ -233,6 +316,8 @@ export const useBreweryStore = defineStore("brewery", () => {
     selectedRecipeId,
     searchQuery,
     categoryFilter,
+    effectSearchQuery,
+    selectedEffect,
     // Computed
     ingredientById,
     discoveriesByRecipe,
@@ -244,6 +329,10 @@ export const useBreweryStore = defineStore("brewery", () => {
     filteredRecipesByCategory,
     selectedRecipe,
     filteredCount,
+    uniqueEffects,
+    filteredEffects,
+    selectedEffectDiscoveries,
+    recipeById,
     // Actions
     loadBrewingData,
     loadDiscoveries,
@@ -251,5 +340,7 @@ export const useBreweryStore = defineStore("brewery", () => {
     importCsv,
     selectRecipe,
     clearSelection,
+    selectEffect,
+    clearEffectSelection,
   };
 });
