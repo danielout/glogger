@@ -7,16 +7,90 @@
     </header>
 
     <div class="flex flex-col gap-1.5 text-xs tabular-nums">
-      <!-- Start / End -->
-      <div class="flex justify-between">
+      <!-- Start -->
+      <div class="flex justify-between items-center">
         <span class="text-text-secondary">Start</span>
-        <span class="text-text-primary">{{ effectiveStart ? formatTimeFull(effectiveStart) : '—' }}</span>
+        <div class="flex items-center gap-1">
+          <template v-if="editingField === 'start'">
+            <input
+              ref="startInput"
+              class="bg-surface-elevated border border-accent-gold/50 rounded px-1.5 py-0.5 text-xs text-text-primary w-[130px] text-right focus:outline-none"
+              :value="editValue"
+              @input="editValue = ($event.target as HTMLInputElement).value"
+              @blur="commitEdit('start')"
+              @keydown.enter="commitEdit('start')"
+              @keydown.escape="cancelEdit"
+              placeholder="YYYY-MM-DD HH:MM:SS"
+            />
+          </template>
+          <template v-else>
+            <span class="text-text-primary">{{ effectiveStart ? formatStartEnd(effectiveStart) : '—' }}</span>
+            <button
+              v-if="!isActive"
+              class="text-text-dim hover:text-accent-gold text-[0.6rem] px-0.5"
+              title="Edit start time"
+              @click="startEditing('start')"
+            >
+              &#9998;
+            </button>
+          </template>
+          <button
+            v-if="!editingField && session.user_started_at && !isActive"
+            class="text-text-dim hover:text-accent-red text-[0.55rem] px-0.5"
+            title="Reset to auto-detected start"
+            @click="resetTime('start')"
+          >
+            &#10005;
+          </button>
+        </div>
       </div>
-      <div class="flex justify-between">
+
+      <!-- End -->
+      <div class="flex justify-between items-center">
         <span class="text-text-secondary">End</span>
-        <span class="text-text-primary">
-          {{ effectiveEnd ? formatTimeFull(effectiveEnd) : (isActive ? 'in progress' : '—') }}
-        </span>
+        <div class="flex items-center gap-1">
+          <template v-if="editingField === 'end'">
+            <input
+              ref="endInput"
+              class="bg-surface-elevated border border-accent-gold/50 rounded px-1.5 py-0.5 text-xs text-text-primary w-[130px] text-right focus:outline-none"
+              :value="editValue"
+              @input="editValue = ($event.target as HTMLInputElement).value"
+              @blur="commitEdit('end')"
+              @keydown.enter="commitEdit('end')"
+              @keydown.escape="cancelEdit"
+              placeholder="YYYY-MM-DD HH:MM:SS"
+            />
+          </template>
+          <template v-else>
+            <span class="text-text-primary">
+              {{ effectiveEnd ? formatStartEnd(effectiveEnd) : (isActive ? 'in progress' : '—') }}
+            </span>
+            <button
+              v-if="!isActive"
+              class="text-text-dim hover:text-accent-gold text-[0.6rem] px-0.5"
+              title="Edit end time"
+              @click="startEditing('end')"
+            >
+              &#9998;
+            </button>
+          </template>
+          <button
+            v-if="!editingField && session.user_ended_at && !isActive"
+            class="text-text-dim hover:text-accent-red text-[0.55rem] px-0.5"
+            title="Reset to auto-detected end"
+            @click="resetTime('end')"
+          >
+            &#10005;
+          </button>
+        </div>
+      </div>
+
+      <!-- User-override hint -->
+      <div
+        v-if="(session.user_started_at || session.user_ended_at) && !editingField"
+        class="text-[0.55rem] text-text-dim italic"
+      >
+        Manually adjusted
       </div>
 
       <!-- Total duration -->
@@ -62,16 +136,69 @@
 // Time breakdown panel for the session center view. Shows start/end
 // (using user-adjusted times when set), total duration, craft time,
 // prep time, survey completion time, and per-survey averages.
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+// Start/end times are editable for ended sessions via inline inputs.
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { SurveySession } from '../../stores/surveyTrackerStore'
-import { formatTimeFull, formatDuration } from '../../composables/useTimestamp'
+import { useSurveyTrackerStore } from '../../stores/surveyTrackerStore'
+import { formatTimeFull, formatDuration, formatDateTimeShort } from '../../composables/useTimestamp'
 
 const props = defineProps<{
   session: SurveySession
   isActive: boolean
 }>()
 
-// Live tick for active sessions.
+const store = useSurveyTrackerStore()
+
+// ── Inline editing ────────────────────────────────────────────────────
+const editingField = ref<'start' | 'end' | null>(null)
+const editValue = ref('')
+const startInput = ref<HTMLInputElement | null>(null)
+const endInput = ref<HTMLInputElement | null>(null)
+
+function startEditing(field: 'start' | 'end') {
+  editingField.value = field
+  if (field === 'start') {
+    editValue.value = props.session.user_started_at ?? props.session.started_at
+  } else {
+    editValue.value = props.session.user_ended_at ?? props.session.ended_at ?? ''
+  }
+  nextTick(() => {
+    const input = field === 'start' ? startInput.value : endInput.value
+    input?.focus()
+    input?.select()
+  })
+}
+
+function cancelEdit() {
+  editingField.value = null
+  editValue.value = ''
+}
+
+function commitEdit(field: 'start' | 'end') {
+  const val = editValue.value.trim()
+  if (!val || !isValidTimestamp(val)) {
+    cancelEdit()
+    return
+  }
+  const newStart = field === 'start' ? val : (props.session.user_started_at ?? null)
+  const newEnd = field === 'end' ? val : (props.session.user_ended_at ?? null)
+  store.updateSessionTimes(props.session.id, newStart, newEnd)
+  cancelEdit()
+}
+
+function resetTime(field: 'start' | 'end') {
+  const newStart = field === 'start' ? null : (props.session.user_started_at ?? null)
+  const newEnd = field === 'end' ? null : (props.session.user_ended_at ?? null)
+  store.updateSessionTimes(props.session.id, newStart, newEnd)
+}
+
+function isValidTimestamp(ts: string): boolean {
+  // Accept YYYY-MM-DD HH:MM:SS format
+  return /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(ts)
+    && !isNaN(Date.parse(ts.replace(' ', 'T') + 'Z'))
+}
+
+// ── Live tick for active sessions ─────────────────────────────────────
 const liveNow = ref<number>(Date.now())
 let tickId: number | null = null
 onMounted(() => {
@@ -99,6 +226,18 @@ const effectiveStart = computed(() =>
 const effectiveEnd = computed(() =>
   props.session.user_ended_at ?? props.session.ended_at,
 )
+
+// Show date+time when start and end are on different calendar days.
+const spansMultipleDays = computed(() => {
+  const s = effectiveStart.value
+  const e = effectiveEnd.value
+  if (!s || !e) return false
+  return s.substring(0, 10) !== e.substring(0, 10)
+})
+
+function formatStartEnd(ts: string): string {
+  return spansMultipleDays.value ? formatDateTimeShort(ts) : formatTimeFull(ts)
+}
 
 const totalSeconds = computed(() => {
   const start = effectiveStart.value

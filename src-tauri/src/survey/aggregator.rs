@@ -351,7 +351,8 @@ impl SurveySessionAggregator {
         // small and indexed.
         if let Some(now_secs) = event_secs_of_day(event) {
             self.run_multihit_sweep(conn, character, server, now_secs, &mut emitted);
-            self.maybe_auto_end_crafting_session(conn, character, server, &mut emitted);
+            let event_iso = event_hms_timestamp(event).map(|hms| self.to_utc(hms));
+            self.maybe_auto_end_crafting_session(conn, character, server, event_iso.as_deref(), &mut emitted);
         }
 
         emitted
@@ -864,12 +865,15 @@ impl SurveySessionAggregator {
 
     /// Auto-end check for crafting-trigger sessions: when consumed_count
     /// reaches crafted_count AND no pending_loot uses remain, end the
-    /// session automatically.
+    /// session automatically. `event_iso` is the current event's UTC
+    /// timestamp (derived from the log, not wall clock) — used as the
+    /// fallback ended_at so replayed sessions don't get today's date.
     fn maybe_auto_end_crafting_session(
         &mut self,
         conn: &Connection,
         character: &str,
         server: &str,
+        event_iso: Option<&str>,
         emitted: &mut Vec<SurveyAggregatorEvent>,
     ) {
         let Some(s) = self.fetch_active_session_full(conn, character, server) else {
@@ -891,15 +895,18 @@ impl SurveySessionAggregator {
                 return;
             }
         }
-        let now_iso = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
-        if let Err(e) = persistence::end_session(conn, s.id, &now_iso) {
+        // Prefer the event timestamp over wall clock so replayed/old-log
+        // sessions don't get "today" as their ended_at.
+        let fallback = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        let end_iso = event_iso.unwrap_or(&fallback);
+        if let Err(e) = persistence::end_session(conn, s.id, end_iso) {
             eprintln!("[survey-aggregator] end_session failed: {e}");
             return;
         }
         // Correct started_at/ended_at from actual event timestamps so the
         // header reflects when the activity really happened, not when the
         // auto-end condition happened to trip.
-        if let Err(e) = persistence::recompute_session_bounds_and_end(conn, s.id, &now_iso) {
+        if let Err(e) = persistence::recompute_session_bounds_and_end(conn, s.id, end_iso) {
             eprintln!("[survey-aggregator] recompute_session_bounds_and_end failed: {e}");
         }
         self.cached_active_session_id = Some(None);

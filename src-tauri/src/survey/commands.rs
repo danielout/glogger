@@ -590,7 +590,9 @@ fn historical_session_rows(
     let partial: Vec<(HistoricalSessionRow, String)> = stmt
         .query_map(params![character, server, limit], |row| {
             let session = persistence::row_to_session_offset(row, 0)?;
-            let duration = compute_duration_seconds(&session.started_at, session.ended_at.as_deref());
+            let eff_start = session.user_started_at.as_deref().unwrap_or(&session.started_at);
+            let eff_end = session.user_ended_at.as_deref().or(session.ended_at.as_deref());
+            let duration = compute_duration_seconds(eff_start, eff_end);
             let server_name = session.server_name.clone();
             Ok((
                 HistoricalSessionRow {

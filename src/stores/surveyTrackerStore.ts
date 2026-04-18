@@ -412,10 +412,7 @@ export const useSurveyTrackerStore = defineStore("surveyTracker", () => {
     isBusy.value = true;
     try {
       const id = await invoke<number>("survey_tracker_start_session");
-      // Backend already wrote the row + emitted survey-tracker-session-started;
-      // the event handler refreshes status/recent. Calling refresh here too is
-      // belt-and-suspenders to keep the UI snappy.
-      await Promise.all([refreshStatus(), refreshRecentSessions()]);
+      await Promise.all([refreshStatus(), refreshRecentSessions(), refreshHistorical()]);
       return id;
     } catch (err) {
       console.error("[surveyTracker] start_session failed:", err);
@@ -429,7 +426,7 @@ export const useSurveyTrackerStore = defineStore("surveyTracker", () => {
     isBusy.value = true;
     try {
       const id = await invoke<number | null>("survey_tracker_end_session");
-      await Promise.all([refreshStatus(), refreshRecentSessions()]);
+      await Promise.all([refreshStatus(), refreshRecentSessions(), refreshHistorical()]);
       // If the ended session is the one currently open in the detail panel,
       // refresh its detail too so the user sees the final state.
       if (openDetailSessionId.value !== null) {
@@ -450,15 +447,14 @@ export const useSurveyTrackerStore = defineStore("surveyTracker", () => {
   // to reason about.
 
   async function handleSessionStarted(_p: SessionStartedPayload) {
-    await Promise.all([refreshStatus(), refreshRecentSessions()]);
+    await Promise.all([refreshStatus(), refreshRecentSessions(), refreshHistorical()]);
   }
 
   async function handleSessionEnded(_p: SessionEndedPayload) {
     await Promise.all([
       refreshStatus(),
       refreshRecentSessions(),
-      // Session ending changes counts on both Historical and Analytics.
-      historical.value.length > 0 ? refreshHistorical() : Promise.resolve(),
+      refreshHistorical(),
       analytics.value !== null ? refreshAnalytics() : Promise.resolve(),
     ]);
     if (openDetailSessionId.value !== null) {
@@ -476,11 +472,7 @@ export const useSurveyTrackerStore = defineStore("surveyTracker", () => {
     ) {
       await loadSessionDetail(openDetailSessionId.value);
     }
-    // Refresh History/Analytics views only if they've been previously loaded.
-    // Avoids an unnecessary query when the user has never opened those tabs.
-    if (historical.value.length > 0) {
-      await refreshHistorical();
-    }
+    await refreshHistorical();
     if (analytics.value !== null) {
       await refreshAnalytics();
     }
@@ -488,14 +480,11 @@ export const useSurveyTrackerStore = defineStore("surveyTracker", () => {
 
   async function handleUseCompleted(_useId: number) {
     // Status doesn't change (it's the open-nodes summary), but the open
-    // detail's per-use status does. Same lazy-only-refresh pattern for
-    // history/analytics.
+    // detail's per-use status does.
     if (openDetailSessionId.value !== null) {
       await loadSessionDetail(openDetailSessionId.value);
     }
-    if (historical.value.length > 0) {
-      await refreshHistorical();
-    }
+    await refreshHistorical();
     if (analytics.value !== null) {
       await refreshAnalytics();
     }

@@ -48,7 +48,7 @@
 
     <!-- Date + duration -->
     <div class="text-[0.6rem] text-text-dim tabular-nums">
-      {{ formatTimeFull(row.session.started_at) }}
+      {{ formatDateTimeShort(effectiveStart) }}
       <span v-if="row.duration_seconds !== null">
         · {{ formatDuration(row.duration_seconds) }}
       </span>
@@ -62,7 +62,7 @@
 // center + right panels.
 import { computed } from 'vue'
 import type { HistoricalSessionRow } from '../../stores/surveyTrackerStore'
-import { formatTimeFull, formatDuration } from '../../composables/useTimestamp'
+import { formatDateTimeShort, formatDuration } from '../../composables/useTimestamp'
 import { formatGold } from '../../composables/useRecipeCost'
 import { liveEnrichedRows, liveRevenue } from '../../composables/useLiveValuation'
 import AreaInline from '../Shared/Area/AreaInline.vue'
@@ -79,6 +79,10 @@ defineEmits<{
 
 const displayName = computed(() =>
   props.row.session.name ?? `Session #${props.row.session.id}`,
+)
+
+const effectiveStart = computed(() =>
+  props.row.session.user_started_at ?? props.row.session.started_at,
 )
 
 const cardClass = computed(() => {
