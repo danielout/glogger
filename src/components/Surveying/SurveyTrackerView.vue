@@ -273,7 +273,7 @@
           <div class="flex justify-end mt-4">
             <button
               class="text-[0.7rem] px-2.5 py-1 rounded border border-accent-red/50 text-accent-red hover:bg-accent-red/10 transition-colors"
-              @click="confirmDelete(selectedDetail!.session.id)"
+              @click="pendingDeleteId = selectedDetail!.session.id; showDeleteConfirm = true"
             >
               Delete session
             </button>
@@ -282,6 +282,17 @@
       </div>
     </template>
   </PaneLayout>
+
+  <ModalDialog
+    :show="showDeleteConfirm"
+    title="Delete Session"
+    type="confirm"
+    :message="`Delete session #${pendingDeleteId}? This will remove the session and its survey uses. The underlying item transactions are preserved.\n\nThis cannot be undone.`"
+    confirm-label="Delete"
+    :danger="true"
+    @update:show="showDeleteConfirm = $event"
+    @confirm="handleDeleteConfirmed"
+  />
 </template>
 
 <script setup lang="ts">
@@ -299,6 +310,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import PaneLayout from '../Shared/PaneLayout.vue'
+import ModalDialog from '../Shared/ModalDialog.vue'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
 import SessionCard from './SessionCard.vue'
 import LootOverviewPanel from './LootOverviewPanel.vue'
@@ -313,7 +325,6 @@ import {
 } from '../../stores/surveyTrackerStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { useViewPrefs } from '../../composables/useViewPrefs'
-import { formatTimeFull } from '../../composables/useTimestamp'
 import { formatGold } from '../../composables/useRecipeCost'
 import { liveEnrichedRows, liveRevenue, liveProfit as computeLiveProfit } from '../../composables/useLiveValuation'
 
@@ -522,8 +533,13 @@ function onNotesBlur(e: FocusEvent, sessionId: number) {
   }
 }
 
-async function confirmDelete(id: number) {
-  if (!window.confirm(`Delete session #${id}? This cannot be undone.`)) return
+const showDeleteConfirm = ref(false)
+const pendingDeleteId = ref<number | null>(null)
+
+async function handleDeleteConfirmed() {
+  const id = pendingDeleteId.value
+  if (id === null) return
+  pendingDeleteId.value = null
   const ok = await store.deleteSession(id)
   if (ok && selectedSessionId.value === id) {
     selectedSessionId.value = null

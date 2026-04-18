@@ -228,6 +228,14 @@ pub fn run() {
                         stored_version.as_deref().unwrap_or("first run"),
                         current_version.as_deref().unwrap_or("unknown"),
                     );
+                    // Invalidate cached indices so CDN data is re-indexed with new code.
+                    // This ensures bug fixes to index-building logic (e.g. ability family
+                    // construction) take effect without waiting for a CDN version bump.
+                    let indices_path = app_data_dir.join("data").join("indices.json");
+                    if indices_path.exists() {
+                        startup_log!("Removing cached indices.json to force re-index");
+                        let _ = std::fs::remove_file(&indices_path);
+                    }
                 }
                 let mut updated = settings_manager.get();
                 updated.last_app_version = current_version.clone();

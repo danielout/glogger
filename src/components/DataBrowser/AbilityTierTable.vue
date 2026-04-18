@@ -101,7 +101,7 @@ const props = defineProps<{
 }>()
 
 const store = useGameDataStore()
-const expandedTier = ref<number | null>(null)
+const expandedTier = defineModel<number | null>('expandedTierId', { default: null })
 const tierSources = ref<EntitySources | null>(null)
 const tierSourcesLoading = ref(false)
 

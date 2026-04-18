@@ -41,13 +41,13 @@ pub fn persist_cdn_data(conn: &mut Connection, data: &GameData) -> Result<()> {
     Ok(())
 }
 
-/// Patch `survey_uses.area` from `survey_types.zone` for any row where:
-/// - area is NULL, OR
-/// - area doesn't start with "Area" (old-style raw zone string like
-///   "KurMountains" or "Povus9Y" from the legacy InternalName parser)
-///
-/// Cheap UPDATE — indexed by `map_internal_name`. Called both from the
-/// one-time migration and from every CDN reload so corrections propagate.
+/// Unconditionally overwrite `survey_uses.area` from the freshly-loaded
+/// `survey_types.zone` for every row where the survey_types lookup
+/// returns a non-NULL zone. This runs on every CDN reload so even rows
+/// that were written with old-style zone strings ("Povus9Y",
+/// "KurMountains") or stale area keys get corrected to the canonical
+/// area key ("AreaPovus", "AreaKurMountains") derived from the CDN
+/// description + areas.json lookup.
 fn backfill_survey_use_areas(conn: &Connection) -> Result<()> {
     conn.execute(
         "UPDATE survey_uses
@@ -57,8 +57,11 @@ fn backfill_survey_use_areas(conn: &Connection) -> Result<()> {
                  WHERE st.internal_name = survey_uses.map_internal_name
                    AND st.zone IS NOT NULL
             )
-          WHERE area IS NULL
-             OR (area NOT LIKE 'Area%' AND area != '(unknown)')",
+          WHERE EXISTS (
+                SELECT 1 FROM survey_types st
+                 WHERE st.internal_name = survey_uses.map_internal_name
+                   AND st.zone IS NOT NULL
+          )",
         [],
     )?;
     Ok(())

@@ -172,6 +172,16 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 29)?;
     }
 
+    if current_version < 30 {
+        migration_v30_normalize_survey_use_areas(conn)?;
+        super::record_migration(conn, 30)?;
+    }
+
+    if current_version < 31 {
+        migration_v31_abilities_internal_name(conn)?;
+        super::record_migration(conn, 31)?;
+    }
+
     Ok(())
 }
 
@@ -451,6 +461,33 @@ fn migration_v29_session_name_and_timestamps(conn: &Connection) -> Result<()> {
          ALTER TABLE survey_sessions ADD COLUMN last_craft_at TEXT;
          ALTER TABLE survey_sessions ADD COLUMN first_loot_at TEXT;
          ALTER TABLE survey_sessions ADD COLUMN last_loot_at TEXT;",
+    )?;
+    Ok(())
+}
+
+/// Normalize all survey_uses.area values to proper area keys from
+/// survey_types.zone. This catches rows that were written before the CDN
+/// ingestion started producing area keys, and rows that were written with
+/// old-style zone strings like "Eltibule" instead of "AreaEltibule".
+/// Runs once; the CDN-reload backfill in persist_cdn_data handles future cases.
+fn migration_v30_normalize_survey_use_areas(conn: &Connection) -> Result<()> {
+    // Overwrite ALL non-null area values with the survey_types.zone lookup,
+    // not just NULLs — this catches "Eltibule" → "AreaEltibule" etc.
+    conn.execute(
+        "UPDATE survey_uses
+            SET area = (
+                SELECT st.zone
+                  FROM survey_types st
+                 WHERE st.internal_name = survey_uses.map_internal_name
+                   AND st.zone IS NOT NULL
+            )
+          WHERE EXISTS (
+                SELECT 1 FROM survey_types st
+                 WHERE st.internal_name = survey_uses.map_internal_name
+                   AND st.zone IS NOT NULL
+                   AND st.zone != COALESCE(survey_uses.area, '')
+          )",
+        [],
     )?;
     Ok(())
 }
@@ -1801,6 +1838,50 @@ fn migration_v16_survey_data_imports(conn: &Connection) -> Result<()> {
 
         CREATE INDEX idx_survey_session_stats_import ON survey_session_stats(import_id);
         "
+    )?;
+
+    Ok(())
+}
+
+/// Migration V31: Recreate abilities table with the full current schema.
+/// The V1 schema was edited after some databases were created, so older databases
+/// may be missing columns (internal_name, upgrade_of, etc.). Since abilities is
+/// pure CDN data (repopulated on every CDN load), DROP + CREATE is safe and
+/// guarantees all columns exist.
+fn migration_v31_abilities_internal_name(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "DROP TABLE IF EXISTS abilities;
+         CREATE TABLE abilities (
+             id INTEGER PRIMARY KEY,
+             name TEXT NOT NULL,
+             internal_name TEXT,
+             description TEXT,
+             icon_id INTEGER,
+             skill TEXT,
+             level_req REAL,
+             keywords TEXT,
+             damage_type TEXT,
+             reset_time REAL,
+             target TEXT,
+             prerequisite TEXT,
+             upgrade_of TEXT,
+             is_harmless BOOLEAN,
+             animation TEXT,
+             special_info TEXT,
+             works_underwater BOOLEAN,
+             works_while_falling BOOLEAN,
+             pve TEXT,
+             pvp TEXT,
+             mana_cost INTEGER,
+             power_cost INTEGER,
+             armor_cost INTEGER,
+             health_cost INTEGER,
+             range REAL,
+             raw_json TEXT NOT NULL
+         );
+         CREATE INDEX idx_abilities_name ON abilities(name COLLATE NOCASE);
+         CREATE INDEX idx_abilities_skill ON abilities(skill);
+         CREATE INDEX idx_abilities_damage_type ON abilities(damage_type);",
     )?;
 
     Ok(())

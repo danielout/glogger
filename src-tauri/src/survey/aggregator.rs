@@ -35,6 +35,7 @@ const SURVEY_TO_MINING_GRACE_SECS: u32 = 60;
 /// Multihit node timeout: if no mining hit lands on a tracked node for this
 /// long, the open_multihit_nodes row is swept and the use marked completed.
 /// See docs/architecture/survey-mechanics.md for why this is 30 minutes.
+#[allow(dead_code)] // Will be used once multihit sweep is wired up
 const MULTIHIT_TIMEOUT_SECS: u32 = 30 * 60;
 
 /// One survey-map use awaiting its first Mining context. Lives in memory
@@ -89,13 +90,16 @@ pub enum SurveyAggregatorEvent {
         map_internal_name: String,
         kind: SurveyUseKind,
     },
+    #[allow(dead_code)] // Matched in coordinator; not yet emitted by aggregator
     UseCompleted {
         use_id: i64,
     },
+    #[allow(dead_code)] // Matched in coordinator; not yet emitted by aggregator
     MultihitNodeOpened {
         use_id: i64,
         node_entity_id: u32,
     },
+    #[allow(dead_code)] // Matched in coordinator; not yet emitted by aggregator
     MultihitNodeClosed {
         use_id: i64,
         node_entity_id: u32,
@@ -358,6 +362,7 @@ impl SurveySessionAggregator {
     /// `InteractionStarted` events. Mining state must clear when the player
     /// switches to a non-mining interaction (e.g., corpse search) so the
     /// next mining cycle is correctly recognized as a "different entity".
+    #[allow(dead_code)] // Reserved hook for future mining-state clearing
     pub fn note_interaction_started(&mut self, _entity_id: u32) {
         // Currently a no-op: `current_mining_node` is set only when a mining
         // delay loop fires, and a different-entity mining cycle naturally

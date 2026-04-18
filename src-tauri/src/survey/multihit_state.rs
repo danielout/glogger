@@ -12,7 +12,6 @@
 //! coffee break can all happen within it. Losing that state would lose real
 //! loot attribution, so we persist it. See
 //! `docs/architecture/survey-mechanics.md` for the full mechanics.
-
 use rusqlite::{params, Connection, OptionalExtension, Result};
 use serde::{Deserialize, Serialize};
 

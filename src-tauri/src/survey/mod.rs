@@ -20,6 +20,7 @@
 
 pub mod aggregator;
 pub mod commands;
+#[allow(dead_code)] // Scaffolding for in-progress multihit tracking
 pub mod multihit_state;
 pub mod persistence;
 pub mod types;
@@ -44,6 +45,7 @@ pub use types::{
 ///
 /// Mirrors the same parser the CDN ingestion uses to populate
 /// `survey_types.zone`, so the two paths stay aligned.
+#[allow(dead_code)] // Used by tests; will be called from aggregator once area-tracking is routed in
 pub fn parse_zone_from_internal_name(internal_name: &str) -> Option<String> {
     let rest = internal_name
         .strip_prefix("GeologySurvey")

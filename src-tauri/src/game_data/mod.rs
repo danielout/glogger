@@ -1073,14 +1073,19 @@ fn build_all_indices(
         .filter_map(|(id, a)| a.internal_name.as_deref().map(|n| (n, *id)))
         .collect();
 
-    // Collect which base internal names have upgrades pointing to them
+    // Collect which base internal names have upgrades pointing to them.
+    // Exclude monster-only abilities (Lint_MonsterAbility) so they don't get
+    // pulled into player families — they'd skew tier numbering and metadata.
     let mut family_tiers: HashMap<String, Vec<u32>> = HashMap::new();
     for (id, ability) in abilities {
         if let Some(ref upgrade_of) = ability.upgrade_of {
-            family_tiers
-                .entry(upgrade_of.clone())
-                .or_default()
-                .push(*id);
+            let is_monster = ability.keywords.iter().any(|k| k == "Lint_MonsterAbility");
+            if !is_monster {
+                family_tiers
+                    .entry(upgrade_of.clone())
+                    .or_default()
+                    .push(*id);
+            }
         }
     }
 
@@ -1117,9 +1122,7 @@ fn build_all_indices(
                 .trim()
                 .to_string();
 
-            // Only mark as monster ability if ALL tiers have the tag.
-            // Some families (e.g. Cow Stampede) have a monster-only base tier
-            // but player-usable higher tiers that lack the tag.
+            // Mark as monster ability if ALL tiers have the tag.
             let is_monster_ability = tier_ids.iter().all(|tid| {
                 abilities
                     .get(tid)

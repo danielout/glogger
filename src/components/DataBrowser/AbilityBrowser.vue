@@ -151,7 +151,7 @@
             </div>
 
             <!-- Tier Progression Table -->
-            <AbilityTierTable :tiers="resolvedTiers" />
+            <AbilityTierTable :tiers="resolvedTiers" v-model:expanded-tier-id="expandedTierId" />
 
             <!-- Flags (from base tier) -->
             <div v-if="abilityFlags.length" class="flex flex-col gap-1.5">
@@ -231,9 +231,12 @@
             </div>
 
             <!-- Raw JSON -->
-            <div v-if="settingsStore.settings.showRawJsonInDataBrowser && baseTierAbility" class="flex flex-col gap-1.5">
-              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON (Base Tier)</div>
-              <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(baseTierAbility, null, 2) }}</pre>
+            <div v-if="settingsStore.settings.showRawJsonInDataBrowser && jsonTier" class="flex flex-col gap-1.5">
+              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+                Raw JSON
+                <span class="text-text-muted">({{ jsonTier.name }})</span>
+              </div>
+              <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(jsonTier, null, 2) }}</pre>
             </div>
           </template>
         </template>
@@ -278,8 +281,15 @@ const iconLoading = ref(false);
 const loading = ref(false);
 const showMonsterAbilities = ref(false);
 
+const expandedTierId = ref<number | null>(null);
 const baseTierAbility = computed(() => resolvedTiers.value[0] ?? null);
 const highestTier = computed(() => resolvedTiers.value[resolvedTiers.value.length - 1] ?? null);
+const jsonTier = computed(() => {
+  if (expandedTierId.value != null) {
+    return resolvedTiers.value.find(t => t.id === expandedTierId.value) ?? baseTierAbility.value;
+  }
+  return baseTierAbility.value;
+});
 
 const sharedCooldown = computed(() => {
   const base = baseTierAbility.value;
@@ -396,6 +406,7 @@ function levelRange(family: AbilityFamily): string {
 async function selectFamily(family: AbilityFamily) {
   selected.value = family;
   iconSrc.value = null;
+  expandedTierId.value = null;
   dataBrowserStore.addToHistory({ type: "ability", reference: family.base_internal_name, label: family.base_name });
   resolvedTiers.value = [];
   relatedTsys.value = [];

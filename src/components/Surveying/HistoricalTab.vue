@@ -136,7 +136,7 @@
             <div class="flex justify-end">
               <button
                 class="text-[0.7rem] px-2.5 py-1 rounded border border-accent-red/50 text-accent-red hover:bg-accent-red/10 transition-colors"
-                @click="confirmDelete(row.session.id)"
+                @click="pendingDeleteId = row.session.id; showDeleteConfirm = true"
               >
                 Delete session
               </button>
@@ -145,6 +145,17 @@
         </div>
       </div>
     </div>
+
+    <ModalDialog
+      :show="showDeleteConfirm"
+      title="Delete Session"
+      type="confirm"
+      :message="`Delete session #${pendingDeleteId}? This cannot be undone.`"
+      confirm-label="Delete"
+      :danger="true"
+      @update:show="showDeleteConfirm = $event"
+      @confirm="handleDeleteConfirmed"
+    />
   </div>
 </template>
 
@@ -158,6 +169,7 @@ import { useSurveyTrackerStore, type HistoricalSessionRow } from '../../stores/s
 import { formatTimeFull, formatDuration } from '../../composables/useTimestamp'
 import { formatGold } from '../../composables/useRecipeCost'
 import { liveEnrichedRows, liveProfit as computeLiveProfit } from '../../composables/useLiveValuation'
+import ModalDialog from '../Shared/ModalDialog.vue'
 import SessionSummary from './SessionSummary.vue'
 
 const store = useSurveyTrackerStore()
@@ -215,10 +227,13 @@ async function saveNotes(id: number) {
   }
 }
 
-async function confirmDelete(id: number) {
-  if (!window.confirm(`Delete session #${id}? This cannot be undone.`)) {
-    return
-  }
+const showDeleteConfirm = ref(false)
+const pendingDeleteId = ref<number | null>(null)
+
+async function handleDeleteConfirmed() {
+  const id = pendingDeleteId.value
+  if (id === null) return
+  pendingDeleteId.value = null
   const ok = await store.deleteSession(id)
   if (ok && expandedId.value === id) {
     expandedId.value = null
