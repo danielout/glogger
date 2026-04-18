@@ -29,6 +29,34 @@ pub struct BrewingScanResult {
     pub total_brewing_items: u32,
 }
 
+// ── String helpers ──────────────────────────────────────────────────────────
+
+/// Strip numbers (and surrounding whitespace) from a string to create a template.
+/// "Orcs gain +38 Max Power" → "orcs gain max power"
+fn strip_numbers(s: &str) -> String {
+    let mut result = String::new();
+    let mut last_was_space = false;
+    for c in s.chars() {
+        if c.is_ascii_digit() || c == '+' || c == '-' || c == '.' || c == '%' {
+            if !last_was_space && !result.is_empty() {
+                result.push(' ');
+                last_was_space = true;
+            }
+            continue;
+        }
+        if c == ' ' {
+            if !last_was_space && !result.is_empty() {
+                result.push(' ');
+                last_was_space = true;
+            }
+        } else {
+            result.push(c);
+            last_was_space = false;
+        }
+    }
+    result.trim().to_string()
+}
+
 // ── Race detection from power names ─────────────────────────────────────────
 
 const RACE_MARKERS: &[(&str, &str)] = &[
@@ -401,6 +429,7 @@ pub async fn import_brewing_discoveries_csv(
     let col_ing3 = col("ingredient3").or_else(|| col("ingredient_3"));
     let col_ing4 = col("ingredient4").or_else(|| col("ingredient_4"));
     let col_effect_name = col("effect_name").or_else(|| col("effect"));
+    let col_effect_desc = col("effect_desc").or_else(|| col("effects")).or_else(|| col("description"));
     let col_power = col("power");
     let col_power_tier = col("power_tier");
     let col_item_name = col("item_name");
@@ -446,7 +475,9 @@ pub async fn import_brewing_discoveries_csv(
     }
 
     // TSys prefix/suffix → power name (for resolving effect names like "Partier's")
+    // Also build effect description text → power name lookup
     let mut label_to_power: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    let mut desc_to_power: std::collections::HashMap<String, String> = std::collections::HashMap::new();
     for info in data.tsys.client_info.values() {
         if let Some(ref iname) = info.internal_name {
             if !iname.starts_with("Brewing") { continue; }
@@ -455,6 +486,18 @@ pub async fn import_brewing_discoveries_csv(
             }
             if let Some(ref suffix) = info.suffix {
                 label_to_power.insert(suffix.to_lowercase(), iname.clone());
+            }
+            // Build description templates from all tiers
+            for tier_info in info.tiers.values() {
+                for desc in &tier_info.effect_descs {
+                    if let Some(resolved) = crate::cdn_commands::resolve_single_effect_public(desc, &data) {
+                        // Strip numbers to create a matchable template
+                        let template = strip_numbers(&resolved.formatted).to_lowercase();
+                        if !template.is_empty() {
+                            desc_to_power.insert(template, iname.clone());
+                        }
+                    }
+                }
             }
         }
     }
@@ -527,9 +570,10 @@ pub async fn import_brewing_discoveries_csv(
             }
         };
 
-        // Resolve power: try explicit power field, then effect_name → TSys lookup
+        // Resolve power: try explicit power field, then effect_name, then effect_desc
         let mut power = get_field(col_power).to_string();
         let effect_name = get_field(col_effect_name).to_string();
+        let effect_desc = get_field(col_effect_desc).to_string();
 
         if power.is_empty() && !effect_name.is_empty() {
             // Try to resolve effect_name to a power via TSys prefix/suffix
@@ -537,7 +581,7 @@ pub async fn import_brewing_discoveries_csv(
             if let Some(resolved) = label_to_power.get(&label_lower) {
                 power = resolved.clone();
             } else {
-                // Try matching with "of " prefix stripped or "'s" suffix stripped
+                // Try with "of " prefix stripped
                 let stripped = label_lower
                     .strip_prefix("of ")
                     .unwrap_or(&label_lower)
@@ -545,6 +589,18 @@ pub async fn import_brewing_discoveries_csv(
                 if let Some(resolved) = label_to_power.get(&stripped) {
                     power = resolved.clone();
                 }
+            }
+        }
+
+        // Try matching effect_desc (e.g., "Orcs gain +38 Max Power") against
+        // resolved TSys effect descriptions by stripping numbers
+        if power.is_empty() && !effect_desc.is_empty() {
+            // The desc might contain multiple effects separated by " / "
+            // Try matching the first one
+            let first_desc = effect_desc.split(" / ").next().unwrap_or(&effect_desc);
+            let template = strip_numbers(first_desc).to_lowercase();
+            if let Some(resolved) = desc_to_power.get(&template) {
+                power = resolved.clone();
             }
         }
 
@@ -563,6 +619,9 @@ pub async fn import_brewing_discoveries_csv(
 
         let effect_label = if !effect_name.is_empty() {
             Some(effect_name.clone())
+        } else if !effect_desc.is_empty() {
+            // Use the effect description as the label when no name is given
+            Some(effect_desc.clone())
         } else if !item_name.is_empty() {
             let base_name = type_id
                 .and_then(|tid| data.items.get(&tid))
@@ -584,7 +643,10 @@ pub async fn import_brewing_discoveries_csv(
                 power_tier,
                 effect_label,
                 race_restriction,
-                if item_name.is_empty() { &effect_name } else { item_name },
+                if !item_name.is_empty() { item_name }
+                else if !effect_name.is_empty() { &effect_name }
+                else if !effect_desc.is_empty() { &effect_desc }
+                else { "" },
                 timestamp,
             ])
             .map_err(|e| format!("Failed to insert discovery: {e}"))?;

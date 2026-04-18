@@ -1683,6 +1683,11 @@ fn strip_icon_tags(text: &str) -> (String, Option<u32>) {
     (result, first_icon)
 }
 
+/// Public wrapper for resolve_single_effect (used by brewing_commands)
+pub fn resolve_single_effect_public(desc: &str, data: &GameData) -> Option<ResolvedEffect> {
+    resolve_single_effect(desc, data)
+}
+
 fn resolve_single_effect(desc: &str, data: &GameData) -> Option<ResolvedEffect> {
     // Parse "{TOKEN}{VALUE}" format
     let parts: Vec<&str> = desc.split('{').filter(|s| !s.is_empty()).collect();

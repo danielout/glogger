@@ -120,19 +120,22 @@
             <div class="text-xs text-text-secondary flex flex-col gap-2">
               <p class="m-0"><strong>Required columns:</strong> <code class="text-accent-gold">recipe_name</code> and at least one ingredient column.</p>
               <p class="m-0"><strong>Ingredient columns:</strong> <code class="text-accent-gold">ingredient1</code> through <code class="text-accent-gold">ingredient4</code> — use in-game item names (e.g., "Corn", "Groxmax Powder"). Empty cells are fine for recipes with fewer slots.</p>
-              <p class="m-0"><strong>Optional columns:</strong></p>
+              <p class="m-0"><strong>Effect columns</strong> (at least one recommended):</p>
               <ul class="m-0 pl-4 flex flex-col gap-0.5">
-                <li><code class="text-accent-gold">effect_name</code> — what you got, e.g., "Partier's" or "Lumberjack's"</li>
-                <li><code class="text-accent-gold">power</code> — internal TSysPower name (e.g., "BrewingLumberjack")</li>
-                <li><code class="text-accent-gold">power_tier</code> — tier number</li>
-                <li><code class="text-accent-gold">type_id</code> — CDN item TypeID of the result drink</li>
-                <li><code class="text-accent-gold">item_name</code> — full drink name</li>
+                <li><code class="text-accent-gold">effect_desc</code> — what the brew does, e.g., "Orcs gain +38 Max Power" or "Archery Base Damage % +20%". This is the most natural way to record effects — just paste the in-game tooltip text.</li>
+                <li><code class="text-accent-gold">effect_name</code> — the drink's prefix/suffix, e.g., "Partier's" or "of Elfinity"</li>
               </ul>
-              <p class="m-0 text-text-dim">The more columns you provide, the more accurate the import. At minimum, <code>recipe_name</code> + ingredients lets us record what you tried. Adding <code>effect_name</code> lets us record what you got.</p>
-              <div class="bg-surface-base rounded p-2 mt-1 font-mono text-[0.65rem] text-text-dim overflow-x-auto">
-                recipe_name,ingredient1,ingredient2,ingredient3,ingredient4,effect_name<br>
-                Dwarven Stout,Corn,Green Apple,Groxmax Powder,Cinnamon,of Elfinity<br>
-                Rice Wine,Rattus Root,Tomato,Walnuts,Pansy,Forager's
+              <p class="m-0"><strong>Advanced columns</strong> (optional):</p>
+              <ul class="m-0 pl-4 flex flex-col gap-0.5">
+                <li><code class="text-accent-gold">power</code> — internal TSysPower name (e.g., "BrewingLumberjack")</li>
+                <li><code class="text-accent-gold">power_tier</code>, <code class="text-accent-gold">type_id</code>, <code class="text-accent-gold">item_name</code></li>
+              </ul>
+              <p class="m-0 text-text-dim">At minimum, <code>recipe_name</code> + ingredients records what you tried. Adding <code>effect_desc</code> or <code>effect_name</code> records what you got. We'll auto-match effect text to the game's internal data.</p>
+              <div class="bg-surface-base rounded p-2 mt-1 font-mono text-[0.65rem] text-text-dim overflow-x-auto whitespace-nowrap">
+                recipe_name,ingredient1,ingredient2,ingredient3,ingredient4,effect_desc<br>
+                Dwarven Stout,Corn,Green Apple,Groxmax Powder,Cinnamon,Rakshasa gain +38 Max Power<br>
+                Dwarven Stout,Corn,Pear,Groxmax Powder,Cinnamon,Rakshasa earn +11.8% Combat XP<br>
+                Rice Wine,Rattus Root,Tomato,Walnuts,Pansy,Chance to Forage Extra Mushrooms +25%
               </div>
             </div>
           </div>

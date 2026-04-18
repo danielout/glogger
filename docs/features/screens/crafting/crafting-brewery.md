@@ -43,14 +43,24 @@ Some brewing effects are restricted to specific races (e.g., "of Elfinity" = Elf
 
 ### CSV Import
 
-Players with existing spreadsheets can import discoveries via CSV:
+Players with existing spreadsheets can import discoveries via CSV. The format is flexible — uses header-based column detection, so columns can be in any order.
+
+**Required columns:** `recipe_name` + at least one `ingredient` column (ingredient1..ingredient4).
+
+**Effect columns** (at least one recommended):
+- `effect_desc` — the actual buff text, e.g., "Orcs gain +38 Max Power" or "Archery Base Damage % +20%". Numbers are stripped for matching, so the exact values don't need to be precise. Multiple effects separated by " / " are supported. This is the most natural format for players who recorded tooltip text.
+- `effect_name` — the drink's prefix/suffix, e.g., "Partier's" or "of Elfinity". Resolved to TSysPower via CDN prefix/suffix lookup.
+
+**Advanced columns** (optional): `power`, `power_tier`, `type_id`, `item_name`.
+
+Ingredient names are resolved case-insensitively against CDN item data. Recipe names are matched against CDN recipe names, internal names, and with parenthetical suffixes stripped (e.g., "Dwarven Stout" matches "Dwarven Stout (One Glass)"). If effect cannot be resolved, it's stored as `power="unknown"` — the combo is still recorded.
 
 ```
-ingredient1,ingredient2,ingredient3,ingredient4,power,power_tier,item_name,type_id
-Corn,Green Apple,Groxmax Powder,Cinnamon,BrewingMaxHealthElf,28,Dwarven Stout of Elfinity,21608
+recipe_name,ingredient1,ingredient2,ingredient3,ingredient4,effect_desc
+Dwarven Stout,Corn,Green Apple,Groxmax Powder,Cinnamon,Rakshasa gain +38 Max Power
+Dwarven Stout,Corn,Pear,Groxmax Powder,Cinnamon,Rakshasa earn +11.8% Combat XP
+Rice Wine,Rattus Root,Tomato,Walnuts,Pansy,Chance to Forage Extra Mushrooms +25%
 ```
-
-Ingredient names are resolved case-insensitively against CDN item data. `ingredient4` can be empty for recipes with fewer variable slots.
 
 ## UI Layout
 
