@@ -102,27 +102,32 @@
     <!-- Center: detail panel -->
     <div class="h-full overflow-y-auto">
       <EmptyState
-        v-if="!store.loading && !store.selectedRecipe"
-        variant="panel"
-        primary="Select a recipe"
-        secondary="Choose a brewing recipe from the list to view its ingredients and discoveries." />
-
-      <EmptyState
-        v-else-if="store.loading"
+        v-if="store.loading"
         variant="panel"
         primary="Loading brewing data..."
         secondary="Parsing CDN recipe and item data." />
 
+      <!-- Effect search results (when an effect is selected in the right panel) -->
+      <BreweryEffectResults
+        v-else-if="store.selectedEffect" />
+
+      <!-- Recipe detail (when a recipe is selected in the left panel) -->
       <BreweryRecipeDetail
         v-else-if="store.selectedRecipe"
         :recipe="store.selectedRecipe"
         :ingredient-by-id="store.ingredientById"
         :discoveries="store.selectedRecipeDiscoveries" />
+
+      <EmptyState
+        v-else
+        variant="panel"
+        primary="Select a recipe or effect"
+        secondary="Choose a recipe from the left panel, or search for an effect in the right panel." />
     </div>
 
     <!-- Right pane: effect search -->
     <template #right>
-      <BreweryEffectPanel @navigate-recipe="store.selectRecipe" />
+      <BreweryEffectPanel />
     </template>
   </PaneLayout>
 </template>
@@ -133,6 +138,7 @@ import PaneLayout from "../Shared/PaneLayout.vue";
 import EmptyState from "../Shared/EmptyState.vue";
 import BreweryRecipeDetail from "./BreweryRecipeDetail.vue";
 import BreweryEffectPanel from "./BreweryEffectPanel.vue";
+import BreweryEffectResults from "./BreweryEffectResults.vue";
 import { useBreweryStore } from "../../stores/breweryStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useToast as useToastComposable } from "../../composables/useToast";

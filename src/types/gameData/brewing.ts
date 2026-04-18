@@ -94,6 +94,27 @@ export interface BrewingScanResult {
   total_brewing_items: number;
 }
 
+// ── TSys power info (from batch resolve) ────────────────────────────────────
+
+export interface ResolvedEffect {
+  label: string;
+  value: string;
+  display_type: string;
+  formatted: string;
+  icon_id: number | null;
+}
+
+export interface TsysPowerInfo {
+  internal_name: string;
+  skill: string | null;
+  prefix: string | null;
+  suffix: string | null;
+  slots: string[];
+  tier_effects: string[];
+  tier_effects_structured: ResolvedEffect[];
+  icon_id: number | null;
+}
+
 // ── Effect pool labels ──────────────────────────────────────────────────────
 
 /** Strip the trailing number from a pool name to get the base category */

@@ -71,6 +71,7 @@ use cdn_commands::{
     get_storage_vault_zones,
     get_all_tsys,
     get_tsys_power_info,
+    get_tsys_power_info_batch,
     get_tsys_powers_for_slot,
     get_tsys_profiles,
     get_tsys_for_ability,
@@ -385,6 +386,7 @@ pub fn run() {
             get_effect,
             resolve_effect_descs,
             get_tsys_power_info,
+            get_tsys_power_info_batch,
             // TSys browser queries
             get_all_tsys,
             search_tsys,

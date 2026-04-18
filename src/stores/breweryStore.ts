@@ -7,6 +7,7 @@ import type {
   BrewingCategory,
   BrewingDiscovery,
   BrewingScanResult,
+  TsysPowerInfo,
 } from "../types/gameData/brewing";
 import { CATEGORY_ORDER, CATEGORY_LABELS } from "../types/gameData/brewing";
 
@@ -25,9 +26,12 @@ export const useBreweryStore = defineStore("brewery", () => {
   const searchQuery = ref("");
   const categoryFilter = ref<BrewingCategory | "all">("all");
 
-  // Right panel state
+  // Right panel + effect search state
   const effectSearchQuery = ref("");
   const selectedEffect = ref<string | null>(null);
+
+  /** Resolved TSys power info, keyed by "power:tier" */
+  const powerInfoMap = ref<Map<string, TsysPowerInfo>>(new Map());
 
   // ── Computed ───────────────────────────────────────────────────────────────
 
@@ -36,6 +40,15 @@ export const useBreweryStore = defineStore("brewery", () => {
     const map = new Map<number, BrewingIngredient>();
     for (const ing of ingredients.value) {
       map.set(ing.item_id, ing);
+    }
+    return map;
+  });
+
+  /** Recipe lookup by ID */
+  const recipeById = computed(() => {
+    const map = new Map<number, BrewingRecipe>();
+    for (const r of recipes.value) {
+      map.set(r.recipe_id, r);
     }
     return map;
   });
@@ -52,7 +65,7 @@ export const useBreweryStore = defineStore("brewery", () => {
     return map;
   });
 
-  /** Discovery count per recipe (for showing in recipe list) */
+  /** Discovery count per recipe */
   const discoveryCountByRecipe = computed(() => {
     const map = new Map<number, number>();
     for (const [recipeId, discs] of discoveriesByRecipe.value) {
@@ -138,41 +151,53 @@ export const useBreweryStore = defineStore("brewery", () => {
 
   // ── Effect search computed ──────────────────────────────────────────────
 
-  /** All unique effects discovered, with metadata */
-  const uniqueEffects = computed(() => {
-    const map = new Map<string, {
+  /** Get resolved power info for a discovery */
+  function getPowerInfo(power: string, tier: number): TsysPowerInfo | undefined {
+    return powerInfoMap.value.get(`${power}:${tier}`);
+  }
+
+  /**
+   * All unique effects as searchable entries.
+   * Each entry has the resolved effect descriptions as searchable text.
+   */
+  const effectEntries = computed(() => {
+    // Group discoveries by power name (not power:tier, since same power
+    // at different tiers is the same "effect" just different strength)
+    const byPower = new Map<string, {
       power: string;
       effectLabel: string | null;
       raceRestriction: string | null;
-      recipeCount: number;
       discoveryCount: number;
-      recipeIds: Set<number>;
+      descriptions: string[]; // resolved human-readable effect descriptions
+      skill: string | null;
+      prefix: string | null;
+      suffix: string | null;
     }>();
 
     for (const d of discoveries.value) {
-      const existing = map.get(d.power);
+      const info = getPowerInfo(d.power, d.power_tier);
+      const existing = byPower.get(d.power);
+
       if (existing) {
         existing.discoveryCount++;
-        existing.recipeIds.add(d.recipe_id);
-        existing.recipeCount = existing.recipeIds.size;
-        // Prefer a non-null label
         if (!existing.effectLabel && d.effect_label) {
           existing.effectLabel = d.effect_label;
         }
       } else {
-        map.set(d.power, {
+        byPower.set(d.power, {
           power: d.power,
           effectLabel: d.effect_label,
           raceRestriction: d.race_restriction,
-          recipeCount: 1,
           discoveryCount: 1,
-          recipeIds: new Set([d.recipe_id]),
+          descriptions: info?.tier_effects ?? [],
+          skill: info?.skill ?? null,
+          prefix: info?.prefix ?? null,
+          suffix: info?.suffix ?? null,
         });
       }
     }
 
-    return [...map.values()].sort((a, b) => {
-      // Sort: non-race-restricted first, then by label/power name
+    return [...byPower.values()].sort((a, b) => {
       if (a.raceRestriction && !b.raceRestriction) return 1;
       if (!a.raceRestriction && b.raceRestriction) return -1;
       const aName = a.effectLabel ?? a.power;
@@ -181,30 +206,23 @@ export const useBreweryStore = defineStore("brewery", () => {
     });
   });
 
-  /** Filtered effects based on search query */
+  /** Filtered effects based on search query — searches descriptions, labels, and power names */
   const filteredEffects = computed(() => {
     const q = effectSearchQuery.value.toLowerCase().trim();
-    if (!q) return uniqueEffects.value;
-    return uniqueEffects.value.filter((e) => {
+    if (!q) return effectEntries.value;
+    return effectEntries.value.filter((e) => {
       const label = e.effectLabel?.toLowerCase() ?? "";
       const power = e.power.toLowerCase();
-      return label.includes(q) || power.includes(q);
+      const descs = e.descriptions.join(" ").toLowerCase();
+      const skill = e.skill?.toLowerCase() ?? "";
+      return label.includes(q) || power.includes(q) || descs.includes(q) || skill.includes(q);
     });
   });
 
-  /** Discoveries for the selected effect (across all recipes) */
+  /** Discoveries for the selected effect (across all recipes), enriched with power info */
   const selectedEffectDiscoveries = computed(() => {
     if (!selectedEffect.value) return [];
     return discoveries.value.filter((d) => d.power === selectedEffect.value);
-  });
-
-  /** Recipe lookup by ID for the right panel */
-  const recipeById = computed(() => {
-    const map = new Map<number, BrewingRecipe>();
-    for (const r of recipes.value) {
-      map.set(r.recipe_id, r);
-    }
-    return map;
   });
 
   // ── Actions ────────────────────────────────────────────────────────────────
@@ -236,8 +254,38 @@ export const useBreweryStore = defineStore("brewery", () => {
         "get_brewing_discoveries",
         { character }
       );
+      // Bulk-fetch TSys info for all discovered powers
+      await fetchAllPowerInfo();
     } catch (e) {
       console.error("Failed to load brewing discoveries:", e);
+    }
+  }
+
+  /** Fetch TSys power info for all unique power+tier combos in discoveries */
+  async function fetchAllPowerInfo() {
+    const needed: [string, number][] = [];
+    const seen = new Set<string>();
+    for (const d of discoveries.value) {
+      const key = `${d.power}:${d.power_tier}`;
+      if (!seen.has(key) && !powerInfoMap.value.has(key)) {
+        seen.add(key);
+        needed.push([d.power, d.power_tier]);
+      }
+    }
+    if (needed.length === 0) return;
+
+    try {
+      const result = await invoke<Record<string, TsysPowerInfo>>(
+        "get_tsys_power_info_batch",
+        { powers: needed }
+      );
+      const newMap = new Map(powerInfoMap.value);
+      for (const [key, info] of Object.entries(result)) {
+        newMap.set(key, info);
+      }
+      powerInfoMap.value = newMap;
+    } catch (e) {
+      console.error("Failed to fetch TSys power info batch:", e);
     }
   }
 
@@ -249,7 +297,6 @@ export const useBreweryStore = defineStore("brewery", () => {
         "scan_all_snapshots_for_brewing",
         { character }
       );
-      // Reload discoveries after scanning
       await loadDiscoveries(character);
       return result;
     } catch (e) {
@@ -290,6 +337,7 @@ export const useBreweryStore = defineStore("brewery", () => {
 
   function selectRecipe(recipeId: number) {
     selectedRecipeId.value = recipeId;
+    selectedEffect.value = null; // clear effect selection when picking a recipe
   }
 
   function clearSelection() {
@@ -298,6 +346,7 @@ export const useBreweryStore = defineStore("brewery", () => {
 
   function selectEffect(power: string) {
     selectedEffect.value = power;
+    selectedRecipeId.value = null; // clear recipe selection when picking an effect
   }
 
   function clearEffectSelection() {
@@ -318,8 +367,10 @@ export const useBreweryStore = defineStore("brewery", () => {
     categoryFilter,
     effectSearchQuery,
     selectedEffect,
+    powerInfoMap,
     // Computed
     ingredientById,
+    recipeById,
     discoveriesByRecipe,
     discoveryCountByRecipe,
     totalDiscoveries,
@@ -329,10 +380,11 @@ export const useBreweryStore = defineStore("brewery", () => {
     filteredRecipesByCategory,
     selectedRecipe,
     filteredCount,
-    uniqueEffects,
+    effectEntries,
     filteredEffects,
     selectedEffectDiscoveries,
-    recipeById,
+    // Functions
+    getPowerInfo,
     // Actions
     loadBrewingData,
     loadDiscoveries,
