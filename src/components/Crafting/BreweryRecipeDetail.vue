@@ -34,6 +34,9 @@
           class="flex items-center gap-2 text-xs">
           <span class="font-mono text-text-muted w-6 text-right shrink-0">{{ ing.stack_size }}x</span>
           <ItemInline :reference="String(ing.item_id)" />
+          <span v-if="getOwnedCount(ing.item_id) > 0" class="text-[0.55rem] text-accent-green font-mono">
+            (×{{ getOwnedCount(ing.item_id) }})
+          </span>
           <span v-if="ing.chance_to_consume != null && ing.chance_to_consume < 1"
             class="text-text-dim text-[0.6rem]">
             ({{ Math.round(ing.chance_to_consume * 100) }}% consumed)
@@ -50,21 +53,21 @@
       </div>
       <div class="flex flex-col gap-3">
         <div v-for="(slot, i) in recipe.variable_slots" :key="i" class="bg-surface-base border border-surface-elevated rounded px-3 py-2">
-          <div class="flex items-center gap-2 mb-1">
+          <div class="flex items-center gap-2 mb-1.5">
             <span class="text-[0.6rem] font-mono text-accent-gold bg-accent-gold/10 rounded px-1.5 py-0.5">
               {{ slot.keyword }}
             </span>
             <span class="text-text-muted text-[0.6rem]">{{ slot.stack_size }}x needed</span>
           </div>
-          <div v-if="slot.description" class="text-xs text-text-secondary mb-1.5">
-            {{ slot.description }}
-          </div>
-          <div class="flex flex-wrap gap-1.5">
+          <div class="flex flex-wrap gap-x-2 gap-y-1">
             <span
               v-for="itemId in slot.valid_item_ids"
               :key="itemId"
-              class="text-xs">
+              class="text-xs inline-flex items-center gap-0.5">
               <ItemInline :reference="String(itemId)" />
+              <span v-if="getOwnedCount(itemId) > 0" class="text-[0.55rem] text-accent-green font-mono">
+                (×{{ getOwnedCount(itemId) }})
+              </span>
             </span>
           </div>
           <div v-if="slot.valid_item_ids.length === 0" class="text-xs text-text-dim italic">
@@ -183,26 +186,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
-import { invoke } from "@tauri-apps/api/core";
+import { computed } from "vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 import type { BrewingRecipe, BrewingIngredient, BrewingDiscovery } from "../../types/gameData/brewing";
 import { CATEGORY_LABELS, getPoolLabel, getPoolDescription } from "../../types/gameData/brewing";
-
-interface TsysPowerInfo {
-  internal_name: string;
-  skill: string | null;
-  prefix: string | null;
-  suffix: string | null;
-  tier_effects: string[];
-  icon_id: number | null;
-}
+import { useBreweryStore } from "../../stores/breweryStore";
+import { useGameStateStore } from "../../stores/gameStateStore";
 
 const props = defineProps<{
   recipe: BrewingRecipe;
   ingredientById: Map<number, BrewingIngredient>;
   discoveries: BrewingDiscovery[];
 }>();
+
+const store = useBreweryStore();
+const gameState = useGameStateStore();
 
 const categoryLabel = computed(() => CATEGORY_LABELS[props.recipe.category]);
 
@@ -215,48 +213,15 @@ function isPlaceholderPool(pool: string): boolean {
   return pool.startsWith("TBD");
 }
 
-// ── TSys power info lookups ─────────────────────────────────────────────────
-
-const powerInfoCache = ref<Map<string, TsysPowerInfo>>(new Map());
-
-/** Unique power+tier combos from current discoveries */
-const uniquePowerKeys = computed(() => {
-  const keys = new Set<string>();
-  for (const d of props.discoveries) {
-    keys.add(`${d.power}:${d.power_tier}`);
-  }
-  return keys;
-});
-
-/** Look up cached power info for a discovery */
-function getPowerInfo(disc: BrewingDiscovery): TsysPowerInfo | undefined {
-  return powerInfoCache.value.get(`${disc.power}:${disc.power_tier}`);
+/** Get the TSys power info from the store's bulk-fetched cache */
+function getPowerInfo(disc: BrewingDiscovery) {
+  return store.getPowerInfo(disc.power, disc.power_tier);
 }
 
-/** Fetch TSys power info for all unique powers in discoveries */
-async function fetchPowerInfos() {
-  for (const key of uniquePowerKeys.value) {
-    if (powerInfoCache.value.has(key)) continue;
-    const [powerName, tierStr] = key.split(":");
-    const tier = parseInt(tierStr);
-    try {
-      const info = await invoke<TsysPowerInfo | null>("get_tsys_power_info", {
-        powerName,
-        tier,
-      });
-      if (info) {
-        powerInfoCache.value.set(key, info);
-      }
-    } catch {
-      // silently skip — CDN may not have this power
-    }
-  }
+/** Get owned count for an item by type ID */
+function getOwnedCount(itemTypeId: number): number {
+  const ingredient = props.ingredientById.get(itemTypeId);
+  if (!ingredient) return 0;
+  return gameState.ownedItemCounts[ingredient.name] ?? 0;
 }
-
-// Fetch when discoveries change
-watch(
-  () => props.discoveries,
-  () => { fetchPowerInfos(); },
-  { immediate: true }
-);
 </script>
