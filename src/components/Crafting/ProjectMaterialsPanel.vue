@@ -121,9 +121,25 @@
           <AccordionSection v-if="craftableItems.length > 0">
             <template #title>Craft or Buy?</template>
             <template #badge>
-              <span class="text-text-muted text-[0.65rem]">
-                {{ expandedItemIds.size }} crafting, {{ craftableButNotExpanded.length }} buying
-              </span>
+              <div class="flex items-center gap-2">
+                <span class="text-text-muted text-[0.65rem]">
+                  {{ expandedItemIds.size }} crafting, {{ craftableButNotExpanded.length }} buying
+                </span>
+                <template v-if="!activeGroupName">
+                  <button
+                    v-if="craftableButNotExpanded.length > 0"
+                    class="text-[0.6rem] text-text-muted hover:text-accent-gold cursor-pointer bg-transparent border border-border-light hover:border-accent-gold/30 rounded px-1 py-0 transition-colors"
+                    @click.stop="emit('set-all-intermediates', craftableItems.map(i => i.item_id), true)">
+                    craft all
+                  </button>
+                  <button
+                    v-if="expandedItemIds.size > 0"
+                    class="text-[0.6rem] text-text-muted hover:text-accent-gold cursor-pointer bg-transparent border border-border-light hover:border-accent-gold/30 rounded px-1 py-0 transition-colors"
+                    @click.stop="emit('set-all-intermediates', craftableItems.map(i => i.item_id), false)">
+                    buy all
+                  </button>
+                </template>
+              </div>
             </template>
             <div class="flex flex-col gap-1">
               <div
@@ -291,6 +307,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'resolve': []
   'toggle-intermediate': [itemId: number]
+  'set-all-intermediates': [itemIds: number[], expand: boolean]
   'update-customer-provides': [key: string, quantity: number]
 }>();
 
@@ -369,29 +386,21 @@ const craftableItems = computed((): CraftableItem[] => {
     }
   }
 
-  // Currently expanded intermediates — use intermediateStock for have/toCraft
+  // Currently expanded intermediates — intermediates are now deduplicated
+  // with correct cross-entry totals for quantity_produced.
   for (const inter of props.intermediates) {
+    if (items.has(inter.item_id)) continue;
     const onHand = props.intermediateStock.get(inter.item_id) ?? 0;
-    if (!items.has(inter.item_id)) {
-      // quantity_produced is the shortfall amount (already stock-adjusted by resolver)
-      // The total needed is shortfall + what we already have
-      const totalNeeded = inter.quantity_produced + onHand;
-      items.set(inter.item_id, {
-        item_id: inter.item_id,
-        item_name: inter.item_name,
-        quantity: totalNeeded,
-        have: onHand,
-        toCraft: inter.quantity_produced,
-        isExpanded: true,
-        intermediate: inter,
-      });
-    } else {
-      const existing = items.get(inter.item_id)!;
-      existing.isExpanded = true;
-      existing.intermediate = inter;
-      existing.have = onHand;
-      existing.toCraft = Math.max(0, existing.quantity - onHand);
-    }
+    const totalNeeded = inter.quantity_produced + onHand;
+    items.set(inter.item_id, {
+      item_id: inter.item_id,
+      item_name: inter.item_name,
+      quantity: totalNeeded,
+      have: onHand,
+      toCraft: inter.quantity_produced,
+      isExpanded: true,
+      intermediate: inter,
+    });
   }
 
   // Sort: expanded first, then alphabetical

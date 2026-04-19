@@ -328,9 +328,13 @@ export const useCraftingStore = defineStore("crafting", () => {
 
     function walk(list: ResolvedIngredient[]) {
       for (const ing of list) {
-        if (ing.children.length > 0) {
-          // This is an expanded intermediate — recurse into children
-          walk(ing.children);
+        if (ing.source_recipe_id !== null) {
+          // Expanded intermediate — recurse into children (if any).
+          // Stock-satisfied intermediates may have no children but are
+          // still handled by collectIntermediates, not the flat list.
+          if (ing.children.length > 0) {
+            walk(ing.children);
+          }
         } else {
           // Leaf node — determine key
           let key: string;
@@ -369,14 +373,16 @@ export const useCraftingStore = defineStore("crafting", () => {
 
   /**
    * Collect intermediate crafts from the resolved ingredient tree.
-   * These are ingredients that have been expanded (children.length > 0).
+   * An intermediate is any ingredient that has a source recipe (was marked
+   * for expansion), regardless of whether it actually has children — stock
+   * may fully cover the need, leaving children empty.
    */
   function collectIntermediates(ingredients: ResolvedIngredient[]): IntermediateCraft[] {
     const intermediates: IntermediateCraft[] = [];
 
     function walk(list: ResolvedIngredient[]) {
       for (const ing of list) {
-        if (ing.children.length > 0 && ing.source_recipe_id !== null && ing.item_id !== null) {
+        if (ing.source_recipe_id !== null && ing.item_id !== null) {
           intermediates.push({
             recipe_name: ing.source_recipe_name ?? ing.item_name,
             recipe_id: ing.source_recipe_id,
@@ -386,7 +392,9 @@ export const useCraftingStore = defineStore("crafting", () => {
             quantity_produced: ing.expected_quantity,
           });
           // Also collect nested intermediates
-          walk(ing.children);
+          if (ing.children.length > 0) {
+            walk(ing.children);
+          }
         }
       }
     }

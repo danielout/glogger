@@ -135,6 +135,7 @@ Per-screen documentation organized by view.
 - [stall-tracker-implementation.md](plans/stall-tracker-implementation.md) — Stall Tracker build plan: phased Rust + Vue implementation guide with ASCII previews for every screen and modal.
 - [item-provenance-overhaul.md](plans/item-provenance-overhaul.md) — Attribute every inventory gain to a source context (mining, survey, corpse, vendor, etc.); use chat `[Status]` as authoritative quantity.
 - [survey-tracker-rewrite.md](plans/survey-tracker-rewrite.md) — Phase 5 implementation plan: nuke-and-pave the survey tracker on top of the provenance pipeline; new `src-tauri/src/survey/` module, schema v26, A3 stitching.
+- [projects-performance.md](plans/projects-performance.md) — Crafting projects performance: cascading re-resolve elimination, caching, batch queries.
 
 ## Samples
 

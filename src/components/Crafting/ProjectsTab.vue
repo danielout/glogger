@@ -26,6 +26,7 @@
       :pricing-calculation="pricingCalculation"
       @resolve="onResolve"
       @toggle-intermediate="toggleIntermediateGlobal"
+      @set-all-intermediates="setAllIntermediates"
       @update-customer-provides="onCustomerProvidesChange" />
 
     <template v-if="!store.activeGroupName" #right>
@@ -252,6 +253,8 @@ async function toggleIntermediateGlobal(itemId: number) {
 
   const isCurrentlyExpanded = expandedItemIds.value.has(itemId);
 
+  // Update local state for all entries first, then batch DB writes
+  const updates: Promise<void>[] = [];
   for (const entry of entries) {
     const key = `${entry.id}:${itemId}`;
     if (isCurrentlyExpanded) {
@@ -267,8 +270,11 @@ async function toggleIntermediateGlobal(itemId: number) {
         if (!isNaN(id)) ids.push(id);
       }
     }
-    await store.updateEntry(entry.id, entry.quantity, ids, entry.target_stock);
+    updates.push(store.updateEntry(entry.id, entry.quantity, ids, entry.target_stock));
   }
+
+  // Fire all DB writes in parallel, then re-resolve
+  await Promise.all(updates);
 
   if (projectMaterials.value.size > 0) {
     resolveProject();
@@ -278,6 +284,40 @@ async function toggleIntermediateGlobal(itemId: number) {
 async function toggleIntermediate(_entryId: number, itemId: number | null) {
   if (itemId === null) return;
   await toggleIntermediateGlobal(itemId);
+}
+
+async function setAllIntermediates(itemIds: number[], expand: boolean) {
+  const entries = store.activeProject?.entries;
+  if (!entries) return;
+
+  for (const itemId of itemIds) {
+    for (const entry of entries) {
+      const key = `${entry.id}:${itemId}`;
+      if (expand) {
+        intermediateExpansions.value.set(key, true);
+      } else {
+        intermediateExpansions.value.delete(key);
+      }
+    }
+  }
+
+  // Batch all DB writes in parallel
+  const updates: Promise<void>[] = [];
+  for (const entry of entries) {
+    const ids: number[] = [];
+    for (const [k, v] of intermediateExpansions.value) {
+      if (v && k.startsWith(`${entry.id}:`)) {
+        const id = parseInt(k.split(":")[1], 10);
+        if (!isNaN(id)) ids.push(id);
+      }
+    }
+    updates.push(store.updateEntry(entry.id, entry.quantity, ids, entry.target_stock));
+  }
+  await Promise.all(updates);
+
+  if (projectMaterials.value.size > 0) {
+    resolveProject();
+  }
 }
 
 // ── Pricing actions ───────────────────────────────────────────────────────────
@@ -406,7 +446,7 @@ async function resolveGroup(groupName: string) {
     stockTargets.value = targets;
 
     const combinedMaterials = new Map<string, FlattenedMaterial>();
-    const allIntermediates: IntermediateCraft[] = [];
+    const intermediateMap = new Map<number, IntermediateCraft>();
 
     const expandItemIds = new Set<number>();
     for (const project of fullProjects) {
@@ -446,7 +486,15 @@ async function resolveGroup(groupName: string) {
       );
 
       const entryIntermediates = store.collectIntermediates(resolved.ingredients);
-      allIntermediates.push(...entryIntermediates);
+      for (const inter of entryIntermediates) {
+        const existing = intermediateMap.get(inter.item_id);
+        if (existing) {
+          existing.quantity_produced += inter.quantity_produced;
+          existing.crafts_needed += inter.crafts_needed;
+        } else {
+          intermediateMap.set(inter.item_id, { ...inter });
+        }
+      }
 
       const flat = store.flattenIngredients(resolved.ingredients);
       for (const [key, mat] of flat) {
@@ -463,7 +511,7 @@ async function resolveGroup(groupName: string) {
     if (gen !== resolveGeneration || store.activeGroupName !== groupName) return;
 
     projectMaterials.value = combinedMaterials;
-    projectIntermediates.value = allIntermediates;
+    projectIntermediates.value = Array.from(intermediateMap.values());
     materialNeeds.value = [];
 
     if (combinedMaterials.size > 0) {
@@ -493,7 +541,7 @@ async function resolveProject() {
     stockTargets.value = targets;
 
     const combinedMaterials = new Map<string, FlattenedMaterial>();
-    const allIntermediates: IntermediateCraft[] = [];
+    const intermediateMap = new Map<number, IntermediateCraft>();
 
     const expandItemIds = new Set<number>();
     for (const [key, value] of intermediateExpansions.value) {
@@ -532,7 +580,15 @@ async function resolveProject() {
       );
 
       const entryIntermediates = store.collectIntermediates(resolved.ingredients);
-      allIntermediates.push(...entryIntermediates);
+      for (const inter of entryIntermediates) {
+        const existing = intermediateMap.get(inter.item_id);
+        if (existing) {
+          existing.quantity_produced += inter.quantity_produced;
+          existing.crafts_needed += inter.crafts_needed;
+        } else {
+          intermediateMap.set(inter.item_id, { ...inter });
+        }
+      }
 
       const flat = store.flattenIngredients(resolved.ingredients);
       for (const [key, mat] of flat) {
@@ -549,7 +605,7 @@ async function resolveProject() {
     if (gen !== resolveGeneration || store.activeProject?.id !== projectId) return;
 
     projectMaterials.value = combinedMaterials;
-    projectIntermediates.value = allIntermediates;
+    projectIntermediates.value = Array.from(intermediateMap.values());
     materialNeeds.value = [];
 
     if (combinedMaterials.size > 0) {

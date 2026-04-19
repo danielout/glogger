@@ -70,7 +70,18 @@ Ingredients that can themselves be crafted are identified during material resolu
 - Items marked for crafting are expanded into their sub-ingredients in the material totals
 - The toggle applies project-wide — all recipe entries sharing that ingredient are updated
 - Per-entry toggle buttons in recipe cards also apply project-wide for consistency
+- "Craft all" / "Buy all" buttons in the section header for bulk toggling
 - State is persisted per-entry in `expanded_ingredient_ids` (JSON column)
+
+### How intermediate resolution works
+
+The ingredient resolver (`resolveRecipeIngredients`) marks an ingredient as an intermediate when it finds a producing recipe and the item is in the project's `expandedItemIds` set. The marker is `source_recipe_id` on the `ResolvedIngredient`.
+
+**`flattenIngredients`** builds the leaf material list. Any ingredient with `source_recipe_id` set (an expanded intermediate) is excluded from the flat list — its children (sub-ingredients) are walked instead. Stock-satisfied intermediates (where inventory covers the need) have no children but are still excluded from the flat list.
+
+**`collectIntermediates`** collects all ingredients with `source_recipe_id` set, regardless of whether they have children. This ensures stock-satisfied intermediates still appear in the Craft or Buy section.
+
+**Cross-entry deduplication:** Both materials and intermediates are deduplicated across project entries. Materials sum `quantity` and `expected_quantity`. Intermediates sum `quantity_produced` and `crafts_needed`. This ensures quantities in the Craft or Buy section reflect the total need across all entries in the project.
 
 ## Live Crafting Detection
 
