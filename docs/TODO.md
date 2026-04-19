@@ -33,6 +33,17 @@ Small tasks and notes that don't belong in a dedicated plan.
 - ~~impv: need to be able to quickly jump to a specific chat search result to see it in context~~ — **Done:** Click a search result to view surrounding messages via `get_chat_messages_around` with highlighted target
 - ~~fix: our dynamic loading of chat messages seems to get stuck?~~ — **Done:** Fixed race condition — added loading guard in `loadMore()`, moved offset increment to after response, added emit guard in scroll handler
 
+- build: dropping msi from build pipeline to improve build times.
+- build: strip=true in release profile to speed up build times.
+- fix: when we import snapshot data, we nuke any information about current favor amounts. 
+- fix: need to do a pass on all our dashboard widgets and make sure they are set to a fixed, consistent height. 
+- fix: dashboard widgets need fixed, consistent widths across the three sizes. 
+- fix: summary widget -> the 'status' line changes height when the mounted or combat cards are applied. shifts everything. looks bad.
+- fix: weird page refresh issues on the dashboard, unsure what is causing. this is probably more investigate than fix.
+- feat(devtools): 'start debug capture' and 'stop debug capture'... should save copy of gamestate at start and stop. should save both all player.log lines for duration of capture. should save both '[Status]' and ['Combat'] channels of chat log. after capture done, should then have a 'save debug capture' button to save off all the data as one file. probably include a "notes" field they can enter notes in before saving? grab latest character and inventory jsons at start and stop as well? or maybe only worth grabbing the jsons if we detect them exported in the chat log.
+- impv: we don't need to watch the reports folder for new jsons... the chat log reports when they are exported. that's better/easier, right? probably is.
+
+
 ---
 
 ## Quick Wins (Small Effort, Noticeable Value)
