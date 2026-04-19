@@ -78,7 +78,7 @@
           </span>
           <span
             v-if="!inCombat && !isMounted"
-            class="text-text-dim text-xs italic">
+            class="px-2 py-0.5 rounded text-xs text-text-dim italic border border-transparent">
             Idle
           </span>
         </div>

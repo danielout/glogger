@@ -11,6 +11,7 @@ Users create named projects containing multiple target crafts. The helper aggreg
 - Reorder entries with drag-and-drop
 - Per-entry toggle for intermediate expansion
 - Projects persist to SQLite across sessions
+- Last selected project or group is remembered via `useViewPrefs` and restored on tab mount
 - **Sorting** — sidebar supports Recent, A-Z, Z-A sort modes
 - **Grouping** — projects can be assigned a group name; grouped projects display under collapsible headers in the sidebar
 
@@ -81,6 +82,11 @@ Real-time tracking of crafting progress against active projects or quick-calc ta
 - Matches detected item outputs against tracked recipe entries
 - Updates crafts completed and detected output quantities in real-time
 - Maintains a rolling log of recent craft detections (max 100 entries)
+
+### Starting tracking
+
+- **From Projects tab** — the "Start Tracking" button appears in the materials panel footer when a project is selected and no tracking session is active. Calls `startProjectTracking()` to resolve all project recipe outputs and begin detection.
+- **From Quick Calc tab** — the "Track Crafting" button starts single-recipe tracking.
 
 ### Tracking modes
 

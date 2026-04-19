@@ -190,12 +190,18 @@
       </div>
 
       <!-- Footer actions -->
-      <div v-if="materialNeeds.length > 0" class="flex gap-2">
+      <div v-if="materialNeeds.length > 0 || (activeProject && !activeGroupName)" class="flex gap-2">
         <button
-          v-if="displayName"
+          v-if="displayName && materialNeeds.length > 0"
           class="btn-secondary text-xs py-1.5 flex-1"
           @click="craftingStore.exportMaterialList(displayName, materialNeeds)">
           Export
+        </button>
+        <button
+          v-if="activeProject && !activeGroupName && !craftingStore.tracker?.active"
+          class="btn-secondary text-xs py-1.5 flex-1"
+          @click="craftingStore.startProjectTracking()">
+          Start Tracking
         </button>
       </div>
 

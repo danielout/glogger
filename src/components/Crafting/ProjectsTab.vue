@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import PaneLayout from "../Shared/PaneLayout.vue";
 import { invoke } from "@tauri-apps/api/core";
 import { confirm } from "@tauri-apps/plugin-dialog";
@@ -72,6 +72,11 @@ const marketStore = useMarketStore();
 const { prefs: defaultFeePrefs, update: updateDefaultFeePrefs } = useViewPrefs(
   "price-helper-defaults",
   { fee_config: DEFAULT_FEE_CONFIG as FeeConfig },
+);
+
+const { prefs: selectionPrefs, update: updateSelectionPrefs } = useViewPrefs(
+  "crafting-projects-selection",
+  { lastProjectId: null as number | null, lastGroupName: null as string | null },
 );
 
 // ── Right pane config (hidden in group view) ────────────────────────────────
@@ -180,6 +185,25 @@ watch(() => store.activeGroupName, async (groupName) => {
   pricingMode.value = false;
   await resolveGroup(groupName);
 }, { immediate: false });
+
+// Persist selection so it survives navigation
+watch(() => store.activeProject, (project) => {
+  if (project) updateSelectionPrefs({ lastProjectId: project.id, lastGroupName: null });
+});
+watch(() => store.activeGroupName, (groupName) => {
+  if (groupName) updateSelectionPrefs({ lastProjectId: null, lastGroupName: groupName });
+});
+
+// Restore last selection on mount
+onMounted(async () => {
+  if (store.activeProject || store.activeGroupName) return;
+  const { lastProjectId, lastGroupName } = selectionPrefs.value;
+  if (lastProjectId != null) {
+    try { await store.loadProject(lastProjectId); } catch { /* project may have been deleted */ }
+  } else if (lastGroupName) {
+    store.selectGroup(lastGroupName);
+  }
+});
 
 function onResolve() {
   if (store.activeGroupName) {

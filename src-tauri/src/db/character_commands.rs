@@ -763,14 +763,14 @@ fn seed_game_state_from_snapshot(
         }
     }
 
-    // Seed NPC favor — snapshot provides tier names, reset cumulative_delta to 0
+    // Seed NPC favor — snapshot provides tier names; preserve existing cumulative_delta
+    // (snapshots only have tier names, not point totals, so zeroing delta destroys tracked gifting progress)
     let mut favor_stmt = conn.prepare(
         "INSERT INTO game_state_favor (character_name, server_name, npc_key, npc_name, favor_tier, cumulative_delta, last_confirmed_at, source)
          VALUES (?1, ?2, ?3, ?4, ?5, 0, ?6, 'snapshot')
          ON CONFLICT(character_name, server_name, npc_key) DO UPDATE SET
             npc_name = excluded.npc_name,
             favor_tier = excluded.favor_tier,
-            cumulative_delta = 0,
             last_confirmed_at = excluded.last_confirmed_at,
             source = 'snapshot'
          WHERE excluded.last_confirmed_at > game_state_favor.last_confirmed_at"

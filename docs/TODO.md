@@ -15,32 +15,7 @@ These are investigated items kept for reference — the research is done but the
 
 ---
 
-## Build / Infra
-
-- [ ] Drop MSI from build pipeline to improve build times
-  - MSI is still built and listed in `.github/workflows/release.yml`. NSIS installer is also produced — MSI is redundant.
-- [ ] Add `strip = true` to release profile
-  - No `[profile.release]` section exists in `src-tauri/Cargo.toml` yet.
-
----
-
 ## Quick Wins (Small Effort, Noticeable Value)
-
-- [ ] Investigate and fix project tracking in Crafting -> Projects
-  - The "Start Tracking" button was removed from `ProjectMaterialsPanel.vue` because it wasn't working well. The `startProjectTracking()` method still exists in `craftingStore`. Need to investigate what's broken and re-implement properly.
-  - **Effort: Medium | Impact: Medium**
-
-- [ ] Save page state of projects page when navigating off it
-  - Active project and group selection are ephemeral reactive refs in `craftingStore`. Pane widths already persist via `useViewPrefs()`. Just need to persist `activeProject`/`activeGroupName` the same way.
-  - **Effort: Small | Impact: Medium (annoyance)**
-
-- [ ] Fix: snapshot import nukes current favor amounts
-  - In `character_commands.rs` line ~773, `seed_game_state_from_snapshot()` unconditionally resets `cumulative_delta` to 0 on the `ON CONFLICT ... DO UPDATE` path. This destroys tracked gifting progress. Snapshots only contain favor tier names, not point totals — the code should preserve the existing `cumulative_delta` instead of zeroing it.
-  - **Effort: Small | Impact: Medium**
-
-- [ ] Fix: summary widget status line shifts height when mounted/combat badges appear
-  - In `ContextBar.vue`, the status badges ("In Combat", "Mounted") use `px-2 py-0.5 rounded` with background styling, but the "Idle" fallback is plain text with no padding. Needs a consistent min-height or always-present badge wrapper.
-  - **Effort: Small | Impact: Small (visual polish)**
 
 ---
 

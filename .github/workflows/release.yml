@@ -155,10 +155,7 @@ jobs:
           BUNDLE_DIR="src-tauri/target/release/bundle"
           mkdir -p release-artifacts
 
-          # Windows: MSI + NSIS
-          for f in "$BUNDLE_DIR"/msi/*.msi; do
-            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-windows.msi"
-          done
+          # Windows: NSIS
           for f in "$BUNDLE_DIR"/nsis/*.exe; do
             [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-windows-setup.exe"
           done
@@ -221,7 +218,6 @@ jobs:
             NAME="$(basename "$file")"
             case "$NAME" in
               *-windows-setup.exe) DOWNLOADS="$DOWNLOADS\n| **Windows** (recommended) | [$NAME]($BASE_URL/$NAME) |" ;;
-              *-windows.msi)       DOWNLOADS="$DOWNLOADS\n| **Windows** (MSI) | [$NAME]($BASE_URL/$NAME) |" ;;
               *-macos.dmg)         DOWNLOADS="$DOWNLOADS\n| **macOS** | [$NAME]($BASE_URL/$NAME) |" ;;
               *-linux.deb)         DOWNLOADS="$DOWNLOADS\n| **Linux** (Debian/Ubuntu) | [$NAME]($BASE_URL/$NAME) |" ;;
               *-linux.AppImage)    DOWNLOADS="$DOWNLOADS\n| **Linux** (AppImage) | [$NAME]($BASE_URL/$NAME) |" ;;
