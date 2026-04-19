@@ -86,8 +86,8 @@ These are investigated items kept for reference — the research is done but the
   - Sub-task: track statehelm renown possible vs earned (depends on quest tracking above).
   - **Effort: High | Impact: Medium-High**
 
-- [ ] Debug capture devtool
-  - 'Start/stop debug capture' that saves: gamestate at start+stop, all player.log lines during capture, Status and Combat chat channels, character/inventory JSONs if detected. Save as single file with optional notes field.
+- [x] Debug capture devtool
+  - 'Start/stop debug capture' that saves: gamestate at start+stop, all player.log lines during capture, Status and Combat chat channels, character/inventory JSONs if detected. Any glogger debug should be saved as well. Save as single file with optional notes field.
   - **Effort: High | Impact: Medium (debugging/support)**
 
 - [ ] Shop/stall tracking (reported by Reyetta)

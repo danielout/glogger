@@ -23,6 +23,7 @@
       <GameStateTab v-if="activeTab === 'game-state'" />
       <ComponentShowcaseTab v-else-if="activeTab === 'showcase'" />
       <TestingHelpersTab v-else-if="activeTab === 'testing'" />
+      <DebugCaptureTab v-else-if="activeTab === 'debug-capture'" />
     </div>
 
     <ToastContainer />
@@ -34,12 +35,14 @@ import { ref } from "vue";
 import GameStateTab from "./tabs/GameStateTab.vue";
 import ComponentShowcaseTab from "./tabs/ComponentShowcaseTab.vue";
 import TestingHelpersTab from "./tabs/TestingHelpersTab.vue";
+import DebugCaptureTab from "./tabs/DebugCaptureTab.vue";
 import ToastContainer from "../components/Shared/ToastContainer.vue";
 
 const tabs = [
   { id: "game-state", label: "Game State" },
   { id: "showcase", label: "Component Showcase" },
   { id: "testing", label: "Testing Helpers" },
+  { id: "debug-capture", label: "Debug Capture" },
 ];
 
 const activeTab = ref("game-state");

@@ -118,6 +118,9 @@ pub struct PlayerLogWatcher {
     current_chat_log: Option<PathBuf>,
     pattern_matchers: Vec<PatternMatcher>,
     player_event_parser: PlayerEventParser,
+    /// When true, raw lines are buffered for debug capture.
+    capture_raw_lines: bool,
+    raw_lines_buffer: Vec<String>,
 }
 
 impl PlayerLogWatcher {
@@ -131,6 +134,8 @@ impl PlayerLogWatcher {
             current_chat_log: None,
             pattern_matchers: Vec::new(),
             player_event_parser: PlayerEventParser::new(),
+            capture_raw_lines: false,
+            raw_lines_buffer: Vec::new(),
         };
 
         watcher.register_core_patterns();
@@ -147,6 +152,8 @@ impl PlayerLogWatcher {
             current_chat_log: None,
             pattern_matchers: Vec::new(),
             player_event_parser: PlayerEventParser::new(),
+            capture_raw_lines: false,
+            raw_lines_buffer: Vec::new(),
         };
 
         watcher.register_core_patterns();
@@ -200,6 +207,19 @@ impl PlayerLogWatcher {
     ) {
         self.player_event_parser
             .feed_chat_gain(item_internal_name, quantity, timestamp_hms);
+    }
+
+    /// Enable or disable raw line capture for debug purposes.
+    pub fn set_capture_raw_lines(&mut self, enabled: bool) {
+        self.capture_raw_lines = enabled;
+        if !enabled {
+            self.raw_lines_buffer.clear();
+        }
+    }
+
+    /// Drain all buffered raw lines captured since the last drain.
+    pub fn drain_raw_lines(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.raw_lines_buffer)
     }
 
     /// Parse a single line from Player.log
@@ -317,6 +337,11 @@ impl LogFileWatcher for PlayerLogWatcher {
                 Ok(line_content) => {
                     self.current_position += line_content.len() as u64 + 1;
 
+                    // Buffer raw line for debug capture if enabled
+                    if self.capture_raw_lines {
+                        self.raw_lines_buffer.push(line_content.clone());
+                    }
+
                     if let Some(event) = self.parse_line(&line_content) {
                         events.push(event);
                     }
@@ -367,6 +392,9 @@ pub struct ChatLogWatcher {
     active: bool,
     player_name: Option<String>,
     current_session_start: Option<NaiveDateTime>,
+    /// When true, raw lines are buffered for debug capture.
+    capture_raw_lines: bool,
+    raw_lines_buffer: Vec<String>,
 }
 
 impl ChatLogWatcher {
@@ -378,6 +406,8 @@ impl ChatLogWatcher {
             active: false,
             player_name: None,
             current_session_start: None,
+            capture_raw_lines: false,
+            raw_lines_buffer: Vec::new(),
         }
     }
 
@@ -389,6 +419,8 @@ impl ChatLogWatcher {
             active: false,
             player_name: None,
             current_session_start: None,
+            capture_raw_lines: false,
+            raw_lines_buffer: Vec::new(),
         }
     }
 
@@ -414,6 +446,19 @@ impl ChatLogWatcher {
     /// Get the full file path
     pub fn get_file_path(&self) -> &PathBuf {
         &self.file_path
+    }
+
+    /// Enable or disable raw line capture for debug purposes.
+    pub fn set_capture_raw_lines(&mut self, enabled: bool) {
+        self.capture_raw_lines = enabled;
+        if !enabled {
+            self.raw_lines_buffer.clear();
+        }
+    }
+
+    /// Drain all buffered raw lines captured since the last drain.
+    pub fn drain_raw_lines(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.raw_lines_buffer)
     }
 
     /// Check a line for session markers (login/logout).
@@ -505,6 +550,14 @@ impl LogFileWatcher for ChatLogWatcher {
         self.current_position = file_size;
 
         let content_str = String::from_utf8_lossy(&content);
+
+        // Buffer raw lines for debug capture if enabled
+        if self.capture_raw_lines {
+            for line in content_str.lines() {
+                self.raw_lines_buffer.push(line.to_string());
+            }
+        }
+
         let mut events = Vec::new();
 
         // Check each line for session markers, but only keep the LAST login

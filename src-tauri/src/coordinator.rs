@@ -6,6 +6,7 @@ use crate::db::chat_commands::insert_chat_messages;
 use crate::db::queries::log_positions;
 use crate::db::stall_tracker_commands::{insert_stall_events, StallEventInput, StallOpsLock};
 use crate::db::DbPool;
+use crate::debug_capture::{self, DebugCaptureResult, DebugCaptureState, DebugCaptureStatus};
 use crate::shop_log_parser::parse_shop_log;
 use crate::stall_year_resolver::base_year_for_live;
 use crate::game_state::GameStateManager;
@@ -101,6 +102,8 @@ pub struct DataIngestCoordinator {
     /// Rolling buffer of recent damage-on-player events (max 10).
     /// Snapshotted into DB when a death occurs for "what killed me" context.
     recent_damage: Vec<crate::chat_combat_parser::ChatCombatEvent>,
+    /// Debug capture state — buffers raw log lines when a capture is active.
+    debug_capture: DebugCaptureState,
 }
 
 impl DataIngestCoordinator {
@@ -139,6 +142,7 @@ impl DataIngestCoordinator {
             game_data: game_data_clone,
             current_area: None,
             recent_damage: Vec::new(),
+            debug_capture: DebugCaptureState::new(),
         })
     }
 
@@ -429,6 +433,11 @@ impl DataIngestCoordinator {
         if let Some(watcher) = &mut self.chat_watcher {
             let events = watcher.poll()?;
             self.process_chat_events(events)?;
+        }
+
+        // Drain raw lines from watchers into the debug capture temp file
+        if self.debug_capture.is_active() {
+            self.drain_capture_lines();
         }
 
         // Persist watcher positions every poll cycle so a crash doesn't
@@ -1278,6 +1287,121 @@ impl DataIngestCoordinator {
             Err(e) => eprintln!("[coordinator] Failed to persist stall events: {e}"),
         }
     }
+
+    // ── Debug Capture ──────────────────────────────────────────────────
+
+    /// Start a debug capture session. Snapshots current game state and
+    /// enables raw line buffering on both watchers.
+    pub fn debug_capture_start(&mut self) -> Result<(), String> {
+        if self.debug_capture.is_active() {
+            return Err("A debug capture is already active".to_string());
+        }
+
+        let (char, server) = self
+            .active_character_server()
+            .unwrap_or_default();
+        let snapshot =
+            debug_capture::snapshot_game_state(&self.db_pool, Some(&char), Some(&server));
+
+        let temp_dir = self
+            .app_handle
+            .path()
+            .app_data_dir()
+            .map_err(|e| format!("Cannot resolve app data dir: {e}"))?;
+
+        // Enable raw line capture on watchers
+        if let Some(w) = &mut self.player_watcher {
+            w.set_capture_raw_lines(true);
+        }
+        if let Some(w) = &mut self.chat_watcher {
+            w.set_capture_raw_lines(true);
+        }
+
+        self.debug_capture.start(snapshot, &temp_dir)?;
+        startup_log!("[debug-capture] Capture started");
+        Ok(())
+    }
+
+    /// Stop the active debug capture and write the bundle to `output_path`.
+    pub fn debug_capture_stop(
+        &mut self,
+        notes: String,
+        output_path: String,
+    ) -> Result<DebugCaptureResult, String> {
+        if !self.debug_capture.is_active() {
+            return Err("No debug capture is active".to_string());
+        }
+
+        // Drain any remaining raw lines before stopping
+        self.drain_capture_lines();
+
+        // Disable raw line capture on watchers
+        if let Some(w) = &mut self.player_watcher {
+            w.set_capture_raw_lines(false);
+        }
+        if let Some(w) = &mut self.chat_watcher {
+            w.set_capture_raw_lines(false);
+        }
+
+        let (char, server) = self
+            .active_character_server()
+            .unwrap_or_default();
+        let snapshot =
+            debug_capture::snapshot_game_state(&self.db_pool, Some(&char), Some(&server));
+
+        let app_version = self
+            .app_handle
+            .config()
+            .version
+            .clone()
+            .unwrap_or_else(|| "unknown".to_string());
+
+        let result = self
+            .debug_capture
+            .stop(snapshot, notes, app_version, &output_path)?;
+
+        startup_log!(
+            "[debug-capture] Capture stopped — {} lines ({} player, {} chat)",
+            result.line_count,
+            result.player_line_count,
+            result.chat_line_count,
+        );
+
+        Ok(result)
+    }
+
+    /// Discard the active capture without saving.
+    pub fn debug_capture_discard(&mut self) {
+        // Disable raw line capture on watchers
+        if let Some(w) = &mut self.player_watcher {
+            w.set_capture_raw_lines(false);
+        }
+        if let Some(w) = &mut self.chat_watcher {
+            w.set_capture_raw_lines(false);
+        }
+
+        self.debug_capture.discard();
+        startup_log!("[debug-capture] Capture discarded");
+    }
+
+    /// Get the current debug capture status.
+    pub fn debug_capture_status(&self) -> DebugCaptureStatus {
+        self.debug_capture.status()
+    }
+
+    /// Drain buffered raw lines from watchers into the capture temp file.
+    fn drain_capture_lines(&mut self) {
+        if let Some(w) = &mut self.player_watcher {
+            for line in w.drain_raw_lines() {
+                self.debug_capture.push_line("player", line);
+            }
+        }
+        if let Some(w) = &mut self.chat_watcher {
+            for line in w.drain_raw_lines() {
+                self.debug_capture.push_line("chat", line);
+            }
+        }
+    }
 }
 
 // ============================================================
@@ -1354,6 +1478,47 @@ pub fn poll_watchers(
 ) -> Result<(), String> {
     let mut coord = coordinator.lock().unwrap();
     coord.poll()
+}
+
+// ── Debug Capture Commands ──────────────────────────────────────────────
+
+/// Start a debug capture session.
+#[tauri::command]
+pub fn debug_capture_start(
+    coordinator: State<'_, Arc<Mutex<DataIngestCoordinator>>>,
+) -> Result<(), String> {
+    let mut coord = coordinator.lock().unwrap();
+    coord.debug_capture_start()
+}
+
+/// Stop the active debug capture and write the bundle to `output_path`.
+#[tauri::command]
+pub fn debug_capture_stop(
+    coordinator: State<'_, Arc<Mutex<DataIngestCoordinator>>>,
+    notes: String,
+    output_path: String,
+) -> Result<DebugCaptureResult, String> {
+    let mut coord = coordinator.lock().unwrap();
+    coord.debug_capture_stop(notes, output_path)
+}
+
+/// Discard the active debug capture without saving.
+#[tauri::command]
+pub fn debug_capture_discard(
+    coordinator: State<'_, Arc<Mutex<DataIngestCoordinator>>>,
+) -> Result<(), String> {
+    let mut coord = coordinator.lock().unwrap();
+    coord.debug_capture_discard();
+    Ok(())
+}
+
+/// Get the current debug capture status.
+#[tauri::command]
+pub fn debug_capture_status(
+    coordinator: State<'_, Arc<Mutex<DataIngestCoordinator>>>,
+) -> Result<DebugCaptureStatus, String> {
+    let coord = coordinator.lock().unwrap();
+    Ok(coord.debug_capture_status())
 }
 
 // ============================================================
