@@ -2,52 +2,29 @@
 
 Small tasks and notes that don't belong in a dedicated plan.
 
-*Last reviewed: 2026-04-17*
+*Last reviewed: 2026-04-19*
 
 ---
 
-## To Sort
+## Investigations (Completed Research, No Code Changes Needed)
 
+These are investigated items kept for reference — the research is done but the underlying limitation or blocker remains.
 
-- investigate: we don't show the mods/augments/etc on items in the inventory. can we? should see if this data is anywhere in the log
-  - **Investigated:** Player.log does NOT include TSys mod/augment data. Only `ProcessAddItem` (name + instance_id) and `ProcessUpdateItemCode` (stack size + type ID) are available. TSys data is only available through VIP Inventory JSON export (snapshot imports already store it). This is a fundamental log format limitation.
-- investigate: we don't show current equipment anywhere - is this in the log?
-  - **Investigated:** Equipment IS tracked from Player.log via `ProcessSetEquippedItems`, but it only provides `slot` + `appearance_key` — no item names, stats, or details. The data is stored in `game_state_equipment` and exposed to the frontend. A basic "current equipment" display could be built but would only show appearance slots, not full item info. Full equipment details would require the VIP JSON export.
+- **Item mods/augments not shown in inventory** — Player.log does NOT include TSys mod/augment data. Only `ProcessAddItem` (name + instance_id) and `ProcessUpdateItemCode` (stack size + type ID) are available. TSys data is only in VIP Inventory JSON export (snapshot imports already store it). Fundamental log format limitation.
+- **Equipment display limited** — Equipment IS tracked from Player.log via `ProcessSetEquippedItems`, but only provides `slot` + `appearance_key` — no item names, stats, or details. A basic display could be built showing appearance slots only. Full details require VIP JSON export.
 
-- ~~feat: migrate the teleport machine codes off the wiki and in to a widget.~~ **Done.** `TeleportCodesWidget` — searchable lookup with zone filtering, ~190 codes across 14 zones.
-- feat: "garden almanac" widget that saves almanac data when you check it in game.
-  - **Investigated:** The almanac shows daily bonus (item + zone for guaranteed double-yield), rotating at midnight EST. `ProcessBook` parser event already exists and emits `BookOpened { title, content, book_type }`, but only `PlayerShopLog` is handled in the coordinator. The almanac likely fires as a different book type. **Blocker:** need someone to read the almanac in-game and check what the `ProcessBook(...)` line looks like in Player.log. If parseable: add coordinator handler, new SQLite table for entries, frontend widget using `ItemInline`/`AreaInline`. Widget can only show data after the player reads the almanac — can't predict future bonuses unless the rotation algorithm is reverse-engineered. **Effort: Medium.**
-- ~~feat: "mushroom farming" widget — lookup tool with moon phase integration.~~ **Done.** `MushroomFarmingWidget` — 22 varieties with level, grow time, substrates, and live moon phase highlighting for robust/poor. Sortable and filterable.
-  - feat: barrel timers for mushroom farming. No log events for barrel placement/harvest, so timers would need manual user input. Needs a general-purpose timer system (reusable with brewing/cheesemaking/fletching). **Effort: Medium-High.**
-- feat: fletching/cheesemaking/brewing timer widget? what can we do there?
-  - **Investigated:** All three skills share a real-time waiting pattern. **Brewing:** un-aged casks age in caves, 1–3 hours by level, 2–3 concurrent slots. **Cheesemaking:** cheese ages in cave containers, 1–9 hours, 1–3 slots. **Fletching:** arrow shafts dry in boxes, 1–30 min, but only during daylight + sunny weather, 1–7 slots. The parser recognizes `Brew`/`Distill` as `DoDelayLoop` action types but only for the short crafting animation — the multi-hour aging/drying timers are **not in Player.log**. No fletching or cheesemaking recognition in the parser either. Without log events, these are manual-entry timer widgets. Could share a general-purpose timer system with mushroom barrel timers. Worth checking if newer game versions produce aging log events. **Effort: Medium-High.** Talk to buppis for more info on brewing specifics.
-- feat: add repeatable quest tracking for statehelm quests to the statehelm character page.
-  - **Investigated:** StatehelmView already has full gift tracking (NPC cards, favor tiers, progress dots). CDN quest data has `ReuseTime_Days/Hours/Minutes` fields for repeatable quest cooldowns and `DeltaScriptAtomicInt` renown rewards. **Blocker:** quest events (`ProcessCompleteQuest`, `ProcessAddQuest`, etc.) are listed in the parser docs as **not yet implemented** — no `QuestCompleted` variant exists in `PlayerEvent`. Needs: (1) implement quest event parsing in `PlayerEventParser`, (2) new `game_state_quest_completions` table, (3) coordinator handler, (4) extract `ReuseTime_*` from CDN quest JSON, (5) filter to Statehelm quests, (6) frontend UI with cooldown timers. **Effort: High.**
-  - impv: track count of statehelm renown possible vs earned in the statehelm widget. requires the above statehelm work first.
-    - **Investigated:** Statehelm Renown is already tracked as a currency in `game_state_currencies`. "Possible vs earned" requires summing renown rewards from completed repeatable quests against total available — fully depends on the quest tracking above being built first.
-- feat: 'package data' feature to create zip file of game state json, player.log, chat logs, and any character/inventory exports that occurred during the session. we probably should start saving the last X historical character jsons locally once we detect them to help with this, since (unlike inventory exports) they get overwritten
-  - **Investigated:** All data sources have path helpers already (`get_player_log_path()`, `get_chat_logs_dir()`, Reports/ directory). `character_snapshots` table already stores `raw_json` for every imported snapshot — **historical character JSON is already preserved in the database**, so the "save last X" concern is partially solved. Inventory snapshots also store `raw_json`. No zip/export code exists — needs `zip` crate added to Cargo.toml, a new Tauri command to gather files + DB snapshots into a zip, and a save dialog. **Effort: Low-Medium.**
+---
 
-- ~~fix/impovement/idunno ChatLog search doesn't work at all~~ — **Done:** Added unified Search tab as default chat tab with `from:` and `in:` operator support
-- ~~impv: need to support "from:user" in chat log search and "in:channel"~~ — **Done:** `parseSearchQuery()` utility parses `from:player` and `in:channel` operators
-- ~~impv: need to be able to quickly jump to a specific chat search result to see it in context~~ — **Done:** Click a search result to view surrounding messages via `get_chat_messages_around` with highlighted target
-- ~~fix: our dynamic loading of chat messages seems to get stuck?~~ — **Done:** Fixed race condition — added loading guard in `loadMore()`, moved offset increment to after response, added emit guard in scroll handler
+## Build / Infra
 
-- build: dropping msi from build pipeline to improve build times.
-- build: strip=true in release profile to speed up build times.
-- fix: when we import snapshot data, we nuke any information about current favor amounts. 
-- fix: need to do a pass on all our dashboard widgets and make sure they are set to a fixed, consistent height. 
-- fix: dashboard widgets need fixed, consistent widths across the three sizes. 
-- fix: summary widget -> the 'status' line changes height when the mounted or combat cards are applied. shifts everything. looks bad.
-- fix: weird page refresh issues on the dashboard, unsure what is causing. this is probably more investigate than fix.
-- feat(devtools): 'start debug capture' and 'stop debug capture'... should save copy of gamestate at start and stop. should save both all player.log lines for duration of capture. should save both '[Status]' and ['Combat'] channels of chat log. after capture done, should then have a 'save debug capture' button to save off all the data as one file. probably include a "notes" field they can enter notes in before saving? grab latest character and inventory jsons at start and stop as well? or maybe only worth grabbing the jsons if we detect them exported in the chat log.
-- impv: we don't need to watch the reports folder for new jsons... the chat log reports when they are exported. that's better/easier, right? probably is.
-
+- [ ] Drop MSI from build pipeline to improve build times
+  - MSI is still built and listed in `.github/workflows/release.yml`. NSIS installer is also produced — MSI is redundant.
+- [ ] Add `strip = true` to release profile
+  - No `[profile.release]` section exists in `src-tauri/Cargo.toml` yet.
 
 ---
 
 ## Quick Wins (Small Effort, Noticeable Value)
-
 
 - [ ] Investigate and fix project tracking in Crafting -> Projects
   - The "Start Tracking" button was removed from `ProjectMaterialsPanel.vue` because it wasn't working well. The `startProjectTracking()` method still exists in `craftingStore`. Need to investigate what's broken and re-implement properly.
@@ -57,11 +34,33 @@ Small tasks and notes that don't belong in a dedicated plan.
   - Active project and group selection are ephemeral reactive refs in `craftingStore`. Pane widths already persist via `useViewPrefs()`. Just need to persist `activeProject`/`activeGroupName` the same way.
   - **Effort: Small | Impact: Medium (annoyance)**
 
+- [ ] Fix: snapshot import nukes current favor amounts
+  - In `character_commands.rs` line ~773, `seed_game_state_from_snapshot()` unconditionally resets `cumulative_delta` to 0 on the `ON CONFLICT ... DO UPDATE` path. This destroys tracked gifting progress. Snapshots only contain favor tier names, not point totals — the code should preserve the existing `cumulative_delta` instead of zeroing it.
+  - **Effort: Small | Impact: Medium**
+
+- [ ] Fix: summary widget status line shifts height when mounted/combat badges appear
+  - In `ContextBar.vue`, the status badges ("In Combat", "Mounted") use `px-2 py-0.5 rounded` with background styling, but the "Idle" fallback is plain text with no padding. Needs a consistent min-height or always-present badge wrapper.
+  - **Effort: Small | Impact: Small (visual polish)**
 
 ---
 
 ## Medium Effort, High Value
 
+- [ ] Dashboard widget sizing pass — consistent heights
+  - Widgets have inconsistent `max-h-*` values (some 80, some 52, some 40, many have none). No systematic height management exists. Need a standardized sizing approach in `DashboardCard.vue` or the widget registry.
+  - **Effort: Medium | Impact: Medium (visual consistency)**
+
+- [ ] Dashboard widget sizing pass — consistent widths across three sizes
+  - The sizing system exists in `dashboardWidgets.ts` (`small`/`medium`/`large` → col-span classes), but the responsive `auto-fill` grid means actual widths vary with viewport. `col-span-4` assumes enough columns exist. Needs either a fixed column count or size-aware breakpoints.
+  - **Effort: Medium | Impact: Medium (visual consistency)**
+
+- [ ] Investigate dashboard refresh issues
+  - Reported as "weird page refresh issues." No obvious refresh/reload logic in `DashboardView.vue`. Likely caused by reactive store updates triggering unexpected re-renders, or PaneLayout interactions. Needs runtime debugging to identify the trigger.
+  - **Effort: Unknown (investigation) | Impact: Unknown**
+
+- [ ] Switch report detection from folder polling to chat log events
+  - Currently the Reports folder is polled on a timer (`characterStore.ts` `startReportWatching()`, configurable 5–300s interval). The chat log already announces when exports happen. Switching to chat-log-triggered detection would be more responsive and eliminate unnecessary polling. Needs a new handler in the chat status parser for export messages.
+  - **Effort: Medium | Impact: Small-Medium (efficiency/responsiveness)**
 
 - [ ] Actually implement audio alerts for watchwords
   - The "Play sound" checkbox exists in the rule editor UI and the setting is stored in `WatchNotifyConfig`, but there's no audio playback implementation behind it. Toast notifications appear to be wired up. Need to add actual audio file(s) and playback logic.
@@ -83,9 +82,6 @@ Small tasks and notes that don't belong in a dedicated plan.
   - Some screens still don't look like they fit within the app, or have their own paradigms. Sidebars that don't use standardized panels, inconsistent patterns, etc.
   - **Effort: Medium (iterative) | Impact: Medium (consistency/polish)**
 
-- [x] Book viewer in the data browser
-  - Lorebooks tab added to the data browser. Browse by category, search by title/text/location, read formatted book content.
-
 - [ ] Hot tips tracker
   - Track hot tips in the game. Needs investigation into what data is available.
   - **Effort: Medium | Impact: Medium**
@@ -94,19 +90,37 @@ Small tasks and notes that don't belong in a dedicated plan.
   - Right now in the data browser, items show up as "gift from grindstone" or "gift from ripesunflowerplant" with no direct linkage. Need to check if CDN data has a way to link seedling → plant → milling product.
   - **Effort: Medium | Impact: Low-Medium (data browser completeness)**
 
+- [ ] Garden almanac widget
+  - Saves almanac data when you check it in-game. The almanac shows daily bonus (item + zone for guaranteed double-yield), rotating at midnight EST. `ProcessBook` parser event already exists and emits `BookOpened { title, content, book_type }`, but only `PlayerShopLog` is handled in the coordinator. **Blocker:** need someone to read the almanac in-game and check what the `ProcessBook(...)` line looks like in Player.log. If parseable: add coordinator handler, new SQLite table, frontend widget using `ItemInline`/`AreaInline`.
+  - **Effort: Medium**
 
+- [ ] General-purpose timer system (mushroom barrels, brewing, cheesemaking, fletching)
+  - All these skills share a real-time waiting pattern with no log events for the timer portion. Mushroom barrel timers, brewing cask aging (1–3h), cheesemaking aging (1–9h), and fletching drying (1–30m, daylight+sunny only) would all need manual-entry timers. Could share a single reusable timer system. Talk to buppis for brewing specifics. Worth checking if newer game versions produce aging log events.
+  - **Effort: Medium-High**
+
+- [ ] 'Package data' export feature
+  - Create zip file of game state JSON, player.log, chat logs, and character/inventory exports. All data sources have path helpers already. `character_snapshots` table already stores `raw_json` for every imported snapshot (historical character JSON is preserved). Needs `zip` crate, a new Tauri command to gather files + DB snapshots, and a save dialog.
+  - **Effort: Low-Medium**
 
 ---
 
 ## Larger Efforts / Research Needed
 
+- [ ] Statehelm repeatable quest tracking
+  - StatehelmView already has full gift tracking. CDN quest data has `ReuseTime_*` fields and renown rewards. **Blocker:** quest events (`ProcessCompleteQuest`, `ProcessAddQuest`, etc.) are **not yet implemented** in the parser. Needs: (1) quest event parsing in `PlayerEventParser`, (2) new `game_state_quest_completions` table, (3) coordinator handler, (4) extract `ReuseTime_*` from CDN, (5) filter to Statehelm quests, (6) frontend UI with cooldown timers.
+  - Sub-task: track statehelm renown possible vs earned (depends on quest tracking above).
+  - **Effort: High | Impact: Medium-High**
 
-- [ ] Shop/stall tracking — track what you put in, what sells, trends (would require manual entry or future log support) (reported by Reyetta)
-  - Big feature. Needs: investigation of what log events exist for stalls, schema for tracking stock/sales, analytics UI. Manual entry fallback would work but adoption is questionable (Reyetta herself said manual entry is "too much effort"). The player event parser handles ~24 of ~60 known event types — player vendor events are in the "low priority / future" bucket per the parser docs.
+- [ ] Debug capture devtool
+  - 'Start/stop debug capture' that saves: gamestate at start+stop, all player.log lines during capture, Status and Combat chat channels, character/inventory JSONs if detected. Save as single file with optional notes field.
+  - **Effort: High | Impact: Medium (debugging/support)**
+
+- [ ] Shop/stall tracking (reported by Reyetta)
+  - Track what you put in, what sells, trends. Player vendor events are in the parser's "low priority / future" bucket. Manual entry fallback has questionable adoption (Reyetta said it's "too much effort").
   - **Effort: Large | Impact: High (if automated), Low (if manual-only)**
 
 - [ ] Nightmare cave challenge door tracker
-  - Need to look up all the challenges and see which ones we can track. Some are easy (1200 armor) and some are harder (have 4x 10-second premonition buffs). Could also track how many letters of authority the player has as an alternate path. Requires research + parser work.
+  - Need to look up all the challenges and see which ones we can track. Some are easy (1200 armor) and some are harder (have 4x 10-second premonition buffs). Could also track letters of authority as alternate path. Requires research + parser work.
   - **Effort: Large (research + implementation) | Impact: Medium (niche but useful)**
 
 - [ ] Gardening helper
