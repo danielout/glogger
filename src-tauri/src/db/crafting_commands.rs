@@ -42,6 +42,12 @@ pub struct UpdateProjectEntryInput {
 }
 
 #[derive(Deserialize)]
+pub struct BatchUpdateExpansionsEntry {
+    pub id: i64,
+    pub expanded_ingredient_ids: Vec<i64>,
+}
+
+#[derive(Deserialize)]
 pub struct ReorderEntriesInput {
     pub project_id: i64,
     pub entry_ids: Vec<i64>,
@@ -297,6 +303,40 @@ pub fn update_project_entry(
         [input.id],
     )
     .ok();
+
+    Ok(())
+}
+
+/// Batch-update only the expanded_ingredient_ids for multiple entries in one DB transaction.
+/// Does NOT reload the project — the frontend manages its own state after calling this.
+#[tauri::command]
+pub fn batch_update_entry_expansions(
+    db: State<'_, DbPool>,
+    entries: Vec<BatchUpdateExpansionsEntry>,
+) -> Result<(), String> {
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
+
+    for entry in &entries {
+        let ids_json = serde_json::to_string(&entry.expanded_ingredient_ids)
+            .map_err(|e| format!("Failed to serialize expanded_ingredient_ids: {e}"))?;
+        conn.execute(
+            "UPDATE crafting_project_entries SET expanded_ingredient_ids = ?1 WHERE id = ?2",
+            rusqlite::params![ids_json, entry.id],
+        )
+        .map_err(|e| format!("Failed to update entry {}: {e}", entry.id))?;
+    }
+
+    // Touch the project's updated_at once (use the first entry to find the project)
+    if let Some(first) = entries.first() {
+        conn.execute(
+            "UPDATE crafting_projects SET updated_at = CURRENT_TIMESTAMP
+             WHERE id = (SELECT project_id FROM crafting_project_entries WHERE id = ?1)",
+            [first.id],
+        )
+        .ok();
+    }
 
     Ok(())
 }

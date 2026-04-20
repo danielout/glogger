@@ -55,6 +55,20 @@ export const useCraftingStore = defineStore("crafting", () => {
     return null;
   }
 
+  // ── Recipe lookup cache ─────────────────────────────────────────────────────
+  // Recipe data is static within a CDN version, so we cache lookups to avoid
+  // repeated IPC round-trips during ingredient resolution.
+
+  const recipesForItemCache = new Map<number, RecipeInfo[]>();
+
+  async function getCachedRecipesForItem(itemId: number): Promise<RecipeInfo[]> {
+    const cached = recipesForItemCache.get(itemId);
+    if (cached) return cached;
+    const recipes = await gameData.getRecipesForItem(itemId);
+    recipesForItemCache.set(itemId, recipes);
+    return recipes;
+  }
+
   // ── Recipe filtering helpers ────────────────────────────────────────────────
 
   const MAX_ENCHANTED_RE = /\(Max-Enchanted\)/i;
@@ -227,7 +241,7 @@ export const useCraftingStore = defineStore("crafting", () => {
         : false;
 
       if (ing.item_id && shouldExpand && !visited.has(ing.item_id)) {
-        const producingRecipes = filterRecipes(await gameData.getRecipesForItem(ing.item_id));
+        const producingRecipes = filterRecipes(await getCachedRecipesForItem(ing.item_id));
         if (producingRecipes.length > 0) {
           isCraftable = true;
           const sourceRecipe = producingRecipes[0];
@@ -256,7 +270,7 @@ export const useCraftingStore = defineStore("crafting", () => {
         }
       } else if (ing.item_id) {
         // Just check if craftable (without expanding)
-        const producingRecipes = filterRecipes(await gameData.getRecipesForItem(ing.item_id));
+        const producingRecipes = filterRecipes(await getCachedRecipesForItem(ing.item_id));
         isCraftable = producingRecipes.length > 0;
       }
 
@@ -1192,7 +1206,7 @@ export const useCraftingStore = defineStore("crafting", () => {
         if (item) {
           itemName = item.name;
           // Find a recipe that produces this item (filtering Max-Enchanted)
-          const recipes = filterRecipes(await gameData.getRecipesForItem(item.id));
+          const recipes = filterRecipes(await getCachedRecipesForItem(item.id));
           if (recipes.length > 0) {
             recipeId = recipes[0].id;
             recipeName = recipes[0].name;

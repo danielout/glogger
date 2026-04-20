@@ -714,11 +714,14 @@ pub async fn get_recipes_for_item(
 ) -> Result<Vec<RecipeInfo>, String> {
     let data = state.read().await;
     let results: Vec<RecipeInfo> = data
-        .recipes
-        .values()
-        .filter(|r| r.result_item_ids.contains(&item_id))
-        .cloned()
-        .collect();
+        .recipes_producing_item
+        .get(&item_id)
+        .map(|ids| {
+            ids.iter()
+                .filter_map(|id| data.recipes.get(id).cloned())
+                .collect()
+        })
+        .unwrap_or_default();
     Ok(results)
 }
 
@@ -730,11 +733,14 @@ pub async fn get_recipes_using_item(
 ) -> Result<Vec<RecipeInfo>, String> {
     let data = state.read().await;
     let results: Vec<RecipeInfo> = data
-        .recipes
-        .values()
-        .filter(|r| r.ingredient_item_ids.contains(&item_id))
-        .cloned()
-        .collect();
+        .recipes_using_item
+        .get(&item_id)
+        .map(|ids| {
+            ids.iter()
+                .filter_map(|id| data.recipes.get(id).cloned())
+                .collect()
+        })
+        .unwrap_or_default();
     Ok(results)
 }
 

@@ -146,10 +146,11 @@ use db::character_commands::{
 use db::death_commands::{get_character_deaths, get_death_damage_sources};
 use db::resuscitate_commands::get_character_resuscitations;
 use db::crafting_commands::{
-    add_project_entry, check_material_availability, create_crafting_project,
-    delete_crafting_project, duplicate_crafting_project, get_crafting_project,
-    get_crafting_projects, get_work_orders_from_snapshot, remove_project_entry,
-    reorder_project_entries, update_crafting_project, update_project_entry,
+    add_project_entry, batch_update_entry_expansions, check_material_availability,
+    create_crafting_project, delete_crafting_project, duplicate_crafting_project,
+    get_crafting_project, get_crafting_projects, get_work_orders_from_snapshot,
+    remove_project_entry, reorder_project_entries, update_crafting_project,
+    update_project_entry,
 };
 use db::farming_commands::{
     delete_farming_session, get_farming_sessions, save_farming_session, update_farming_session,
@@ -536,6 +537,7 @@ pub fn run() {
             delete_crafting_project,
             add_project_entry,
             update_project_entry,
+            batch_update_entry_expansions,
             remove_project_entry,
             reorder_project_entries,
             duplicate_crafting_project,

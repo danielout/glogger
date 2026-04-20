@@ -247,14 +247,34 @@ async function updateEntryTargetStock(entryId: number, targetStock: number | nul
   }
 }
 
+/** Collect expanded item IDs for a single entry from the intermediateExpansions map. */
+function getExpandedIdsForEntry(entryId: number): number[] {
+  const ids: number[] = [];
+  for (const [k, v] of intermediateExpansions.value) {
+    if (v && k.startsWith(`${entryId}:`)) {
+      const id = parseInt(k.split(":")[1], 10);
+      if (!isNaN(id)) ids.push(id);
+    }
+  }
+  return ids;
+}
+
+/** Persist expansion state for all entries in one IPC call (no project reload). */
+async function saveExpansionsToDB(entries: import("../../types/crafting").CraftingProjectEntry[]) {
+  const batchEntries = entries.map((entry) => ({
+    id: entry.id,
+    expanded_ingredient_ids: getExpandedIdsForEntry(entry.id),
+  }));
+  await invoke("batch_update_entry_expansions", { entries: batchEntries });
+}
+
 async function toggleIntermediateGlobal(itemId: number) {
   const entries = store.activeProject?.entries;
   if (!entries) return;
 
   const isCurrentlyExpanded = expandedItemIds.value.has(itemId);
 
-  // Update local state for all entries first, then batch DB writes
-  const updates: Promise<void>[] = [];
+  // Update local state for all entries
   for (const entry of entries) {
     const key = `${entry.id}:${itemId}`;
     if (isCurrentlyExpanded) {
@@ -262,19 +282,10 @@ async function toggleIntermediateGlobal(itemId: number) {
     } else {
       intermediateExpansions.value.set(key, true);
     }
-
-    const ids: number[] = [];
-    for (const [k, v] of intermediateExpansions.value) {
-      if (v && k.startsWith(`${entry.id}:`)) {
-        const id = parseInt(k.split(":")[1], 10);
-        if (!isNaN(id)) ids.push(id);
-      }
-    }
-    updates.push(store.updateEntry(entry.id, entry.quantity, ids, entry.target_stock));
   }
 
-  // Fire all DB writes in parallel, then re-resolve
-  await Promise.all(updates);
+  // Single batch DB write, then re-resolve
+  await saveExpansionsToDB(entries);
 
   if (projectMaterials.value.size > 0) {
     resolveProject();
@@ -301,19 +312,8 @@ async function setAllIntermediates(itemIds: number[], expand: boolean) {
     }
   }
 
-  // Batch all DB writes in parallel
-  const updates: Promise<void>[] = [];
-  for (const entry of entries) {
-    const ids: number[] = [];
-    for (const [k, v] of intermediateExpansions.value) {
-      if (v && k.startsWith(`${entry.id}:`)) {
-        const id = parseInt(k.split(":")[1], 10);
-        if (!isNaN(id)) ids.push(id);
-      }
-    }
-    updates.push(store.updateEntry(entry.id, entry.quantity, ids, entry.target_stock));
-  }
-  await Promise.all(updates);
+  // Single batch DB write, then re-resolve
+  await saveExpansionsToDB(entries);
 
   if (projectMaterials.value.size > 0) {
     resolveProject();

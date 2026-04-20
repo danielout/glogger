@@ -14,9 +14,23 @@
         </div>
       </div>
 
-      <!-- Recipe summary: what you're crafting -->
-      <div v-if="recipeEntries.length > 0" class="flex items-start gap-2">
-        <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs flex-1 min-w-0">
+      <!-- Recheck button (always visible when there's content) -->
+      <div v-if="recipeEntries.length > 0 && hasContent" class="flex justify-end">
+        <button
+          class="text-[0.65rem] text-text-muted hover:text-text-primary cursor-pointer bg-transparent border border-border-light rounded px-1.5 py-0.5 shrink-0 transition-colors"
+          :disabled="resolving"
+          @click="$emit('resolve')">
+          {{ resolving ? 'Refreshing...' : 'Recheck Inventory' }}
+        </button>
+      </div>
+
+      <!-- Recipe summary: what you're crafting (collapsible) -->
+      <AccordionSection v-if="recipeEntries.length > 0" :default-open="!hasContent">
+        <template #title>Crafting</template>
+        <template #badge>
+          <span class="text-text-muted text-[0.65rem]">{{ recipeEntries.length }} recipe{{ recipeEntries.length !== 1 ? 's' : '' }}</span>
+        </template>
+        <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs">
           <div
             v-for="entry in recipeEntries"
             :key="entry.id"
@@ -34,92 +48,21 @@
             <span v-else class="font-mono text-text-primary/70">&times;{{ entry.quantity }}</span>
           </div>
         </div>
-        <button
-          v-if="hasContent"
-          class="text-[0.65rem] text-text-muted hover:text-text-primary cursor-pointer bg-transparent border border-border-light rounded px-1.5 py-0.5 shrink-0 transition-colors"
-          :disabled="resolving"
-          @click="$emit('resolve')">
-          {{ resolving ? 'Refreshing...' : 'Recheck Inventory' }}
-        </button>
+      </AccordionSection>
+
+      <!-- Resolving indicator when no content yet -->
+      <div v-if="resolving && !hasContent" class="flex items-center gap-2 text-text-muted text-xs py-4">
+        <LoadingSpinner />
+        Resolving project...
       </div>
 
       <!-- Two-column layout for materials + actionable lists -->
       <div v-if="hasContent" class="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
         <!-- Left: Materials overview -->
         <div class="flex flex-col gap-3">
-          <!-- Unified materials table (with availability) -->
-          <AccordionSection v-if="materialNeeds.length > 0">
-            <template #title>Materials</template>
-            <template #badge>
-              <div class="flex gap-3 text-[0.65rem] text-text-muted">
-                <span>{{ materialNeeds.length }}</span>
-                <span><span class="text-green-400">{{ coveredCount }}</span> ok</span>
-                <span v-if="partialCount > 0"><span class="text-yellow-400">{{ partialCount }}</span> partial</span>
-                <span v-if="missingCount > 0"><span class="text-accent-red">{{ missingCount }}</span> missing</span>
-              </div>
-            </template>
-            <MaterialSummary
-              :needs="materialNeeds"
-              :bare="true"
-              :pricing-mode="pricingMode"
-              :customer-provides="customerProvides"
-              @update-customer-provides="(key, qty) => $emit('update-customer-provides', key, qty)" />
-          </AccordionSection>
-
-          <!-- Fallback: raw materials table when availability hasn't been checked yet -->
-          <AccordionSection v-else-if="materials.size > 0">
-            <template #title>Materials</template>
-            <template #badge>
-              <span class="text-text-muted text-[0.65rem]">{{ materials.size }} items</span>
-            </template>
-            <table class="w-full text-xs">
-              <thead>
-                <tr class="text-text-dim border-b border-border-light">
-                  <th class="text-left py-1 font-medium">Item</th>
-                  <th class="text-right py-1 font-medium w-20">Qty</th>
-                  <th v-if="pricingMode" class="text-right py-1 font-medium w-20">They Give</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="mat in sortedMaterials"
-                  :key="mat.key"
-                  class="border-b border-surface-dark"
-                  :class="{ 'bg-accent-green/5': pricingMode && (customerProvides[mat.key] ?? 0) > 0 }">
-                  <td class="py-1">
-                    <template v-if="mat.is_dynamic">
-                      <span class="text-accent-gold/60 text-[0.65rem] mr-1">&#9670;</span>
-                      <span class="text-text-secondary">{{ mat.item_name }}</span>
-                    </template>
-                    <ItemInline v-else-if="mat.item_id !== null" :reference="mat.item_name" />
-                    <span v-else class="text-text-muted italic">{{ mat.item_name }}</span>
-                  </td>
-                  <td class="text-right py-1 text-text-primary font-mono whitespace-nowrap">
-                    {{ mat.expected_quantity }}
-                    <span
-                      v-if="mat.chance_to_consume < 1"
-                      class="text-accent-gold cursor-help"
-                      :title="`~${Math.round(mat.chance_to_consume * 100)}% chance to consume per use. Raw quantity: ${mat.quantity}`">
-                      *
-                    </span>
-                  </td>
-                  <td v-if="pricingMode" class="text-right py-1">
-                    <input
-                      :value="customerProvides[mat.key] ?? 0"
-                      type="number"
-                      min="0"
-                      :max="Math.ceil(mat.expected_quantity)"
-                      class="input w-14 text-xs text-right py-0"
-                      @change="onCustomerProvidesChange(mat.key, mat.expected_quantity, $event)" />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </AccordionSection>
-
-          <!-- Craft or Buy: unified intermediate management -->
+          <!-- Intermediates: craft-or-buy decisions -->
           <AccordionSection v-if="craftableItems.length > 0">
-            <template #title>Craft or Buy?</template>
+            <template #title>Intermediates</template>
             <template #badge>
               <div class="flex items-center gap-2">
                 <span class="text-text-muted text-[0.65rem]">
@@ -171,6 +114,86 @@
                 </button>
               </div>
             </div>
+          </AccordionSection>
+
+          <!-- Raw materials table (with availability) -->
+          <AccordionSection v-if="materialNeeds.length > 0">
+            <template #title>Raw Materials</template>
+            <template #badge>
+              <div class="flex gap-3 text-[0.65rem] text-text-muted">
+                <span>{{ materialNeeds.length }}</span>
+                <span><span class="text-green-400">{{ coveredCount }}</span> ok</span>
+                <span v-if="partialCount > 0"><span class="text-yellow-400">{{ partialCount }}</span> partial</span>
+                <span v-if="missingCount > 0"><span class="text-accent-red">{{ missingCount }}</span> missing</span>
+                <span v-if="checkingAvailability" class="inline-flex items-center gap-1 text-accent-gold/60">
+                  <LoadingSpinner size="xs" />
+                  checking
+                </span>
+              </div>
+            </template>
+            <MaterialSummary
+              :needs="materialNeeds"
+              :bare="true"
+              :pricing-mode="pricingMode"
+              :customer-provides="customerProvides"
+              @update-customer-provides="(key, qty) => $emit('update-customer-provides', key, qty)" />
+          </AccordionSection>
+
+          <!-- Fallback: raw materials table when availability hasn't been checked yet -->
+          <AccordionSection v-else-if="materials.size > 0">
+            <template #title>Raw Materials</template>
+            <template #badge>
+              <div class="flex items-center gap-2 text-text-muted text-[0.65rem]">
+                <span>{{ materials.size }} items</span>
+                <span v-if="checkingAvailability" class="inline-flex items-center gap-1 text-accent-gold/60">
+                  <LoadingSpinner size="xs" />
+                  checking availability
+                </span>
+              </div>
+            </template>
+            <table class="w-full text-xs">
+              <thead>
+                <tr class="text-text-dim border-b border-border-light">
+                  <th class="text-left py-1 font-medium">Item</th>
+                  <th class="text-right py-1 font-medium w-20">Qty</th>
+                  <th v-if="pricingMode" class="text-right py-1 font-medium w-20">They Give</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="mat in sortedMaterials"
+                  :key="mat.key"
+                  class="border-b border-surface-dark"
+                  :class="{ 'bg-accent-green/5': pricingMode && (customerProvides[mat.key] ?? 0) > 0 }">
+                  <td class="py-1">
+                    <template v-if="mat.is_dynamic">
+                      <span class="text-accent-gold/60 text-[0.65rem] mr-1">&#9670;</span>
+                      <span class="text-text-secondary">{{ mat.item_name }}</span>
+                    </template>
+                    <ItemInline v-else-if="mat.item_id !== null" :reference="mat.item_name" />
+                    <span v-else class="text-text-muted italic">{{ mat.item_name }}</span>
+                  </td>
+                  <td class="text-right py-1 text-text-primary font-mono whitespace-nowrap">
+                    {{ mat.expected_quantity }}
+                    <span
+                      v-if="mat.chance_to_consume < 1"
+                      class="text-accent-gold cursor-help"
+                      :title="`~${Math.round(mat.chance_to_consume * 100)}% chance to consume per use. Raw quantity: ${mat.quantity}`">
+                      *
+                    </span>
+                  </td>
+                  <td v-if="pricingMode" class="text-right py-1">
+                    <input
+                      :value="customerProvides[mat.key] ?? 0"
+                      type="number"
+                      min="0"
+                      :max="Math.ceil(mat.expected_quantity)"
+                      class="input w-14 text-xs text-right py-0"
+                      @change="onCustomerProvidesChange(mat.key, mat.expected_quantity, $event)" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </AccordionSection>
         </div>
 
@@ -279,6 +302,7 @@ import type { PriceCalculation } from "../../composables/usePriceCalculator";
 import { formatGold } from "../../composables/useRecipeCost";
 import EmptyState from "../Shared/EmptyState.vue";
 import AccordionSection from "../Shared/AccordionSection.vue";
+import LoadingSpinner from "../Shared/LoadingSpinner.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 import RecipeInline from "../Shared/Recipe/RecipeInline.vue";
 import MaterialSummary from "./MaterialSummary.vue";
