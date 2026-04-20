@@ -6,7 +6,7 @@
       @click="toggle"
     >
       <span class="text-[0.6rem] text-text-dim transition-transform" :class="expanded ? 'rotate-90' : ''">&#9654;</span>
-      <span>GorgonSurveyTracker</span>
+      <span>GorgonSurveyTracker by Kaeus</span>
       <span v-if="status?.installed_version" class="text-text-dim">
         {{ status.installed_version }}
       </span>
