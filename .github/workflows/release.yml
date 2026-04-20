@@ -157,17 +157,29 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json
+          tauriScript: npx tauri
+          args: ${{ matrix.args }} --config tauri.release.conf.json
           updaterJsonPreferNsis: true
 
       # Collect artifacts for the publish step
+      # macOS cross-compile puts artifacts in target/<triple>/release/bundle
+      # while native builds use target/release/bundle
       - name: Collect artifacts
         shell: bash
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
-          BUNDLE_DIR="src-tauri/target/release/bundle"
           mkdir -p release-artifacts
+
+          # Find the bundle directory — handle both native and cross-compile paths
+          BUNDLE_DIR=$(find src-tauri/target -path "*/release/bundle" -type d 2>/dev/null | head -1)
+          if [ -z "$BUNDLE_DIR" ]; then
+            echo "ERROR: Could not find bundle directory"
+            find src-tauri/target -name "bundle" -type d
+            exit 1
+          fi
+          echo "Found bundle directory: $BUNDLE_DIR"
+          find "$BUNDLE_DIR" -type f | head -30
 
           # Windows: NSIS installer + signature
           for f in "$BUNDLE_DIR"/nsis/*.exe; do
@@ -177,14 +189,10 @@ jobs:
             [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-windows-setup.exe.sig"
           done
 
-          # macOS: DMG + signature
+          # macOS: DMG (for direct download) + .app.tar.gz updater artifact + signatures
           for f in "$BUNDLE_DIR"/dmg/*.dmg; do
             [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-macos.dmg"
           done
-          for f in "$BUNDLE_DIR"/dmg/*.dmg.sig; do
-            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-macos.dmg.sig"
-          done
-          # macOS: also check for .tar.gz updater artifact
           for f in "$BUNDLE_DIR"/macos/*.tar.gz; do
             [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-macos.app.tar.gz"
           done
@@ -195,9 +203,6 @@ jobs:
           # Linux: deb + AppImage + signatures
           for f in "$BUNDLE_DIR"/deb/*.deb; do
             [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-linux.deb"
-          done
-          for f in "$BUNDLE_DIR"/deb/*.deb.sig; do
-            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-linux.deb.sig"
           done
           for f in "$BUNDLE_DIR"/appimage/*.AppImage; do
             [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-linux.AppImage"
