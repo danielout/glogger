@@ -76,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useSettingsStore } from '../../../stores/settingsStore'
 import { useGameStateStore } from '../../../stores/gameStateStore'
@@ -110,12 +110,12 @@ const knownDuplicates = computed(() => recipeItems.value.filter(i => i.all_known
 const readyToLearn = computed(() => recipeItems.value.filter(i => !i.all_known && i.meets_requirements))
 const notYetLearnable = computed(() => recipeItems.value.filter(i => !i.all_known && !i.meets_requirements))
 
-async function load() {
+async function load(showLoading = true) {
   const characterName = settings.settings.activeCharacterName
   const serverName = settings.settings.activeServerName
   if (!characterName || !serverName) return
 
-  loading.value = true
+  if (showLoading) loading.value = true
   try {
     recipeItems.value = await invoke<RecipeItemMatch[]>('find_recipe_items_in_inventory', {
       characterName,
@@ -130,7 +130,24 @@ async function load() {
 
 onMounted(load)
 
-// Reload when inventory or storage changes
-watch(() => gameState.inventory, load, { deep: true })
-watch(() => gameState.storage, load, { deep: true })
+// Debounced reload when inventory item names change — avoids flashing on every
+// single item event.  We watch a lightweight fingerprint (sorted item name list)
+// instead of deep-watching the entire inventory/storage arrays.
+const inventoryFingerprint = computed(() =>
+  Object.keys(gameState.inventoryItemCounts).sort().join('\0')
+)
+const storageFingerprint = computed(() =>
+  gameState.storage.map(s => `${s.item_name}:${s.stack_size}`).sort().join('\0')
+)
+
+let reloadTimer: ReturnType<typeof setTimeout> | undefined
+function scheduleReload() {
+  clearTimeout(reloadTimer)
+  reloadTimer = setTimeout(() => load(false), 500)
+}
+
+watch(inventoryFingerprint, scheduleReload)
+watch(storageFingerprint, scheduleReload)
+
+onUnmounted(() => clearTimeout(reloadTimer))
 </script>

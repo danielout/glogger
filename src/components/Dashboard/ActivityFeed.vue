@@ -8,8 +8,8 @@
 
     <div v-else class="flex flex-col gap-0.5 overflow-y-auto max-h-52 pr-1">
       <div
-        v-for="(entry, i) in entries"
-        :key="`${entry.timestamp}-${entry.label}-${i}`"
+        v-for="entry in entries"
+        :key="`${entry.timestamp}-${entry.label}-${entry.amount}-${entry.detail}`"
         class="flex items-center gap-2 py-1 px-2 rounded text-xs hover:bg-surface-elevated/50">
         <!-- Color indicator -->
         <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="dotColor" />

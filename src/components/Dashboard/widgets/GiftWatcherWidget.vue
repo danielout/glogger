@@ -183,15 +183,18 @@ function resolveNpcName(key: string): string {
 
 // ── Item resolution ──────────────────────────────────────────────────────────
 
+// Stable fingerprint of inventory item names — avoids re-resolving when only
+// stack sizes change (Object.keys is the same set of names).
 const inventoryItemNames = computed(() => Object.keys(gameState.inventoryItemCounts))
+const itemNamesFingerprint = computed(() => inventoryItemNames.value.slice().sort().join('\0'))
 
-async function resolveInventoryItems() {
+async function resolveInventoryItems(showLoading = true) {
   const names = inventoryItemNames.value
   if (names.length === 0) {
     resolvedItems.value = {}
     return
   }
-  loading.value = true
+  if (showLoading) loading.value = true
   try {
     resolvedItems.value = await gameData.resolveItemsBatch(names)
   } catch (e) {
@@ -201,8 +204,9 @@ async function resolveInventoryItems() {
   }
 }
 
-// Re-resolve when inventory item names change
-watch(inventoryItemNames, resolveInventoryItems, { deep: true })
+// Only re-resolve when the actual set of item names changes, not on every
+// stack size update.  Skip the loading flash on incremental updates.
+watch(itemNamesFingerprint, () => resolveInventoryItems(false))
 
 // ── Gift matching ────────────────────────────────────────────────────────────
 
