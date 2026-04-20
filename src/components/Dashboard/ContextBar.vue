@@ -40,12 +40,36 @@
       <!-- Right: Moon phase -->
       <template v-if="prefs.showMoon && phase">
         <div v-if="showAnyTime" class="w-px bg-border-default" />
-        <div class="flex flex-col items-center gap-0.5 min-w-20">
-          <span class="text-3xl leading-none">{{ phase.emoji }}</span>
-          <span class="text-text-primary text-xs font-medium">{{ phase.label }}</span>
-          <span v-if="nextPhaseText" class="text-text-dim text-[10px]">{{ nextPhaseText }}</span>
-          <span v-if="fullMoonText" class="text-text-dim text-[10px]">{{ fullMoonText }}</span>
-        </div>
+        <EntityTooltipWrapper :delay="300" :interactive="true" border-class="border-border-default">
+          <div class="flex flex-col items-center gap-0.5 min-w-20 cursor-help">
+            <span class="text-3xl leading-none">{{ phase.emoji }}</span>
+            <span class="text-text-primary text-xs font-medium">{{ phase.label }}</span>
+            <span v-if="nextPhaseText" class="text-text-dim text-[10px]">{{ nextPhaseText }}</span>
+            <span v-if="fullMoonText" class="text-text-dim text-[10px]">{{ fullMoonText }}</span>
+          </div>
+          <template #tooltip>
+            <div class="flex flex-col gap-2 text-xs">
+              <!-- Casino Portal -->
+              <div>
+                <div class="text-text-primary font-medium mb-1">Casino Portal</div>
+                <div class="text-text-secondary">{{ casinoPortalLocation }}</div>
+              </div>
+              <!-- Dark Chapel Statue -->
+              <div class="border-t border-border-default pt-2">
+                <div class="text-text-primary font-medium mb-1">Dark Chapel Statue</div>
+                <div class="text-text-secondary">{{ darkChapelDirection }}</div>
+              </div>
+              <!-- Upcoming phases -->
+              <div v-if="daysUntil.length > 0" class="border-t border-border-default pt-2">
+                <div class="text-text-primary font-medium mb-1">Upcoming</div>
+                <div v-for="d in daysUntil" :key="d.game_phase" class="flex justify-between gap-4">
+                  <span class="text-text-secondary">{{ d.label }}</span>
+                  <span class="text-text-muted">{{ d.days }}d</span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </EntityTooltipWrapper>
       </template>
     </div>
 
@@ -125,7 +149,8 @@ import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useGameStateStore } from '../../stores/gameStateStore'
 import { useGameDataStore } from '../../stores/gameDataStore'
 import { useSettingsStore } from '../../stores/settingsStore'
-import { useMoonPhase } from '../../composables/useMoonPhase'
+import { useMoonPhase, type MoonPhaseName } from '../../composables/useMoonPhase'
+import EntityTooltipWrapper from '../Shared/EntityTooltipWrapper.vue'
 import { useViewPrefs } from '../../composables/useViewPrefs'
 import { CURRENCY_DISPLAY_ORDER, CURRENCY_DISPLAY_NAMES, CONTEXT_BAR_DEFAULTS, type ContextBarPrefs } from './contextBarPrefs'
 
@@ -209,6 +234,41 @@ const nextPhaseText = computed(() => {
   if (daysUntil.value.length === 0) return null
   const next = daysUntil.value[0]
   return `${next.label} in ${next.days}d`
+})
+
+// Casino Portal: Rahu during New Moon, First Quarter, Full Moon, Last Quarter
+// Statehelm during Crescent and Gibbous phases
+const CASINO_PORTAL_LOCATION: Record<MoonPhaseName, string> = {
+  NewMoon: 'Rahu',
+  WaxingCrescentMoon: 'Statehelm',
+  QuarterMoon: 'Rahu',
+  WaxingGibbousMoon: 'Statehelm',
+  FullMoon: 'Rahu',
+  WaningGibbousMoon: 'Statehelm',
+  LastQuarterMoon: 'Rahu',
+  WaningCrescentMoon: 'Statehelm',
+}
+
+// Dark Chapel Statue direction by moon phase
+const DARK_CHAPEL_DIRECTION: Record<MoonPhaseName, string> = {
+  NewMoon: 'Southwest',
+  WaxingCrescentMoon: 'South',
+  QuarterMoon: 'Southeast',
+  WaxingGibbousMoon: 'East',
+  FullMoon: 'Northeast',
+  WaningGibbousMoon: 'North',
+  LastQuarterMoon: 'Northwest',
+  WaningCrescentMoon: 'West',
+}
+
+const casinoPortalLocation = computed(() => {
+  if (!phase.value) return ''
+  return CASINO_PORTAL_LOCATION[phase.value.name]
+})
+
+const darkChapelDirection = computed(() => {
+  if (!phase.value) return ''
+  return DARK_CHAPEL_DIRECTION[phase.value.name]
 })
 
 const fullMoonText = computed(() => {

@@ -89,9 +89,6 @@ These are investigated items kept for reference — the research is done but the
   - All these skills share a real-time waiting pattern with no log events for the timer portion. Mushroom barrel timers, brewing cask aging (1–3h), cheesemaking aging (1–9h), and fletching drying (1–30m, daylight+sunny only) would all need manual-entry timers. Could share a single reusable timer system. Talk to buppis for brewing specifics. **Partial update:** `ProcessUpdateDescription` does fire for timed crafting items while the player is nearby (e.g. "Rising Simple Sourdough" with proofing countdown and increasing scale value). This provides live progress for items in proximity but won't help with offline/away timers. See `docs/plans/capture-results.md`.
   - **Effort: Medium-High**
 
-- [ ] 'Package data' export feature
-  - Create zip file of game state JSON, player.log, chat logs, and character/inventory exports. All data sources have path helpers already. `character_snapshots` table already stores `raw_json` for every imported snapshot (historical character JSON is preserved). Needs `zip` crate, a new Tauri command to gather files + DB snapshots, and a save dialog.
-  - **Effort: Low-Medium**
 
 ---
 
