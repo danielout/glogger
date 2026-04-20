@@ -87,6 +87,7 @@ export const useGameDataStore = defineStore("gameData", () => {
     status.value = "ready";
     errorMessage.value = null;
     await Promise.all([refreshCacheStatus(), loadAllNpcsMap(), loadAllQuests()]);
+    startCdnPolling();
   });
 
   listen<string>("game-data-error", (event) => {
@@ -129,6 +130,61 @@ export const useGameDataStore = defineStore("gameData", () => {
       errorMessage.value = String(e);
       throw e;
     }
+  }
+
+  // ── CDN version monitoring ───────────────────────────────────��─────────────
+  // Polls for CDN version changes while the app is running.
+  // When a mismatch is detected, surfaces a blocking modal via cdnUpdateAvailable.
+
+  const CDN_POLL_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
+  const CDN_DISMISS_MS = 30 * 60 * 1000; // 30 minutes
+
+  const cdnUpdateAvailable = ref(false);
+  const cdnCurrentVersion = ref(0);
+  const cdnRemoteVersion = ref(0);
+  const cdnDismissed = ref(false);
+
+  let cdnPollId: ReturnType<typeof setInterval> | null = null;
+  let cdnRedismissId: ReturnType<typeof setTimeout> | null = null;
+
+  async function checkCdnVersion() {
+    try {
+      const result = await invoke<{
+        update_available: boolean;
+        current_version: number;
+        remote_version: number;
+      }>("check_cdn_version");
+
+      if (result.update_available) {
+        cdnUpdateAvailable.value = true;
+        cdnCurrentVersion.value = result.current_version;
+        cdnRemoteVersion.value = result.remote_version;
+      }
+    } catch {
+      // Silently ignore — offline, CDN down, etc.
+    }
+  }
+
+  function startCdnPolling() {
+    if (cdnPollId) return;
+    // First check after 2 minutes, then every 15 minutes
+    setTimeout(() => checkCdnVersion(), 2 * 60 * 1000);
+    cdnPollId = setInterval(() => checkCdnVersion(), CDN_POLL_INTERVAL_MS);
+  }
+
+  function stopCdnPolling() {
+    if (cdnPollId) {
+      clearInterval(cdnPollId);
+      cdnPollId = null;
+    }
+  }
+
+  function dismissCdnUpdate() {
+    cdnDismissed.value = true;
+    if (cdnRedismissId) clearTimeout(cdnRedismissId);
+    cdnRedismissId = setTimeout(() => {
+      cdnDismissed.value = false;
+    }, CDN_DISMISS_MS);
   }
 
   // ── Unified entity resolvers ─────────────────────────────────────────────
@@ -487,6 +543,14 @@ export const useGameDataStore = defineStore("gameData", () => {
     getStorageVaultZones,
     storageVaultZones,
     getIconPath,
+    // CDN version monitoring
+    cdnUpdateAvailable,
+    cdnCurrentVersion,
+    cdnRemoteVersion,
+    cdnDismissed,
+    checkCdnVersion,
+    dismissCdnUpdate,
+    stopCdnPolling,
     // Cross-reference queries
     getNpcsWantingItem,
     getNpcsTrainingSkill,

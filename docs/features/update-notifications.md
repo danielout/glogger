@@ -2,20 +2,23 @@
 
 ## Overview
 
-Glogger checks for new releases on GitHub and notifies the user when a newer version is available. This is a lightweight "go download it" notification — it does not auto-update or download anything on the user's behalf.
+Glogger has two update systems:
 
-## How It Works
+1. **App auto-updater** — checks GitHub releases for new app versions and allows one-click download + install via the Tauri updater plugin.
+2. **CDN game data monitoring** — polls for Project: Gorgon CDN version changes and surfaces a blocking modal when stale data is detected.
 
-### Version Check
+## App Auto-Updater
 
-- **Source:** GitHub Releases API for [danielout/glogger-release](https://github.com/danielout/glogger-release)
-- **Endpoint:** `GET /repos/danielout/glogger-release/releases/latest`
-- The Rust backend (`src-tauri/src/update_check.rs`) fetches the latest release, strips the `v` prefix from the tag, and does a semver comparison against the running app version from `tauri.conf.json`.
-- Failures (no network, rate-limited, GitHub down) are silently ignored — the feature is best-effort.
+### How It Works
+
+- **Source:** GitHub Releases on [danielout/glogger-release](https://github.com/danielout/glogger-release)
+- Uses the [Tauri updater plugin](https://v2.tauri.app/plugin/updater/) (`tauri-plugin-updater`) which checks a `latest.json` manifest attached to the latest release.
+- The manifest includes download URLs and cryptographic signatures for each platform. Signatures are verified before installation.
+- Failures (no network, rate-limited, GitHub down) are silently ignored.
 
 ### Polling Schedule
 
-- **Initial check:** 5 seconds after app startup (avoids blocking the startup sequence)
+- **Initial check:** 5 seconds after app startup
 - **Recurring:** Every 60 minutes while the app is running
 - Managed by the frontend update store (`src/stores/updateStore.ts`)
 
@@ -23,23 +26,48 @@ Glogger checks for new releases on GitHub and notifies the user when a newer ver
 
 Two notification surfaces:
 
-1. **Toast (one-time):** When a new version is first detected, an info toast appears via the existing toast system: *"Glogger v0.5.0 is available!"*
+1. **Toast (one-time):** When a new version is first detected, an info toast appears: *"Glogger vX.Y.Z is available!"*
 
-2. **Bottom bar (persistent):** A small indicator appears on the right side of the app's bottom status bar showing the available version (e.g., "v0.5.0 available"). Clicking it opens the GitHub release page in the user's default browser. The indicator includes a pulsing dot to draw subtle attention.
+2. **Bottom bar (persistent):** A small indicator in the status bar shows "Update to vX.Y.Z". Clicking it downloads and installs the update, then restarts the app. A progress percentage is shown during download.
 
-The user can dismiss the bottom bar indicator via the ✕ button. It will automatically resurface after 5 hours to gently re-remind during long sessions.
+The user can dismiss the indicator via the X button. It resurfaces after 5 hours.
+
+### Signing
+
+Release builds are signed with a keypair. The public key is in `tauri.conf.json` under `plugins.updater.pubkey`. The private key is a GitHub Actions secret (`TAURI_SIGNING_PRIVATE_KEY`). The CI workflow uses `tauri-apps/tauri-action` which auto-generates `latest.json` and `.sig` files for each platform artifact.
+
+## CDN Game Data Monitoring
+
+### Why This Matters
+
+If Project: Gorgon pushes a CDN data update while glogger is running, the app continues using stale data. This can cause incorrect item names, broken recipe lookups, and missing entity information.
+
+### How It Works
+
+- After game data loads, a background poll starts checking the CDN version endpoint (`http://client.projectgorgon.com/fileversion.txt`).
+- **Poll interval:** Every 15 minutes (CDN updates are infrequent).
+- If the remote version differs from the loaded version, `cdnUpdateAvailable` is set in the game data store.
+
+### User Notification
+
+A **blocking modal dialog** appears over the entire app:
+
+- Shows the version change (e.g., "v621 -> v622")
+- Warns that stale data may cause incorrect information
+- Two buttons:
+  - **Restart Now** — re-downloads CDN data and relaunches the app
+  - **Remind Me Later** — dismisses the modal for 30 minutes, then re-shows
+
+The modal is intentionally blocking (no backdrop-click-to-dismiss) to ensure users don't run with stale data indefinitely.
 
 ## Key Files
 
 | Layer | File | Purpose |
 |-------|------|---------|
-| Rust | `src-tauri/src/update_check.rs` | GitHub API call, semver comparison, `check_for_update` command |
-| Store | `src/stores/updateStore.ts` | Polling lifecycle, update state, toast trigger |
-| UI | `src/App.vue` | Bottom bar indicator, click-to-open handler |
-
-## Design Decisions
-
-- **No auto-update:** Avoids the complexity of code signing, delta patching, and Tauri's built-in updater. Appropriate for the beta stage.
-- **GitHub Releases API:** No custom infrastructure needed — releases are already published there.
-- **Silent failure:** Network errors never surface to the user. The update check is strictly informational.
-- **Dismiss resurfaces after 5 hours:** Dismissing the indicator hides it temporarily. It reappears after 5 hours to gently re-remind during long sessions without being annoying.
+| Config | `src-tauri/tauri.conf.json` | Updater plugin config (pubkey, endpoints, install mode) |
+| Store | `src/stores/updateStore.ts` | App update polling, download/install lifecycle |
+| Store | `src/stores/gameDataStore.ts` | CDN version polling, `cdnUpdateAvailable` state |
+| Rust | `src-tauri/src/cdn_commands.rs` | `check_cdn_version` command |
+| UI | `src/App.vue` | Bottom bar update indicator, CDN modal wiring |
+| UI | `src/components/Shared/CdnUpdateModal.vue` | Blocking CDN update modal |
+| CI | `.github/workflows/release.yml` | Build + sign + publish with `tauri-apps/tauri-action` |

@@ -66,18 +66,26 @@
       <div class="shrink-0 h-6 bg-surface-base border-t border-border-default flex items-center justify-between px-3">
         <span class="text-text-dim text-[0.6rem]">Glogger by Zenith of Dreva -- Some portions copyright 2026 Elder Game, LLC.</span>
         <div v-if="updateStore.updateAvailable && !updateStore.dismissed" class="flex items-center gap-1.5 text-[0.6rem]">
-          <button
-            class="flex items-center gap-1.5 text-accent-blue hover:text-accent-blue-bright transition-colors cursor-pointer"
-            @click="openUpdate"
-          >
-            <span class="inline-block w-1.5 h-1.5 rounded-full bg-accent-blue animate-pulse" />
-            v{{ updateStore.latestVersion }} available
-          </button>
-          <button
-            class="text-text-dim hover:text-text-default transition-colors cursor-pointer"
-            title="Dismiss"
-            @click="updateStore.dismiss()"
-          >✕</button>
+          <template v-if="updateStore.installing">
+            <span class="text-accent-blue">
+              Updating... {{ updateStore.downloadProgress }}%
+            </span>
+          </template>
+          <template v-else>
+            <button
+              class="flex items-center gap-1.5 text-accent-blue hover:text-accent-blue-bright transition-colors cursor-pointer"
+              @click="updateStore.downloadAndInstall()"
+            >
+              <span class="inline-block w-1.5 h-1.5 rounded-full bg-accent-blue animate-pulse" />
+              Update to v{{ updateStore.latestVersion }}
+            </button>
+            <button
+              class="text-text-dim hover:text-text-default transition-colors cursor-pointer"
+              title="Dismiss"
+              @click="updateStore.dismiss()"
+            >&#10005;</button>
+          </template>
+          <span v-if="updateStore.installError" class="text-accent-red">{{ updateStore.installError }}</span>
         </div>
       </div>
 
@@ -88,6 +96,14 @@
         @navigate="showHelp = false; navigateToView($event as AppView)"
       />
       <ToastContainer />
+      <CdnUpdateModal
+        :show="gameDataStore.cdnUpdateAvailable && !gameDataStore.cdnDismissed"
+        :current-version="gameDataStore.cdnCurrentVersion"
+        :remote-version="gameDataStore.cdnRemoteVersion"
+        :restarting="cdnRestarting"
+        @dismiss="gameDataStore.dismissCdnUpdate()"
+        @restart="handleCdnRestart"
+      />
       <QuickSearchOverlay
         :show="showQuickSearch"
         @update:show="showQuickSearch = $event"
@@ -104,8 +120,9 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useSettingsStore } from "./stores/settingsStore";
 import { useStartupStore } from "./stores/startupStore";
 import { useUpdateStore } from "./stores/updateStore";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { useGameDataStore } from "./stores/gameDataStore";
 import { useGameStateStore } from "./stores/gameStateStore";
+import { relaunch } from "@tauri-apps/plugin-process";
 import { provideEntityNavigation } from "./composables/useEntityNavigation";
 import { useDataBrowserStore, entityTypeToTab } from "./stores/dataBrowserStore";
 import { provideViewNavigation } from "./composables/useViewNavigation";
@@ -130,6 +147,7 @@ import CharacterSelect from "./components/Startup/CharacterSelect.vue";
 import ToastContainer from "./components/Shared/ToastContainer.vue";
 import QuickSearchOverlay from "./components/Search/QuickSearchOverlay.vue";
 import ReferenceShelf from "./components/Shared/ReferenceShelf/ReferenceShelf.vue";
+import CdnUpdateModal from "./components/Shared/CdnUpdateModal.vue";
 import { useToast } from "./composables/useToast";
 import type { SearchResult } from "./composables/useQuickSearch";
 
@@ -137,11 +155,21 @@ const settingsStore = useSettingsStore();
 const toast = useToast();
 const startup = useStartupStore();
 const updateStore = useUpdateStore();
+const gameDataStore = useGameDataStore();
 const dataBrowserStore = useDataBrowserStore();
 const dataBrowserOverlayRef = ref<InstanceType<typeof DataBrowserOverlay> | null>(null);
 
-function openUpdate() {
-  openUrl(updateStore.downloadUrl);
+const cdnRestarting = ref(false);
+
+async function handleCdnRestart() {
+  cdnRestarting.value = true;
+  try {
+    await gameDataStore.forceRefreshCdn();
+    await relaunch();
+  } catch (e: any) {
+    cdnRestarting.value = false;
+    toast.error(`CDN update failed: ${e}`);
+  }
 }
 
 const error = ref("");

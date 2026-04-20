@@ -100,20 +100,20 @@ jobs:
           name: release-notes
           path: RELEASE_NOTES.md
 
-  # ── Step 2: build on all platforms in parallel ──
+  # ── Step 2: build on all platforms with tauri-action ──
   build:
     needs: prepare
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: windows-latest
-            label: windows
-          - os: macos-latest
-            label: macos
-          - os: ubuntu-latest
-            label: linux
-    runs-on: ${{ matrix.os }}
+          - platform: windows-latest
+            args: ""
+          - platform: macos-latest
+            args: "--target aarch64-apple-darwin"
+          - platform: ubuntu-latest
+            args: ""
+    runs-on: ${{ matrix.platform }}
     steps:
       - name: Checkout (at release tag)
         uses: actions/checkout@v5
@@ -121,7 +121,7 @@ jobs:
           ref: v${{ needs.prepare.outputs.version }}
 
       - name: Install Linux dependencies
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.platform == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
@@ -134,6 +134,8 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
 
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
@@ -143,47 +145,23 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build Tauri app
-        shell: bash
-        run: npm run tauri:build
-
-      - name: Collect and rename artifacts
-        shell: bash
+      - name: Build with tauri-action
+        uses: tauri-apps/tauri-action@v0
         env:
-          VERSION: ${{ needs.prepare.outputs.version }}
-        run: |
-          BUNDLE_DIR="src-tauri/target/release/bundle"
-          mkdir -p release-artifacts
-
-          # Windows: NSIS
-          for f in "$BUNDLE_DIR"/nsis/*.exe; do
-            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-windows-setup.exe"
-          done
-
-          # macOS: DMG
-          for f in "$BUNDLE_DIR"/dmg/*.dmg; do
-            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-macos.dmg"
-          done
-
-          # Linux: deb + AppImage
-          for f in "$BUNDLE_DIR"/deb/*.deb; do
-            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-linux.deb"
-          done
-          for f in "$BUNDLE_DIR"/appimage/*.AppImage; do
-            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-linux.AppImage"
-          done
-
-          echo "Collected artifacts:"
-          ls -la release-artifacts/
-
-      - name: Upload platform artifacts
-        uses: actions/upload-artifact@v6
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          name: artifacts-${{ matrix.label }}
-          path: release-artifacts/*
+          tagName: v${{ needs.prepare.outputs.version }}
+          releaseName: v${{ needs.prepare.outputs.version }}
+          releaseBody: ""
+          owner: ${{ github.repository_owner }}
+          repo: glogger-release
+          args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json
+          updaterJsonPreferNsis: true
 
-  # ── Step 3: collect all artifacts and publish to release repo ──
-  publish:
+  # ── Step 3: update release notes on the published release ──
+  finalize:
     needs: [prepare, build]
     runs-on: ubuntu-latest
     steps:
@@ -192,37 +170,29 @@ jobs:
         with:
           name: release-notes
 
-      - name: Download all platform artifacts
-        uses: actions/download-artifact@v7
-        with:
-          pattern: artifacts-*
-          path: all-artifacts
-          merge-multiple: true
-
-      - name: List artifacts
-        run: ls -la all-artifacts/
-
-      - name: Publish release to glogger-release repo
+      - name: Update release notes
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
         run: |
           TAG="v${{ needs.prepare.outputs.version }}"
-          VERSION="${{ needs.prepare.outputs.version }}"
+
+          # Build a download table from the release assets
+          ASSETS=$(gh release view "$TAG" --repo "$RELEASE_REPO" --json assets -q '.assets[].name')
           BASE_URL="https://github.com/$RELEASE_REPO/releases/download/$TAG"
 
-          # Build a download table from the artifacts that actually exist
           DOWNLOADS="## Downloads\n\n| Platform | Installer |\n|----------|-----------|"
-          for file in all-artifacts/*; do
-            [ -f "$file" ] || continue
-            NAME="$(basename "$file")"
+          while IFS= read -r NAME; do
             case "$NAME" in
-              *-windows-setup.exe) DOWNLOADS="$DOWNLOADS\n| **Windows** (recommended) | [$NAME]($BASE_URL/$NAME) |" ;;
-              *-macos.dmg)         DOWNLOADS="$DOWNLOADS\n| **macOS** | [$NAME]($BASE_URL/$NAME) |" ;;
-              *-linux.deb)         DOWNLOADS="$DOWNLOADS\n| **Linux** (Debian/Ubuntu) | [$NAME]($BASE_URL/$NAME) |" ;;
-              *-linux.AppImage)    DOWNLOADS="$DOWNLOADS\n| **Linux** (AppImage) | [$NAME]($BASE_URL/$NAME) |" ;;
+              *.exe) DOWNLOADS="$DOWNLOADS\n| **Windows** | [$NAME]($BASE_URL/$NAME) |" ;;
+              *.dmg) DOWNLOADS="$DOWNLOADS\n| **macOS** | [$NAME]($BASE_URL/$NAME) |" ;;
+              *.deb) DOWNLOADS="$DOWNLOADS\n| **Linux** (Debian/Ubuntu) | [$NAME]($BASE_URL/$NAME) |" ;;
+              *.AppImage) DOWNLOADS="$DOWNLOADS\n| **Linux** (AppImage) | [$NAME]($BASE_URL/$NAME) |" ;;
+              latest.json) ;; # skip updater manifest
+              *.sig) ;; # skip signature files
+              *) ;;
             esac
-          done
+          done <<< "$ASSETS"
 
           # Prepend downloads table to changelog
           {
@@ -233,15 +203,6 @@ jobs:
             cat RELEASE_NOTES.md
           } > FULL_RELEASE_NOTES.md
 
-          gh release create "$TAG" \
+          gh release edit "$TAG" \
             --repo "$RELEASE_REPO" \
-            --title "$TAG" \
             --notes-file FULL_RELEASE_NOTES.md
-
-          for file in all-artifacts/*; do
-            [ -f "$file" ] || continue
-            echo "Uploading: $file"
-            gh release upload "$TAG" "$file" --repo "$RELEASE_REPO"
-          done
-
-          echo "Release published: https://github.com/$RELEASE_REPO/releases/tag/$TAG"

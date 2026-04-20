@@ -24,7 +24,6 @@ mod stall_year_resolver;
 mod survey;
 mod external_fetch;
 mod gst_manager;
-mod update_check;
 mod watch_rules;
 
 use chrono::Local;
@@ -34,6 +33,7 @@ use tauri::{Emitter, Manager};
 use tokio::sync::RwLock;
 
 use cdn_commands::{
+    check_cdn_version,
     force_refresh_cdn,
     get_abilities_for_skill,
     get_ability_families_for_skill,
@@ -189,7 +189,6 @@ use db::player_commands::{
 use replay::replay_dual_logs;
 use external_fetch::{fetch_github_releases, fetch_pg_news};
 use gst_manager::{gst_check_status, gst_download, gst_launch};
-use update_check::check_for_update;
 use settings::{
     get_server_list, get_settings_file_path, load_settings, save_settings, SettingsManager,
 };
@@ -220,6 +219,8 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(game_data_state.clone())
         .setup(move |app| {
             let app_handle = app.handle().clone();
@@ -359,6 +360,7 @@ pub fn run() {
             replay_dual_logs,
             // CDN management
             get_cache_status,
+            check_cdn_version,
             force_refresh_cdn,
             // Unified entity resolvers
             resolve_item,
@@ -636,8 +638,6 @@ pub fn run() {
             db::words_of_power_commands::get_words_of_power,
             db::words_of_power_commands::add_word_of_power,
             db::words_of_power_commands::delete_word_of_power,
-            // Update check
-            check_for_update,
             // External content
             fetch_github_releases,
             fetch_pg_news,

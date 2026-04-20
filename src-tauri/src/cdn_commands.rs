@@ -129,6 +129,31 @@ pub struct CacheStatus {
     pub skill_count: usize,
 }
 
+#[derive(serde::Serialize)]
+pub struct CdnVersionCheck {
+    pub update_available: bool,
+    pub current_version: u32,
+    pub remote_version: u32,
+}
+
+/// Lightweight check: is there a newer CDN version than what we currently have loaded?
+/// Only fetches the single-integer version file, not the full cache status.
+#[tauri::command]
+pub async fn check_cdn_version(
+    state: State<'_, GameDataState>,
+) -> Result<CdnVersionCheck, String> {
+    let current_version = state.read().await.version;
+    let remote_version = cdn::fetch_remote_version()
+        .await
+        .map_err(|e| format!("CDN version check failed: {e}"))?;
+
+    Ok(CdnVersionCheck {
+        update_available: remote_version != current_version && current_version > 0,
+        current_version,
+        remote_version,
+    })
+}
+
 /// Returns current cache status and whether a CDN update is available.
 #[tauri::command]
 pub async fn get_cache_status(
