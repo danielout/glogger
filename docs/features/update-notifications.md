@@ -39,7 +39,7 @@ The user can dismiss the bottom bar indicator via the ✕ button. It will automa
 
 ## Design Decisions
 
-- **No auto-update:** Avoids the complexity of code signing, delta patching, and Tauri's built-in updater. Appropriate for the alpha stage.
+- **No auto-update:** Avoids the complexity of code signing, delta patching, and Tauri's built-in updater. Appropriate for the beta stage.
 - **GitHub Releases API:** No custom infrastructure needed — releases are already published there.
 - **Silent failure:** Network errors never surface to the user. The update check is strictly informational.
 - **Dismiss resurfaces after 5 hours:** Dismissing the indicator hides it temporarily. It reappears after 5 hours to gently re-remind during long sessions without being annoying.

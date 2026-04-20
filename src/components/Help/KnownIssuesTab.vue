@@ -3,7 +3,7 @@
     <!-- Header -->
     <div>
       <p class="text-sm text-text-muted mt-1">
-        Glogger is currently in <span class="text-accent-gold font-medium">early alpha</span>.
+        Glogger is currently in <span class="text-accent-gold font-medium">beta</span>.
         Below are known issues and limitations we're aware of.
       </p>
     </div>

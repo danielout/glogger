@@ -82,7 +82,7 @@ Currently, ingredient trees are fully recomputed on every resolve. Some of this 
 
 - **Resolved ingredient tree per entry** — Store the serialized `ResolvedIngredient[]` tree alongside each entry. Invalidate when: recipe CDN data changes (version bump), quantity changes, or expansion set changes. This avoids re-resolving unchanged entries during bulk operations.
 - **Intermediate craftability flags** — Store which ingredients are craftable alongside the entry. This is derivable from CDN data and doesn't change between resolves — only on CDN updates.
-- **Caveat:** Persisting computed trees adds schema complexity and cache invalidation concerns. A simpler in-memory cache (keyed by `recipe_id + quantity + expandedItemIds hash`) achieves the same benefit without migration burden. Given the project's early alpha status, the in-memory approach is probably better.
+- **Caveat:** Persisting computed trees adds schema complexity and cache invalidation concerns. A simpler in-memory cache (keyed by `recipe_id + quantity + expandedItemIds hash`) achieves the same benefit without migration burden. Given the project's beta status, the in-memory approach is probably better.
 
 ### 9. Loading states and progress indicators
 

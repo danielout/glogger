@@ -73,7 +73,7 @@ sed -i "s/\"version\": \"$CURRENT\"/\"version\": \"$NEW_VERSION\"/" "$TAURI_CONF
 sed -i "s/\"title\": \"glogger v$CURRENT DEV\"/\"title\": \"glogger v$NEW_VERSION DEV\"/" "$TAURI_CONF"
 
 # 3. Update tauri.release.conf.json — release window title
-sed -i "s/\"title\": \"glogger alpha v$CURRENT\"/\"title\": \"glogger alpha v$NEW_VERSION\"/" "$TAURI_RELEASE_CONF"
+sed -i "s/\"title\": \"glogger beta v$CURRENT\"/\"title\": \"glogger beta v$NEW_VERSION\"/" "$TAURI_RELEASE_CONF"
 
 # 4. Update package.json
 sed -i "s/\"version\": \"[0-9]*\.[0-9]*\.[0-9]*\"/\"version\": \"$NEW_VERSION\"/" "$PACKAGE_JSON"
