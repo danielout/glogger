@@ -1,15 +1,14 @@
-## What's Changed since v0.6.6
+## What's Changed since v0.7.0
 
 ### Features
-- feat: adding milking widget and stat tracker widget to dashboard (`0bcd8ec`)
-- feat: character stats page now tracks all attributes, /age, and /behaviorreport - also initial batch of computed stats. (`c712d5b`)
+- feat: wop tracker (`b271f2b`)
+- feat: GST launch and download button, and link to info (`4494a8d`)
 
 ### Improvements
-- impv: update gourmand report just on log view, saving not required (`6f06aac`)
-- impv: better log parsing, updating documentation, additional game state tracking (`0ae4bba`)
+- impv: hovering the moon gives you good moon info! (`dd86171`)
 
 ### Fixes
-- fix: fixing dashboard flashing, hopefully (`2b52e27`)
+- fix: attribution (`4bb416e`)
 
 ---
-*7 commits since v0.6.6*
+*5 commits since v0.7.0*
