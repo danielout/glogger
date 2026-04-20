@@ -3451,3 +3451,62 @@ pub async fn get_brewing_ingredients(
     let data = state.read().await;
     Ok(data.brewing_ingredients.clone())
 }
+
+// ── CDN Diff commands ────────────────────────────────────────────────────────
+
+use crate::cdn_diff::{self, FileDiffSummary, FileDiff};
+
+/// Download the prior CDN version's data files and compute a diff summary.
+/// The downloaded files are kept in `_diff_old/` and reused across sessions.
+/// They are only re-downloaded when the current cached version changes
+/// (i.e. we track which old version we downloaded via `_diff_old/version.txt`).
+#[tauri::command]
+pub async fn cdn_diff_summary(
+    app: AppHandle,
+) -> Result<Vec<FileDiffSummary>, String> {
+    let data_dir = data_cache_dir(&app)?;
+    let cached_version = cdn::read_cached_version(&data_dir)
+        .await
+        .ok_or("No cached CDN version found")?;
+
+    if cached_version == 0 {
+        return Err("Cannot diff: cached version is 0".into());
+    }
+
+    let old_version = cached_version - 1;
+    let old_dir = data_dir.join("_diff_old");
+    std::fs::create_dir_all(&old_dir)
+        .map_err(|e| format!("Failed to create diff dir: {e}"))?;
+
+    // Only re-download if the cached old version doesn't match what we need
+    let old_cached = cdn::read_cached_version(&old_dir).await;
+    if old_cached != Some(old_version) {
+        cdn::download_all_data_files(old_version, &old_dir).await?;
+        cdn::write_cached_version(&old_dir, old_version).await?;
+    }
+
+    cdn_diff::compute_summary(&old_dir, &data_dir).await
+}
+
+/// Compute a detailed diff for a single CDN data file.
+/// Reads the prior version from the `_diff_old/` directory that was populated
+/// by `cdn_diff_summary` — no additional download needed.
+#[tauri::command]
+pub async fn cdn_diff_file(
+    app: AppHandle,
+    file_name: String,
+) -> Result<FileDiff, String> {
+    if !cdn::DATA_FILES.contains(&file_name.as_str()) {
+        return Err(format!("Unknown data file: {file_name}"));
+    }
+
+    let data_dir = data_cache_dir(&app)?;
+    let old_dir = data_dir.join("_diff_old");
+
+    if !old_dir.exists() {
+        return Err("No diff data available — run CDN Diff Summary first".into());
+    }
+
+    cdn_diff::compute_file_diff(&file_name, &old_dir, &data_dir).await
+}
+

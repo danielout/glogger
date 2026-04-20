@@ -20,6 +20,17 @@
             >
               {{ tab.label }}
             </button>
+            <!-- CDN Diff tab (dev mode only, far right) -->
+            <template v-if="devMode">
+              <div class="w-px h-4 bg-border-default" />
+              <button
+                class="px-2.5 py-1 bg-transparent border-none text-text-secondary cursor-pointer font-mono text-xs rounded transition-all hover:bg-surface-elevated hover:text-text-primary"
+                :class="{ 'text-accent-gold! bg-surface-elevated! shadow-sm': store.activeType === 'cdn-diff' }"
+                @click="store.setActiveType('cdn-diff')"
+              >
+                CDN Diff
+              </button>
+            </template>
             <div class="flex-1" />
             <kbd class="text-[0.55rem] text-text-dim bg-surface-elevated border border-border-default rounded px-1.5 py-0.5">ESC</kbd>
             <button
@@ -63,10 +74,13 @@
               <div v-if="visitedTypes.has('treasure')" v-show="store.activeType === 'treasure'" class="h-full">
                 <TsysBrowser />
               </div>
+              <div v-if="devMode && visitedTypes.has('cdn-diff')" v-show="store.activeType === 'cdn-diff'" class="h-full">
+                <CdnDiffBrowser />
+              </div>
             </div>
 
-            <!-- Sidebar -->
-            <DataBrowserSidebar class="shrink-0 border-l border-border-default bg-surface-dark/30" @navigate="handleSidebarNavigate" />
+            <!-- Sidebar (hidden on CDN Diff since it has its own right pane) -->
+            <DataBrowserSidebar v-show="store.activeType !== 'cdn-diff'" class="shrink-0 border-l border-border-default bg-surface-dark/30" @navigate="handleSidebarNavigate" />
           </div>
         </div>
       </div>
@@ -75,8 +89,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, nextTick, onMounted, onBeforeUnmount } from "vue";
+import { ref, reactive, computed, watch, nextTick, onMounted, onBeforeUnmount } from "vue";
 import { useDataBrowserStore, browserTypes, entityTypeToTab } from "../../stores/dataBrowserStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import ItemSearch from "./ItemSearch.vue";
 import SkillBrowser from "./SkillBrowser.vue";
@@ -88,7 +103,11 @@ import EffectBrowser from "./EffectBrowser.vue";
 import LoreBrowser from "./LoreBrowser.vue";
 import TitleBrowser from "./TitleBrowser.vue";
 import TsysBrowser from "./TsysBrowser.vue";
+import CdnDiffBrowser from "./CdnDiffBrowser.vue";
 import DataBrowserSidebar from "./DataBrowserSidebar.vue";
+
+const settingsStore = useSettingsStore();
+const devMode = computed(() => settingsStore.settings.devModeEnabled);
 
 const store = useDataBrowserStore();
 const navTarget = ref<EntityNavigationTarget | null>(null);

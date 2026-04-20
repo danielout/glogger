@@ -1,5 +1,6 @@
 mod cdn;
 mod cdn_commands;
+mod cdn_diff;
 mod chat_commands;
 mod chat_parser;
 mod chat_combat_parser;
@@ -110,6 +111,8 @@ use cdn_commands::{
     get_current_moon_phase,
     get_recipes_for_keyword,
     find_recipe_items_in_inventory,
+    cdn_diff_summary,
+    cdn_diff_file,
     GameDataState,
 };
 use db::brewing_commands::{
@@ -362,6 +365,8 @@ pub fn run() {
             get_cache_status,
             check_cdn_version,
             force_refresh_cdn,
+            cdn_diff_summary,
+            cdn_diff_file,
             // Unified entity resolvers
             resolve_item,
             resolve_items_batch,
