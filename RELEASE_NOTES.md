@@ -1,4 +1,4 @@
-## What's Changed since v0.7.2
+## What's Changed since v0.7.4
 
 ---
-*2 commits since v0.7.2*
+*0 commits since v0.7.4*
