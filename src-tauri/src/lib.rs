@@ -632,6 +632,10 @@ pub fn run() {
             db::stall_tracker_commands::import_shop_log_file,
             db::stall_tracker_commands::export_shop_log_files,
             db::stall_tracker_commands::seed_stall_events_dev,
+            // Words of Power
+            db::words_of_power_commands::get_words_of_power,
+            db::words_of_power_commands::add_word_of_power,
+            db::words_of_power_commands::delete_word_of_power,
             // Update check
             check_for_update,
             // External content

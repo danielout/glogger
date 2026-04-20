@@ -88,6 +88,7 @@ Each widget is documented in its own file under `dashboard/`:
 | Milking Timers | Small | NPC cow milking cooldown tracker — cows grouped by zone with 1h countdown timers, current zone floated to top. Includes "Players Milked" and "Milked By" leaderboard tabs for player-to-player milking. |
 | Mushroom Farming | Large | Moon-phase-aware mushroom reference table with level, grow time, substrates, and extra/reduced yield highlighting |
 | Stat Tracker | Small | Configurable display of player attributes and computed stats. Gear icon opens config to search and add/remove tracked stats. Defaults: Total Skill Levels, Combat XP Earned Mod, Crafting XP Earned Mod, Max Inventory Size. Updates live as attributes change. |
+| [Words of Power](dashboard/widget-words-of-power.md) | Medium | Auto-captures words of power when crafted, grouped by power name with age counters, click-to-copy, and manual add/remove. |
 
 ## Adding a New Widget
 

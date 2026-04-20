@@ -28,6 +28,7 @@ pub mod stall_tracker_commands;
 // legacy survey screen was removed; allow dead_code until that work lands.
 #[allow(dead_code)]
 pub mod survey_commands;
+pub mod words_of_power_commands;
 
 pub type DbPool = r2d2::Pool<SqliteConnectionManager>;
 pub type DbConnection = r2d2::PooledConnection<SqliteConnectionManager>;

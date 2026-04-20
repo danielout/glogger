@@ -207,6 +207,11 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 36)?;
     }
 
+    if current_version < 37 {
+        migration_v37_words_of_power(conn)?;
+        super::record_migration(conn, 37)?;
+    }
+
     Ok(())
 }
 
@@ -2012,6 +2017,25 @@ fn migration_v35_attribute_extremes(conn: &Connection) -> Result<()> {
          -- Seed min/max from current values for existing rows
          UPDATE game_state_attributes SET min_value = value, max_value = value
             WHERE min_value IS NULL;",
+    )?;
+    Ok(())
+}
+
+/// Migration V37: Words of Power — tracks discovered words for the dashboard widget.
+fn migration_v37_words_of_power(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE words_of_power (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            word TEXT NOT NULL,
+            power_name TEXT NOT NULL,
+            description TEXT,
+            discovered_at TEXT NOT NULL,
+            source TEXT NOT NULL DEFAULT 'auto',
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX idx_words_of_power_char_server ON words_of_power(character_name, server_name);",
     )?;
     Ok(())
 }

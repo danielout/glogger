@@ -746,6 +746,11 @@ impl DataIngestCoordinator {
                                 self.ingest_report_stats(book_type, content);
                             }
                         }
+
+                        // Detect word of power discovery books
+                        if title == "You discovered a word of power!" {
+                            self.ingest_word_of_power(timestamp, content);
+                        }
                     }
 
                     // Track cow interactions for milking timer feature
@@ -1526,6 +1531,92 @@ impl DataIngestCoordinator {
         self.app_handle
             .emit("game-state-updated", vec!["milking"])
             .ok();
+    }
+
+    /// Extract and persist a word of power from a "You discovered a word of power!" book.
+    ///
+    /// The word is wrapped in `<sel>WORD</sel>` and the power name follows
+    /// `<size=125%>Word of Power: NAME</size>` in the book content. The full
+    /// description text (between the power name and the disclaimer) is saved too.
+    fn ingest_word_of_power(&self, _timestamp: &str, content: &str) {
+        // Extract word from <sel>WORD</sel>
+        let word = match content.find("<sel>") {
+            Some(start) => {
+                let after = &content[start + 5..];
+                match after.find("</sel>") {
+                    Some(end) => after[..end].to_string(),
+                    None => return,
+                }
+            }
+            None => return,
+        };
+
+        // Extract power name from <size=125%>Word of Power: NAME</size>
+        let power_name = match content.find("<size=125%>") {
+            Some(start) => {
+                let after = &content[start + 11..];
+                match after.find("</size>") {
+                    Some(end) => {
+                        let raw = &after[..end];
+                        // Strip "Word of Power: " prefix if present
+                        raw.strip_prefix("Word of Power: ")
+                            .unwrap_or(raw)
+                            .to_string()
+                    }
+                    None => return,
+                }
+            }
+            None => return,
+        };
+
+        // Extract description: everything between the closing </size> of the name
+        // and the disclaimer italic block
+        let description = content
+            .find("</size></b>")
+            .and_then(|pos| {
+                let after = content[pos + 11..].trim_start_matches("\\n").trim();
+                // Stop before the disclaimer block
+                let end = after.find("<i><size=75%>").unwrap_or(after.len());
+                let desc = after[..end].trim().trim_matches('\\').trim_matches('n').trim();
+                if desc.is_empty() {
+                    None
+                } else {
+                    // Clean up escaped newlines
+                    Some(desc.replace("\\n", "\n").trim().to_string())
+                }
+            });
+
+        let Some((char_name, server_name)) = self.active_character_server() else {
+            return;
+        };
+
+        let dt = chrono::Utc::now().to_rfc3339();
+
+        if let Ok(conn) = self.db_pool.get() {
+            match crate::db::words_of_power_commands::insert_word_of_power(
+                &conn,
+                &char_name,
+                &server_name,
+                &word,
+                &power_name,
+                description.as_deref(),
+                &dt,
+            ) {
+                Ok(_id) => {
+                    startup_log!(
+                        "[coordinator] Word of power recorded: {} ({})",
+                        power_name,
+                        word
+                    );
+                    self.app_handle
+                        .emit("game-state-updated", vec!["words_of_power"])
+                        .ok();
+                }
+                Err(e) => {
+                    eprintln!("[coordinator] Failed to save word of power: {e}");
+                }
+            }
+        }
     }
 
     /// Parse a PlayerShopLog book body and persist its entries to the

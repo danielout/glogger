@@ -61,6 +61,7 @@ Per-screen documentation organized by view.
   - [widget-statehelm-summary.md](features/screens/dashboard/widget-statehelm-summary.md) — Statehelm Gifting widget: weekly gift progress.
   - [widget-watchword-alerts.md](features/screens/dashboard/widget-watchword-alerts.md) — Watchword Alerts widget: recent match feed.
   - [widget-death-tracker.md](features/screens/dashboard/widget-death-tracker.md) — Death Tracker widget: recent deaths, rez tracking, top rezzers.
+  - [widget-words-of-power.md](features/screens/dashboard/widget-words-of-power.md) — Words of Power widget: auto-captured crafted words with age counters and click-to-copy.
 
 ### Character
 - [character.md](features/screens/character.md) — Character screen: architecture, component hierarchy, data sources.

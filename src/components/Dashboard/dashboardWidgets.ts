@@ -20,6 +20,7 @@ import MilkingTimersWidget from "./widgets/MilkingTimersWidget.vue";
 import MushroomFarmingWidget from "./widgets/MushroomFarmingWidget.vue";
 import StatTrackerWidget from "./widgets/StatTrackerWidget.vue";
 import StatTrackerConfig from "./widgets/StatTrackerConfig.vue";
+import WordsOfPowerWidget from "./widgets/WordsOfPowerWidget.vue";
 
 export type WidgetSize = "small" | "medium" | "large";
 
@@ -159,6 +160,12 @@ export const DASHBOARD_WIDGETS: DashboardWidget[] = [
     component: StatTrackerWidget,
     configComponent: StatTrackerConfig,
     defaultSize: "small",
+  },
+  {
+    id: "words-of-power",
+    name: "Words of Power",
+    component: WordsOfPowerWidget,
+    defaultSize: "medium",
   },
 ];
 
