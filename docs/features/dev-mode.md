@@ -22,6 +22,7 @@ A standalone Tauri window (`src/dev-panel/`) that opens independently of the mai
 **Tabs:**
 
 - **Game State** — The game state inspector (moved from Settings > Game State). Shows all persisted game state domains (skills, inventory, equipment, recipes, favor, currencies, effects, storage) plus live in-memory data (inventory, event log, session skills). Includes an auto-refresh toggle.
+- **Debug Capture** — Record raw Player.log and Chat.log lines with game state snapshots for debugging and analysis. See [Debug Capture](#debug-capture) below.
 - **Component Showcase** — Interactive preview of shared UI components: AccordionSection, StyledSelect, TabBar, EmptyState, ModalDialog (prompt, confirm, danger variants).
 - **Testing Helpers** — Toast notification triggers. Can fire toasts in the main app window (via Tauri events) or preview them locally in the dev panel.
 
@@ -53,6 +54,32 @@ The dev panel is a second Vite entry point (`dev-panel.html`) with its own Vue a
 **Tauri config:**
 - `src-tauri/capabilities/default.json` — Window creation permissions (`core:window:allow-create`, `core:webview:allow-create-webview-window`), dev-panel window included in capability scope
 - `vite.config.ts` — Multi-page build with `rollupOptions.input`
+
+### Debug Capture
+
+The Debug Capture tab records raw log lines and game state snapshots for debugging, analysis, and feature discovery.
+
+**Three-phase flow:**
+
+1. **Recording** — Click "Start Capture" to begin buffering all raw Player.log and Chat.log lines to a temp file on disk. A game state snapshot is taken at the start. Live line counts are shown while recording.
+2. **Review** — Click "Stop Recording" to end the capture. A final game state snapshot is taken. The UI shows capture stats and an editable notes field so you can describe what was captured before saving.
+3. **Save** — Choose a save mode:
+   - **Save (Normal)** — Filters out engine noise (asset loading, animation warnings, sound events, `ProcessMusicPerformance`, etc.) for easier analysis. Typically reduces file size by 75-80%.
+   - **Save (Full)** — Keeps every raw line, for when today's noise might be tomorrow's signal.
+
+The capture can be discarded at any point (during recording or before saving).
+
+**Output format:** A single JSON file (format_version 2) containing:
+- `lines` — Array of `{ captured_at, source, line }` entries
+- `state_at_start` / `state_at_stop` — Full game state snapshots (skills, inventory, equipment, effects, favor, currencies, world state)
+- `filter_mode` — "normal" or "full"
+- `notes` — User description
+- `unfiltered_line_count` — Total lines before filtering (present even in normal mode)
+
+**Key files:**
+- `src/dev-panel/tabs/DebugCaptureTab.vue` — Frontend UI
+- `src-tauri/src/debug_capture.rs` — Core capture state machine, noise filtering, JSON output
+- `src-tauri/src/coordinator.rs` — Integration: watcher line draining, Tauri command handlers
 
 ### Cross-Window Communication
 

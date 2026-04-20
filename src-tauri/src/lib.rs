@@ -124,7 +124,8 @@ use chat_commands::{
 };
 use commands::parse_log;
 use coordinator::{
-    debug_capture_discard, debug_capture_start, debug_capture_status, debug_capture_stop,
+    debug_capture_discard, debug_capture_save, debug_capture_start, debug_capture_status,
+    debug_capture_stop,
     get_coordinator_status, poll_watchers, start_chat_tailing, start_player_tailing,
     stop_chat_tailing, stop_player_tailing, DataIngestCoordinator,
 };
@@ -481,6 +482,7 @@ pub fn run() {
             // Debug capture
             debug_capture_start,
             debug_capture_stop,
+            debug_capture_save,
             debug_capture_discard,
             debug_capture_status,
             // Survey tracker (Phase 5)

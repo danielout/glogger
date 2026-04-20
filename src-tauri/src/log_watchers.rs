@@ -10,7 +10,7 @@ use chrono::NaiveDateTime;
 /// - PlayerLogWatcher for monitoring Player.log
 /// - ChatLogWatcher for monitoring chat log files
 use std::fs::File;
-use std::io::{BufRead, BufReader, Seek, SeekFrom};
+use std::io::{Seek, SeekFrom};
 use std::path::PathBuf;
 
 /// Type alias for pattern matcher functions
@@ -310,52 +310,69 @@ impl LogFileWatcher for PlayerLogWatcher {
     }
 
     fn poll(&mut self) -> Result<Vec<LogEvent>, String> {
+        use std::io::Read;
+
         if !self.active {
             return Ok(Vec::new());
-        }
-
-        // Detect file truncation / rotation (e.g. game restart creates a new Player.log)
-        if let Ok(meta) = std::fs::metadata(&self.file_path) {
-            if meta.len() < self.current_position {
-                eprintln!("[player-poll] Player.log was rotated (size {} < position {}), resetting to beginning",
-                    meta.len(), self.current_position);
-                self.current_position = 0;
-                self.player_event_parser = PlayerEventParser::new();
-            }
         }
 
         let mut file =
             File::open(&self.file_path).map_err(|e| format!("Failed to open Player.log: {}", e))?;
 
+        let file_size = file
+            .metadata()
+            .map_err(|e| format!("Failed to get Player.log metadata: {}", e))?
+            .len();
+
+        // Detect file truncation / rotation (e.g. game restart creates a new Player.log)
+        if file_size < self.current_position {
+            eprintln!(
+                "[player-poll] Player.log was rotated (size {} < position {}), resetting to beginning",
+                file_size, self.current_position
+            );
+            self.current_position = 0;
+            self.player_event_parser = PlayerEventParser::new();
+        }
+
+        if self.current_position >= file_size {
+            return Ok(Vec::new());
+        }
+
         file.seek(SeekFrom::Start(self.current_position))
             .map_err(|e| format!("Failed to seek in Player.log: {}", e))?;
 
-        let reader = BufReader::new(file);
+        let mut content = Vec::new();
+        file.read_to_end(&mut content)
+            .map_err(|e| format!("Failed to read Player.log: {}", e))?;
+
+        // Only advance position to the last complete line. If the file doesn't
+        // end with a newline the final partial line is left for the next poll.
+        let usable_len = match content.iter().rposition(|&b| b == b'\n') {
+            Some(pos) => pos + 1,
+            None => {
+                // No newline found — entire read is a partial line, skip for now
+                return Ok(Vec::new());
+            }
+        };
+
+        self.current_position += usable_len as u64;
+        let content_str = String::from_utf8_lossy(&content[..usable_len]);
+
         let mut events = Vec::new();
-        for line in reader.lines() {
-            match line {
-                Ok(line_content) => {
-                    self.current_position += line_content.len() as u64 + 1;
+        for line_content in content_str.lines() {
+            // Buffer raw line for debug capture if enabled
+            if self.capture_raw_lines {
+                self.raw_lines_buffer.push(line_content.to_string());
+            }
 
-                    // Buffer raw line for debug capture if enabled
-                    if self.capture_raw_lines {
-                        self.raw_lines_buffer.push(line_content.clone());
-                    }
+            if let Some(event) = self.parse_line(line_content) {
+                events.push(event);
+            }
 
-                    if let Some(event) = self.parse_line(&line_content) {
-                        events.push(event);
-                    }
-
-                    // Feed every line through the player event parser first
-                    let player_events = self.player_event_parser.process_line(&line_content);
-                    for pe in player_events {
-                        events.push(LogEvent::PlayerEventParsed(pe));
-                    }
-                }
-                Err(e) => {
-                    eprintln!("Error reading line from Player.log: {}", e);
-                    break;
-                }
+            // Feed every line through the player event parser first
+            let player_events = self.player_event_parser.process_line(line_content);
+            for pe in player_events {
+                events.push(LogEvent::PlayerEventParsed(pe));
             }
         }
 
@@ -547,9 +564,19 @@ impl LogFileWatcher for ChatLogWatcher {
         file.read_to_end(&mut content)
             .map_err(|e| format!("Failed to read chat log: {}", e))?;
 
-        self.current_position = file_size;
+        // Only advance position to the last complete line to avoid reading
+        // a partial line if the game is mid-write.
+        let usable_len = match content.iter().rposition(|&b| b == b'\n') {
+            Some(pos) => pos + 1,
+            None => {
+                // No newline found — entire read is a partial line, skip for now
+                return Ok(Vec::new());
+            }
+        };
 
-        let content_str = String::from_utf8_lossy(&content);
+        self.current_position += usable_len as u64;
+
+        let content_str = String::from_utf8_lossy(&content[..usable_len]);
 
         // Buffer raw lines for debug capture if enabled
         if self.capture_raw_lines {

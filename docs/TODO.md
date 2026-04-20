@@ -17,6 +17,14 @@ These are investigated items kept for reference — the research is done but the
 
 ## Quick Wins (Small Effort, Noticeable Value)
 
+- [ ] Parse ProcessSetCelestialInfo for moon phase
+  - `ProcessSetCelestialInfo(WaxingCrescentMoon)` fires on area load with the server's authoritative moon phase. Could validate or replace the Meeus algorithm calculation. Single event, simple string parse.
+  - **Effort: Low | Impact: Low-Medium (moon phase accuracy)**
+
+- [ ] Parse ProcessUpdateDescription for entity state changes
+  - Fires for nearby entities changing state (garden plants, crafting items with timers, etc.). Format: `(entityId, "name", "description", "action", actionType, "appearance", flags)`. This is the foundation event for gardening tracker and crafting timers — parsing it in the event parser is the first step.
+  - **Effort: Low (parser only) | Impact: High (unblocks gardening + crafting features)**
+
 ---
 
 ## Medium Effort, High Value
@@ -66,11 +74,11 @@ These are investigated items kept for reference — the research is done but the
   - **Effort: Medium | Impact: Low-Medium (data browser completeness)**
 
 - [ ] Garden almanac widget
-  - Saves almanac data when you check it in-game. The almanac shows daily bonus (item + zone for guaranteed double-yield), rotating at midnight EST. `ProcessBook` parser event already exists and emits `BookOpened { title, content, book_type }`, but only `PlayerShopLog` is handled in the coordinator. **Blocker:** need someone to read the almanac in-game and check what the `ProcessBook(...)` line looks like in Player.log. If parseable: add coordinator handler, new SQLite table, frontend widget using `ItemInline`/`AreaInline`.
+  - Saves almanac data when you check it in-game. The almanac shows daily bonus (item + zone for guaranteed double-yield), rotating at midnight EST. `ProcessBook` parser event already exists and emits `BookOpened { title, content, book_type }`, but only `PlayerShopLog` is handled in the coordinator. **Blocker resolved:** capture analysis confirms book_type is `"GardeningAlmanac"` with parseable HTML content including current events (crop + zone + time remaining) and upcoming events. See `docs/plans/capture-results.md` and sample data in `docs/samples/devtolsCaptures/gardening-almanac-01.json`. Next: add coordinator handler, new SQLite table, frontend widget using `ItemInline`/`AreaInline`.
   - **Effort: Medium**
 
 - [ ] General-purpose timer system (mushroom barrels, brewing, cheesemaking, fletching)
-  - All these skills share a real-time waiting pattern with no log events for the timer portion. Mushroom barrel timers, brewing cask aging (1–3h), cheesemaking aging (1–9h), and fletching drying (1–30m, daylight+sunny only) would all need manual-entry timers. Could share a single reusable timer system. Talk to buppis for brewing specifics. Worth checking if newer game versions produce aging log events.
+  - All these skills share a real-time waiting pattern with no log events for the timer portion. Mushroom barrel timers, brewing cask aging (1–3h), cheesemaking aging (1–9h), and fletching drying (1–30m, daylight+sunny only) would all need manual-entry timers. Could share a single reusable timer system. Talk to buppis for brewing specifics. **Partial update:** `ProcessUpdateDescription` does fire for timed crafting items while the player is nearby (e.g. "Rising Simple Sourdough" with proofing countdown and increasing scale value). This provides live progress for items in proximity but won't help with offline/away timers. See `docs/plans/capture-results.md`.
   - **Effort: Medium-High**
 
 - [ ] 'Package data' export feature
@@ -90,6 +98,13 @@ These are investigated items kept for reference — the research is done but the
   - 'Start/stop debug capture' that saves: gamestate at start+stop, all player.log lines during capture, Status and Combat chat channels, character/inventory JSONs if detected. Any glogger debug should be saved as well. Save as single file with optional notes field.
   - **Effort: High | Impact: Medium (debugging/support)**
 
+- [x] Debug capture improvements (from capture analysis)
+  - [x] **Line truncation bug** — Fixed: PlayerLogWatcher now uses `read_to_end` with partial-line detection (only advances position to last complete newline), matching ChatLogWatcher's approach. Also fixed CRLF position tracking on Windows.
+  - [x] **Normal vs Full capture modes** — Done: "Save (Normal)" filters engine noise, "Save (Full)" keeps everything. Filtering happens at save time so raw data is always fully captured.
+  - [x] **Post-capture notes editing** — Done: Two-phase stop/save flow. Recording stops first (snapshot taken), then user reviews stats and edits notes before choosing save mode.
+  - [x] **Empty lines** — Fixed by the same partial-line detection fix (lines < 4 chars also filtered in normal mode).
+  - **Opaque .NET types** — Some events (ProcessSetStarredRecipes, ProcessInventoryFolderSettings) log .NET type names instead of data. Not fixable from our side.
+
 - [ ] Shop/stall tracking (reported by Reyetta)
   - Track what you put in, what sells, trends. Player vendor events are in the parser's "low priority / future" bucket. Manual entry fallback has questionable adoption (Reyetta said it's "too much effort").
   - **Effort: Large | Impact: High (if automated), Low (if manual-only)**
@@ -99,8 +114,8 @@ These are investigated items kept for reference — the research is done but the
   - **Effort: Large (research + implementation) | Impact: Medium (niche but useful)**
 
 - [ ] Gardening helper
-  - Should be able to detect seeds, fertilizer, water in inventory. Could also track what nearby plants need. Needs investigation into what inventory/proximity data is available from logs.
-  - **Effort: Large (research + implementation) | Impact: Medium-High (if feasible)**
+  - Should be able to detect seeds, fertilizer, water in inventory. Could also track what nearby plants need. **Research resolved:** `ProcessUpdateDescription` fires for every nearby garden plot with full state (Thirsty/Hungry/Growing/Ripe + crop name + action needed). Combined with inventory data, this enables a real-time gardening dashboard. See `docs/plans/capture-results.md` for the full state machine and sample data.
+  - **Effort: Medium-Large (implementation only, research done) | Impact: High**
 
 - [ ] Macros or process interaction
   - Can we target the game process and send commands? Can we screen-read the process? Major research question with significant technical and policy implications.

@@ -4,6 +4,16 @@
 //! temporary files on disk to avoid unbounded memory growth during long sessions.
 //! Game state is snapshotted at start and stop. The whole bundle is assembled
 //! into a single JSON file for debugging and support purposes.
+//!
+//! ## Two-phase stop/save flow
+//!
+//! 1. `stop()` — ends recording and takes the final game state snapshot. The
+//!    temp file and snapshots are kept so the user can review stats and edit
+//!    notes before saving.
+//! 2. `save()` — writes the bundle JSON to the chosen path with the user's
+//!    notes and selected filter mode (normal or full).
+//! 3. `discard()` — can be called at any time (active or stopped) to throw
+//!    away captured data without saving.
 
 use crate::db::DbPool;
 use chrono::{Local, Utc};
@@ -44,13 +54,15 @@ pub struct GameStateSnapshot {
 #[derive(Debug, Clone, Serialize)]
 pub struct DebugCaptureStatus {
     pub active: bool,
+    /// True when recording has stopped but data hasn't been saved or discarded yet.
+    pub pending_save: bool,
     pub started_at: Option<String>,
     pub line_count: usize,
     pub player_line_count: usize,
     pub chat_line_count: usize,
 }
 
-/// Result returned after stopping and saving a capture.
+/// Result returned after saving a capture.
 #[derive(Debug, Clone, Serialize)]
 pub struct DebugCaptureResult {
     pub line_count: usize,
@@ -64,10 +76,15 @@ pub struct DebugCaptureResult {
 /// (`source\tcaptured_at\tline`) to keep memory usage constant.
 pub struct DebugCaptureState {
     active: bool,
+    /// True when recording has stopped but data hasn't been saved/discarded yet.
+    pending_save: bool,
     started_at: Option<String>,
+    stopped_at: Option<String>,
     player_line_count: usize,
     chat_line_count: usize,
     state_at_start: Option<GameStateSnapshot>,
+    state_at_stop: Option<GameStateSnapshot>,
+    app_version: Option<String>,
     /// Temp file for captured lines. Created on start, deleted after export.
     temp_path: Option<PathBuf>,
     temp_writer: Option<BufWriter<fs::File>>,
@@ -77,10 +94,14 @@ impl DebugCaptureState {
     pub fn new() -> Self {
         Self {
             active: false,
+            pending_save: false,
             started_at: None,
+            stopped_at: None,
             player_line_count: 0,
             chat_line_count: 0,
             state_at_start: None,
+            state_at_stop: None,
+            app_version: None,
             temp_path: None,
             temp_writer: None,
         }
@@ -90,9 +111,14 @@ impl DebugCaptureState {
         self.active
     }
 
+    pub fn is_pending_save(&self) -> bool {
+        self.pending_save
+    }
+
     pub fn status(&self) -> DebugCaptureStatus {
         DebugCaptureStatus {
             active: self.active,
+            pending_save: self.pending_save,
             started_at: self.started_at.clone(),
             line_count: self.player_line_count + self.chat_line_count,
             player_line_count: self.player_line_count,
@@ -115,66 +141,103 @@ impl DebugCaptureState {
             .map_err(|e| format!("Failed to create capture temp file: {e}"))?;
 
         self.active = true;
+        self.pending_save = false;
         self.started_at = Some(Utc::now().to_rfc3339());
+        self.stopped_at = None;
         self.player_line_count = 0;
         self.chat_line_count = 0;
         self.state_at_start = Some(snapshot);
+        self.state_at_stop = None;
+        self.app_version = None;
         self.temp_writer = Some(BufWriter::new(file));
         self.temp_path = Some(temp_path);
 
         Ok(())
     }
 
-    /// Stop the capture and write the full bundle JSON to `output_path`.
-    /// Returns stats about the capture.
+    /// Stop recording and take the final snapshot. The capture data is kept
+    /// in the temp file so the user can review and edit notes before saving.
     pub fn stop(
         &mut self,
         snapshot: GameStateSnapshot,
-        notes: String,
         app_version: String,
-        output_path: &str,
     ) -> Result<DebugCaptureResult, String> {
         if !self.active {
             return Err("No debug capture is active".to_string());
         }
 
         self.active = false;
+        self.pending_save = true;
+        self.stopped_at = Some(Utc::now().to_rfc3339());
+        self.state_at_stop = Some(snapshot);
+        self.app_version = Some(app_version);
 
-        // Flush and close the temp writer
+        // Flush and close the temp writer (keep the file for save)
         if let Some(mut writer) = self.temp_writer.take() {
             writer
                 .flush()
                 .map_err(|e| format!("Failed to flush capture temp file: {e}"))?;
         }
 
+        Ok(DebugCaptureResult {
+            line_count: self.player_line_count + self.chat_line_count,
+            player_line_count: self.player_line_count,
+            chat_line_count: self.chat_line_count,
+        })
+    }
+
+    /// Save the stopped capture to a file. `filter_mode` is "normal" (filter
+    /// noise) or "full" (keep everything).
+    pub fn save(
+        &mut self,
+        notes: String,
+        filter_mode: String,
+        output_path: &str,
+    ) -> Result<DebugCaptureResult, String> {
+        if !self.pending_save {
+            return Err("No stopped capture is pending save".to_string());
+        }
+
         let started_at = self.started_at.take().unwrap_or_default();
+        let stopped_at = self.stopped_at.take().unwrap_or_default();
         let state_at_start = self
             .state_at_start
             .take()
             .ok_or_else(|| "Missing start snapshot".to_string())?;
-
-        let result = DebugCaptureResult {
-            line_count: self.player_line_count + self.chat_line_count,
-            player_line_count: self.player_line_count,
-            chat_line_count: self.chat_line_count,
-        };
+        let state_at_stop = self
+            .state_at_stop
+            .take()
+            .ok_or_else(|| "Missing stop snapshot".to_string())?;
+        let app_version = self.app_version.take().unwrap_or_else(|| "unknown".to_string());
 
         // Read captured lines from temp file
-        let lines = self.read_temp_lines();
+        let use_filter = filter_mode == "normal";
+        let lines = self.read_temp_lines(use_filter);
 
-        // Build the output JSON and write directly to the destination
+        let filtered_player = lines.iter().filter(|l| l.source == "player").count();
+        let filtered_chat = lines.iter().filter(|l| l.source == "chat").count();
+
+        let result = DebugCaptureResult {
+            line_count: filtered_player + filtered_chat,
+            player_line_count: filtered_player,
+            chat_line_count: filtered_chat,
+        };
+
+        // Build the output JSON
         let bundle = serde_json::json!({
-            "format_version": 1,
+            "format_version": 2,
             "app_version": app_version,
             "captured_by": "glogger debug capture",
+            "filter_mode": filter_mode,
             "started_at": started_at,
-            "stopped_at": Utc::now().to_rfc3339(),
+            "stopped_at": stopped_at,
             "notes": notes,
             "state_at_start": state_at_start,
-            "state_at_stop": snapshot,
+            "state_at_stop": state_at_stop,
             "line_count": result.line_count,
             "player_line_count": result.player_line_count,
             "chat_line_count": result.chat_line_count,
+            "unfiltered_line_count": self.player_line_count + self.chat_line_count,
             "lines": lines,
         });
 
@@ -184,19 +247,24 @@ impl DebugCaptureState {
         serde_json::to_writer_pretty(writer, &bundle)
             .map_err(|e| format!("Failed to write capture JSON: {e}"))?;
 
-        // Clean up temp file
+        // Clean up
         self.cleanup_temp();
+        self.pending_save = false;
         self.player_line_count = 0;
         self.chat_line_count = 0;
 
         Ok(result)
     }
 
-    /// Discard the active capture without saving.
+    /// Discard the capture (active or pending save) without saving.
     pub fn discard(&mut self) {
         self.active = false;
+        self.pending_save = false;
         self.started_at = None;
+        self.stopped_at = None;
         self.state_at_start = None;
+        self.state_at_stop = None;
+        self.app_version = None;
         self.player_line_count = 0;
         self.chat_line_count = 0;
         if let Some(mut writer) = self.temp_writer.take() {
@@ -223,7 +291,8 @@ impl DebugCaptureState {
     }
 
     /// Read all captured lines from the temp file into CapturedLine structs.
-    fn read_temp_lines(&self) -> Vec<CapturedLine> {
+    /// When `filter_noise` is true, known noise patterns are excluded.
+    fn read_temp_lines(&self, filter_noise: bool) -> Vec<CapturedLine> {
         let path = match &self.temp_path {
             Some(p) if p.exists() => p,
             _ => return vec![],
@@ -241,6 +310,11 @@ impl DebugCaptureState {
                 let source = parts.next()?.to_string();
                 let captured_at = parts.next()?.to_string();
                 let content = parts.next()?.to_string();
+
+                if filter_noise && source == "player" && is_noise_line(&content) {
+                    return None;
+                }
+
                 Some(CapturedLine {
                     captured_at,
                     source,
@@ -263,6 +337,52 @@ impl Drop for DebugCaptureState {
     fn drop(&mut self) {
         self.cleanup_temp();
     }
+}
+
+/// Check whether a player log line is engine/rendering noise that should be
+/// filtered out in "normal" capture mode. Chat lines are never filtered.
+fn is_noise_line(line: &str) -> bool {
+    // Empty or very short fragment lines (truncation artifacts)
+    if line.len() < 4 {
+        return true;
+    }
+
+    // Exact prefix matches — high-confidence noise patterns
+    if line.starts_with("Download appearance loop")
+        || line.starts_with("LoadAssetAsync")
+        || line.starts_with("IsDoneLoading")
+        || line.starts_with("Successfully downloaded Texture")
+        || line.starts_with("Cannot remove: entity doesn't have particle")
+        || line.starts_with("Ref-count cleanup")
+        || line.starts_with("ClearCursor")
+        || line.starts_with("Animator.GotoState")
+        || line.starts_with("BoxColliders created at Runtime")
+        || line.starts_with("Combined Static Meshes")
+        || line.starts_with("Either create the Box Collider")
+        || line.starts_with("MecanimEx:")
+        || line.starts_with("Told to do animation")
+        || line.starts_with("Shader ")
+        || line.starts_with("New Network State")
+    {
+        return true;
+    }
+
+    // Contains matches
+    if line.contains("ProcessMusicPerformance(MusicPerformanceManager+PerformanceInfo)") {
+        return true;
+    }
+
+    // Sound events: "1234.567: Playing sound ..." or just "Playing sound ..."
+    if line.contains(": Playing sound ") || line.starts_with("Playing sound ") {
+        return true;
+    }
+
+    // Asset bundle loading noise
+    if line.starts_with("Completed ") && line.contains("asset bundle") {
+        return true;
+    }
+
+    false
 }
 
 /// Take a snapshot of all game state tables from the database.

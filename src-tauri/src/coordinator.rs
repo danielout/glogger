@@ -1322,12 +1322,9 @@ impl DataIngestCoordinator {
         Ok(())
     }
 
-    /// Stop the active debug capture and write the bundle to `output_path`.
-    pub fn debug_capture_stop(
-        &mut self,
-        notes: String,
-        output_path: String,
-    ) -> Result<DebugCaptureResult, String> {
+    /// Stop recording the active debug capture. The data is kept on disk
+    /// so the user can review stats and edit notes before saving.
+    pub fn debug_capture_stop(&mut self) -> Result<DebugCaptureResult, String> {
         if !self.debug_capture.is_active() {
             return Err("No debug capture is active".to_string());
         }
@@ -1343,9 +1340,7 @@ impl DataIngestCoordinator {
             w.set_capture_raw_lines(false);
         }
 
-        let (char, server) = self
-            .active_character_server()
-            .unwrap_or_default();
+        let (char, server) = self.active_character_server().unwrap_or_default();
         let snapshot =
             debug_capture::snapshot_game_state(&self.db_pool, Some(&char), Some(&server));
 
@@ -1356,9 +1351,7 @@ impl DataIngestCoordinator {
             .clone()
             .unwrap_or_else(|| "unknown".to_string());
 
-        let result = self
-            .debug_capture
-            .stop(snapshot, notes, app_version, &output_path)?;
+        let result = self.debug_capture.stop(snapshot, app_version)?;
 
         startup_log!(
             "[debug-capture] Capture stopped — {} lines ({} player, {} chat)",
@@ -1370,9 +1363,35 @@ impl DataIngestCoordinator {
         Ok(result)
     }
 
-    /// Discard the active capture without saving.
+    /// Save the stopped capture to a file with the given notes and filter mode.
+    pub fn debug_capture_save(
+        &mut self,
+        notes: String,
+        filter_mode: String,
+        output_path: String,
+    ) -> Result<DebugCaptureResult, String> {
+        if !self.debug_capture.is_pending_save() {
+            return Err("No stopped capture is pending save".to_string());
+        }
+
+        let result = self
+            .debug_capture
+            .save(notes, filter_mode.clone(), &output_path)?;
+
+        startup_log!(
+            "[debug-capture] Capture saved ({} mode) — {} lines ({} player, {} chat)",
+            filter_mode,
+            result.line_count,
+            result.player_line_count,
+            result.chat_line_count,
+        );
+
+        Ok(result)
+    }
+
+    /// Discard the capture (active or pending save) without saving.
     pub fn debug_capture_discard(&mut self) {
-        // Disable raw line capture on watchers
+        // Disable raw line capture on watchers (in case still active)
         if let Some(w) = &mut self.player_watcher {
             w.set_capture_raw_lines(false);
         }
@@ -1491,15 +1510,25 @@ pub fn debug_capture_start(
     coord.debug_capture_start()
 }
 
-/// Stop the active debug capture and write the bundle to `output_path`.
+/// Stop recording the active debug capture. Data is kept for review.
 #[tauri::command]
 pub fn debug_capture_stop(
     coordinator: State<'_, Arc<Mutex<DataIngestCoordinator>>>,
+) -> Result<DebugCaptureResult, String> {
+    let mut coord = coordinator.lock().unwrap();
+    coord.debug_capture_stop()
+}
+
+/// Save the stopped capture to a file with notes and filter mode.
+#[tauri::command]
+pub fn debug_capture_save(
+    coordinator: State<'_, Arc<Mutex<DataIngestCoordinator>>>,
     notes: String,
+    filter_mode: String,
     output_path: String,
 ) -> Result<DebugCaptureResult, String> {
     let mut coord = coordinator.lock().unwrap();
-    coord.debug_capture_stop(notes, output_path)
+    coord.debug_capture_save(notes, filter_mode, output_path)
 }
 
 /// Discard the active debug capture without saving.

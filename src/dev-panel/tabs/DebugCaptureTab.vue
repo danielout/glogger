@@ -7,6 +7,11 @@
         class="text-xs font-mono px-2 py-0.5 rounded bg-red-900/40 text-red-400 animate-pulse">
         RECORDING
       </span>
+      <span
+        v-else-if="status?.pending_save"
+        class="text-xs font-mono px-2 py-0.5 rounded bg-yellow-900/40 text-yellow-400">
+        READY TO SAVE
+      </span>
     </div>
     <p class="text-text-muted text-xs">
       Capture raw Player.log and Chat.log lines along with game state snapshots
@@ -17,7 +22,8 @@
     <section class="border border-border-default rounded p-4 space-y-4">
       <h4 class="text-text-secondary text-sm mb-3 mt-0">Capture Controls</h4>
 
-      <div v-if="!status?.active" class="space-y-3">
+      <!-- Idle state: start button -->
+      <div v-if="!status?.active && !status?.pending_save" class="space-y-3">
         <button
           class="btn btn-primary text-xs"
           :disabled="starting"
@@ -29,8 +35,8 @@
         </p>
       </div>
 
-      <div v-else class="space-y-3">
-        <!-- Live stats -->
+      <!-- Recording state: live stats + stop button -->
+      <div v-else-if="status?.active" class="space-y-3">
         <div class="grid grid-cols-3 gap-3 text-xs font-mono">
           <div class="bg-surface-elevated rounded p-2">
             <div class="text-text-muted mb-1">Total Lines</div>
@@ -50,7 +56,39 @@
           Started: <span class="text-text-secondary font-mono">{{ formatStartTime }}</span>
         </div>
 
-        <!-- Notes -->
+        <div class="flex gap-2">
+          <button
+            class="btn btn-primary text-xs"
+            :disabled="stopping"
+            @click="stopCapture">
+            {{ stopping ? 'Stopping...' : 'Stop Recording' }}
+          </button>
+          <button
+            class="btn btn-secondary text-xs"
+            :disabled="stopping"
+            @click="discardCapture">
+            Discard
+          </button>
+        </div>
+      </div>
+
+      <!-- Pending save state: review, edit notes, choose save mode -->
+      <div v-else-if="status?.pending_save" class="space-y-3">
+        <div class="grid grid-cols-3 gap-3 text-xs font-mono">
+          <div class="bg-surface-elevated rounded p-2">
+            <div class="text-text-muted mb-1">Total Lines</div>
+            <div class="text-text-primary text-sm">{{ status.line_count.toLocaleString() }}</div>
+          </div>
+          <div class="bg-surface-elevated rounded p-2">
+            <div class="text-text-muted mb-1">Player.log</div>
+            <div class="text-accent-gold text-sm">{{ status.player_line_count.toLocaleString() }}</div>
+          </div>
+          <div class="bg-surface-elevated rounded p-2">
+            <div class="text-text-muted mb-1">Chat.log</div>
+            <div class="text-accent-gold text-sm">{{ status.chat_line_count.toLocaleString() }}</div>
+          </div>
+        </div>
+
         <div>
           <label class="text-xs text-text-muted block mb-1">Notes (what were you doing?)</label>
           <textarea
@@ -61,21 +99,30 @@
           />
         </div>
 
-        <!-- Stop & save -->
-        <div class="flex gap-2">
+        <div class="flex gap-2 flex-wrap">
           <button
             class="btn btn-primary text-xs"
-            :disabled="stopping"
-            @click="stopAndSave">
-            {{ stopping ? 'Saving...' : 'Stop & Save' }}
+            :disabled="saving"
+            @click="saveCapture('normal')">
+            {{ saving ? 'Saving...' : 'Save (Normal)' }}
           </button>
           <button
             class="btn btn-secondary text-xs"
-            :disabled="stopping"
+            :disabled="saving"
+            @click="saveCapture('full')">
+            Save (Full)
+          </button>
+          <button
+            class="btn btn-secondary text-xs"
+            :disabled="saving"
             @click="discardCapture">
             Discard
           </button>
         </div>
+        <p class="text-text-muted text-xs mt-1">
+          <strong>Normal</strong> filters engine noise (asset loading, animations, sounds) for easier analysis.
+          <strong>Full</strong> keeps every raw line.
+        </p>
       </div>
     </section>
 
@@ -101,6 +148,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 
 interface CaptureStatus {
   active: boolean;
+  pending_save: boolean;
   started_at: string | null;
   line_count: number;
   player_line_count: number;
@@ -117,6 +165,7 @@ const status = ref<CaptureStatus | null>(null);
 const notes = ref("");
 const starting = ref(false);
 const stopping = ref(false);
+const saving = ref(false);
 const lastResult = ref<{
   success: boolean;
   path?: string;
@@ -127,7 +176,7 @@ const lastResult = ref<{
 let pollInterval: ReturnType<typeof setInterval> | null = null;
 
 const formatStartTime = computed(() => {
-  if (!status.value?.started_at) return "—";
+  if (!status.value?.started_at) return "\u2014";
   try {
     return new Date(status.value.started_at).toLocaleTimeString();
   } catch {
@@ -158,24 +207,35 @@ async function startCapture() {
   }
 }
 
-async function stopAndSave() {
+async function stopCapture() {
   stopping.value = true;
   try {
-    // Get save path first, before stopping the capture
+    await invoke<CaptureResult>("debug_capture_stop");
+    await refreshStatus();
+  } catch (e) {
+    console.error("Failed to stop capture:", e);
+    lastResult.value = { success: false, error: String(e) };
+  } finally {
+    stopping.value = false;
+  }
+}
+
+async function saveCapture(filterMode: "normal" | "full") {
+  saving.value = true;
+  try {
     const filePath = await save({
       filters: [{ name: "JSON", extensions: ["json"] }],
-      defaultPath: `glogger-debug-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.json`,
+      defaultPath: `glogger-capture-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.json`,
     });
 
     if (!filePath) {
-      // User cancelled — capture is still running, do nothing
-      stopping.value = false;
+      saving.value = false;
       return;
     }
 
-    // Stop the capture and write directly to the chosen path
-    const result = await invoke<CaptureResult>("debug_capture_stop", {
+    const result = await invoke<CaptureResult>("debug_capture_save", {
       notes: notes.value,
+      filterMode,
       outputPath: filePath,
     });
 
@@ -186,30 +246,26 @@ async function stopAndSave() {
     };
     await refreshStatus();
   } catch (e) {
-    console.error("Failed to stop/save capture:", e);
+    console.error("Failed to save capture:", e);
     lastResult.value = { success: false, error: String(e) };
     await refreshStatus();
   } finally {
-    stopping.value = false;
+    saving.value = false;
   }
 }
 
 async function discardCapture() {
-  stopping.value = true;
   try {
     await invoke("debug_capture_discard");
     lastResult.value = null;
     await refreshStatus();
   } catch (e) {
     console.error("Failed to discard capture:", e);
-  } finally {
-    stopping.value = false;
   }
 }
 
 onMounted(() => {
   refreshStatus();
-  // Poll status while tab is open to show live line counts
   pollInterval = setInterval(refreshStatus, 2000);
 });
 
