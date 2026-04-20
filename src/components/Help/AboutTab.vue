@@ -65,6 +65,15 @@
           {{ tech }}
         </span>
       </div>
+      <p>
+        Project: Gorgon app developer? You might find
+        <a
+          href="https://github.com/danielout/GorgonLogViewer"
+          class="text-accent-gold"
+          >Gorgon Log Viewer</a
+        >
+        to be a handy tool!
+      </p>
     </div>
   </div>
 </template>

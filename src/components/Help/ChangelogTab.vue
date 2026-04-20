@@ -1,5 +1,45 @@
 <template>
   <div class="flex flex-col gap-4">
+    <!-- Update banner (when update available) -->
+    <div
+      v-if="updateStore.updateAvailable"
+      class="bg-accent-blue/10 border border-accent-blue/30 rounded-lg p-4 flex items-center justify-between gap-4">
+      <div>
+        <div class="text-sm font-semibold text-text-primary">
+          Glogger v{{ updateStore.latestVersion }} is available
+        </div>
+        <div class="text-xs text-text-secondary mt-0.5">
+          Review the changes below, then update when you're ready.
+        </div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <template v-if="updateStore.installing">
+          <span class="text-xs text-accent-blue">Updating... {{ updateStore.downloadProgress }}%</span>
+        </template>
+        <template v-else>
+          <button
+            class="px-4 py-2 text-sm font-medium rounded cursor-pointer bg-accent-blue/20 border border-accent-blue/40 text-accent-blue hover:bg-accent-blue/30 transition-colors"
+            @click="updateStore.downloadAndInstall()">
+            Update Glogger
+          </button>
+        </template>
+      </div>
+      <div v-if="updateStore.installError" class="text-xs text-accent-red mt-1 w-full">
+        {{ updateStore.installError }}
+      </div>
+    </div>
+
+    <!-- Check for updates (when no update detected yet) -->
+    <div v-else class="flex items-center gap-3">
+      <button
+        class="px-3 py-1.5 text-xs font-medium rounded cursor-pointer bg-surface-base border border-border-default text-text-secondary hover:bg-surface-elevated hover:text-text-primary transition-colors"
+        :disabled="checking"
+        @click="manualCheck">
+        {{ checking ? 'Checking...' : 'Check for Updates' }}
+      </button>
+      <span v-if="checkResult" class="text-xs text-accent-green">{{ checkResult }}</span>
+    </div>
+
     <!-- Loading -->
     <div v-if="loading" class="text-sm text-text-muted py-8 text-center">
       Loading release notes...
@@ -41,6 +81,24 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { useUpdateStore } from '../../stores/updateStore'
+
+const updateStore = useUpdateStore()
+
+const checking = ref(false)
+const checkResult = ref<string | null>(null)
+
+async function manualCheck() {
+  checking.value = true
+  checkResult.value = null
+  await updateStore.checkForUpdate(false)
+  checking.value = false
+  if (updateStore.updateAvailable) {
+    checkResult.value = null // banner will show instead
+  } else {
+    checkResult.value = 'You\'re on the latest version.'
+  }
+}
 
 interface ReleaseInfo {
   tag_name: string

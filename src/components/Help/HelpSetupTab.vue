@@ -45,8 +45,8 @@
     <section>
       <h2 class="text-sm font-bold text-text-secondary uppercase tracking-wider m-0 mb-3">Useful In-Game Commands</h2>
       <div class="flex flex-col gap-1.5">
-        <ShortcutRow keys="/outputcharacter" description="Export character data (skills, recipes, quests)" />
-        <ShortcutRow keys="/outputitems" description="Export inventory snapshot (VIP only)" />
+        <ShortcutRow keys="/behaviorreport" description="Display (and let glogger save) some character stats" />
+        <ShortcutRow keys="/age" description="Display (and let glogger save) some playtime data" />
       </div>
     </section>
   </div>
