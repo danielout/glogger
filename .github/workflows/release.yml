@@ -158,7 +158,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tauriScript: npx tauri
-          args: ${{ matrix.args }} --config tauri.release.conf.json
+          args: ${{ matrix.args }} --config '{"identifier":"glogger.Release","app":{"windows":[{"title":"glogger v${{ needs.prepare.outputs.version }}"}]}}'
           updaterJsonPreferNsis: true
 
       # Collect artifacts for the publish step
