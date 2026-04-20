@@ -76,10 +76,22 @@ The capture can be discarded at any point (during recording or before saving).
 - `notes` — User description
 - `unfiltered_line_count` — Total lines before filtering (present even in normal mode)
 
+**Analyzing captures:**
+
+Use `scripts/analyze_capture.py` to summarize a capture file:
+```
+python scripts/analyze_capture.py capture.json           # quick summary
+python scripts/analyze_capture.py capture.json --full     # everything (examples, chat, diff)
+python scripts/analyze_capture.py capture.json --chat     # include chat lines
+python scripts/analyze_capture.py capture.json --diff     # state snapshot diff (start vs stop)
+python scripts/analyze_capture.py capture.json --process-only  # just ProcessXxx lines for piping
+```
+
 **Key files:**
 - `src/dev-panel/tabs/DebugCaptureTab.vue` — Frontend UI
 - `src-tauri/src/debug_capture.rs` — Core capture state machine, noise filtering, JSON output
 - `src-tauri/src/coordinator.rs` — Integration: watcher line draining, Tauri command handlers
+- `scripts/analyze_capture.py` — Post-capture analysis script
 
 ### Cross-Window Communication
 

@@ -137,6 +137,15 @@ Per-screen documentation organized by view.
 - [survey-tracker-rewrite.md](plans/survey-tracker-rewrite.md) — Phase 5 implementation plan: nuke-and-pave the survey tracker on top of the provenance pipeline; new `src-tauri/src/survey/` module, schema v26, A3 stitching.
 - [projects-performance.md](plans/projects-performance.md) — Crafting projects performance: cascading re-resolve elimination, caching, batch queries.
 
+## Scripts
+
+Utility scripts in `scripts/`.
+
+- `analyze_capture.py` — Analyze a debug capture JSON file: ProcessXxx type inventory, noise classification, combat summary, chat extraction, state snapshot diff. Run `python scripts/analyze_capture.py --help` for options.
+- `extract_cdn_schemas.py` — Extract field schemas from CDN JSON files.
+- `bump-version.sh` — Bump app version across Cargo.toml, tauri.conf.json, and package.json.
+- `minimize-player-log.sh` — Strip noise lines from a raw Player.log for smaller test fixtures.
+
 ## Samples
 
 Sample data files for development and testing (gitignored).
@@ -144,3 +153,4 @@ Sample data files for development and testing (gitignored).
 - `samples/CDN-full-examples/` — Complete CDN JSON snapshots.
 - `samples/character-export-samples/` — Character export JSON examples.
 - `samples/player-log-samples/` — Player.log excerpts for parser testing.
+- `samples/devtolsCaptures/` — Debug capture JSON files for analysis and feature discovery.
