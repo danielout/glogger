@@ -123,6 +123,20 @@ The UI derives **profit-per-hour** and **ETA** on the frontend from the economic
 
 For the History rollup, `survey_tracker_historical_sessions` runs the same economics helper per session (one loot-summary + one cost query each, both indexed) so each row can show cost/revenue/profit inline without needing a detail fetch.
 
+## GorgonSurveyTracker Integration
+
+The left pane includes a `GstLauncher.vue` widget that manages [GorgonSurveyTracker](https://github.com/kaeus/GorgonSurveyTracker) — a third-party survey overlay tool.
+
+**Backend** (`src-tauri/src/gst_manager.rs`):
+- `gst_check_status` — reports the current platform, checks whether `GorgonSurveyTracker.exe` exists in the app data `gst/` subfolder (Windows only), reads the locally stored version tag, and fetches the latest release from the GitHub API to detect updates.
+- `gst_download` — (Windows only) downloads the latest release asset to `<app_data>/gst/GorgonSurveyTracker.exe` (via a temp file + rename) and writes a `gst_version.txt` sidecar for version tracking.
+- `gst_launch` — (Windows only) spawns the exe as a detached process.
+
+**Frontend** (`src/components/Surveying/GstLauncher.vue`):
+- **Windows**: shows Download/Launch/Update buttons with version info.
+- **macOS/Linux**: shows a note that Python 3.8+ is required with a pointer to the GST page for platform-specific setup steps (PyQt5, pynput, plus pyobjc-framework-Cocoa on macOS or python-xlib on Linux X11).
+- **All platforms**: shows a "GST Homepage & Instructions" link that opens the GitHub repo page in the user's browser.
+
 ## Known follow-ups
 
 - **Cost model preference** — current cost uses nominal vendor-buy pricing. A future enhancement could offer "use market value of ingredients" as an alternative, toggleable like the Crafting view's valuation modes.

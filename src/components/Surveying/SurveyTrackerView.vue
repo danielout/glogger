@@ -37,6 +37,10 @@
             />
             Auto-start sessions
           </label>
+
+          <div class="border-t border-border-default pt-2">
+            <GstLauncher />
+          </div>
         </div>
 
         <!-- Active session card (pinned) -->
@@ -313,6 +317,7 @@ import PaneLayout from '../Shared/PaneLayout.vue'
 import ModalDialog from '../Shared/ModalDialog.vue'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
 import SessionCard from './SessionCard.vue'
+import GstLauncher from './GstLauncher.vue'
 import LootOverviewPanel from './LootOverviewPanel.vue'
 import LootDonutChart from './LootDonutChart.vue'
 import TimeBreakdownPanel from './TimeBreakdownPanel.vue'

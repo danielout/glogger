@@ -23,6 +23,7 @@ mod stall_aggregations;
 mod stall_year_resolver;
 mod survey;
 mod external_fetch;
+mod gst_manager;
 mod update_check;
 mod watch_rules;
 
@@ -187,6 +188,7 @@ use db::player_commands::{
 };
 use replay::replay_dual_logs;
 use external_fetch::{fetch_github_releases, fetch_pg_news};
+use gst_manager::{gst_check_status, gst_download, gst_launch};
 use update_check::check_for_update;
 use settings::{
     get_server_list, get_settings_file_path, load_settings, save_settings, SettingsManager,
@@ -635,6 +637,10 @@ pub fn run() {
             // External content
             fetch_github_releases,
             fetch_pg_news,
+            // GorgonSurveyTracker management
+            gst_check_status,
+            gst_download,
+            gst_launch,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
