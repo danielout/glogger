@@ -179,7 +179,7 @@ jobs:
             exit 1
           fi
           echo "Found bundle directory: $BUNDLE_DIR"
-          find "$BUNDLE_DIR" -type f | head -30
+          find "$BUNDLE_DIR" -type f 2>/dev/null | head -30 || true
 
           # Windows: NSIS installer + signature
           for f in "$BUNDLE_DIR"/nsis/*.exe; do
