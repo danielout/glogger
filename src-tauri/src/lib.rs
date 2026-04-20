@@ -126,8 +126,10 @@ use commands::parse_log;
 use coordinator::{
     debug_capture_discard, debug_capture_save, debug_capture_start, debug_capture_status,
     debug_capture_stop,
-    get_coordinator_status, poll_watchers, start_chat_tailing, start_player_tailing,
-    stop_chat_tailing, stop_player_tailing, DataIngestCoordinator,
+    get_coordinator_status, poll_watchers, start_background_polling, stop_background_polling,
+    start_chat_tailing, start_player_tailing,
+    stop_chat_tailing, stop_player_tailing,
+    spawn_polling_thread, DataIngestCoordinator, PollingHandle,
 };
 use db::admin_commands::{force_rebuild_cdn_tables, get_database_stats, purge_player_data};
 use db::aggregate_commands::{get_aggregate_inventory, get_aggregate_skills, get_aggregate_wealth};
@@ -276,10 +278,18 @@ pub fn run() {
             ));
             startup_log!("Coordinator initialized");
 
+            // Step 5b: Spawn background polling thread (starts paused,
+            // frontend calls start_background_polling after catch-up)
+            let polling_handle = Arc::new(Mutex::new(
+                spawn_polling_thread(coordinator.clone(), std::time::Duration::from_millis(500))
+            ));
+            startup_log!("Background polling thread spawned (paused)");
+
             // Step 6: Register managed state
             app.manage(settings_manager.clone());
             app.manage(db_pool.clone());
             app.manage(coordinator.clone());
+            app.manage(polling_handle.clone());
             app.manage(db::stall_tracker_commands::StallOpsLock::default());
 
             startup_log!("Splash screen displayed (frontend rendering)");
@@ -479,6 +489,8 @@ pub fn run() {
             stop_chat_tailing,
             get_coordinator_status,
             poll_watchers,
+            start_background_polling,
+            stop_background_polling,
             // Debug capture
             debug_capture_start,
             debug_capture_stop,
@@ -617,6 +629,13 @@ pub fn run() {
         .expect("error while building tauri application")
         .run(|app_handle, event| {
             if let tauri::RunEvent::Exit = event {
+                // Stop the background polling thread first so it doesn't
+                // fight with the coordinator lock during shutdown.
+                if let Some(ph) = app_handle.try_state::<Arc<Mutex<PollingHandle>>>() {
+                    ph.lock().unwrap().shutdown();
+                    startup_log!("[shutdown] Polling thread stopped.");
+                }
+
                 // Save watcher positions before the process dies
                 if let Some(coordinator) = app_handle.try_state::<Arc<Mutex<DataIngestCoordinator>>>() {
                     let mut coord = coordinator.lock().unwrap();

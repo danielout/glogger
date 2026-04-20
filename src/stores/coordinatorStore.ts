@@ -27,8 +27,6 @@ export const useCoordinatorStore = defineStore('coordinator', () => {
   const isChatLogTailing = computed(() => status.value.chat_log_active)
   const currentOperation = computed(() => status.value.operation)
 
-  let pollInterval: number | null = null
-
   // ── Event Listeners ────────────────────────────────────────────────────────
 
   // Listen for coordinator status changes
@@ -118,30 +116,24 @@ export const useCoordinatorStore = defineStore('coordinator', () => {
   }
 
   /**
-   * Start polling watchers for new events
-   * This should be called periodically (e.g., every 1-2 seconds)
+   * Start background polling on the Rust side (immune to WebView timer throttling)
    */
-  function startPolling(intervalMs: number = 1500): void {
-    if (pollInterval !== null) {
-      return // Already polling
+  async function startPolling(): Promise<void> {
+    try {
+      await invoke('start_background_polling')
+    } catch (e) {
+      console.error('Failed to start background polling:', e)
     }
-
-    pollInterval = window.setInterval(async () => {
-      try {
-        await invoke('poll_watchers')
-      } catch (e) {
-        console.error('Error polling watchers:', e)
-      }
-    }, intervalMs)
   }
 
   /**
-   * Stop polling watchers
+   * Stop background polling
    */
-  function stopPolling(): void {
-    if (pollInterval !== null) {
-      clearInterval(pollInterval)
-      pollInterval = null
+  async function stopPolling(): Promise<void> {
+    try {
+      await invoke('stop_background_polling')
+    } catch (e) {
+      console.error('Failed to stop background polling:', e)
     }
   }
 

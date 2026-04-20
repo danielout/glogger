@@ -320,16 +320,16 @@ export const useStartupStore = defineStore("startup", () => {
       updateTask(TASK_LOG_CATCHUP, "running", "Processing log history...");
       await invoke('poll_watchers');
 
-      // Now start periodic polling for live updates
+      // Now start background polling on the Rust side for live updates
       updateTask(TASK_LOG_CATCHUP, "running", "Starting live polling...");
-      coordinator.startPolling(1500);
+      await coordinator.startPolling();
 
       updateTask(TASK_LOG_CATCHUP, "done");
     } catch (e) {
       console.warn("Log watcher startup error:", e);
       updateTask(TASK_LOG_CATCHUP, "done", "Some watchers failed to start");
       // Start polling anyway so live tailing still works
-      coordinator.startPolling(1500);
+      await coordinator.startPolling();
     }
 
     // Refresh settings from backend — the catch-up may have updated

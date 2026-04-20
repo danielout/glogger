@@ -27,7 +27,8 @@ use serde::Serialize;
 /// - Database write coordination
 /// - Progress event emission to frontend
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -336,11 +337,46 @@ impl DataIngestCoordinator {
         drop(operation);
 
         // Already tailing the same file? No-op.
-        if let Some(existing) = &self.chat_watcher {
-            if existing.is_active() && existing.get_file_path() == &chat_log_path {
+        let should_switch = match &self.chat_watcher {
+            Some(existing) if existing.is_active() && existing.get_file_path() == &chat_log_path => {
                 return Ok(());
             }
-            // Different file — stop the old watcher first
+            Some(_) => true,
+            None => false,
+        };
+
+        if should_switch {
+            // Different file — do a final flush of any unread content
+            // before switching, so we don't lose messages written between
+            // the last poll and this switch.
+            if let Some(watcher) = &mut self.chat_watcher {
+                startup_log!("Chat log switching from {:?} → {:?}, flushing old watcher",
+                    watcher.get_file_path(), chat_log_path);
+                if let Ok(events) = watcher.poll() {
+                    if !events.is_empty() {
+                        startup_log!("Final flush: {} events from old chat log", events.len());
+                        // Process inline to avoid borrow issues with self
+                        let conn = self.db_pool.get()
+                            .map_err(|e| format!("Database error: {}", e))?;
+                        let log_file = watcher.get_file_name().to_string();
+                        let excluded_channels = &self.settings.get().excluded_chat_channels;
+                        let mut messages = Vec::new();
+                        let tz_offset = self.settings.get()
+                            .manual_timezone_override
+                            .or(self.settings.get().timezone_offset_seconds)
+                            .unwrap_or(0);
+                        for event in events {
+                            if let LogEvent::ChatMessage(mut msg) = event {
+                                msg.timestamp = chat_local_to_utc(msg.timestamp, tz_offset);
+                                messages.push(msg);
+                            }
+                        }
+                        if !messages.is_empty() {
+                            insert_chat_messages(&conn, &messages, &log_file, excluded_channels).ok();
+                        }
+                    }
+                }
+            }
             self.stop_chat_log_tailing()?;
         }
 
@@ -1427,7 +1463,6 @@ impl DataIngestCoordinator {
 // Tauri Commands (frontend interface)
 // ============================================================
 
-use std::sync::Mutex;
 use tauri::State;
 
 /// Start player log tailing (called from frontend)
@@ -1490,13 +1525,96 @@ pub fn get_coordinator_status(
     Ok(coord.get_status())
 }
 
-/// Poll all watchers (called periodically from frontend or background task)
+/// Poll all watchers (one-shot, for manual/diagnostic use from frontend)
 #[tauri::command]
 pub fn poll_watchers(
     coordinator: State<'_, Arc<Mutex<DataIngestCoordinator>>>,
 ) -> Result<(), String> {
     let mut coord = coordinator.lock().unwrap();
     coord.poll()
+}
+
+// ── Background Polling ─────────────────────────────────────────────────
+
+/// Shared flag that the background polling thread checks each iteration.
+/// When false the thread stays alive but skips the poll() call.
+pub type PollingFlag = Arc<AtomicBool>;
+
+/// Spawn the background polling thread and return a handle to control it.
+///
+/// The thread acquires the coordinator Mutex for each poll cycle, so it
+/// cooperates with Tauri commands that also lock the coordinator.
+pub fn spawn_polling_thread(
+    coordinator: Arc<Mutex<DataIngestCoordinator>>,
+    interval: Duration,
+) -> PollingHandle {
+    let active = Arc::new(AtomicBool::new(false));
+    let flag = active.clone();
+    let alive = Arc::new(AtomicBool::new(true));
+    let alive_clone = alive.clone();
+
+    let handle = std::thread::Builder::new()
+        .name("poll-watchers".into())
+        .spawn(move || {
+            while alive_clone.load(Ordering::Relaxed) {
+                if active.load(Ordering::Relaxed) {
+                    let mut coord = coordinator.lock().unwrap();
+                    if let Err(e) = coord.poll() {
+                        eprintln!("[poll-thread] poll error: {e}");
+                    }
+                    drop(coord); // release lock before sleeping
+                }
+                std::thread::sleep(interval);
+            }
+        })
+        .expect("failed to spawn poll-watchers thread");
+
+    PollingHandle {
+        flag,
+        alive,
+        join_handle: Some(handle),
+    }
+}
+
+/// Wrapper managed as Tauri state so commands can toggle polling.
+pub struct PollingHandle {
+    pub flag: PollingFlag,
+    pub alive: Arc<AtomicBool>,
+    pub join_handle: Option<std::thread::JoinHandle<()>>,
+}
+
+impl PollingHandle {
+    pub fn start(&self) {
+        self.flag.store(true, Ordering::Relaxed);
+    }
+    pub fn stop(&self) {
+        self.flag.store(false, Ordering::Relaxed);
+    }
+    pub fn shutdown(&mut self) {
+        self.flag.store(false, Ordering::Relaxed);
+        self.alive.store(false, Ordering::Relaxed);
+        if let Some(h) = self.join_handle.take() {
+            let _ = h.join();
+        }
+    }
+}
+
+/// Start background polling (called from frontend after startup catch-up)
+#[tauri::command]
+pub fn start_background_polling(
+    handle: State<'_, Arc<Mutex<PollingHandle>>>,
+) -> Result<(), String> {
+    handle.lock().unwrap().start();
+    Ok(())
+}
+
+/// Stop background polling (called from frontend or on shutdown)
+#[tauri::command]
+pub fn stop_background_polling(
+    handle: State<'_, Arc<Mutex<PollingHandle>>>,
+) -> Result<(), String> {
+    handle.lock().unwrap().stop();
+    Ok(())
 }
 
 // ── Debug Capture Commands ──────────────────────────────────────────────
