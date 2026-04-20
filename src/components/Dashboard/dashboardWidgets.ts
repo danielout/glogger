@@ -16,7 +16,10 @@ import RecipeItemsWidget from "./widgets/RecipeItemsWidget.vue";
 import ZoneNpcsWidget from "./widgets/ZoneNpcsWidget.vue";
 import GiftWatcherWidget from "./widgets/GiftWatcherWidget.vue";
 import TeleportCodesWidget from "./widgets/TeleportCodesWidget.vue";
+import MilkingTimersWidget from "./widgets/MilkingTimersWidget.vue";
 import MushroomFarmingWidget from "./widgets/MushroomFarmingWidget.vue";
+import StatTrackerWidget from "./widgets/StatTrackerWidget.vue";
+import StatTrackerConfig from "./widgets/StatTrackerConfig.vue";
 
 export type WidgetSize = "small" | "medium" | "large";
 
@@ -139,10 +142,23 @@ export const DASHBOARD_WIDGETS: DashboardWidget[] = [
     defaultSize: "medium",
   },
   {
+    id: "milking-timers",
+    name: "Milking Timers",
+    component: MilkingTimersWidget,
+    defaultSize: "small",
+  },
+  {
     id: "mushroom-farming",
     name: "Mushroom Farming",
     component: MushroomFarmingWidget,
     defaultSize: "large",
+  },
+  {
+    id: "stat-tracker",
+    name: "Stat Tracker",
+    component: StatTrackerWidget,
+    configComponent: StatTrackerConfig,
+    defaultSize: "small",
   },
 ];
 
