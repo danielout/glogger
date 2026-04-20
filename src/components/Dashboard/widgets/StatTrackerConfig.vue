@@ -1,21 +1,23 @@
 <template>
-  <div class="flex flex-col gap-3 min-w-64 max-h-80">
-    <!-- Currently tracked -->
-    <div>
-      <div class="text-xs font-bold text-text-secondary uppercase tracking-wide mb-1">Tracked Stats</div>
+  <div class="flex flex-col gap-3 min-w-64">
+    <!-- Currently tracked (scrollable, capped height) -->
+    <div class="flex flex-col min-h-0">
+      <div class="text-xs font-bold text-text-secondary uppercase tracking-wide mb-1 shrink-0">Tracked Stats</div>
       <div v-if="prefs.trackedStats.length === 0" class="text-xs text-text-dim italic">None</div>
-      <div v-for="key in prefs.trackedStats" :key="key" class="flex items-center justify-between gap-2 py-0.5">
-        <span class="text-xs text-text-primary truncate">{{ labelFor(key) }}</span>
-        <button
-          class="text-xs text-red-400 hover:text-red-300 cursor-pointer shrink-0"
-          @click="removeStat(key)">
-          Remove
-        </button>
+      <div v-else class="overflow-y-auto max-h-32">
+        <div v-for="key in prefs.trackedStats" :key="key" class="flex items-center justify-between gap-2 py-0.5">
+          <span class="text-xs text-text-primary truncate">{{ labelFor(key) }}</span>
+          <button
+            class="text-xs text-red-400 hover:text-red-300 cursor-pointer shrink-0"
+            @click="removeStat(key)">
+            Remove
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- Search to add -->
-    <div>
+    <div class="shrink-0">
       <div class="text-xs font-bold text-text-secondary uppercase tracking-wide mb-1">Add Stat</div>
       <input
         v-model="search"
@@ -24,7 +26,8 @@
         class="w-full px-2 py-1 bg-surface-base border border-border-default rounded text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-gold/50" />
     </div>
 
-    <div class="flex-1 overflow-y-auto min-h-0 max-h-40">
+    <!-- Search results (always has room for 5 rows) -->
+    <div class="overflow-y-auto min-h-30 max-h-40">
       <div
         v-for="option in filteredOptions"
         :key="option.key"

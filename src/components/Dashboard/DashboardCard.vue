@@ -15,7 +15,9 @@
         <!-- Config popover -->
         <div
           v-if="configOpen"
-          class="absolute right-0 top-full mt-1 z-50 min-w-48 bg-surface-elevated border border-border-default rounded-lg shadow-lg p-3 text-xs text-text-secondary">
+          ref="popoverRef"
+          class="absolute top-full mt-1 z-50 min-w-48 bg-surface-elevated border border-border-default rounded-lg shadow-lg p-3 text-xs text-text-secondary"
+          :class="popoverAlignClass">
           <slot name="config" />
         </div>
       </div>
@@ -29,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, useSlots } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount, useSlots } from 'vue'
 
 defineProps<{
   title: string
@@ -40,6 +42,31 @@ const slots = useSlots()
 const hasConfig = computed(() => !!slots.config)
 const configOpen = ref(false)
 const cardRef = ref<HTMLElement | null>(null)
+const popoverRef = ref<HTMLElement | null>(null)
+const popoverAlignClass = ref('right-0')
+
+// Position popover so it doesn't overflow the viewport
+watch(configOpen, async (open) => {
+  if (!open) return
+  popoverAlignClass.value = 'right-0' // default
+  await nextTick()
+  if (!popoverRef.value) return
+  const rect = popoverRef.value.getBoundingClientRect()
+  // If overflowing right, anchor to right edge
+  if (rect.right > window.innerWidth - 8) {
+    popoverAlignClass.value = 'right-0'
+  }
+  // If overflowing left, anchor to left edge
+  else if (rect.left < 8) {
+    popoverAlignClass.value = 'left-0'
+  }
+  // If overflowing bottom, cap max-height via style
+  if (rect.bottom > window.innerHeight - 8) {
+    const maxH = window.innerHeight - rect.top - 16
+    popoverRef.value.style.maxHeight = `${maxH}px`
+    popoverRef.value.style.overflowY = 'auto'
+  }
+})
 
 function handleClickOutside(e: MouseEvent) {
   if (configOpen.value && cardRef.value && !cardRef.value.contains(e.target as Node)) {
