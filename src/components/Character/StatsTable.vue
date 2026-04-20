@@ -1,15 +1,18 @@
 <template>
-  <div class="flex flex-col gap-2">
-    <div class="flex items-center gap-3">
-      <input
-        v-model="filter"
-        type="text"
-        placeholder="Filter stats..."
-        class="px-3 py-1.5 bg-surface-base border border-border-default rounded text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-gold/50 w-48" />
-      <span class="text-xs text-text-muted">{{ filtered.length }} stats</span>
+  <div class="flex flex-col gap-2 min-h-0 h-full">
+    <div class="flex items-center justify-between shrink-0">
+      <h3 class="text-sm font-semibold text-text-secondary uppercase tracking-wider">Combat Stats</h3>
+      <div class="flex items-center gap-3">
+        <input
+          v-model="filter"
+          type="text"
+          placeholder="Filter..."
+          class="px-2 py-1 bg-surface-base border border-border-default rounded text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-gold/50 w-32" />
+        <span class="text-xs text-text-muted">{{ filtered.length }}</span>
+      </div>
     </div>
 
-    <div class="overflow-auto max-h-[60vh]">
+    <div class="overflow-auto flex-1 min-h-0">
       <table class="w-full text-sm border-collapse">
         <thead class="sticky top-0 bg-surface-base">
           <tr class="text-left text-text-secondary border-b border-border-default">

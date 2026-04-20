@@ -1,5 +1,7 @@
 <template>
-  <div class="overflow-auto max-h-[60vh]">
+  <div class="flex flex-col gap-2 min-h-0 h-full">
+    <h3 class="text-sm font-semibold text-text-secondary uppercase tracking-wider shrink-0">Currencies</h3>
+    <div class="overflow-auto flex-1 min-h-0">
     <table class="w-full text-sm border-collapse">
       <thead class="sticky top-0 bg-surface-base">
         <tr class="text-left text-text-secondary border-b border-border-default">
@@ -17,6 +19,7 @@
         </tr>
       </tbody>
     </table>
+    </div>
   </div>
 </template>
 
