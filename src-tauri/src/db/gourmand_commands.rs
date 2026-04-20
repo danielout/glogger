@@ -74,6 +74,32 @@ pub fn get_all_foods(db: State<'_, DbPool>) -> Result<Vec<FoodItemInfo>, String>
     Ok(result)
 }
 
+/// Import a gourmand report from a content string (e.g. from a ProcessBook event).
+/// Called by the coordinator when a "Foods Consumed" SkillReport book is opened.
+pub fn import_gourmand_from_content(
+    conn: &rusqlite::Connection,
+    content: &str,
+) -> Result<usize, String> {
+    let entries = parse_gourmand_report(content)?;
+    if entries.is_empty() {
+        return Ok(0);
+    }
+
+    conn.execute("DELETE FROM gourmand_eaten_foods", [])
+        .map_err(|e| format!("Failed to clear old data: {e}"))?;
+
+    let mut stmt = conn
+        .prepare("INSERT INTO gourmand_eaten_foods (food_name, times_eaten) VALUES (?1, ?2)")
+        .map_err(|e| format!("Prepare error: {e}"))?;
+
+    for entry in &entries {
+        stmt.execute(params![&entry.name, entry.count])
+            .map_err(|e| format!("Insert error: {e}"))?;
+    }
+
+    Ok(entries.len())
+}
+
 /// Import a gourmand report from a text file, persist as "last known" snapshot
 #[tauri::command]
 pub fn import_gourmand_report(
@@ -271,7 +297,7 @@ fn find_latest_gourmand_report(books_dir: &Path) -> Result<Option<std::path::Pat
 ///   All-Flavor Chicken (HAS MEAT) (HAS DAIRY): 2
 ///   Almonds: 1
 /// ```
-fn parse_gourmand_report(content: &str) -> Result<Vec<GourmandFoodEntry>, String> {
+pub fn parse_gourmand_report(content: &str) -> Result<Vec<GourmandFoodEntry>, String> {
     let mut entries = Vec::new();
 
     for line in content.lines() {

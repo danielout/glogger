@@ -17,9 +17,17 @@ These are investigated items kept for reference — the research is done but the
 
 ## Quick Wins (Small Effort, Noticeable Value)
 
-- [ ] Parse ProcessSetCelestialInfo for moon phase
-  - `ProcessSetCelestialInfo(WaxingCrescentMoon)` fires on area load with the server's authoritative moon phase. Could validate or replace the Meeus algorithm calculation. Single event, simple string parse.
-  - **Effort: Low | Impact: Low-Medium (moon phase accuracy)**
+- [x] Parse ProcessSetCelestialInfo for moon phase
+  - Parsed and persisted to `game_state_moon`. Also added parsers for ProcessGuildGeneralInfo, ProcessCompleteDirectedGoals, and ProcessSetString (9 known keys) — all persisted to new game state tables in migration v33.
+
+- [x] Auto-import gourmand report from ProcessBook
+  - When the Foods Consumed SkillReport book is opened in-game, the coordinator auto-imports it to `gourmand_eaten_foods` using the existing parser. No file save needed.
+
+- [x] Parse PlayerAge and Behavior Report stats from ProcessBook
+  - Structured stats (kills, deaths, damage, time played, badges, challenge restrictions, food stats, etc.) extracted from HelpScreen and PlayerAge book content, persisted to `character_report_stats`. Displayed on Character > Stats tab via `ReportStatsSection.vue`.
+
+- [x] Milking timers dashboard widget
+  - NPC cow milking cooldown tracker. Detects milks from ProcessStartInteraction + chat "Bottle of Milk" gain. Backfills from cooldown error messages. Small dashboard widget with cows grouped by zone, 1h countdown timers, current zone floated to top.
 
 - [ ] Parse ProcessUpdateDescription for entity state changes
   - Fires for nearby entities changing state (garden plants, crafting items with timers, etc.). Format: `(entityId, "name", "description", "action", actionType, "appearance", flags)`. This is the foundation event for gardening tracker and crafting timers — parsing it in the event parser is the first step.

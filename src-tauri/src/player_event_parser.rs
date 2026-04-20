@@ -208,6 +208,33 @@ pub enum PlayerEvent {
         effect_ids: Vec<u32>,
         is_login_batch: bool,
     },
+    // === Moon Phase Events ===
+    MoonPhaseChanged {
+        timestamp: String,
+        phase: String,
+    },
+
+    // === Guild Events ===
+    GuildInfoLoaded {
+        timestamp: String,
+        guild_id: u32,
+        guild_name: String,
+        motd: String,
+    },
+
+    // === Directed Goals Events ===
+    DirectedGoalsLoaded {
+        timestamp: String,
+        goal_ids: Vec<u32>,
+    },
+
+    // === Player String Events ===
+    PlayerStringUpdated {
+        timestamp: String,
+        key: String,
+        value: String,
+    },
+
     /// Signal-only: ProcessRemoveEffects prints opaque System.Int32[] so we can't
     /// extract which IDs were removed. We still emit the event so consumers know
     /// *something* changed.
@@ -1018,6 +1045,26 @@ impl PlayerEventParser {
         } else if line.contains("ProcessUpdateEffectName(") {
             self.flush_pending_deletes(&mut events);
             if let Some(ev) = self.parse_update_effect_name(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessSetCelestialInfo(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_celestial_info(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessGuildGeneralInfo(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_guild_general_info(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessCompleteDirectedGoals(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_complete_directed_goals(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessSetString(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_set_string(line) {
                 events.push(ev);
             }
         } else {
@@ -2233,6 +2280,93 @@ impl PlayerEventParser {
             entity_id,
             effect_instance_id,
             display_name,
+        })
+    }
+
+    // ── New game state parsers ──────────────────────────────────────
+
+    /// ProcessSetCelestialInfo(WaxingCrescentMoon)
+    fn parse_celestial_info(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let start = line.find("ProcessSetCelestialInfo(")? + "ProcessSetCelestialInfo(".len();
+        let end = line[start..].find(')')? + start;
+        let phase = line[start..end].trim().to_string();
+        if phase.is_empty() {
+            return None;
+        }
+        Some(PlayerEvent::MoonPhaseChanged {
+            timestamp: ts,
+            phase,
+        })
+    }
+
+    /// ProcessGuildGeneralInfo(guildId, "GuildName", "motd")
+    fn parse_guild_general_info(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let args_start =
+            line.find("ProcessGuildGeneralInfo(")? + "ProcessGuildGeneralInfo(".len();
+        let args = &line[args_start..];
+
+        let first_comma = args.find(',')?;
+        let guild_id: u32 = args[..first_comma].trim().parse().ok()?;
+
+        let guild_name = extract_quoted_string(args, 0)?;
+        let motd = extract_quoted_string(args, 1).unwrap_or_default();
+
+        Some(PlayerEvent::GuildInfoLoaded {
+            timestamp: ts,
+            guild_id,
+            guild_name,
+            motd,
+        })
+    }
+
+    /// ProcessCompleteDirectedGoals([3200,8000,1,70,...])
+    fn parse_complete_directed_goals(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let args_start =
+            line.find("ProcessCompleteDirectedGoals(")? + "ProcessCompleteDirectedGoals(".len();
+        let args = &line[args_start..];
+
+        let bracket_start = args.find('[')? + 1;
+        let bracket_end = args.find(']')?;
+        let ids_str = &args[bracket_start..bracket_end];
+
+        let goal_ids: Vec<u32> = ids_str
+            .split(',')
+            .filter_map(|s| s.trim().parse().ok())
+            .collect();
+
+        Some(PlayerEvent::DirectedGoalsLoaded {
+            timestamp: ts,
+            goal_ids,
+        })
+    }
+
+    /// ProcessSetString(KEY, "value")
+    /// Only emits events for known useful keys.
+    fn parse_set_string(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let args_start = line.find("ProcessSetString(")? + "ProcessSetString(".len();
+        let args = &line[args_start..];
+
+        let first_comma = args.find(',')?;
+        let key = args[..first_comma].trim().to_string();
+
+        // Only persist known useful keys
+        match key.as_str() {
+            "NOTEPAD" | "NOTEPAD_TAB_1" | "NOTEPAD_TAB_2" | "NOTEPAD_TAB_3"
+            | "NOTEPAD_TAB_4" | "NOTEPAD_TAB_NAMES" | "FRIEND_STATUS" | "PUBLIC_STATUS"
+            | "HUNTING_GROUP_TITLE" => {}
+            _ => return None,
+        }
+
+        let value = extract_quoted_string(args, 0)?;
+
+        Some(PlayerEvent::PlayerStringUpdated {
+            timestamp: ts,
+            key,
+            value,
         })
     }
 }
@@ -4590,5 +4724,175 @@ mod tests {
             r#"[15:47:00] LocalPlayer: ProcessAddItem(Phlogiston7(222), -1, True)"#,
         );
         assert_eq!(*parser.stack_sizes.get(&222).unwrap(), 750);
+    }
+
+    // ── New game state parser tests ─────────────────────────────
+
+    #[test]
+    fn test_parse_celestial_info() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser
+            .process_line(r#"[23:32:47] LocalPlayer: ProcessSetCelestialInfo(WaxingCrescentMoon)"#);
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::MoonPhaseChanged { phase, .. } => {
+                assert_eq!(phase, "WaxingCrescentMoon");
+            }
+            other => panic!("Expected MoonPhaseChanged, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_parse_celestial_info_full_moon() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser
+            .process_line(r#"[12:00:00] LocalPlayer: ProcessSetCelestialInfo(FullMoon)"#);
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::MoonPhaseChanged { phase, .. } => {
+                assert_eq!(phase, "FullMoon");
+            }
+            other => panic!("Expected MoonPhaseChanged, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_parse_guild_general_info() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[15:16:24] LocalPlayer: ProcessGuildGeneralInfo(57, "SpaceMagic", "Welcome to the guild!")"#,
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::GuildInfoLoaded {
+                guild_id,
+                guild_name,
+                motd,
+                ..
+            } => {
+                assert_eq!(*guild_id, 57);
+                assert_eq!(guild_name, "SpaceMagic");
+                assert_eq!(motd, "Welcome to the guild!");
+            }
+            other => panic!("Expected GuildInfoLoaded, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_parse_guild_general_info_empty_motd() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[15:16:24] LocalPlayer: ProcessGuildGeneralInfo(42, "TestGuild", "")"#,
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::GuildInfoLoaded {
+                guild_id,
+                guild_name,
+                motd,
+                ..
+            } => {
+                assert_eq!(*guild_id, 42);
+                assert_eq!(guild_name, "TestGuild");
+                assert_eq!(motd, "");
+            }
+            other => panic!("Expected GuildInfoLoaded, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_parse_complete_directed_goals() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[15:16:24] LocalPlayer: ProcessCompleteDirectedGoals([3200,8000,1,70,3400,5000,])"#,
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::DirectedGoalsLoaded { goal_ids, .. } => {
+                assert_eq!(goal_ids, &[3200, 8000, 1, 70, 3400, 5000]);
+            }
+            other => panic!("Expected DirectedGoalsLoaded, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_parse_complete_directed_goals_empty() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[15:16:24] LocalPlayer: ProcessCompleteDirectedGoals([])"#,
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::DirectedGoalsLoaded { goal_ids, .. } => {
+                assert!(goal_ids.is_empty());
+            }
+            other => panic!("Expected DirectedGoalsLoaded, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_parse_set_string_notepad() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[15:16:24] LocalPlayer: ProcessSetString(NOTEPAD, "My notes here")"#,
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::PlayerStringUpdated { key, value, .. } => {
+                assert_eq!(key, "NOTEPAD");
+                assert_eq!(value, "My notes here");
+            }
+            other => panic!("Expected PlayerStringUpdated, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_parse_set_string_friend_status() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[15:16:24] LocalPlayer: ProcessSetString(FRIEND_STATUS, "110 Hammer, 101 Ment")"#,
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::PlayerStringUpdated { key, value, .. } => {
+                assert_eq!(key, "FRIEND_STATUS");
+                assert_eq!(value, "110 Hammer, 101 Ment");
+            }
+            other => panic!("Expected PlayerStringUpdated, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_parse_set_string_skips_unknown_keys() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[15:16:24] LocalPlayer: ProcessSetString(MOUNT_APPEARANCE, "@Horse1(stuff)")"#,
+        );
+        assert!(events.is_empty(), "MOUNT_APPEARANCE should be skipped");
+    }
+
+    #[test]
+    fn test_parse_set_string_all_notepad_tabs() {
+        let mut parser = PlayerEventParser::new();
+        for tab in &[
+            "NOTEPAD_TAB_1",
+            "NOTEPAD_TAB_2",
+            "NOTEPAD_TAB_3",
+            "NOTEPAD_TAB_4",
+            "NOTEPAD_TAB_NAMES",
+        ] {
+            let line = format!(
+                r#"[15:16:24] LocalPlayer: ProcessSetString({}, "content")"#,
+                tab
+            );
+            let events = parser.process_line(&line);
+            assert_eq!(events.len(), 1, "Should parse {}", tab);
+            match &events[0] {
+                PlayerEvent::PlayerStringUpdated { key, .. } => {
+                    assert_eq!(key, *tab);
+                }
+                other => panic!("Expected PlayerStringUpdated for {}, got {:?}", tab, other),
+            }
+        }
     }
 }

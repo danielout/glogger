@@ -52,14 +52,12 @@ Example content: `"Paleblood Season in Ilmari"` with extra yield, ends in 12h43m
 
 ### 4. Character Statistics Dashboard (via ProcessBook reports)
 
-The `/report` slash commands produce `ProcessBook` events with specific book types containing rich structured data:
-
 | Book Type | Content |
 |-----------|---------|
 | `HelpScreen` (Behavior Report) | Lifetime kills by species, deaths, attacks, damage dealt/taken, time played, foods eaten (meat/dairy/eggs/fish), login count, group joins, buried corpses |
 | `PlayerAge` | Creation date, time played, deaths, kills, VIP subscription days |
 | `ServerStatus` | Server time, uptime, ping, area status, session time |
-| `SkillReport` (Foods Consumed) | Every food item ever eaten with counts (hundreds of entries) |
+| `SkillReport` (Gourmand Report) | Every food item ever eaten with counts (hundreds of entries) - we already have a process to capture this from a file. |
 | `SkillReport` (Sources of Lore XP) | Lore XP by source category (altars, books, quests, hangouts, recipes) with current/max |
 | `SkillReport` (Explored Maps) | Per-area exploration percentage with fog block counts |
 | `SkillReport` (Teleportation Status) | Bind locations, most-used destinations, unique spots per area |

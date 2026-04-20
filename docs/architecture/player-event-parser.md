@@ -114,6 +114,15 @@ This is a general-purpose event for any timed action (surveying, eating, craftin
 | `ScreenText` | `ProcessScreenText` | `category`, `message` |
 | `BookOpened` | `ProcessBook` | `title`, `content`, `book_type` |
 
+### Character Info Events
+
+| Event | Log Source | Key Fields |
+|---|---|---|
+| `MoonPhaseChanged` | `ProcessSetCelestialInfo` | `phase` (e.g. `WaxingCrescentMoon`) — fires on area load |
+| `GuildInfoLoaded` | `ProcessGuildGeneralInfo` | `guild_id`, `guild_name`, `motd` — fires on login |
+| `DirectedGoalsLoaded` | `ProcessCompleteDirectedGoals` | `goal_ids: Vec<u32>` — completed goal IDs on login |
+| `PlayerStringUpdated` | `ProcessSetString` | `key`, `value` — known keys: NOTEPAD, NOTEPAD_TAB_1-4, NOTEPAD_TAB_NAMES, FRIEND_STATUS, PUBLIC_STATUS, HUNTING_GROUP_TITLE |
+
 ### Skill Bar / Mount Events
 
 | Event | Log Source | Key Fields |
@@ -360,6 +369,10 @@ The parser currently handles 24 of ~60 known event types. See `docs/architecture
 | `ProcessAddEffects` | `EffectsAdded` | Effect IDs + login batch flag |
 | `ProcessRemoveEffects` | `EffectsRemoved` | Signal-only — opaque `System.Int32[]` |
 | `ProcessUpdateEffectName` | `EffectNameUpdated` | Display name for effect instance |
+| `ProcessSetCelestialInfo` | `MoonPhaseChanged` | Server-authoritative moon phase (e.g. `WaxingCrescentMoon`) |
+| `ProcessGuildGeneralInfo` | `GuildInfoLoaded` | Guild id, name, MOTD on login |
+| `ProcessCompleteDirectedGoals` | `DirectedGoalsLoaded` | Completed directed goal IDs on login |
+| `ProcessSetString` | `PlayerStringUpdated` | Player strings: NOTEPAD, FRIEND_STATUS, PUBLIC_STATUS, etc. (9 known keys) |
 
 ### Planned — Medium Priority (Enrichment)
 

@@ -317,6 +317,20 @@ Relevant for features that depend on weather conditions (e.g., some Fletching re
 [16:06:32] LocalPlayer: ProcessSetWeather("Cloudy 3", True)
 ```
 
+### ProcessSetCelestialInfo — Moon phase
+
+```
+[HH:MM:SS] LocalPlayer: ProcessSetCelestialInfo(moonPhase)
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `moonPhase` | string | Moon phase name (e.g., `WaxingCrescentMoon`, `FullMoon`, `WaningGibbousMoon`) |
+
+**When it fires:** On login and area transitions. Provides the server's authoritative moon phase.
+
+**Parsed** → `MoonPhaseChanged { phase }`. Persisted to `game_state_moon` singleton.
+
 ### ProcessAddEffects — Effects/buffs applied
 
 ```
@@ -609,7 +623,7 @@ Relevant for features that depend on weather conditions (e.g., some Fletching re
 
 **When it fires:** On login. Contains guild ID, name, and message of the day.
 
-**NOT YET PARSED.**
+**Parsed** → `GuildInfoLoaded { guild_id, guild_name, motd }`. Persisted to `game_state_guild`.
 
 ### ProcessErrorMessage — Game error
 
@@ -655,9 +669,9 @@ Relevant for features that depend on weather conditions (e.g., some Fletching re
 [HH:MM:SS] LocalPlayer: ProcessSetString(key, "value")
 ```
 
-**When it fires:** Sets named string values. Known keys: `HUNTING_GROUP_TITLE`.
+**When it fires:** Sets named string values. Known keys: `NOTEPAD`, `NOTEPAD_TAB_1` through `NOTEPAD_TAB_4`, `NOTEPAD_TAB_NAMES`, `FRIEND_STATUS`, `PUBLIC_STATUS`, `HUNTING_GROUP_TITLE`, `MOUNT_APPEARANCE`.
 
-**NOT YET PARSED.**
+**Parsed** → `PlayerStringUpdated { key, value }` for 9 known useful keys (MOUNT_APPEARANCE skipped — already tracked via equipment). Persisted to `game_state_strings`.
 
 ### ProcessTitlesList — Unlocked titles
 
@@ -755,9 +769,9 @@ Relevant for features that depend on weather conditions (e.g., some Fletching re
 [HH:MM:SS] LocalPlayer: ProcessCompleteDirectedGoals(System.Int32[])
 ```
 
-**When it fires:** On login. List of completed tutorial/directed goals.
+**When it fires:** On login. List of completed tutorial/directed goals. Format is `[id1,id2,id3,]` (comma-separated integers in brackets, with trailing comma).
 
-**NOT YET PARSED.**
+**Parsed** → `DirectedGoalsLoaded { goal_ids: Vec<u32> }`. Persisted to `game_state_directed_goals` (full replacement on login).
 
 ### ProcessMapFog — Explored map areas
 

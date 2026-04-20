@@ -323,11 +323,13 @@ impl GameStateManager {
                 conn.execute("SAVEPOINT attributes_batch", []).ok();
                 {
                     let mut stmt = conn.prepare(
-                        "INSERT INTO game_state_attributes (character_name, server_name, attribute_name, value, last_confirmed_at)
-                         VALUES (?1, ?2, ?3, ?4, ?5)
+                        "INSERT INTO game_state_attributes (character_name, server_name, attribute_name, value, last_confirmed_at, min_value, max_value)
+                         VALUES (?1, ?2, ?3, ?4, ?5, ?4, ?4)
                          ON CONFLICT(character_name, server_name, attribute_name) DO UPDATE SET
                             value = excluded.value,
-                            last_confirmed_at = excluded.last_confirmed_at"
+                            last_confirmed_at = excluded.last_confirmed_at,
+                            min_value = MIN(COALESCE(game_state_attributes.min_value, excluded.value), excluded.value),
+                            max_value = MAX(COALESCE(game_state_attributes.max_value, excluded.value), excluded.value)"
                     ).ok();
 
                     if let Some(stmt) = stmt.as_mut() {
@@ -889,6 +891,89 @@ impl GameStateManager {
                 } else {
                     eprintln!("[game_state] VendorGoldChanged with no current interaction NPC — skipping");
                 }
+            }
+
+            // ── New game state events ──────────────────────────────────
+
+            PlayerEvent::MoonPhaseChanged { timestamp, phase } => {
+                let dt = self.to_utc(timestamp);
+                conn.execute(
+                    "INSERT INTO game_state_moon (id, phase, last_confirmed_at)
+                     VALUES (1, ?1, ?2)
+                     ON CONFLICT(id) DO UPDATE SET
+                        phase = excluded.phase,
+                        last_confirmed_at = excluded.last_confirmed_at",
+                    rusqlite::params![phase, dt],
+                )
+                .ok();
+                domains.push("moon");
+            }
+
+            PlayerEvent::GuildInfoLoaded {
+                timestamp,
+                guild_id,
+                guild_name,
+                motd,
+            } => {
+                let dt = self.to_utc(timestamp);
+                conn.execute(
+                    "INSERT INTO game_state_guild (character_name, server_name, guild_id, guild_name, motd, last_confirmed_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                     ON CONFLICT(character_name, server_name) DO UPDATE SET
+                        guild_id = excluded.guild_id,
+                        guild_name = excluded.guild_name,
+                        motd = excluded.motd,
+                        last_confirmed_at = excluded.last_confirmed_at",
+                    rusqlite::params![character, server, *guild_id as i64, guild_name, motd, dt],
+                )
+                .ok();
+                domains.push("guild");
+            }
+
+            PlayerEvent::DirectedGoalsLoaded {
+                timestamp,
+                goal_ids,
+            } => {
+                let dt = self.to_utc(timestamp);
+                // Full replacement on login — same pattern as SkillsLoaded
+                conn.execute(
+                    "DELETE FROM game_state_directed_goals WHERE character_name = ?1 AND server_name = ?2",
+                    rusqlite::params![character, server],
+                )
+                .ok();
+                if let Ok(mut stmt) = conn.prepare(
+                    "INSERT INTO game_state_directed_goals (character_name, server_name, goal_id, last_confirmed_at)
+                     VALUES (?1, ?2, ?3, ?4)",
+                ) {
+                    for goal_id in goal_ids {
+                        stmt.execute(rusqlite::params![
+                            character,
+                            server,
+                            *goal_id as i64,
+                            dt
+                        ])
+                        .ok();
+                    }
+                }
+                domains.push("directed_goals");
+            }
+
+            PlayerEvent::PlayerStringUpdated {
+                timestamp,
+                key,
+                value,
+            } => {
+                let dt = self.to_utc(timestamp);
+                conn.execute(
+                    "INSERT INTO game_state_strings (character_name, server_name, key, value, last_confirmed_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5)
+                     ON CONFLICT(character_name, server_name, key) DO UPDATE SET
+                        value = excluded.value,
+                        last_confirmed_at = excluded.last_confirmed_at",
+                    rusqlite::params![character, server, key, value, dt],
+                )
+                .ok();
+                domains.push("strings");
             }
 
             _ => {}

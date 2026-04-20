@@ -15,6 +15,7 @@ mod log_watchers;
 mod parsers;
 mod player_event_parser;
 mod replay;
+mod report_stats;
 mod settings;
 mod setup_commands;
 mod shop_log_parser;
@@ -162,8 +163,12 @@ use db::game_state_commands::{
     get_game_state_active_skills, get_game_state_attributes, get_game_state_currencies,
     get_game_state_effects, get_game_state_equipment, get_game_state_favor,
     get_game_state_inventory, get_game_state_recipes, get_game_state_skills,
-    get_game_state_storage, get_game_state_vendor, get_game_state_world, get_gift_log,
+    get_character_report_stats, get_game_state_books, get_game_state_storage,
+    get_game_state_vendor, get_game_state_world, get_gift_log, get_milking_timers,
     add_manual_gift, remove_last_gift, get_tracked_skills, set_tracked_skills,
+    get_computed_stats,
+    get_attribute_extremes,
+    get_player_milking_leaderboard,
 };
 use db::gourmand_commands::{
     export_text_file, get_all_foods, get_gourmand_eaten_foods, import_cooks_helper_file,
@@ -597,6 +602,12 @@ pub fn run() {
             get_game_state_effects,
             get_game_state_storage,
             get_game_state_vendor,
+            get_game_state_books,
+            get_milking_timers,
+            get_character_report_stats,
+            get_computed_stats,
+            get_attribute_extremes,
+            get_player_milking_leaderboard,
             get_tracked_skills,
             set_tracked_skills,
             get_market_values,

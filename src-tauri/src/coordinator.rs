@@ -105,6 +105,10 @@ pub struct DataIngestCoordinator {
     recent_damage: Vec<crate::chat_combat_parser::ChatCombatEvent>,
     /// Debug capture state — buffers raw log lines when a capture is active.
     debug_capture: DebugCaptureState,
+    /// Internal name of the cow currently being interacted with (e.g. "Cow_Homer").
+    /// Set on ProcessStartInteraction with a Cow_ NPC, cleared on InteractionEnded.
+    /// Used to attribute "Bottle of Milk" chat gains to a specific cow.
+    pending_cow_interaction: Option<String>,
 }
 
 impl DataIngestCoordinator {
@@ -144,6 +148,7 @@ impl DataIngestCoordinator {
             current_area: None,
             recent_damage: Vec::new(),
             debug_capture: DebugCaptureState::new(),
+            pending_cow_interaction: None,
         })
     }
 
@@ -698,7 +703,96 @@ impl DataIngestCoordinator {
                     {
                         if book_type == "PlayerShopLog" {
                             self.ingest_shop_log(timestamp, title, content);
+                        } else if matches!(
+                            book_type.as_str(),
+                            "HelpScreen"
+                                | "PlayerAge"
+                                | "ServerStatus"
+                                | "SkillReport"
+                                | "GardeningAlmanac"
+                        ) {
+                            self.persist_book_report(timestamp, title, content, book_type);
+
+                            // Auto-import gourmand report when the Foods Consumed
+                            // skill report is opened.
+                            if book_type == "SkillReport"
+                                && content.trim_start().starts_with("Foods Consumed:")
+                            {
+                                if let Ok(conn) = self.db_pool.get() {
+                                    match crate::db::gourmand_commands::import_gourmand_from_content(
+                                        &conn, content,
+                                    ) {
+                                        Ok(n) if n > 0 => {
+                                            startup_log!(
+                                                "[coordinator] Auto-imported gourmand report: {} foods",
+                                                n
+                                            );
+                                            self.app_handle
+                                                .emit("gourmand-updated", n)
+                                                .ok();
+                                        }
+                                        Ok(_) => {}
+                                        Err(e) => {
+                                            eprintln!(
+                                                "[coordinator] Failed to auto-import gourmand report: {e}"
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Parse structured stats from PlayerAge and Behavior Report
+                            if book_type == "PlayerAge" || book_type == "HelpScreen" {
+                                self.ingest_report_stats(book_type, content);
+                            }
                         }
+                    }
+
+                    // Track cow interactions for milking timer feature
+                    match &player_event {
+                        PlayerEvent::InteractionStarted { npc_name, .. }
+                            if npc_name.starts_with("Cow_") =>
+                        {
+                            self.pending_cow_interaction = Some(npc_name.clone());
+                        }
+                        PlayerEvent::InteractionEnded { .. } => {
+                            self.pending_cow_interaction = None;
+                        }
+                        PlayerEvent::ScreenText {
+                            category, message, ..
+                        } if category == "ErrorMessage" => {
+                            // "You've already milked Homer in the past hour."
+                            if let Some(cow_name) =
+                                message.strip_prefix("You've already milked ")
+                                    .and_then(|s| s.strip_suffix(" in the past hour."))
+                            {
+                                self.record_cow_milk_backfill(cow_name);
+                            }
+                        }
+                        PlayerEvent::ScreenText {
+                            category, message, timestamp, ..
+                        } if category == "GeneralInfo" => {
+                            // "You obtain fresh milk from PlayerName."
+                            if let Some(player_name) =
+                                message.strip_prefix("You obtain fresh milk from ")
+                                    .and_then(|s| s.strip_suffix('.'))
+                            {
+                                self.record_player_milk(player_name, "milked", timestamp);
+                            }
+                        }
+                        PlayerEvent::ScreenText {
+                            category, message, timestamp, ..
+                        } if category == "ImportantInfo" => {
+                            // "PlayerName has milked you."
+                            if let Some(player_name) =
+                                message.strip_suffix(" has milked you.")
+                            {
+                                if !player_name.is_empty() {
+                                    self.record_player_milk(player_name, "milked_by", timestamp);
+                                }
+                            }
+                        }
+                        _ => {}
                     }
 
                     // Phase 5 survey aggregator. Runs *before* game_state
@@ -817,7 +911,7 @@ impl DataIngestCoordinator {
                                             .and_then(|info| info.internal_name.clone())
                                     });
                                 if let (Some(internal), Some(watcher)) =
-                                    (internal_name, self.player_watcher.as_mut())
+                                    (internal_name.clone(), self.player_watcher.as_mut())
                                 {
                                     // timestamp is "YYYY-MM-DD HH:MM:SS" UTC — extract the time portion
                                     let hms = timestamp
@@ -825,6 +919,22 @@ impl DataIngestCoordinator {
                                         .nth(1)
                                         .unwrap_or(timestamp);
                                     watcher.feed_chat_gain(internal, *quantity, hms);
+                                }
+
+                                // Milking timer: if we gained milk while interacting with a cow
+                                if (item_name == "Bottle of Milk"
+                                    || internal_name.as_deref() == Some("BottleOfMilk"))
+                                    && self.pending_cow_interaction.is_some()
+                                {
+                                    if let Some(cow_internal) =
+                                        self.pending_cow_interaction.take()
+                                    {
+                                        let cow_display = cow_internal
+                                            .strip_prefix("Cow_")
+                                            .unwrap_or(&cow_internal)
+                                            .to_string();
+                                        self.record_cow_milk(&cow_display);
+                                    }
                                 }
 
                                 // Correct inventory/storage stack sizes
@@ -1264,6 +1374,158 @@ impl DataIngestCoordinator {
                     .ok();
             }
         }
+    }
+
+    /// Persist a non-shop book report (behavior report, age, server status,
+    /// skill reports, gardening almanac) to `game_state_books`. Upserts by
+    /// (character, server, book_type, title) so re-running a report overwrites.
+    fn persist_book_report(
+        &self,
+        _timestamp: &str,
+        title: &str,
+        content: &str,
+        book_type: &str,
+    ) {
+        let (character, server) = match self.active_character_server() {
+            Some(cs) => cs,
+            None => return,
+        };
+        let dt = chrono::Utc::now().to_rfc3339();
+        let conn = match self.db_pool.get() {
+            Ok(c) => c,
+            Err(_) => return,
+        };
+        conn.execute(
+            "INSERT INTO game_state_books (character_name, server_name, book_type, title, content, captured_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+             ON CONFLICT(character_name, server_name, book_type, title) DO UPDATE SET
+                content = excluded.content,
+                captured_at = excluded.captured_at",
+            rusqlite::params![character, server, book_type, title, content, dt],
+        )
+        .ok();
+        self.app_handle
+            .emit("game-state-updated", vec!["books"])
+            .ok();
+    }
+
+    /// Parse structured stats from PlayerAge or Behavior Report books and
+    /// persist them to the `character_stats` table as key-value pairs.
+    fn ingest_report_stats(&self, book_type: &str, content: &str) {
+        let (character, server) = match self.active_character_server() {
+            Some(cs) => cs,
+            None => return,
+        };
+        let stats = match book_type {
+            "PlayerAge" => crate::report_stats::parse_player_age(content),
+            "HelpScreen" => crate::report_stats::parse_behavior_report(content),
+            _ => return,
+        };
+        if stats.is_empty() {
+            return;
+        }
+        let dt = chrono::Utc::now().to_rfc3339();
+        let conn = match self.db_pool.get() {
+            Ok(c) => c,
+            Err(_) => return,
+        };
+        match crate::report_stats::persist_stats(&conn, &character, &server, &stats, &dt) {
+            Ok(n) => {
+                startup_log!(
+                    "[coordinator] Imported {} stats from {} report",
+                    n,
+                    book_type,
+                );
+                self.app_handle
+                    .emit("game-state-updated", vec!["report_stats"])
+                    .ok();
+            }
+            Err(e) => {
+                eprintln!("[coordinator] Failed to persist report stats: {e}");
+            }
+        }
+    }
+
+    // ── Milking timers ────────────────────────────────────────────
+
+    /// Record a successful cow milk (from chat "Bottle of Milk added to inventory"
+    /// while interacting with a Cow_ NPC). Uses current area as the zone.
+    fn record_cow_milk(&self, cow_name: &str) {
+        let (character, server) = match self.active_character_server() {
+            Some(cs) => cs,
+            None => return,
+        };
+        let zone = self.current_area.clone().unwrap_or_default();
+        let now = chrono::Utc::now().to_rfc3339();
+        let conn = match self.db_pool.get() {
+            Ok(c) => c,
+            Err(_) => return,
+        };
+        conn.execute(
+            "INSERT INTO milking_timers (character_name, server_name, cow_name, zone, last_milked_at)
+             VALUES (?1, ?2, ?3, ?4, ?5)
+             ON CONFLICT(character_name, server_name, cow_name, zone) DO UPDATE SET
+                last_milked_at = excluded.last_milked_at",
+            rusqlite::params![character, server, cow_name, zone, now],
+        )
+        .ok();
+        self.app_handle
+            .emit("game-state-updated", vec!["milking"])
+            .ok();
+    }
+
+    /// Backfill a milking timer from the cooldown error message
+    /// ("You've already milked X in the past hour."). Since we don't know
+    /// exactly when the milk happened, record it as 59 minutes ago so the
+    /// timer shows nearly expired.
+    fn record_cow_milk_backfill(&self, cow_name: &str) {
+        let (character, server) = match self.active_character_server() {
+            Some(cs) => cs,
+            None => return,
+        };
+        let zone = self.current_area.clone().unwrap_or_default();
+        let backfill_time =
+            (chrono::Utc::now() - chrono::Duration::minutes(59)).to_rfc3339();
+        let conn = match self.db_pool.get() {
+            Ok(c) => c,
+            Err(_) => return,
+        };
+        // Only backfill if we don't already have a more recent record for this cow
+        conn.execute(
+            "INSERT INTO milking_timers (character_name, server_name, cow_name, zone, last_milked_at)
+             VALUES (?1, ?2, ?3, ?4, ?5)
+             ON CONFLICT(character_name, server_name, cow_name, zone) DO UPDATE SET
+                last_milked_at = excluded.last_milked_at
+                WHERE excluded.last_milked_at > milking_timers.last_milked_at",
+            rusqlite::params![character, server, cow_name, zone, backfill_time],
+        )
+        .ok();
+        self.app_handle
+            .emit("game-state-updated", vec!["milking"])
+            .ok();
+    }
+
+    /// Record a player-to-player milking event.
+    /// direction is "milked" (I milked them) or "milked_by" (they milked me).
+    fn record_player_milk(&self, other_player: &str, direction: &str, _timestamp: &str) {
+        let (character, server) = match self.active_character_server() {
+            Some(cs) => cs,
+            None => return,
+        };
+        let dt = chrono::Utc::now().to_rfc3339();
+        let conn = match self.db_pool.get() {
+            Ok(c) => c,
+            Err(_) => return,
+        };
+        conn.execute(
+            "INSERT INTO player_milking_log (character_name, server_name, other_player, direction, milked_at)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![character, server, other_player, direction, dt],
+        )
+        .ok();
+        self.app_handle
+            .emit("game-state-updated", vec!["milking"])
+            .ok();
     }
 
     /// Parse a PlayerShopLog book body and persist its entries to the

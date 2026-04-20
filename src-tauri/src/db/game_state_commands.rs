@@ -708,3 +708,539 @@ pub fn get_game_state_vendor(
     rows.collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Row error: {e}"))
 }
+
+// ── Book reports ────────────────────────────────────────────────
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct GameStateBook {
+    pub book_type: String,
+    pub title: String,
+    pub content: String,
+    pub captured_at: String,
+}
+
+#[tauri::command]
+pub fn get_game_state_books(
+    db: State<'_, DbPool>,
+    character_name: String,
+    server_name: String,
+    book_type: Option<String>,
+) -> Result<Vec<GameStateBook>, String> {
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+
+    if let Some(bt) = book_type {
+        let mut stmt = conn
+            .prepare(
+                "SELECT book_type, title, content, captured_at
+                 FROM game_state_books
+                 WHERE character_name = ?1 AND server_name = ?2 AND book_type = ?3
+                 ORDER BY captured_at DESC",
+            )
+            .map_err(|e| format!("Query error: {e}"))?;
+
+        let rows = stmt
+            .query_map(rusqlite::params![character_name, server_name, bt], |row| {
+                Ok(GameStateBook {
+                    book_type: row.get(0)?,
+                    title: row.get(1)?,
+                    content: row.get(2)?,
+                    captured_at: row.get(3)?,
+                })
+            })
+            .map_err(|e| format!("Query error: {e}"))?;
+
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Row error: {e}"))
+    } else {
+        let mut stmt = conn
+            .prepare(
+                "SELECT book_type, title, content, captured_at
+                 FROM game_state_books
+                 WHERE character_name = ?1 AND server_name = ?2
+                 ORDER BY captured_at DESC",
+            )
+            .map_err(|e| format!("Query error: {e}"))?;
+
+        let rows = stmt
+            .query_map(rusqlite::params![character_name, server_name], |row| {
+                Ok(GameStateBook {
+                    book_type: row.get(0)?,
+                    title: row.get(1)?,
+                    content: row.get(2)?,
+                    captured_at: row.get(3)?,
+                })
+            })
+            .map_err(|e| format!("Query error: {e}"))?;
+
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Row error: {e}"))
+    }
+}
+
+// ── Milking timers ──────────────────────────────────────────────
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct MilkingTimer {
+    pub cow_name: String,
+    pub zone: String,
+    pub last_milked_at: String,
+}
+
+#[tauri::command]
+pub fn get_milking_timers(
+    db: State<'_, DbPool>,
+    character_name: String,
+    server_name: String,
+) -> Result<Vec<MilkingTimer>, String> {
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT cow_name, zone, last_milked_at
+             FROM milking_timers
+             WHERE character_name = ?1 AND server_name = ?2
+             ORDER BY zone, cow_name",
+        )
+        .map_err(|e| format!("Query error: {e}"))?;
+
+    let rows = stmt
+        .query_map(rusqlite::params![character_name, server_name], |row| {
+            Ok(MilkingTimer {
+                cow_name: row.get(0)?,
+                zone: row.get(1)?,
+                last_milked_at: row.get(2)?,
+            })
+        })
+        .map_err(|e| format!("Query error: {e}"))?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Row error: {e}"))
+}
+
+// ── Character stats ─────────────────────────────────────────────
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct CharacterReportStat {
+    pub category: String,
+    pub stat_name: String,
+    pub stat_value: String,
+    pub updated_at: String,
+}
+
+#[tauri::command]
+pub fn get_character_report_stats(
+    db: State<'_, DbPool>,
+    character_name: String,
+    server_name: String,
+    category: Option<String>,
+) -> Result<Vec<CharacterReportStat>, String> {
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+
+    if let Some(cat) = category {
+        let mut stmt = conn
+            .prepare(
+                "SELECT category, stat_name, stat_value, updated_at
+                 FROM character_report_stats
+                 WHERE character_name = ?1 AND server_name = ?2 AND category = ?3
+                 ORDER BY category, stat_name",
+            )
+            .map_err(|e| format!("Query error: {e}"))?;
+
+        let rows = stmt
+            .query_map(rusqlite::params![character_name, server_name, cat], |row| {
+                Ok(CharacterReportStat {
+                    category: row.get(0)?,
+                    stat_name: row.get(1)?,
+                    stat_value: row.get(2)?,
+                    updated_at: row.get(3)?,
+                })
+            })
+            .map_err(|e| format!("Query error: {e}"))?;
+
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Row error: {e}"))
+    } else {
+        let mut stmt = conn
+            .prepare(
+                "SELECT category, stat_name, stat_value, updated_at
+                 FROM character_report_stats
+                 WHERE character_name = ?1 AND server_name = ?2
+                 ORDER BY category, stat_name",
+            )
+            .map_err(|e| format!("Query error: {e}"))?;
+
+        let rows = stmt
+            .query_map(rusqlite::params![character_name, server_name], |row| {
+                Ok(CharacterReportStat {
+                    category: row.get(0)?,
+                    stat_name: row.get(1)?,
+                    stat_value: row.get(2)?,
+                    updated_at: row.get(3)?,
+                })
+            })
+            .map_err(|e| format!("Query error: {e}"))?;
+
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Row error: {e}"))
+    }
+}
+
+// ── Player Milking Leaderboard ──────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PlayerMilkingEntry {
+    pub player_name: String,
+    pub count: i64,
+}
+
+#[tauri::command]
+pub fn get_player_milking_leaderboard(
+    db: State<'_, DbPool>,
+    character_name: String,
+    server_name: String,
+    direction: String,
+) -> Result<Vec<PlayerMilkingEntry>, String> {
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT other_player, COUNT(*) as cnt
+             FROM player_milking_log
+             WHERE character_name = ?1 AND server_name = ?2 AND direction = ?3
+             GROUP BY other_player
+             ORDER BY cnt DESC, other_player ASC",
+        )
+        .map_err(|e| format!("Query error: {e}"))?;
+
+    let rows = stmt
+        .query_map(rusqlite::params![character_name, server_name, direction], |row| {
+            Ok(PlayerMilkingEntry {
+                player_name: row.get(0)?,
+                count: row.get(1)?,
+            })
+        })
+        .map_err(|e| format!("Query error: {e}"))?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Row error: {e}"))
+}
+
+// ── Computed Stats ──────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SkillCraftingBreakdown {
+    pub skill_name: String,
+    pub total_crafted: i64,
+    pub crafting_seconds: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AttributeExtreme {
+    pub attribute_name: String,
+    pub current_value: f64,
+    pub min_value: f64,
+    pub max_value: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ComputedStats {
+    pub total_level: i64,
+    pub total_base_level: i64,
+    pub total_bonus_levels: i64,
+    pub skill_count: i64,
+    pub total_xp_earned: i64,
+    pub items_crafted: i64,
+    pub items_distilled: i64,
+    pub items_deconstructed: i64,
+    pub times_teleported: i64,
+    pub items_dyed: i64,
+    pub total_crafting_seconds: f64,
+    // Rate stats (None if time_played not available from /age report)
+    pub hours_played: Option<f64>,
+    pub xp_per_hour: Option<f64>,
+    pub kills_per_hour: Option<f64>,
+    pub deaths_per_hour: Option<f64>,
+    // Per-skill crafting breakdowns
+    pub crafting_by_skill: Vec<SkillCraftingBreakdown>,
+}
+
+/// Parse a "X days Y hours" string into total hours.
+/// Handles formats like: "40 days 13 hours", "5 hours", "120 days", "1 days 0 hours"
+fn parse_time_played_hours(value: &str) -> Option<f64> {
+    let mut total_hours: f64 = 0.0;
+    let parts: Vec<&str> = value.split_whitespace().collect();
+    let mut i = 0;
+    while i + 1 < parts.len() {
+        if let Ok(num) = parts[i].parse::<f64>() {
+            let unit = parts[i + 1].to_lowercase();
+            if unit.starts_with("day") {
+                total_hours += num * 24.0;
+            } else if unit.starts_with("hour") {
+                total_hours += num;
+            } else if unit.starts_with("minute") {
+                total_hours += num / 60.0;
+            }
+            i += 2;
+        } else {
+            i += 1;
+        }
+    }
+    if total_hours > 0.0 { Some(total_hours) } else { None }
+}
+
+#[tauri::command]
+pub fn get_computed_stats(
+    db: State<'_, DbPool>,
+    character_name: String,
+    server_name: String,
+) -> Result<ComputedStats, String> {
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+
+    // ── Skill totals ────────────────────────────────────────────────
+    let (total_level, total_base_level, total_bonus_levels, skill_count, total_xp_earned): (
+        i64, i64, i64, i64, i64,
+    ) = conn
+        .query_row(
+            "SELECT
+                COALESCE(SUM(level + bonus_levels), 0),
+                COALESCE(SUM(level), 0),
+                COALESCE(SUM(bonus_levels), 0),
+                COUNT(*),
+                COALESCE(SUM(xp), 0)
+             FROM game_state_skills
+             WHERE character_name = ?1 AND server_name = ?2",
+            rusqlite::params![character_name, server_name],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
+        )
+        .map_err(|e| format!("Skill totals query error: {e}"))?;
+
+    // ── Recipe-based stats ──────────────────────────────────────────
+
+    // Items crafted: recipes whose skill is NOT a utility/knowledge skill
+    let items_crafted: i64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(gr.completion_count), 0)
+             FROM game_state_recipes gr
+             JOIN recipes r ON r.id = gr.recipe_id
+             WHERE gr.character_name = ?1 AND gr.server_name = ?2
+               AND r.skill IS NOT NULL
+               AND r.skill NOT IN ('Lore', 'Teleportation', 'Augmentation', 'Transmutation')",
+            rusqlite::params![character_name, server_name],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("Items crafted query error: {e}"))?;
+
+    // Items distilled: Transmutation recipes that aren't repair crafts
+    let items_distilled: i64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(gr.completion_count), 0)
+             FROM game_state_recipes gr
+             JOIN recipes r ON r.id = gr.recipe_id
+             WHERE gr.character_name = ?1 AND gr.server_name = ?2
+               AND r.skill = 'Transmutation'
+               AND COALESCE(r.name, '') NOT LIKE '%Repair%'
+               AND COALESCE(r.action_label, '') NOT LIKE '%Repair%'",
+            rusqlite::params![character_name, server_name],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("Items distilled query error: {e}"))?;
+
+    // Items deconstructed: recipes with internal names like "DecomposeHead", "DecomposeChest", etc.
+    let items_deconstructed: i64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(gr.completion_count), 0)
+             FROM game_state_recipes gr
+             JOIN recipes r ON r.id = gr.recipe_id
+             WHERE gr.character_name = ?1 AND gr.server_name = ?2
+               AND COALESCE(json_extract(r.raw_json, '$.InternalName'), '') LIKE 'Decompose%'",
+            rusqlite::params![character_name, server_name],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("Items deconstructed query error: {e}"))?;
+
+    // Times teleported: Teleportation recipes that aren't binding-related
+    let times_teleported: i64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(gr.completion_count), 0)
+             FROM game_state_recipes gr
+             JOIN recipes r ON r.id = gr.recipe_id
+             WHERE gr.character_name = ?1 AND gr.server_name = ?2
+               AND r.skill = 'Teleportation'
+               AND COALESCE(r.name, '') NOT LIKE '%Bind%'
+               AND COALESCE(r.name, '') NOT LIKE '%Binding%'",
+            rusqlite::params![character_name, server_name],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("Times teleported query error: {e}"))?;
+
+    // Items dyed: recipes with internal names like "DyeLeatherArmor1", "DyeMetalArmor2", etc.
+    let items_dyed: i64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(gr.completion_count), 0)
+             FROM game_state_recipes gr
+             JOIN recipes r ON r.id = gr.recipe_id
+             WHERE gr.character_name = ?1 AND gr.server_name = ?2
+               AND COALESCE(json_extract(r.raw_json, '$.InternalName'), '') LIKE 'Dye%Armor%'",
+            rusqlite::params![character_name, server_name],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("Items dyed query error: {e}"))?;
+
+    // Total crafting time: sum of (completion_count * usage_delay) for all recipes
+    let total_crafting_seconds: f64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(gr.completion_count * COALESCE(r.usage_delay, 0)), 0.0)
+             FROM game_state_recipes gr
+             JOIN recipes r ON r.id = gr.recipe_id
+             WHERE gr.character_name = ?1 AND gr.server_name = ?2",
+            rusqlite::params![character_name, server_name],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("Crafting time query error: {e}"))?;
+
+    // ── Per-skill crafting breakdowns ───────────────────────────────
+    let crafting_by_skill = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT r.skill, SUM(gr.completion_count), SUM(gr.completion_count * COALESCE(r.usage_delay, 0))
+                 FROM game_state_recipes gr
+                 JOIN recipes r ON r.id = gr.recipe_id
+                 WHERE gr.character_name = ?1 AND gr.server_name = ?2
+                   AND r.skill IS NOT NULL
+                 GROUP BY r.skill
+                 ORDER BY SUM(gr.completion_count) DESC",
+            )
+            .map_err(|e| format!("Crafting breakdown query error: {e}"))?;
+
+        let rows = stmt
+            .query_map(rusqlite::params![character_name, server_name], |row| {
+                Ok(SkillCraftingBreakdown {
+                    skill_name: row.get(0)?,
+                    total_crafted: row.get(1)?,
+                    crafting_seconds: row.get(2)?,
+                })
+            })
+            .map_err(|e| format!("Crafting breakdown query error: {e}"))?;
+
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Crafting breakdown row error: {e}"))?
+    };
+
+    // ── Rate stats from report stats ────────────────────────────────
+    // Look up time_played, kills, deaths from character_report_stats (from /age report)
+    let hours_played = {
+        let time_str: Option<String> = conn
+            .query_row(
+                "SELECT stat_value FROM character_report_stats
+                 WHERE character_name = ?1 AND server_name = ?2
+                   AND category = 'age' AND stat_name = 'time_played'",
+                rusqlite::params![character_name, server_name],
+                |row| row.get(0),
+            )
+            .ok();
+        time_str.and_then(|s| parse_time_played_hours(&s))
+    };
+
+    let report_kills: Option<f64> = conn
+        .query_row(
+            "SELECT stat_value FROM character_report_stats
+             WHERE character_name = ?1 AND server_name = ?2
+               AND category = 'age' AND stat_name = 'kills'",
+            rusqlite::params![character_name, server_name],
+            |row| {
+                let val: String = row.get(0)?;
+                Ok(val.replace(',', "").parse::<f64>().ok())
+            },
+        )
+        .ok()
+        .flatten();
+
+    let report_deaths: Option<f64> = conn
+        .query_row(
+            "SELECT stat_value FROM character_report_stats
+             WHERE character_name = ?1 AND server_name = ?2
+               AND category = 'age' AND stat_name = 'deaths'",
+            rusqlite::params![character_name, server_name],
+            |row| {
+                let val: String = row.get(0)?;
+                Ok(val.replace(',', "").parse::<f64>().ok())
+            },
+        )
+        .ok()
+        .flatten();
+
+    let xp_per_hour = hours_played.map(|h| total_xp_earned as f64 / h);
+    let kills_per_hour = match (hours_played, report_kills) {
+        (Some(h), Some(k)) if h > 0.0 => Some(k / h),
+        _ => None,
+    };
+    let deaths_per_hour = match (hours_played, report_deaths) {
+        (Some(h), Some(d)) if h > 0.0 => Some(d / h),
+        _ => None,
+    };
+
+    Ok(ComputedStats {
+        total_level,
+        total_base_level,
+        total_bonus_levels,
+        skill_count,
+        total_xp_earned,
+        items_crafted,
+        items_distilled,
+        items_deconstructed,
+        times_teleported,
+        items_dyed,
+        total_crafting_seconds,
+        hours_played,
+        xp_per_hour,
+        kills_per_hour,
+        deaths_per_hour,
+        crafting_by_skill,
+    })
+}
+
+#[tauri::command]
+pub fn get_attribute_extremes(
+    db: State<'_, DbPool>,
+    character_name: String,
+    server_name: String,
+) -> Result<Vec<AttributeExtreme>, String> {
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT attribute_name, value, COALESCE(min_value, value), COALESCE(max_value, value)
+             FROM game_state_attributes
+             WHERE character_name = ?1 AND server_name = ?2
+             ORDER BY attribute_name",
+        )
+        .map_err(|e| format!("Attribute extremes query error: {e}"))?;
+
+    let rows = stmt
+        .query_map(rusqlite::params![character_name, server_name], |row| {
+            Ok(AttributeExtreme {
+                attribute_name: row.get(0)?,
+                current_value: row.get(1)?,
+                min_value: row.get(2)?,
+                max_value: row.get(3)?,
+            })
+        })
+        .map_err(|e| format!("Attribute extremes query error: {e}"))?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Attribute extremes row error: {e}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_time_played_hours() {
+        assert_eq!(parse_time_played_hours("40 days 13 hours"), Some(40.0 * 24.0 + 13.0));
+        assert_eq!(parse_time_played_hours("5 hours"), Some(5.0));
+        assert_eq!(parse_time_played_hours("120 days"), Some(120.0 * 24.0));
+        assert_eq!(parse_time_played_hours("1 days 0 hours"), Some(24.0));
+        assert_eq!(parse_time_played_hours("0 days 0 hours"), None); // 0 total → None
+        assert_eq!(parse_time_played_hours(""), None);
+        assert_eq!(parse_time_played_hours("garbage"), None);
+        assert_eq!(parse_time_played_hours("71 days"), Some(71.0 * 24.0));
+    }
+}

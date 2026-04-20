@@ -75,6 +75,13 @@ All tables live in the V1 unified migration. Every table uses `last_confirmed_at
 | `game_state_effects` | (character_name, effect_instance_id) | effect_name, source_entity_id |
 | `game_state_storage` | (character_name, server_name, vault_key, instance_id) | item_name, item_type_id, stack_size, slot_index, source |
 | `game_state_area` | (character_name, server_name) | area_name |
+| `game_state_moon` | `id CHECK (id = 1)` | phase |
+| `game_state_guild` | (character_name, server_name) | guild_id, guild_name, motd |
+| `game_state_directed_goals` | (character_name, server_name, goal_id) | — |
+| `game_state_strings` | (character_name, server_name, key) | value (NOTEPAD, FRIEND_STATUS, PUBLIC_STATUS, etc.) |
+| `game_state_books` | (character_name, server_name, book_type, title) UNIQUE | content (raw HTML) |
+| `character_report_stats` | (character_name, server_name, category, stat_name) | stat_value (parsed from PlayerAge/Behavior reports) |
+| `milking_timers` | (character_name, server_name, cow_name, zone) | last_milked_at |
 | `item_transactions` | id (auto) | timestamp, item_name, internal_name, quantity, context, source, instance_id, vault_key |
 
 ### Item Transaction Ledger (`item_transactions`)
@@ -122,6 +129,13 @@ Lightweight struct with `active_character: Option<String>` and `active_server: O
 | StorageDeposit | game_state_storage | UPSERT | `storage` |
 | StorageWithdrawal | game_state_storage | DELETE | `storage` |
 | *(AreaTransition — handled in coordinator)* | game_state_area | UPSERT | `area` |
+| MoonPhaseChanged | game_state_moon | UPSERT singleton | `moon` |
+| GuildInfoLoaded | game_state_guild | UPSERT | `guild` |
+| DirectedGoalsLoaded | game_state_directed_goals | DELETE all + bulk INSERT | `directed_goals` |
+| PlayerStringUpdated | game_state_strings | UPSERT per key | `strings` |
+| *(BookOpened — handled in coordinator)* | game_state_books | UPSERT | `books` |
+| *(BookOpened + HelpScreen/PlayerAge — coordinator)* | character_report_stats | UPSERT | `report_stats` |
+| *(Cow milk detection — coordinator)* | milking_timers | UPSERT | `milking` |
 
 ### Timestamp Handling
 

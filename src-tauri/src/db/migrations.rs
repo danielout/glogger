@@ -187,6 +187,26 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 32)?;
     }
 
+    if current_version < 33 {
+        migration_v33_new_game_state_tables(conn)?;
+        super::record_migration(conn, 33)?;
+    }
+
+    if current_version < 34 {
+        migration_v34_milking_and_stats(conn)?;
+        super::record_migration(conn, 34)?;
+    }
+
+    if current_version < 35 {
+        migration_v35_attribute_extremes(conn)?;
+        super::record_migration(conn, 35)?;
+    }
+
+    if current_version < 36 {
+        migration_v36_player_milking_log(conn)?;
+        super::record_migration(conn, 36)?;
+    }
+
     Ok(())
 }
 
@@ -1889,6 +1909,110 @@ fn migration_v31_abilities_internal_name(conn: &Connection) -> Result<()> {
          CREATE INDEX idx_abilities_damage_type ON abilities(damage_type);",
     )?;
 
+    Ok(())
+}
+
+/// Migration V33: New game state tables for moon phase, guild, directed goals, and player strings.
+fn migration_v33_new_game_state_tables(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS game_state_moon (
+             id INTEGER PRIMARY KEY CHECK (id = 1),
+             phase TEXT NOT NULL,
+             last_confirmed_at TEXT NOT NULL
+         );
+
+         CREATE TABLE IF NOT EXISTS game_state_guild (
+             character_name TEXT NOT NULL,
+             server_name TEXT NOT NULL,
+             guild_id INTEGER NOT NULL,
+             guild_name TEXT NOT NULL,
+             motd TEXT NOT NULL DEFAULT '',
+             last_confirmed_at TEXT NOT NULL,
+             PRIMARY KEY (character_name, server_name)
+         );
+
+         CREATE TABLE IF NOT EXISTS game_state_directed_goals (
+             character_name TEXT NOT NULL,
+             server_name TEXT NOT NULL,
+             goal_id INTEGER NOT NULL,
+             last_confirmed_at TEXT NOT NULL,
+             PRIMARY KEY (character_name, server_name, goal_id)
+         );
+
+         CREATE TABLE IF NOT EXISTS game_state_strings (
+             character_name TEXT NOT NULL,
+             server_name TEXT NOT NULL,
+             key TEXT NOT NULL,
+             value TEXT NOT NULL,
+             last_confirmed_at TEXT NOT NULL,
+             PRIMARY KEY (character_name, server_name, key)
+         );
+
+         CREATE TABLE IF NOT EXISTS game_state_books (
+             id INTEGER PRIMARY KEY AUTOINCREMENT,
+             character_name TEXT NOT NULL,
+             server_name TEXT NOT NULL,
+             book_type TEXT NOT NULL,
+             title TEXT NOT NULL,
+             content TEXT NOT NULL,
+             captured_at TEXT NOT NULL,
+             UNIQUE(character_name, server_name, book_type, title)
+         );",
+    )?;
+    Ok(())
+}
+
+/// Migration V34: Milking cooldown timers and character report stats.
+fn migration_v34_milking_and_stats(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS milking_timers (
+             character_name TEXT NOT NULL,
+             server_name TEXT NOT NULL,
+             cow_name TEXT NOT NULL,
+             zone TEXT NOT NULL,
+             last_milked_at TEXT NOT NULL,
+             PRIMARY KEY (character_name, server_name, cow_name, zone)
+         );
+
+         CREATE TABLE IF NOT EXISTS character_report_stats (
+             character_name TEXT NOT NULL,
+             server_name TEXT NOT NULL,
+             category TEXT NOT NULL,
+             stat_name TEXT NOT NULL,
+             stat_value TEXT NOT NULL,
+             updated_at TEXT NOT NULL,
+             PRIMARY KEY (character_name, server_name, category, stat_name)
+         );",
+    )?;
+    Ok(())
+}
+
+/// Migration V36: Player-to-player milking log for leaderboards.
+fn migration_v36_player_milking_log(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS player_milking_log (
+             id INTEGER PRIMARY KEY AUTOINCREMENT,
+             character_name TEXT NOT NULL,
+             server_name TEXT NOT NULL,
+             other_player TEXT NOT NULL,
+             direction TEXT NOT NULL CHECK (direction IN ('milked', 'milked_by')),
+             milked_at TEXT NOT NULL
+         );
+         CREATE INDEX idx_player_milking_char ON player_milking_log(character_name, server_name);
+         CREATE INDEX idx_player_milking_other ON player_milking_log(character_name, server_name, other_player, direction);",
+    )?;
+    Ok(())
+}
+
+/// Migration V35: Add min/max tracking columns to game_state_attributes.
+fn migration_v35_attribute_extremes(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "ALTER TABLE game_state_attributes ADD COLUMN min_value REAL;
+         ALTER TABLE game_state_attributes ADD COLUMN max_value REAL;
+         -- Seed min/max from current values for existing rows
+         UPDATE game_state_attributes SET min_value = value, max_value = value
+            WHERE min_value IS NULL;",
+    )?;
     Ok(())
 }
 
