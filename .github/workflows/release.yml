@@ -100,7 +100,7 @@ jobs:
           name: release-notes
           path: RELEASE_NOTES.md
 
-  # ── Step 2: build on all platforms with tauri-action ──
+  # ── Step 2: build on all platforms with tauri-action (build only, no release) ──
   build:
     needs: prepare
     strategy:
@@ -108,10 +108,13 @@ jobs:
       matrix:
         include:
           - platform: windows-latest
+            label: windows
             args: ""
           - platform: macos-latest
+            label: macos
             args: "--target aarch64-apple-darwin"
           - platform: ubuntu-latest
+            label: linux
             args: ""
     runs-on: ${{ matrix.platform }}
     steps:
@@ -145,23 +148,75 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      # Build only — omit tagName/releaseName so tauri-action doesn't create a release
       - name: Build with tauri-action
+        id: tauri
         uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: v${{ needs.prepare.outputs.version }}
-          releaseName: v${{ needs.prepare.outputs.version }}
-          releaseBody: ""
-          owner: ${{ github.repository_owner }}
-          repo: glogger-release
           args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json
           updaterJsonPreferNsis: true
 
-  # ── Step 3: update release notes on the published release ──
-  finalize:
+      # Collect artifacts for the publish step
+      - name: Collect artifacts
+        shell: bash
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          BUNDLE_DIR="src-tauri/target/release/bundle"
+          mkdir -p release-artifacts
+
+          # Windows: NSIS installer + signature
+          for f in "$BUNDLE_DIR"/nsis/*.exe; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-windows-setup.exe"
+          done
+          for f in "$BUNDLE_DIR"/nsis/*.exe.sig; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-windows-setup.exe.sig"
+          done
+
+          # macOS: DMG + signature
+          for f in "$BUNDLE_DIR"/dmg/*.dmg; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-macos.dmg"
+          done
+          for f in "$BUNDLE_DIR"/dmg/*.dmg.sig; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-macos.dmg.sig"
+          done
+          # macOS: also check for .tar.gz updater artifact
+          for f in "$BUNDLE_DIR"/macos/*.tar.gz; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-macos.app.tar.gz"
+          done
+          for f in "$BUNDLE_DIR"/macos/*.tar.gz.sig; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-macos.app.tar.gz.sig"
+          done
+
+          # Linux: deb + AppImage + signatures
+          for f in "$BUNDLE_DIR"/deb/*.deb; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-linux.deb"
+          done
+          for f in "$BUNDLE_DIR"/deb/*.deb.sig; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-linux.deb.sig"
+          done
+          for f in "$BUNDLE_DIR"/appimage/*.AppImage; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-linux.AppImage"
+          done
+          for f in "$BUNDLE_DIR"/appimage/*.AppImage.sig; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-linux.AppImage.sig"
+          done
+
+          echo "Collected artifacts:"
+          ls -la release-artifacts/
+
+      - name: Upload platform artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: artifacts-${{ matrix.label }}
+          path: release-artifacts/*
+
+  # ── Step 3: create release on glogger-release and upload everything ──
+  publish:
     needs: [prepare, build]
     runs-on: ubuntu-latest
     steps:
@@ -170,31 +225,100 @@ jobs:
         with:
           name: release-notes
 
-      - name: Update release notes
+      - name: Download all platform artifacts
+        uses: actions/download-artifact@v7
+        with:
+          pattern: artifacts-*
+          path: all-artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la all-artifacts/
+
+      - name: Generate latest.json updater manifest
+        shell: bash
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          TAG="v${VERSION}"
+          BASE_URL="https://github.com/$RELEASE_REPO/releases/download/$TAG"
+
+          # Read signatures from .sig files
+          WIN_SIG=""
+          MAC_SIG=""
+          LINUX_APPIMAGE_SIG=""
+
+          [ -f "all-artifacts/glogger-${VERSION}-windows-setup.exe.sig" ] && \
+            WIN_SIG=$(cat "all-artifacts/glogger-${VERSION}-windows-setup.exe.sig")
+          [ -f "all-artifacts/glogger-${VERSION}-macos.app.tar.gz.sig" ] && \
+            MAC_SIG=$(cat "all-artifacts/glogger-${VERSION}-macos.app.tar.gz.sig")
+          [ -f "all-artifacts/glogger-${VERSION}-linux.AppImage.sig" ] && \
+            LINUX_APPIMAGE_SIG=$(cat "all-artifacts/glogger-${VERSION}-linux.AppImage.sig")
+
+          # Build the platforms object — only include platforms that have artifacts
+          PLATFORMS="{"
+          FIRST=true
+
+          if [ -n "$WIN_SIG" ]; then
+            PLATFORMS="$PLATFORMS\"windows-x86_64\":{\"url\":\"${BASE_URL}/glogger-${VERSION}-windows-setup.exe\",\"signature\":\"${WIN_SIG}\"}"
+            FIRST=false
+          fi
+
+          if [ -n "$MAC_SIG" ]; then
+            [ "$FIRST" = false ] && PLATFORMS="$PLATFORMS,"
+            PLATFORMS="$PLATFORMS\"darwin-aarch64\":{\"url\":\"${BASE_URL}/glogger-${VERSION}-macos.app.tar.gz\",\"signature\":\"${MAC_SIG}\"}"
+            FIRST=false
+          fi
+
+          if [ -n "$LINUX_APPIMAGE_SIG" ]; then
+            [ "$FIRST" = false ] && PLATFORMS="$PLATFORMS,"
+            PLATFORMS="$PLATFORMS\"linux-x86_64\":{\"url\":\"${BASE_URL}/glogger-${VERSION}-linux.AppImage\",\"signature\":\"${LINUX_APPIMAGE_SIG}\"}"
+          fi
+
+          PLATFORMS="$PLATFORMS}"
+
+          # Extract release notes for the body
+          NOTES=$(cat RELEASE_NOTES.md | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' 2>/dev/null || echo '""')
+
+          PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          cat > all-artifacts/latest.json << ENDJSON
+          {
+            "version": "${VERSION}",
+            "notes": ${NOTES},
+            "pub_date": "${PUB_DATE}",
+            "platforms": ${PLATFORMS}
+          }
+          ENDJSON
+
+          echo "Generated latest.json:"
+          cat all-artifacts/latest.json
+
+      - name: Create release and upload artifacts
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          VERSION: ${{ needs.prepare.outputs.version }}
         run: |
-          TAG="v${{ needs.prepare.outputs.version }}"
-
-          # Build a download table from the release assets
-          ASSETS=$(gh release view "$TAG" --repo "$RELEASE_REPO" --json assets -q '.assets[].name')
+          TAG="v${VERSION}"
           BASE_URL="https://github.com/$RELEASE_REPO/releases/download/$TAG"
 
+          # Build a download table from the artifacts
           DOWNLOADS="## Downloads\n\n| Platform | Installer |\n|----------|-----------|"
-          while IFS= read -r NAME; do
+          for file in all-artifacts/*; do
+            [ -f "$file" ] || continue
+            NAME="$(basename "$file")"
             case "$NAME" in
-              *.exe) DOWNLOADS="$DOWNLOADS\n| **Windows** | [$NAME]($BASE_URL/$NAME) |" ;;
-              *.dmg) DOWNLOADS="$DOWNLOADS\n| **macOS** | [$NAME]($BASE_URL/$NAME) |" ;;
-              *.deb) DOWNLOADS="$DOWNLOADS\n| **Linux** (Debian/Ubuntu) | [$NAME]($BASE_URL/$NAME) |" ;;
-              *.AppImage) DOWNLOADS="$DOWNLOADS\n| **Linux** (AppImage) | [$NAME]($BASE_URL/$NAME) |" ;;
-              latest.json) ;; # skip updater manifest
-              *.sig) ;; # skip signature files
+              *-windows-setup.exe) DOWNLOADS="$DOWNLOADS\n| **Windows** (recommended) | [$NAME]($BASE_URL/$NAME) |" ;;
+              *-macos.dmg)         DOWNLOADS="$DOWNLOADS\n| **macOS** | [$NAME]($BASE_URL/$NAME) |" ;;
+              *-linux.deb)         DOWNLOADS="$DOWNLOADS\n| **Linux** (Debian/Ubuntu) | [$NAME]($BASE_URL/$NAME) |" ;;
+              *-linux.AppImage)    DOWNLOADS="$DOWNLOADS\n| **Linux** (AppImage) | [$NAME]($BASE_URL/$NAME) |" ;;
+              latest.json|*.sig|*.tar.gz) ;; # skip updater files from download table
               *) ;;
             esac
-          done <<< "$ASSETS"
+          done
 
-          # Prepend downloads table to changelog
+          # Build full release notes
           {
             echo -e "$DOWNLOADS"
             echo ""
@@ -203,6 +327,17 @@ jobs:
             cat RELEASE_NOTES.md
           } > FULL_RELEASE_NOTES.md
 
-          gh release edit "$TAG" \
+          # Create the release on glogger-release
+          gh release create "$TAG" \
             --repo "$RELEASE_REPO" \
+            --title "$TAG" \
             --notes-file FULL_RELEASE_NOTES.md
+
+          # Upload all artifacts (installers, signatures, and latest.json)
+          for file in all-artifacts/*; do
+            [ -f "$file" ] || continue
+            echo "Uploading: $(basename "$file")"
+            gh release upload "$TAG" "$file" --repo "$RELEASE_REPO"
+          done
+
+          echo "Release published: https://github.com/$RELEASE_REPO/releases/tag/$TAG"
