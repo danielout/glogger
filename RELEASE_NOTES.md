@@ -1,16 +1,15 @@
-## What's Changed since v0.6.5
+## What's Changed since v0.6.6
 
 ### Features
-- feat: devtools capture lets you build a single file limited capture, stripped of player chat messages (`96752ee`)
+- feat: adding milking widget and stat tracker widget to dashboard (`0bcd8ec`)
+- feat: character stats page now tracks all attributes, /age, and /behaviorreport - also initial batch of computed stats. (`c712d5b`)
 
 ### Improvements
-- impv: devmode log captures are a little thinner, and truncate lines less. (`1c53d31`)
-- impv: crafting project performance improvements. (`87918bf`)
+- impv: update gourmand report just on log view, saving not required (`6f06aac`)
+- impv: better log parsing, updating documentation, additional game state tracking (`0ae4bba`)
 
 ### Fixes
-- fix: fixed polling issue with chat logs that caused it to potentially sleep the js thread on windows. (`c14f97a`)
-- fix: fixed bug with not all intermediate crafts resolving their materials correctly (`7280f22`)
-- fix: build cleanup, snapshot favor fix, and crafting UX improvements (`161668c`)
+- fix: fixing dashboard flashing, hopefully (`2b52e27`)
 
 ---
-*10 commits since v0.6.5*
+*7 commits since v0.6.6*
