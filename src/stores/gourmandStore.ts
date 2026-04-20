@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { open, save } from '@tauri-apps/plugin-dialog'
 import { useGameStateStore } from './gameStateStore'
 import { useCharacterStore } from './characterStore'
@@ -237,6 +238,12 @@ export const useGourmandStore = defineStore('gourmand', () => {
     }
     return sorted
   }
+
+  // Auto-reload eaten foods when the backend imports a gourmand report
+  // from a ProcessBook event (user ran /report gourmand in-game)
+  listen<number>('gourmand-updated', () => {
+    loadEatenFoods()
+  })
 
   return {
     // State
