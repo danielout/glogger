@@ -1,7 +1,7 @@
-## What's Changed since v0.7.7
+## What's Changed since v0.7.8
 
 ### Improvements
-- impv: about page tweaks (`eb96e93`)
+- impv: adding "self-milked" counter. sighing heavily. (`d7fc474`)
 
 ---
-*1 commits since v0.7.7*
+*1 commits since v0.7.8*
