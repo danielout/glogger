@@ -18,15 +18,16 @@
       <span>{{ recipeData?.name ?? reference }}</span>
     </span>
     <template #tooltip>
-      <RecipeTooltip v-if="recipeData" :recipe="recipeData" :icon-src="iconSrc" />
+      <RecipeTooltip v-if="recipeData" :recipe="recipeData" :icon-src="iconSrc" :is-learned="isLearned" />
     </template>
   </EntityTooltipWrapper>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../../stores/gameDataStore";
+import { useGameStateStore } from "../../../stores/gameStateStore";
 import { useEntityNavigation } from "../../../composables/useEntityNavigation";
 import type { RecipeInfo } from "../../../types/gameData";
 import EntityTooltipWrapper from "../EntityTooltipWrapper.vue";
@@ -45,10 +46,18 @@ const props = withDefaults(defineProps<{
 });
 
 const store = useGameDataStore();
+const gameState = useGameStateStore();
 const { navigateToEntity } = useEntityNavigation();
 
 const recipeData = ref<RecipeInfo | null>(null);
 const iconSrc = ref<string | null>(null);
+
+const isLearned = computed(() => {
+  if (!recipeData.value) return null;
+  const completions = gameState.recipeCompletions;
+  if (Object.keys(completions).length === 0) return null; // no recipe data loaded
+  return `Recipe_${recipeData.value.id}` in completions;
+});
 
 async function loadData() {
   if (recipeData.value) return;

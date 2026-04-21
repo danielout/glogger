@@ -7,8 +7,12 @@
       class="w-8 h-8 object-contain bg-black/30 border border-border-light rounded shrink-0" />
     <div class="flex-1">
       <div class="font-bold text-entity-recipe text-sm mb-0.5">{{ recipe.name }}</div>
-      <div v-if="recipe.skill" class="text-text-muted text-xs">
-        {{ recipe.skill }}<span v-if="recipe.skill_level_req"> · Lv {{ recipe.skill_level_req }}</span>
+      <div class="flex items-center gap-2">
+        <div v-if="recipe.skill" class="text-text-muted text-xs">
+          {{ recipe.skill }}<span v-if="recipe.skill_level_req"> · Lv {{ recipe.skill_level_req }}</span>
+        </div>
+        <span v-if="isLearned === true" class="text-accent-green text-[0.65rem]">✓ Learned</span>
+        <span v-else-if="isLearned === false" class="text-text-dim text-[0.65rem]">Not learned</span>
       </div>
     </div>
   </div>
@@ -82,6 +86,7 @@ import { useRecipeCost, formatGold } from "../../../composables/useRecipeCost";
 const props = defineProps<{
   recipe: RecipeInfo;
   iconSrc: string | null;
+  isLearned?: boolean | null;
 }>();
 
 const store = useGameDataStore();

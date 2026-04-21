@@ -32,9 +32,8 @@ These are investigated items kept for reference — the research is done but the
   - Should be counting but isn't. The full pipeline (parser → coordinator → DB → store → widget) looks correctly wired. Serde enum serialization uses `#[serde(tag = "kind")]` and frontend checks `payload.kind === 'Resuscitated'` — this should match. Needs a runtime debug capture with a rez event to confirm.
   - **Effort: Low | Impact: Low**
 
-- [ ] Show learned/unlearned status in recipe and skillbook tooltips
-  - Recipe tooltips and recipe/skillbook item tooltips should indicate whether the current character has learned them.
-  - **Effort: Low | Impact: Medium (discoverability)**
+- [x] Show learned/unlearned status in recipe tooltips
+  - RecipeTooltip now shows "✓ Learned" / "Not learned" status. RecipeInline computes this from `gameStateStore.recipeCompletions` (seeded by both log events and character.json imports). Shown everywhere RecipeInline is used.
 
 - [ ] Clean up documents folder structure
   - Better organization, establish clearer structure for docs.
