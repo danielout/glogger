@@ -32,15 +32,9 @@ These are investigated items kept for reference — the research is done but the
   - Should be counting but isn't. The full pipeline (parser → coordinator → DB → store → widget) looks correctly wired. Serde enum serialization uses `#[serde(tag = "kind")]` and frontend checks `payload.kind === 'Resuscitated'` — this should match. Needs a runtime debug capture with a rez event to confirm.
   - **Effort: Low | Impact: Low**
 
-- [x] Show learned/unlearned status in recipe tooltips
-  - RecipeTooltip now shows "✓ Learned" / "Not learned" status. RecipeInline computes this from `gameStateStore.recipeCompletions` (seeded by both log events and character.json imports). Shown everywhere RecipeInline is used.
-
 - [ ] Clean up documents folder structure
   - Better organization, establish clearer structure for docs.
   - **Effort: Low | Impact: Low (maintainability)**
-
-- [x] Parse ProcessUpdateDescription for entity state changes
-  - Added `EntityDescriptionUpdated` event to player event parser. Parses entity ID, name, description, action, action type, appearance (with scale), and flags. Foundation event for gardening tracker and crafting timer features.
 
 ---
 
@@ -54,9 +48,8 @@ These are investigated items kept for reference — the research is done but the
   - Sometimes sessions get wrong timestamps. Needs investigation into what causes the mismatch.
   - **Effort: Medium (investigation) | Impact: Medium (data accuracy)**
 
-- [ ] Bug: survey analytics "fastest method" times wildly off
-  - Calculated times show hundreds or thousands of hours. Should be average time per completion × number needed. Something is fundamentally wrong with the calculation.
-  - **Effort: Medium (investigation) | Impact: High (analytics credibility)**
+- [x] Bug: survey analytics "fastest method" times wildly off
+  - Fixed: the `type_duration` CTE was joining `survey_uses` to `survey_sessions` directly, causing each session's duration to be counted once per use in that session (inflating times by the use count). Restructured to aggregate per-session first, then sum across sessions.
 
 - [ ] Changelog formatting improvement
   - Current in-app changelog rendering is poor. Needs better formatting/styling.

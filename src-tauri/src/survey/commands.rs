@@ -1246,17 +1246,25 @@ fn item_cost_analysis_rows(
     // (map_internal_name, area) to match the granularity the UI shows.
     let mut stmt = conn.prepare(
         "WITH type_duration AS (
+            -- Compute per-session duration once, then aggregate by map type.
+            -- Using DISTINCT session prevents counting a session's duration
+            -- multiple times when it contains multiple uses of the same map.
             SELECT u.map_internal_name,
                    u.area,
-                   -- (julianday_end - julianday_start) * 86400 = seconds.
-                   -- Kept in REAL so a 60.0s session doesn't truncate to 59
-                   -- via integer rounding at any intermediate step.
-                   SUM((julianday(s.ended_at) - julianday(s.started_at)) * 86400.0) AS total_seconds,
-                   COUNT(*) AS total_uses
-              FROM survey_uses u
-              JOIN survey_sessions s ON s.id = u.session_id
-             WHERE u.character_name = ?1 AND u.server_name = ?2
-               AND s.ended_at IS NOT NULL
+                   SUM(session_seconds) AS total_seconds,
+                   SUM(session_uses) AS total_uses
+              FROM (
+                SELECT u.map_internal_name,
+                       u.area,
+                       u.session_id,
+                       (julianday(s.ended_at) - julianday(s.started_at)) * 86400.0 AS session_seconds,
+                       COUNT(*) AS session_uses
+                  FROM survey_uses u
+                  JOIN survey_sessions s ON s.id = u.session_id
+                 WHERE u.character_name = ?1 AND u.server_name = ?2
+                   AND s.ended_at IS NOT NULL
+                 GROUP BY u.map_internal_name, u.area, u.session_id
+              ) u
              GROUP BY u.map_internal_name, u.area
          ),
          per_type_stats AS (
