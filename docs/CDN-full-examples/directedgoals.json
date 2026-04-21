@@ -1,0 +1,380 @@
+[
+	{
+		"Id": 1,
+		"IsCategoryGate": true,
+		"Label": "General",
+		"LargeHint": "",
+		"SmallHint": "",
+		"Zone": "Tasks without a specific location"
+	},
+	{
+		"Id": 10,
+		"IsCategoryGate": true,
+		"Label": "Anagoge Island",
+		"LargeHint": "",
+		"SmallHint": "",
+		"Zone": "Tasks in this area"
+	},
+	{
+		"Id": 20,
+		"IsCategoryGate": true,
+		"Label": "Serbule Hills",
+		"LargeHint": "Serbule Hills can be reached by traveling south from Serbule.",
+		"SmallHint": "Visit Serbule Hills to unlock this list of tasks.",
+		"Zone": "Tasks in this area"
+	},
+	{
+		"Id": 30,
+		"IsCategoryGate": true,
+		"Label": "Serbule",
+		"LargeHint": "Serbule can be reached by completing the island tutorial and teleporting with the correct code.",
+		"SmallHint": "Visit Serbule to unlock this list of tasks.",
+		"Zone": "Tasks in this area"
+	},
+	{
+		"Id": 40,
+		"IsCategoryGate": true,
+		"Label": "Serbule Crypt",
+		"LargeHint": "The Serbule Crypt is in the corner of the Serbule map.",
+		"SmallHint": "Visit Serbule to unlock this list of tasks.",
+		"Zone": "Tasks in this dungeon"
+	},
+	{
+		"Id": 50,
+		"IsCategoryGate": true,
+		"Label": "Eltibule",
+		"LargeHint": "Eltibule can be reached from Serbule.",
+		"SmallHint": "Visit Eltibule to unlock this list of tasks.",
+		"Zone": "Tasks in this area"
+	},
+	{
+		"Id": 60,
+		"IsCategoryGate": true,
+		"Label": "Sun Vale",
+		"LargeHint": "Sun Vale can be reached by visiting a boatman in Serbule, among other methods.",
+		"SmallHint": "Visit Sun Vale to unlock this list of tasks.",
+		"Zone": "Tasks in this area"
+	},
+	{
+		"Id": 70,
+		"IsCategoryGate": true,
+		"Label": "Kur Mountains",
+		"LargeHint": "Kur Mountains can be reached from Eltibule.",
+		"SmallHint": "Visit Kur Mountains to unlock this list of tasks.",
+		"Zone": "Tasks in this area"
+	},
+	{
+		"Id": 80,
+		"IsCategoryGate": true,
+		"Label": "Ilmari Desert",
+		"LargeHint": "Ilmari Desert can be reached from Kur Mountains.",
+		"SmallHint": "Visit the Ilmari Desert to unlock this list of tasks.",
+		"Zone": "Tasks in this area"
+	},
+	{
+		"CategoryGateId": 1,
+		"Id": 500,
+		"Label": "Grow a potato",
+		"LargeHint": "Therese in Serbule can help you get started -- she sells potato seedlings and water bottles, and she has a gardening area behind the windmill. Another option is visiting Julius Patton on his farm in Serbule Hills; he'd be happy to help, too.",
+		"SmallHint": "To plant a potato, you need no special skill. Just purchase a potato seedling and a bottle of water, then plant the seedling in a garden area. Several people can help you get started.",
+		"Zone": "Multiple"
+	},
+	{
+		"CategoryGateId": 1,
+		"Id": 600,
+		"Label": "Learn to skin corpses",
+		"LargeHint": "Ivyn will give you a skinning knife if you complete his favor request for squash seedlings. But there's many ways to find a skinning knife -- in fact, you can sometimes find them for sale in town. Your chance of success at skinning depends on the Skinning skill, but you can start practicing before you have any levels of the skill. Practice on easy monsters, like rats, and you'll gain Skinning levels automatically.",
+		"SmallHint": "First you'll need a skinning knife. There's lots of places to find these. Perhaps the easiest is to do a favor for Ivyn the farmer, near Serbule. He'll give you one in exchange for some seedlings he needs. Once you have the knife, practice skinning the corpses of small animals like rats.",
+		"Zone": "Multiple"
+	},
+	{
+		"CategoryGateId": 10,
+		"Id": 1000,
+		"Label": "Learn Psychology by helping Riger be happier",
+		"LargeHint": "The recipe you need is Pick-Me-Up Juice. Find it in a book near Elmetaph the elf. He's in the lighthouse at the center of the island. You can collect the needed ingredients on the island. Give the completed potion to Riger, who lives in a hut on the island.",
+		"SmallHint": "Riger is the amnesiac Elf you met on the island when you first started playing. He's very unhappy. There's a potion that will make him happy for a while; you can find the recipe somewhere on that island.",
+		"Zone": "Anagoge Island"
+	},
+	{
+		"CategoryGateId": 10,
+		"Id": 1100,
+		"Label": "Master the art of taming rats",
+		"LargeHint": "You can find the four arches by following the shore in either direction. The correct order to touch the arches is South-East-West-North.",
+		"SmallHint": "On the island where you first awoke with amnesia, there's a beach area with four magical arches. If you touch the pillars in the right order, you unlock a nearby chest.",
+		"Zone": "Anagoge Island"
+	},
+	{
+		"CategoryGateId": 10,
+		"Id": 1200,
+		"Label": "Learn to autopsy corpses",
+		"LargeHint": "Lawara is on the island away from the beach. If it's dark, you can find her by looking for her bonfire. Complete favors for her -- or give her gifts -- until you reach Comfortable favor-level. Lawara will then teach you how to autopsy and give you an autopsy kit.",
+		"SmallHint": "The easiest way to accomplish this one is to befriend Lawara, an Elf on the island where you started the game, but there are many other ways to learn autopsying.",
+		"Zone": "Anagoge Island"
+	},
+	{
+		"CategoryGateId": 10,
+		"Id": 1300,
+		"Label": "Destroy the training dummy",
+		"LargeHint": "Perhaps the easiest method is with a spore bomb. You can find a recipe for creating spore bombs in the dungeon on Anagoge Island. Another easy method is with Psychology. Once you've discovered this skill you'll have abilities that deal Psychic damage. Since Psychic damage isn't physical damage, it will work on the dummy!",
+		"SmallHint": "An enchanted training dummy can be found on the northwest beach of the island. It is immune to physical damage (which means Slashing, Crushing, or Piercing damage), so you'll need to find another way to damage it.",
+		"Zone": "Anagoge Island"
+	},
+	{
+		"CategoryGateId": 10,
+		"Id": 1400,
+		"Label": "Learn to stun golems",
+		"LargeHint": "Most of the golems in the area aren't too tough, but the Records Librarian golem is tougher; make sure to dismantle other nearby golems before attacking it so that they don't join in the fight and overwhelm you! Once the monsters are defeated you will need to solve the lamp puzzle. This is quite simple: just turn on all the lamps in all nearby rooms to gain access to the chest you need.",
+		"SmallHint": "Deep in the dungeon beneath Anagoge Island is a stash of important knowledge, including a book on how to stun golems and automatons. The dungeon entrance is in a cliff face. Once inside, you'll need to take three sets of stairs down to reach the records level. (Avoid Gajus! If you see warnings about Gajus, you missed the second stairwell.) The chest you need is in the far north part of the dungeon. When you find strange lamps in the middle of rooms, you're in the vicinity.",
+		"Zone": "Anagoge Island Dungeon"
+	},
+	{
+		"CategoryGateId": 20,
+		"Id": 2000,
+		"Label": "Befriend Tyler Green and learn Shield Mastery",
+		"LargeHint": "Perform favors for Tyler, or give him gifts, until you reach Comfortable favor-level. You can then learn the Shield skill from Tyler's Training menu.",
+		"SmallHint": "Tyler Green is in the Tapestry Inn, in the northwest corner of Serbule Hills.",
+		"Zone": "Serbule Hills"
+	},
+	{
+		"CategoryGateId": 20,
+		"Id": 2100,
+		"Label": "Discover all the Ranalon Telepods",
+		"LargeHint": "There are five so-called 'telepods' hidden throughout Serbule Hills. They look like large bowls. They are surrounded by greenery to help them blend in, although in some cases this makes them more noticeable, not less. Touch each teleporter to unlock it. Once you have unlocked at least two teleporters, you will be able to teleport from one bowl to any other that you've unlocked.",
+		"SmallHint": "Ranalon are the frog-like race that have recently infested Serbule Hills. They seem to have the ability to rapidly move troops to different areas -- perhaps you can use this same technology. Their main camp is near the lakes in the center of Serbule Hills.",
+		"Zone": "Serbule Hills"
+	},
+	{
+		"CategoryGateId": 20,
+		"Id": 2200,
+		"Label": "Learn Calligraphy",
+		"LargeHint": "Sammie is happy to teach you calligraphy, as she sells the inks and papers you'll need. From the northwest entrance to Serbule Hills, head due south, past the Duchess. Sammie is on a hill along the western edge of the map.",
+		"SmallHint": "Sammie Grimspine in Serbule Hills can teach you calligraphy.",
+		"Zone": "Serbule Hills"
+	},
+	{
+		"CategoryGateId": 20,
+		"Id": 2300,
+		"Label": "Defeat The Big Widow",
+		"LargeHint": "More specifically, The Big Widow lives in a farm house near the southernmost central lake in Serbule Hills, very close to the Ranalon encampment. She has numerous offspring with her, so this is a tricky battle! If you are being overwhelmed by poison, you might want to wait until you've found ways to counteract poison.",
+		"SmallHint": "The Big Widow is a large venomous spider that lives in one of the abandoned farm houses in Serbule Hills.",
+		"Zone": "Serbule Hills"
+	},
+	{
+		"CategoryGateId": 20,
+		"Id": 2400,
+		"Label": "Loot the Serbule Hills Gobstore",
+		"LargeHint": "There are three outposts along the goblin-controlled road north of the gobstore. In each outpost is a Competent Goblin with a gobkey. You need all three gobkeys to unlock the gobstore. As always when fighting goblins, be patient: pick them off one or two at a time, because they are quite deadly in packs.",
+		"SmallHint": "Gobstores are large chests full of prized goblin equipment. There's a gobstore in Serbule Hills in the southeast. You'll need several keys to open it! The keys can be found on goblins in Serbule Hills. (PS: \"gobstore\" is a derogatory word humans use for goblin loot boxes. The word should not be used in the presence of goblins you want to befriend!)",
+		"Zone": "Serbule Hills"
+	},
+	{
+		"CategoryGateId": 30,
+		"ForRaces": [
+			"Human",
+			"Elf",
+			"Rakshasa"
+		],
+		"Id": 3000,
+		"Label": "Learn First Aid from Marna",
+		"LargeHint": "Marna will teach you First Aid just by talking to her. If you've been cursed into some sort of animal form, however, Marna won't be willing to talk to you at all. If you can't find a cure for your predicament, another option is to trek to the dangerous island of Sun Vale -- a boatman on the Serbule docks can take you there. Sun Vale has a town of talking animals, and Norbert the pig can teach First Aid.",
+		"SmallHint": "Marna runs a bustling general store in Serbule, with a focus on potions and healing items. She's happy to teach First Aid because she sells the necessary first aid kits.",
+		"Zone": "Town of Serbule"
+	},
+	{
+		"CategoryGateId": 30,
+		"Id": 3100,
+		"Label": "Cook Bacon",
+		"LargeHint": "Fainor will teach you the recipe for a small fee. Bacon requires only a Pork Shoulder and Salt. You must be near a stove to complete the recipe; there's a suitable fire pit in every inn.",
+		"SmallHint": "Fainor in Serbule teaches the recipe for bacon. You'll need a little bit of skill in Cooking, which Fainor can also help you with.",
+		"Zone": "Town of Serbule"
+	},
+	{
+		"CategoryGateId": 30,
+		"Id": 3200,
+		"Label": "Get Velkort to teach you Fire Magic",
+		"LargeHint": "Once you've met Velkort, ask for training and learn the 'Introductory Fire Magic Research' recipe. Next, go to the inn in Serbule and buy some salt from the innkeeper. Stand near the fire pit in the inn and use the recipe window to complete the Introductory Fire Magic research recipe. Once you've learned some spells, you can cast them by wielding a staff. Velkort sells a suitable beginner's staff.",
+		"SmallHint": "Velkort the fire mage lives in Serbule. You can often find him wandering around -- look for his sentient pet flame. He's surly, but he's happy to teach the ways of fire... for a small fee.",
+		"Zone": "Town of Serbule"
+	},
+	{
+		"CategoryGateId": 30,
+		"Id": 3300,
+		"Label": "Research a Basic Word of Power",
+		"LargeHint": "Examine items in town, such as paintings, wall ornaments, and so on, until you obtain several levels of Lore skill. Then you can use the recipe for a Basic Word of Power. To activate a word of power, speak it aloud in chat. Once the word is spoken, it stops being magical. A warning: there are only so many words of power in the world at any time, and other players can learn the same words you do! So don't store your words for too long, or they may have already been used up by the time you speak them. This is especially true of lower-level words of power.",
+		"SmallHint": "Marna in Serbule can teach you the recipe for Words of Power. You'll need to have a few levels of the Lore skill before you can use it, though. Lore is learned by simply examining things everywhere you go.",
+		"Zone": "Town of Serbule"
+	},
+	{
+		"CategoryGateId": 30,
+		"ForRaces": [
+			"Human",
+			"Elf",
+			"Rakshasa"
+		],
+		"Id": 3400,
+		"Label": "Learn Mentalism from Echur",
+		"LargeHint": "Complete favors for Echur or give him gifts until you reach Friends favor-level, and he will automatically teach you the Mentalism skill for free.",
+		"SmallHint": "Echur is an Elf living in Serbule. He's standing near a strange glowing contraption. He's a master of Meditation, but if you become close enough friends, he'll also reveal deeper mental secrets.",
+		"Zone": "Town of Serbule"
+	},
+	{
+		"CategoryGateId": 30,
+		"Id": 3500,
+		"Label": "Get Ivyn to let you use his storage chest",
+		"LargeHint": "This one is quite difficult; you must become Close Friends with Ivyn, which means doing favors and giving him gifts. Other players might teach you the code, but be wary of using his chest without permission! Ivyn has been known to exact revenge on those who abuse his trust.",
+		"SmallHint": "Ivyn the farmer has a large storage chest with a combination lock. If you become his close friend, he'll give you the code.",
+		"Zone": "Farm outside of Serbule"
+	},
+	{
+		"CategoryGateId": 30,
+		"Id": 3600,
+		"Label": "Cook Onion Rings",
+		"LargeHint": "Fainor will teach you the recipe for a small fee. Onion Rings require an onion and a bottle of water. You can grow the onion yourself in a garden, or buy one from another player.",
+		"SmallHint": "Fainor in Serbule teaches the recipe for onion rings. You'll need a little bit of skill in Cooking, which Fainor can also help you with.",
+		"Zone": "Town of Serbule"
+	},
+	{
+		"CategoryGateId": 30,
+		"Id": 3700,
+		"Label": "Help defeat a bear in a barn",
+		"LargeHint": "The bear in the barn is too difficult for a beginner to defeat alone. Even two beginners will have trouble! Find a few adventurers willing to help, or gain some combat levels before attempting to solo the bear. Like most bears, this one is resistant to crushing and trauma damage, so Unarmed attacks are not a good choice. Bears are vulnerable to acid and electricity attacks, so use those if you have them. (Mentalism has some electricity abilities.)",
+		"SmallHint": "Jara and Ivyn have a barn outside of town, and there's a bear inside. Consider bringing backup, because bears are very dangerous!",
+		"Zone": "Farm outside of Serbule"
+	},
+	{
+		"CategoryGateId": 30,
+		"Id": 3800,
+		"Label": "Get Harry to like you even though you're not an animal",
+		"LargeHint": "To become Harry's friend, you'll need Rita's help. Rita is standing outside of the inn. Perform favors for her -- or give her flowers! -- until you reach Comfortable favor-level with her. She'll automatically give you an introductory note. Harry is a good friend to have if you ever become cursed, because he has cures for several nasty problems.",
+		"SmallHint": "Harry the wolf hangs out in Serbule, usually in the little plot behind the windmill. He's not big on bipeds, but if you were friends with Rita, she could give you an introductory note to smooth things over with Harry.",
+		"Zone": "Town of Serbule"
+	},
+	{
+		"CategoryGateId": 40,
+		"Id": 4000,
+		"Label": "Create a Poison Resistance Potion",
+		"LargeHint": "You must read the note in the Serbule Crypt before Marna will offer to teach you her best poison resistance recipe. She will insist on a very large number of spider legs in order to teach the recipe; fortunately, spiders have a lot of legs, so it won't take too long to collect them.",
+		"SmallHint": "Marna the shopkeeper has posted warnings in the Serbule Crypt about venomous spiders. After you read the note in the crypt, talk to Marna in town.",
+		"Zone": "Serbule Crypt (and the town)"
+	},
+	{
+		"CategoryGateId": 40,
+		"Id": 4100,
+		"Label": "Defeat a Megaspider",
+		"LargeHint": "The megaspider is almost certain death for a new player unless they have poison resistance. You can learn to make poison resistance potions from Marna in Serbule, or you can find poison resistance from certain pieces of equipment.",
+		"SmallHint": "In the crypt near Serbule is a pretty big spider. Its poison is quite deadly, so watch out for that!",
+		"Zone": "Serbule Crypt"
+	},
+	{
+		"CategoryGateId": 40,
+		"Id": 4200,
+		"Label": "Defeat Khyrulek's First Form",
+		"LargeHint": "Khyrulek is guarded by trained rhinos, and they are very powerful. You'll need several friends to defeat them. Once you slay Khyrulek, a portal will open to a much more dangerous part of the dungeon. Do not be too eager to venture here! First, explore the rest of the crypt to gain power and skills.",
+		"SmallHint": "Beyond the megaspider in the Serbule crypt is a lich. Defeat her to access a deeper part of the crypt.",
+		"Zone": "Serbule Crypt"
+	},
+	{
+		"CategoryGateId": 40,
+		"Id": 4300,
+		"Label": "Defeat an Omegaspider",
+		"LargeHint": "The omegaspider lies beyond Khyrulek's First Form. It is a gigantic fire spider. Unlike ordinary fire spiders, however, this one is vulnerable to fire! Use this to your advantage. Also, bring friends.",
+		"SmallHint": "Deep in the bowels of the Serbule crypt is a gigantic spider of ridiculous size and power. Kill it to gain access to a new skill. (Good luck. You'll need it.)",
+		"Zone": "Serbule Crypt"
+	},
+	{
+		"CategoryGateId": 50,
+		"Id": 5000,
+		"Label": "Learn Transmutation",
+		"LargeHint": "Complete two quests involving killing panthers and Kalaba will offer to teach you Transmutation. Once you reach Friends favor-level with Kalaba, you can learn more Transmutation recipes from his Training menu. This is a very important crafting skill to learn as it allows you to take any piece of modded equipment and make it stronger for your combat ability's needs.",
+		"SmallHint": "A Rakshasa named Kalaba is a sturdy warrior camping in Eltibule Keep. Seek him out and learn how to change ability mods on your equipment.",
+		"Zone": "Eltibule Keep"
+	},
+	{
+		"CategoryGateId": 50,
+		"Id": 5100,
+		"Label": "Learn Staff Fighting from Hogan",
+		"LargeHint": "Hogan will send you on a merry chase for special items. The snail shells can be found on giant snails in Eltibule. Poetry can be found in many places, including from a goblin in the dungeons beneath Eltibule. The ancient bronze coins are perhaps the most difficult request; these are rare drops from many kinds of monsters. You can often find some for sale on the Used tab of vendors.",
+		"SmallHint": "In the nearby duchy of Eltibule, the monk Hogan runs a small keep. Talk to him and complete his quest to learn Staff Fighting.",
+		"Zone": "Hogan's Keep"
+	},
+	{
+		"CategoryGateId": 50,
+		"Id": 5200,
+		"Label": "Rescue a Fairy from a Goblin Chief",
+		"LargeHint": "Sarina the fairy is trapped in the cave near the Algapa the goblin chief. This is a difficult fight, especially alone, so see if other players can help you. Most goblins are weak against cold and electricity, and resistant to poison and trauma, so plan accordingly.",
+		"SmallHint": "In the center of Eltibule is a small fort called Eltibule Keep. Beneath this keep are goblins. The chief is down the hall on the left. Oh, but he has a few friends with him.",
+		"Zone": "Eltibule Keep Dungeons"
+	},
+	{
+		"CategoryGateId": 50,
+		"Id": 5300,
+		"Label": "Get Hogan to let you into his keep",
+		"LargeHint": "This one is quite difficult. You must reach Close Friends favor-level with Hogan. Complete his favors, then give him gifts to further increase your favor-level. Hogan likes poetry, raw fruit, and magic staves.",
+		"SmallHint": "Hogan is housing some unusual guests hiding in his keep. He doesn't let people in unless they're trustworthy friends, though. Become his close friend to gain access.",
+		"Zone": "Hogan's Keep"
+	},
+	{
+		"CategoryGateId": 50,
+		"Id": 5400,
+		"Label": "Learn Cheesemaking",
+		"LargeHint": "Once you reach Comfortable favor-level with Braigon, you can learn Cheesemaking from his Training menu. Braigon also teaches many cheese recipes. Be warned: cheesemaking is not the most accessible of crafting skills because it requires some exotic ingredients. However, cheese is one of the best foods in the game, and is worth the effort.",
+		"SmallHint": "An Elf named Braigon is visiting Eltibule Keep. Take advantage of that opportunity to befriend him and learn his cheesemaking techniques.",
+		"Zone": "Eltibule Keep"
+	},
+	{
+		"CategoryGateId": 50,
+		"Id": 5500,
+		"Label": "Defeat The Mangler",
+		"LargeHint": "The Mangler and the Mauler are giant green bears that hunt together. They are surrounded by ordinary bears and some panthers. You will need to be patient and tactical in defeating their hangers-on in order to fight the Mangler without being swarmed!",
+		"SmallHint": "In the countryside of the Eltibule region is a large fey bear with an entourage. He preys upon travelers and must be put down.",
+		"Zone": "Eltibule Countryside"
+	},
+	{
+		"CategoryGateId": 50,
+		"Id": 5600,
+		"Label": "Meet Percy Evans",
+		"LargeHint": "Percy Evans lives in a rundown house in the far northeast corner of Eltibule.",
+		"SmallHint": "A hunter named Percy lives in a cabin in the countryside. Getting to know Percy can unlock certain opportunities.",
+		"Zone": "Eltibule Countryside"
+	},
+	{
+		"CategoryGateId": 60,
+		"Id": 6000,
+		"Label": "Trade with Puffy Ben",
+		"LargeHint": "Puffy Ben is a ranalon that can be found on the northeastern island of Sun Vale. He is usually on the island's southwestern beach. He offers different trade options throughout the day.",
+		"SmallHint": "One of the smaller islands was once a resort. Puffy Ben lives there. He collects shells.",
+		"Zone": "Sun Vale"
+	},
+	{
+		"CategoryGateId": 60,
+		"Id": 6100,
+		"Label": "Meet Urglemarg",
+		"LargeHint": "Urglemarg is a ranalon that can be found deep beneath the sea. He's set up shop in the coral reef between the large island and the ranalon-covered island to the southeast.",
+		"SmallHint": "Those that go diving for pearls are likely to meet Urglemarg. Bring sand dollars!",
+		"Zone": "Sun Vale"
+	},
+	{
+		"CategoryGateId": 60,
+		"Id": 6200,
+		"Label": "Meet Silvia the Druid",
+		"LargeHint": "Silvia's druid camp is in the northern tip of Sun Vale's largest island.",
+		"SmallHint": "Silvia leads the druids of Sun Vale. She can be found in the druid camp on the main island.",
+		"Zone": "Sun Vale"
+	},
+	{
+		"CategoryGateId": 70,
+		"Id": 7000,
+		"Label": "Meet Nightshade",
+		"LargeHint": "Nightshade can be found staying at a remote Inn found in the mountains near the central western shores. He can teach you how to add augments to your equipment without the help of a NPC and how to extract them from equipment.",
+		"SmallHint": "Nightshade can be found staying at a remote Inn.",
+		"Zone": "Kur Mountains"
+	},
+	{
+		"CategoryGateId": 80,
+		"Id": 8000,
+		"Label": "Complete a War Cache",
+		"LargeHint": "Sir Johnson lives in Amulna, a city roughly in the middle of the Ilmari Desert. He will send you on an expedition to a 'war cache', a lost dungeon full of dangers and loot.",
+		"SmallHint": "Seek the tiny town of Amulna in the Ilmari Desert. Look for Sir Johnson, who will task you with a quest.",
+		"Zone": "Ilmari Desert"
+	}
+]

@@ -1,0 +1,1706 @@
+{
+	"AreaApartment1": [
+		{
+			"Desc": "Return to Statehelm",
+			"Loc": "x:-5.915932 y:0.003667 z:22.325081",
+			"Name": "Exit",
+			"Type": "Portal"
+		}
+	],
+	"AreaCasino": [
+		{
+			"Desc": "Employees Only!",
+			"Loc": "x:-119.407501 y:-7.11 z:101.227501",
+			"Name": "Employee Exit",
+			"Type": "Portal"
+		},
+		{
+			"Combo": "4017",
+			"Loc": "x:0.136019 y:4.910156 z:213.749985",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Loc": "x:7.5 y:0.999 z:22.5",
+			"Name": "TeleportCircle_CasinoFoyer",
+			"Type": "TeleportationPlatform"
+		}
+	],
+	"AreaCave1": [
+		{
+			"Desc": "Back to the rest of the Keep.",
+			"Loc": "x:962.5 y:46.5 z:-146.762253",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You can get out from here.",
+			"Loc": "x:-507.410004 y:-40.0 z:-648.75",
+			"Name": "Passageway Up",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You can climb back up here.",
+			"Loc": "x:2500.624023 y:505.391998 z:-1654.823975",
+			"Name": "Passageway Up",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the rest of the Keep.",
+			"Loc": "x:1007.5 y:37.527 z:-280.839996",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Return to the keep courtyard",
+			"Loc": "x:-295.25 y:29.57 z:406.054932",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You can get out from here.",
+			"Loc": "x:-1172.838379 y:52.841877 z:-94.230782",
+			"Name": "Passageway Up",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You could squeeze in there.",
+			"Loc": "x:-441.25 y:-59.275002 z:-615.25",
+			"Name": "Tight Passage",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the rest of the Keep.",
+			"Loc": "x:974.288025 y:-65.905998 z:-277.5",
+			"Name": "Exit",
+			"Type": "Portal"
+		}
+	],
+	"AreaCave2": [
+		{
+			"Desc": "Return to Kur",
+			"Loc": "x:-2094.657959 y:-66.841003 z:-369.670013",
+			"Name": "Portal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You can get back out to Etibule here.",
+			"Loc": "x:-109.769997 y:9.565 z:1390.212036",
+			"Name": "Portal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You can faintly hear buzzing",
+			"Loc": "x:-109.234001 y:7.88 z:890.289978",
+			"Name": "Distant Terminal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Climb back out to Kur",
+			"Loc": "x:-2153.391113 y:-93.809006 z:-150.959",
+			"Name": "Portal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You hear fairies chatting on the other side.",
+			"Loc": "x:767.776001 y:16.094013 z:917.607849",
+			"Name": "One-Way Connection",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You can get back out to Sun Vale here.",
+			"Loc": "x:-51.709999 y:11.28 z:967.289978",
+			"Name": "Portal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You could follow this old drain system to... somewhere. (ONE-WAY)",
+			"Loc": "x:98.077637 y:72.789955 z:-2295.499756",
+			"Name": "Drain",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You can get back out to Kur here.",
+			"Loc": "x:43.776367 y:75.532455 z:-2447.071289",
+			"Name": "Portal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You can return to Serbule here.",
+			"Loc": "x:2032.832031 y:75.532455 z:-335.303436",
+			"Name": "Portal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Climb back out to Kur",
+			"Loc": "x:-1997.109619 y:43.764557 z:176.710144",
+			"Name": "Portal",
+			"Type": "Portal"
+		}
+	],
+	"AreaDesert1": [
+		{
+			"Desc": "An entrance has been hastily boarded up here.",
+			"Loc": "x:-1320.75 y:166.089996 z:-1264.77002",
+			"Name": "Boarded Door",
+			"Type": "Portal"
+		},
+		{
+			"Loc": "x:-1287.300049 y:161.505951 z:-1299.26001",
+			"Name": "TeleportCircle_DeadTown1",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:-1194.849976 y:127.550751 z:-411.079987",
+			"Name": "TeleportCircle_Amulna",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Combo": "4052",
+			"Loc": "x:-736.619995 y:184.688004 z:-1678.060059",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4053",
+			"Loc": "x:-1129.25 y:126.709999 z:-418.089996",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Desc": "Begin the perilous trek to Kur",
+			"Loc": "x:-139.619995 y:133.690994 z:-1581.920044",
+			"Name": "Travel to Kur Mountains",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Trek deeper into the desert toward Rahu",
+			"Loc": "x:-168.350006 y:187.160004 z:594.840027",
+			"Name": "Travel to Rahu",
+			"Type": "Portal"
+		}
+	],
+	"AreaDesert1Caves": [
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:919.697266 y:2.0 z:1985.003418",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:2014.697266 y:2.0 z:2000.003418",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:-20.003418 y:2.0 z:2109.69751",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:2084.69751 y:2.0 z:1015.003479",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:939.69751 y:18.0 z:3955.003418",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:-134.69751 y:2.0 z:1954.996582",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:1099.69751 y:2.0 z:3050.003418",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:-109.996521 y:2.0 z:3915.30249",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:924.996582 y:2.0 z:1919.697266",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:15.302489 y:2.0 z:3889.996582",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:920.30249 y:2.0 z:3069.996582",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:4029.69751 y:2.0 z:1970.003418",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:2114.697754 y:2.0 z:2920.003418",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:3915.003418 y:2.0 z:985.30249",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:1054.69751 y:2.0 z:930.003479",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:1955.30249 y:2.0 z:1084.996582",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:1989.996582 y:2.0 z:2974.697754",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "These stairs lead back into the desert",
+			"Loc": "x:89.139999 y:67.089996 z:-93.379997",
+			"Name": "Passageway Up",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:959.996521 y:2.0 z:1134.69751",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:0.003472 y:2.0 z:2985.30249",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:3914.996582 y:2.0 z:964.69751",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:-104.69751 y:2.0 z:1079.996582",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:3999.996582 y:2.0 z:3129.69751",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:3044.996582 y:2.0 z:3029.69751",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:3055.30249 y:2.0 z:4089.996582",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:3044.69751 y:2.0 z:2000.003418",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:3024.996582 y:2.0 z:1069.69751",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:3960.003418 y:2.0 z:2880.30249",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:2895.30249 y:2.0 z:4059.996582",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:2934.996582 y:2.0 z:1039.69751",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:-109.930054 y:2.13 z:2040.23999",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to the desert!",
+			"Loc": "x:1970.003418 y:2.0 z:3950.302246",
+			"Name": "Exit",
+			"Type": "Portal"
+		}
+	],
+	"AreaDesert2": [
+		{
+			"Desc": "An entrance has been hastily boarded up here.",
+			"Loc": "x:-1320.75 y:166.089996 z:-1264.77002",
+			"Name": "Boarded Door",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Return to the waking world",
+			"Loc": "x:-513.969299 y:132.942673 z:-921.891113",
+			"Name": "Wake Up",
+			"Type": "Portal"
+		},
+		{
+			"Combo": "4052",
+			"Loc": "x:-736.619995 y:184.688004 z:-1678.060059",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4053",
+			"Loc": "x:-1129.25 y:126.709999 z:-418.089996",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		}
+	],
+	"AreaEltibule": [
+		{
+			"Desc": "This shouldn't be here! From inside you smell cold, and bear, and fear.",
+			"Loc": "x:954.409973 y:93.550003 z:437.089996",
+			"Name": "Strange Gateway",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Nobody has entered this door in years",
+			"Loc": "x:1138.161865 y:39.093884 z:1367.77417",
+			"Name": "Lord Eltibule's Residence",
+			"Type": "Portal"
+		},
+		{
+			"Loc": "x:2334.690186 y:135.734726 z:841.390625",
+			"Name": "TeleportCircle_PlateauAlt",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:1977.883789 y:41.054588 z:1373.350098",
+			"Name": "TeleportCircle_SieAntry",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:1114.727173 y:39.016926 z:1355.878052",
+			"Name": "TeleportCircle_Courtyard",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:604.247681 y:134.018173 z:1494.122192",
+			"Name": "TeleportCircle_PlateauCity",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:1519.629761 y:113.419998 z:398.076965",
+			"Name": "TeleportCircle_AbandonedCourtyard",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:2550.061768 y:1.430984 z:1352.015747",
+			"Name": "TeleportCircle_BFE1",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Desc": "There's some noise coming from inside there, somewhere...",
+			"Loc": "x:1495.542236 y:113.689079 z:336.063507",
+			"Name": "Hogan's Keep",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You can hear muffled activity far below.",
+			"Loc": "x:1138.047729 y:39.093884 z:1349.43811",
+			"Name": "Cellar Entrance",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "The path leads to the small town of Serbule.",
+			"Loc": "x:1167.875 y:129.005005 z:2924.259033",
+			"Name": "Travel",
+			"Type": "Portal"
+		},
+		{
+			"Combo": "4020",
+			"Loc": "x:2408.116455 y:128.816833 z:2021.867554",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Desc": "Sounds like there's workers behind this door",
+			"Loc": "x:2438.050049 y:112.720001 z:2614.22998",
+			"Name": "Employees Only",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You think you could slip into the basement here.",
+			"Loc": "x:2108.312988 y:40.327 z:2104.249023",
+			"Name": "Boarded Up Entrance",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "There's a huge slab here, blocking a stairway down. Luckily you're pretty lithe...",
+			"Loc": "x:1099.73999 y:48.342999 z:1505.755981",
+			"Name": "Crypt Entrance",
+			"Type": "Portal"
+		},
+		{
+			"Combo": "4017",
+			"Loc": "x:1562.388428 y:112.367661 z:424.236877",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4017",
+			"Loc": "x:1562.388428 y:112.367661 z:424.236877",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Desc": "A treacherous path leads to the freezing Kur mountains, and then on to Gazluk.",
+			"Loc": "x:1517.650024 y:114.507004 z:272.23999",
+			"Name": "Travel to Kur Mountains",
+			"Type": "Portal"
+		},
+		{
+			"Combo": "4016",
+			"Loc": "x:1934.636841 y:37.967136 z:1308.01709",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4018",
+			"Loc": "x:941.062805 y:27.910137 z:1543.284912",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4019",
+			"Loc": "x:916.844788 y:96.698303 z:2428.760254",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		}
+	],
+	"AreaFaeRealm1": [
+		{
+			"Desc": "Looks kind of small ...",
+			"Loc": "x:565.72998 y:176.119995 z:2770.939941",
+			"Name": "Shortcut to Sun Vale",
+			"Type": "Portal"
+		},
+		{
+			"Combo": "4047",
+			"Loc": "x:1769.290039 y:176.149994 z:2428.340088",
+			"Name": "Meditation Arch",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Desc": "Leads to Winter Nexus",
+			"Loc": "x:734.599976 y:173.589996 z:2757.429932",
+			"Name": "Nexus Portal",
+			"Type": "Portal"
+		},
+		{
+			"Combo": "4068",
+			"Loc": "x:1409.560059 y:188.410004 z:263.779999",
+			"Name": "Meditation Arch",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4050",
+			"Loc": "x:673.268982 y:188.669998 z:1354.992188",
+			"Name": "Meditation Arch",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Desc": "Looks like a portal",
+			"Loc": "x:2489.070068 y:225.179993 z:782.080017",
+			"Name": "Transporter Gate",
+			"Type": "Portal"
+		},
+		{
+			"Combo": "4054",
+			"Loc": "x:1702.824585 y:177.408859 z:1893.087891",
+			"Name": "Meditation Arch",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4020",
+			"Loc": "x:2406.2854 y:170.992844 z:2161.77417",
+			"Name": "Meditation Arch",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4013",
+			"Loc": "x:2144.562012 y:180.779999 z:485.785431",
+			"Name": "Meditation Arch",
+			"Type": "MeditationPillar"
+		}
+	],
+	"AreaFaeRealm1Caves": [
+		{
+			"Desc": "Exit Portal",
+			"Loc": "x:79.989998 y:-56.25 z:184.309998",
+			"Name": "Surface Transport Gate",
+			"Type": "Portal"
+		}
+	],
+	"AreaGazluk": [
+		{
+			"Desc": "Hike through the mountains to Vidaria",
+			"Loc": "x:-2010.199951 y:947.22998 z:2206.280029",
+			"Name": "Travel to Vidaria",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "'No-Name Cave'",
+			"Loc": "x:-1682.489868 y:621.89032 z:-1180.768555",
+			"Name": "Cave Entrance",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "'Snowblood Shadow Cave'",
+			"Loc": "x:-1022.512939 y:660.176392 z:-114.268829",
+			"Name": "Cave Entrance",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "'Tower View Cave'",
+			"Loc": "x:851.720032 y:739.179993 z:-215.51001",
+			"Name": "Cave Entrance",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "'Foothills Cave'",
+			"Loc": "x:-929.676697 y:713.024475 z:1925.049561",
+			"Name": "Cave Entrance",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "'Amaluk Valley Cave'",
+			"Loc": "x:-70.456444 y:796.297974 z:-119.046852",
+			"Name": "Cave Entrance",
+			"Type": "Portal"
+		},
+		{
+			"Combo": "4050",
+			"Loc": "x:458.700012 y:635.248291 z:-1429.449951",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Desc": "Hike through the mountains to Kur",
+			"Loc": "x:1634.699951 y:644.067017 z:-1339.819946",
+			"Name": "Travel to Kur Mountains",
+			"Type": "Portal"
+		},
+		{
+			"Loc": "x:290.890015 y:559.549988 z:-1945.48999",
+			"Name": "TeleportCircle_HauntedTown",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:-145.949997 y:707.86499 z:1532.469971",
+			"Name": "TeleportCircle_NearGazlukCity",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:-1334.900024 y:673.700012 z:447.75",
+			"Name": "TeleportCircle_OrcCamps",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:323.869995 y:973.969971 z:-590.890015",
+			"Name": "TeleportCircle_PlateauCenter",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Desc": "There's lots of orcs in there.",
+			"Loc": "x:-381.850006 y:671.280029 z:1014.5",
+			"Name": "Keep Entrance",
+			"Type": "Portal"
+		},
+		{
+			"Combo": "4015",
+			"Loc": "x:-1325.130005 y:677.829285 z:1625.517944",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4019",
+			"Loc": "x:-354.48999 y:691.118286 z:797.950012",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4039",
+			"Loc": "x:-2097.600098 y:860.158325 z:-1813.0",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Desc": "Hike through mountains to the warm lands of Povus",
+			"Loc": "x:1194.780029 y:784.440002 z:2295.340088",
+			"Name": "Travel to Povus",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "'New Prestonbule Cave'",
+			"Loc": "x:-23.638344 y:569.510071 z:-1875.256226",
+			"Name": "Cave Entrance",
+			"Type": "Portal"
+		},
+		{
+			"Combo": "4013",
+			"Loc": "x:1644.599976 y:790.608276 z:1979.780029",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Desc": "'Windy View Cave'",
+			"Loc": "x:738.695618 y:815.063232 z:1426.14624",
+			"Name": "Cave Entrance",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "'Gazluk Shadow Cave'",
+			"Loc": "x:-913.960876 y:703.249634 z:785.158569",
+			"Name": "Cave Entrance",
+			"Type": "Portal"
+		}
+	],
+	"AreaGazlukCaves": [
+		{
+			"Desc": "It seems... odd...",
+			"Loc": "x:2015.572998 y:0.0 z:-96.367996",
+			"Name": "Old Chest",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You can get out from here.",
+			"Loc": "x:1949.359985 y:3.25 z:0.74",
+			"Name": "Cave Exit",
+			"Type": "Portal"
+		},
+		{
+			"Loc": "x:565.018982 y:1.716 z:-2156.0",
+			"Name": "TeleportCircle_GazlukCaves1",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Desc": "You can get out from here.",
+			"Loc": "x:-2301.320068 y:3.39 z:47.959999",
+			"Name": "Cave Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You can get out from here.",
+			"Loc": "x:-0.15 y:3.0 z:2.41",
+			"Name": "Cave Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You can get out from here.",
+			"Loc": "x:310.608978 y:3.185 z:-1646.088013",
+			"Name": "Cave Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You can get out from here.",
+			"Loc": "x:-22.190998 y:3.185 z:-2020.488037",
+			"Name": "Cave Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You can get out from here.",
+			"Loc": "x:-49.739998 y:4.71 z:2000.765015",
+			"Name": "Cave Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You can get out from here.",
+			"Loc": "x:2082.370117 y:3.21 z:-320.730011",
+			"Name": "Cave Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You can get out from here.",
+			"Loc": "x:-1986.680054 y:3.39 z:0.04",
+			"Name": "Cave Exit",
+			"Type": "Portal"
+		}
+	],
+	"AreaGazlukKeep": [
+		{
+			"Desc": "There's more stairs...",
+			"Loc": "x:1725.079956 y:10.76 z:1458.150024",
+			"Name": "Stairs Up",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "There's more stairs...",
+			"Loc": "x:1014.360046 y:-0.79 z:1407.849976",
+			"Name": "Stairs Down",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Return to Gazluk City",
+			"Loc": "x:1005.090027 y:12.0 z:976.289978",
+			"Name": "Exit",
+			"Type": "Portal"
+		}
+	],
+	"AreaGuildHall1": [ ],
+	"AreaKurCaves": [
+		{
+			"Desc": "Back to Kur Mountains",
+			"Loc": "x:5168.648438 y:12.380001 z:5092.307617",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "It's a tight squeeze, but it leads somewhere.",
+			"Loc": "x:3038.336914 y:-126.488998 z:660.044922",
+			"Name": "Passageway Up",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You can get out from here.",
+			"Loc": "x:3240.449951 y:13.120001 z:2969.399902",
+			"Name": "Passageway Up",
+			"Type": "Portal"
+		}
+	],
+	"AreaKurMountains": [
+		{
+			"Desc": "Hey! There's stuff down in there!",
+			"Loc": "x:1491.053467 y:250.412994 z:2146.695801",
+			"Name": "Cave",
+			"Type": "Portal"
+		},
+		{
+			"Combo": "4050",
+			"Loc": "x:1676.990723 y:271.023132 z:548.788513",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Desc": "Are those orc skulls on the door?!",
+			"Loc": "x:1920.050293 y:339.623993 z:1671.33606",
+			"Name": "Creepy Door",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "A long journey through the mountains leads to the warmer lands of Eltibule",
+			"Loc": "x:831.451477 y:291.149994 z:3488.926025",
+			"Name": "Path to Eltibule",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Hike the mountains to the frozen Gazluk Plateau",
+			"Loc": "x:1285.237305 y:313.779999 z:604.997681",
+			"Name": "Travel to Gazluk",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "It stinks of rotting meat and dozens of filthy animals",
+			"Loc": "x:2200.67749 y:222.369995 z:1318.331177",
+			"Name": "Wolf Cave",
+			"Type": "Portal"
+		},
+		{
+			"Loc": "x:3485.729248 y:216.933731 z:1319.314209",
+			"Name": "TeleportCircle_KurIceberg",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:1009.775513 y:402.959869 z:2263.445068",
+			"Name": "TeleportCircle_Crevice",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:2531.111816 y:288.654266 z:1960.166016",
+			"Name": "TeleportCircle_Tundra1NearInn",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:1837.140015 y:211.539993 z:799.359985",
+			"Name": "TeleportCircle_KurMountainsWerewolfForest",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:2248.860107 y:243.720001 z:1493.819946",
+			"Name": "TeleportCircle_Lamashu",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Desc": "There's a way down under this tower here!",
+			"Loc": "x:1595.710083 y:327.725983 z:3211.969971",
+			"Name": "Stairs Down",
+			"Type": "Portal"
+		},
+		{
+			"Combo": "4048",
+			"Loc": "x:1114.299438 y:369.900116 z:1762.230469",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4049",
+			"Loc": "x:1960.076172 y:233.88028 z:3555.588135",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Desc": "It's a long trek to the desert.",
+			"Loc": "x:652.75 y:377.666992 z:1660.679932",
+			"Name": "Travel to Ilmari Desert",
+			"Type": "Portal"
+		},
+		{
+			"Combo": "4051",
+			"Loc": "x:1509.383301 y:252.970139 z:1967.975098",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4050",
+			"Loc": "x:2656.865967 y:263.405396 z:1827.815308",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		}
+	],
+	"AreaMyconianCave": [
+		{
+			"Loc": "x:-677.042358 y:340.824036 z:803.662842",
+			"Name": "TeleportCircle_MycoEntrance",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Desc": "Looks like it leads back to Serbule",
+			"Loc": "x:-694.150208 y:345.731995 z:714.704468",
+			"Name": "Portal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "This leads back out to Serbule.",
+			"Loc": "x:-4157.429199 y:430.64743 z:883.624695",
+			"Name": "Exit",
+			"Type": "Portal"
+		}
+	],
+	"AreaNewbieIsland": [ ],
+	"AreaPlanes": [
+		{
+			"Desc": "Looks like Serbule is in there...",
+			"Loc": "x:-1992.72998 y:102.07 z:-1868.609985",
+			"Name": "Return to Serbule",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Looks like Serbule is in there...",
+			"Loc": "x:-961.006958 y:-1.494995 z:22.178986",
+			"Name": "Unstable Serbule Portal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Looks like Rahu is in there...",
+			"Loc": "x:-965.430908 y:-1.494995 z:26.691986",
+			"Name": "Unstable Rahu Portal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Lots of destinations are swirling by in rapid succession",
+			"Loc": "x:-1002.784607 y:-1.495 z:2.2113",
+			"Name": "Unstable Random Portal",
+			"Type": "Portal"
+		}
+	],
+	"AreaPovus": [
+		{
+			"Desc": "Trek to Vidaria",
+			"Loc": "x:241.031433 y:50.330002 z:2030.473267",
+			"Name": "Travel to Vidaria",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Travel to the frozen Gazluk Plateau",
+			"Loc": "x:2229.102051 y:65.744003 z:296.151276",
+			"Name": "Travel to Gazluk",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Where does it go?",
+			"Loc": "x:1558.641968 y:5.153 z:2466.855225",
+			"Name": "Murky Tunnel",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Trek to the edge of the desert",
+			"Loc": "x:2561.969238 y:36.967003 z:1703.112427",
+			"Name": "Travel to Rahu",
+			"Type": "Portal"
+		},
+		{
+			"Combo": "4016",
+			"Loc": "x:2075.033936 y:53.259998 z:504.927002",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4052",
+			"Loc": "x:1004.591003 y:21.396 z:2398.179932",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4017",
+			"Loc": "x:488.309998 y:29.450001 z:1585.25",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4053",
+			"Loc": "x:2505.419922 y:50.57 z:2306.919922",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Loc": "x:2015.630005 y:11.918523 z:1361.920044",
+			"Name": "TeleportCircle_NearTown",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Combo": "4011",
+			"Loc": "x:929.754028 y:88.486 z:1009.398987",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		}
+	],
+	"AreaPovusCaves": [
+		{
+			"Desc": "Escape the caves",
+			"Loc": "x:-6.437 y:0.766 z:0.280597",
+			"Name": "Portal",
+			"Type": "Portal"
+		}
+	],
+	"AreaPovusCaves2": [
+		{
+			"Desc": "Leave this place",
+			"Loc": "x:798.352539 y:84.0 z:1235.896606",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Cramped, but you could squeeze in...",
+			"Loc": "x:576.651367 y:82.884453 z:1525.599976",
+			"Name": "No Judgment Door",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Leave the cave",
+			"Loc": "x:445.394897 y:65.282997 z:2399.763916",
+			"Name": "Portal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Return to ...",
+			"Loc": "x:425.860016 y:110.0 z:2209.570068",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Return to ...",
+			"Loc": "x:423.396149 y:97.209999 z:2172.532715",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Return to ...",
+			"Loc": "x:365.690002 y:78.0 z:2203.392578",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Return to ...",
+			"Loc": "x:399.62616 y:62.0 z:2233.119873",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "One-Way Exit",
+			"Loc": "x:2280.577637 y:46.960011 z:1418.130127",
+			"Name": "Portal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Return to Povus Swamps",
+			"Loc": "x:1492.939941 y:-5.23 z:1449.878052",
+			"Name": "Cave Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Leave this place",
+			"Loc": "x:903.053528 y:84.0 z:1181.202515",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Leave!",
+			"Loc": "x:603.053467 y:83.5 z:1127.002197",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Go ... somewhere.",
+			"Loc": "x:370.0383 y:54.458748 z:2228.60083",
+			"Name": "Altered Honeycomb",
+			"Type": "Portal"
+		}
+	],
+	"AreaRahu": [
+		{
+			"Desc": "\"Non-Onkara Will Die Inside! Begone!\"",
+			"Loc": "x:184.949005 y:12.351 z:505.549988",
+			"Name": "Maintenance",
+			"Type": "Portal"
+		},
+		{
+			"Loc": "x:193.649994 y:10.704277 z:460.910034",
+			"Name": "TeleportCircle_Rahu1",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:152.559998 y:15.878616 z:-80.07",
+			"Name": "TeleportCircle_Rahu2",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:304.5 y:5.953091 z:-537.130005",
+			"Name": "TeleportCircle_Rahu3",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Desc": "Travel West to Povus",
+			"Loc": "x:1315.024658 y:9.2 z:-1136.846436",
+			"Name": "Travel to Povus",
+			"Type": "Portal"
+		},
+		{
+			"Combo": "4055",
+			"Loc": "x:232.40802 y:9.909998 z:430.020996",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4056",
+			"Loc": "x:639.099976 y:17.73 z:140.25",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4054",
+			"Loc": "x:349.519989 y:12.573999 z:279.179993",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Desc": "Trek deeper into the desert toward Amulna",
+			"Loc": "x:1573.5 y:19.768087 z:50.5",
+			"Name": "Travel to Desert",
+			"Type": "Portal"
+		}
+	],
+	"AreaRahuCaves": [
+		{
+			"Desc": "This leads back out to Rahu.",
+			"Loc": "x:62.994492 y:13.862426 z:57.026367",
+			"Name": "Ladder Out",
+			"Type": "Portal"
+		}
+	],
+	"AreaSerbule": [
+		{
+			"Loc": "x:1406.280029 y:46.850048 z:1647.40625",
+			"Name": "TeleportCircle_TownSquare",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:2333.181152 y:35.116772 z:2163.895264",
+			"Name": "TeleportCircle_TigerFields",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:1626.740479 y:90.152435 z:753.709351",
+			"Name": "TeleportCircle_WolfFields",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Desc": "Hike to Serbule Hills",
+			"Loc": "x:1791.099976 y:163.169998 z:494.5",
+			"Name": "Travel Cross-Country",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "There's strange noises and weird smells coming from in there.",
+			"Loc": "x:374.98999 y:55.939999 z:532.390015",
+			"Name": "Crypt",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Water is rushing into this portal. Wherever it goes, it looks dark.",
+			"Loc": "x:1864.170288 y:12.346127 z:1898.754395",
+			"Name": "Portal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "This giant door is immobile, but you can squeeze into the rock-filled passage beyond...",
+			"Loc": "x:2367.365967 y:41.298626 z:2146.18042",
+			"Name": "Squeeze Space",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "There's a structure down there! Looks bad; maybe bring some backup.",
+			"Loc": "x:597.150208 y:85.540634 z:1333.364258",
+			"Name": "Old Passage",
+			"Type": "Portal"
+		},
+		{
+			"Combo": "4014",
+			"Loc": "x:699.889954 y:93.280273 z:2379.572754",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4013",
+			"Loc": "x:2335.74707 y:33.930275 z:2111.847168",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4015",
+			"Loc": "x:545.791626 y:108.659142 z:1308.366455",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4011",
+			"Loc": "x:1471.621826 y:41.370148 z:1432.490356",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Desc": "Travel to Eltibule",
+			"Loc": "x:1025.709961 y:39.139999 z:2591.27002",
+			"Name": "Travel cross-country",
+			"Type": "Portal"
+		},
+		{
+			"Combo": "4012",
+			"Loc": "x:1215.462158 y:38.700138 z:1723.338013",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Desc": "Weird chittering can be heard from within.",
+			"Loc": "x:577.400024 y:98.529999 z:2431.199951",
+			"Name": "Cave",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Nothing in here but player killing!",
+			"Loc": "x:1602.285034 y:49.794998 z:1419.477051",
+			"Name": "PvP Testing Cellar",
+			"Type": "Portal"
+		}
+	],
+	"AreaSerbule2": [
+		{
+			"Desc": "There's weird chittering coming from deep inside",
+			"Loc": "x:1144.380005 y:109.610001 z:2710.820068",
+			"Name": "Cave",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You could swim down here...",
+			"Loc": "x:1775.26001 y:2.29 z:1617.540039",
+			"Name": "Murky Tunnel",
+			"Type": "Portal"
+		},
+		{
+			"Loc": "x:528.570007 y:49.5107 z:1272.369873",
+			"Name": "TeleportCircle_Serbule2Estate",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:1655.0 y:46.706379 z:437.0",
+			"Name": "TeleportCircle_Serbule2Wilderness",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:2057.790039 y:88.316902 z:2614.659912",
+			"Name": "TeleportCircle_Serbule2Forest",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:724.76001 y:100.842316 z:2515.47998",
+			"Name": "TeleportCircle_Serbule2Hub",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Combo": "4020",
+			"Loc": "x:479.448975 y:94.716057 z:2367.845703",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4018",
+			"Loc": "x:1721.563721 y:26.1903 z:2077.370605",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4016",
+			"Loc": "x:868.929993 y:112.050278 z:925.59198",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4014",
+			"Loc": "x:1967.696533 y:78.800301 z:430.190796",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4013",
+			"Loc": "x:2236.807129 y:113.794403 z:2599.18457",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Desc": "Hike to Serbule Keep",
+			"Loc": "x:423.710022 y:136.970001 z:2829.27002",
+			"Name": "Travel Cross-Country",
+			"Type": "Portal"
+		}
+	],
+	"AreaSerbuleCaves": [
+		{
+			"Desc": "You can swim out here",
+			"Loc": "x:5000.390137 y:3.44 z:924.72998",
+			"Name": "Passage out",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You can get out from here.",
+			"Loc": "x:3982.810059 y:3.19 z:420.160004",
+			"Name": "Cave Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "This door must lead back out to the island.",
+			"Loc": "x:4062.261963 y:27.0 z:79.330002",
+			"Name": "Door",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Back to Serbule",
+			"Loc": "x:1981.630005 y:91.966003 z:12.709999",
+			"Name": "Portal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "This crystal will get you out of here",
+			"Loc": "x:302.630005 y:186.509995 z:1723.26001",
+			"Name": "Exit Crystal",
+			"Type": "Portal"
+		}
+	],
+	"AreaStaging": [ ],
+	"AreaStatehelm": [
+		{
+			"Desc": "Maintenance Entrance - Keep Out!",
+			"Loc": "x:587.750977 y:44.700001 z:945.954956",
+			"Name": "Sewer",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "What's down there?",
+			"Loc": "x:477.972687 y:57.688995 z:1078.557739",
+			"Name": "Basement Door",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Sounds like water down there",
+			"Loc": "x:212.346985 y:44.738998 z:1003.050415",
+			"Name": "Manhole",
+			"Type": "Portal"
+		},
+		{
+			"Loc": "x:859.14093 y:45.740002 z:825.343628",
+			"Name": "TeleportCircle_OtherInTown",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:615.0 y:61.23 z:1190.0",
+			"Name": "TeleportCircle_OldTown",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Desc": "Sounds like water down there",
+			"Loc": "x:694.176025 y:59.819 z:1219.279053",
+			"Name": "Manhole",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Travel overland to Vidaria",
+			"Loc": "x:-39.413208 y:47.391998 z:772.523193",
+			"Name": "Travel to Vidaria",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Barely liftable",
+			"Loc": "x:982.37439 y:84.249298 z:246.183258",
+			"Name": "Heavy Door",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "What's down there?",
+			"Loc": "x:774.252197 y:45.390999 z:842.61792",
+			"Name": "Basement Door",
+			"Type": "Portal"
+		}
+	],
+	"AreaStatehelmCaves": [
+		{
+			"Desc": "Leave the sewer",
+			"Loc": "x:586.268982 y:5.973 z:536.794006",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Leads back up to the street level",
+			"Loc": "x:702.683533 y:5.458 z:613.806274",
+			"Name": "Sewer Exit",
+			"Type": "Portal"
+		},
+		{
+			"Loc": "x:770.286011 y:1.5 z:570.585999",
+			"Name": "TeleportCircle_AnimalCamp",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Desc": "Leads back up to the street level",
+			"Loc": "x:709.816345 y:5.458 z:501.193481",
+			"Name": "Sewer Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Leads out of the crypt",
+			"Loc": "x:1036.504028 y:5.327 z:471.880005",
+			"Name": "Exit",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Climb out of here",
+			"Loc": "x:-467.997986 y:2.494 z:74.932648",
+			"Name": "Basement Exit",
+			"Type": "Portal"
+		}
+	],
+	"AreaStatehelmCaves2": [
+		{
+			"Desc": "Return to the keep courtyard",
+			"Loc": "x:314.029999 y:-29.959999 z:413.549988",
+			"Name": "Exit",
+			"Type": "Portal"
+		}
+	],
+	"AreaSunVale": [
+		{
+			"Desc": "For strong swimmers only",
+			"Loc": "x:-1598.44397 y:2.961479 z:1638.902588",
+			"Name": "Submerged Cave",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "For strong swimmers only",
+			"Loc": "x:685.450012 y:37.323002 z:-1478.030029",
+			"Name": "Submerged Cave",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "For strong swimmers only",
+			"Loc": "x:1445.043335 y:18.82415 z:-1322.783081",
+			"Name": "Submerged Cave",
+			"Type": "Portal"
+		},
+		{
+			"Loc": "x:1351.219971 y:64.596832 z:1226.900024",
+			"Name": "TeleportCircle_Sand",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:456.920013 y:17.246225 z:-1352.839966",
+			"Name": "TeleportCircle_Underwater",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:-1420.831665 y:45.877365 z:770.627441",
+			"Name": "TeleportCircle_Landing",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:-785.219971 y:67.0 z:-423.079987",
+			"Name": "TeleportCircle_TrollRegion",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:-954.8255 y:48.542801 z:1318.400391",
+			"Name": "TeleportCircle_NearDruids",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Combo": "4051",
+			"Loc": "x:-1127.059937 y:62.715794 z:-1342.964844",
+			"Name": "Meditation Arch",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Desc": "It's full of water",
+			"Loc": "x:1651.459961 y:20.733 z:1078.55896",
+			"Name": "Underwater Cave",
+			"Type": "Portal"
+		},
+		{
+			"Loc": "x:509.75 y:47.49226 z:-248.710052",
+			"Name": "TeleportCircle_AnimalTown",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Combo": "4047",
+			"Loc": "x:1283.150391 y:60.935791 z:-1127.314819",
+			"Name": "Meditation Arch",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4048",
+			"Loc": "x:1128.700317 y:70.07579 z:1160.295166",
+			"Name": "Meditation Arch",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4049",
+			"Loc": "x:-194.097229 y:60.265793 z:93.624329",
+			"Name": "Meditation Arch",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4050",
+			"Loc": "x:-1193.389648 y:61.535797 z:737.665161",
+			"Name": "Meditation Arch",
+			"Type": "MeditationPillar"
+		}
+	],
+	"AreaSunValeCaves": [
+		{
+			"Desc": "Swim back into the sea",
+			"Loc": "x:-127.459999 y:41.189999 z:1813.330078",
+			"Name": "Leave Cave",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Swim out of Cave",
+			"Loc": "x:1876.76001 y:52.169998 z:156.860001",
+			"Name": "Portal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Swim out of Cave",
+			"Loc": "x:-2123.23999 y:52.169998 z:2156.860107",
+			"Name": "Portal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Leave the cave",
+			"Loc": "x:1853.903564 y:39.650696 z:-48.352173",
+			"Name": "Swim Out",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Swim up and out!",
+			"Loc": "x:1881.447021 y:65.120003 z:2016.86499",
+			"Name": "Exit",
+			"Type": "Portal"
+		}
+	],
+	"AreaTomb1": [
+		{
+			"Desc": "Climb up out of the tomb.",
+			"Loc": "x:-189.559998 y:41.741001 z:55.16",
+			"Name": "Leave Tomb",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "This leads back out to Serbule.",
+			"Loc": "x:-3001.0 y:1.5 z:0.0",
+			"Name": "Ladder Out",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "You see pipes beyond. Lots of pipes.",
+			"Loc": "x:-190.282974 y:46.482075 z:-56.378613",
+			"Name": "Portal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "There's water on the other side of this portal.",
+			"Loc": "x:-1102.599976 y:61.919998 z:189.930008",
+			"Name": "Portal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Hard to say where this leads. Looks wet.",
+			"Loc": "x:-911.493469 y:111.152206 z:247.968948",
+			"Name": "Portal",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Climb back up out of the crypt here.",
+			"Loc": "x:1056.426758 y:36.193581 z:350.324768",
+			"Name": "Exit Crypt",
+			"Type": "Portal"
+		}
+	],
+	"AreaVidaria": [
+		{
+			"Loc": "x:1471.923584 y:1.25 z:1474.570313",
+			"Name": "TeleportCircle_VidariaTown",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Combo": "4055",
+			"Loc": "x:2144.098145 y:245.660141 z:2553.277832",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4016",
+			"Loc": "x:2143.724854 y:370.270111 z:444.431396",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4056",
+			"Loc": "x:2079.199951 y:34.750137 z:1787.345947",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4068",
+			"Loc": "x:651.469971 y:200.330139 z:2534.186035",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Combo": "4015",
+			"Loc": "x:952.48999 y:31.180138 z:1664.885986",
+			"Name": "Meditation Pillar",
+			"Type": "MeditationPillar"
+		},
+		{
+			"Loc": "x:2196.271973 y:1.92 z:998.442383",
+			"Name": "TeleportCircle_FrozenMushroom",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:2107.431396 y:16.73 z:2216.07959",
+			"Name": "TeleportCircle_Rubywall",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:1033.640015 y:225.089996 z:572.059998",
+			"Name": "TeleportCircle_NearOrcs",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Loc": "x:681.566162 y:1.18 z:1878.248169",
+			"Name": "TeleportCircle_NearSoldiers",
+			"Type": "TeleportationPlatform"
+		},
+		{
+			"Desc": "It seems to lead underneath the tower...",
+			"Loc": "x:2410.640137 y:240.320007 z:2449.719971",
+			"Name": "Trapdoor",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Pass through the mountains to Gazluk",
+			"Loc": "x:1398.079956 y:253.240005 z:182.599976",
+			"Name": "Travel to Gazluk Plateau",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Make your way to the city of Statehelm",
+			"Loc": "x:209.560059 y:16.028 z:1476.642944",
+			"Name": "Travel to Statehelm",
+			"Type": "Portal"
+		},
+		{
+			"Desc": "Journey to the swampland of Povus",
+			"Loc": "x:2583.5 y:2.0 z:1477.0",
+			"Name": "Travel to Povus",
+			"Type": "Portal"
+		}
+	],
+	"AreaVidariaCaves": [
+		{
+			"Desc": "Leave this place",
+			"Loc": "x:1525.625244 y:5.1825 z:16.401001",
+			"Name": "Exit",
+			"Type": "Portal"
+		}
+	]
+}

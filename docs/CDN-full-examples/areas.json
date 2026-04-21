@@ -1,0 +1,142 @@
+{
+	"AreaApartment1": {
+		"FriendlyName": "Player Apartment",
+		"ShortFriendlyName": "Home"
+	},
+	"AreaCasino": {
+		"FriendlyName": "Red Wing Casino",
+		"ShortFriendlyName": "Casino"
+	},
+	"AreaCave1": {
+		"FriendlyName": "Dungeons Beneath Eltibule",
+		"ShortFriendlyName": "Beneath Eltibule"
+	},
+	"AreaCave2": {
+		"FriendlyName": "Caves Beneath Kur Mountains",
+		"ShortFriendlyName": "Kur Caves"
+	},
+	"AreaDesert1": {
+		"FriendlyName": "Ilmari Desert",
+		"ShortFriendlyName": "Ilmari Desert"
+	},
+	"AreaDesert1Caves": {
+		"FriendlyName": "Dungeons Beneath Ilmari Desert",
+		"ShortFriendlyName": "Beneath Ilmari"
+	},
+	"AreaDesert2": {
+		"FriendlyName": "Phantom Ilmari Desert",
+		"ShortFriendlyName": "Phantom Desert"
+	},
+	"AreaEltibule": {
+		"FriendlyName": "Eltibule"
+	},
+	"AreaFaeRealm1": {
+		"FriendlyName": "Fae Realm",
+		"ShortFriendlyName": "Fae Realm"
+	},
+	"AreaFaeRealm1Caves": {
+		"FriendlyName": "Fae Realm",
+		"ShortFriendlyName": "Fae Realm"
+	},
+	"AreaGazluk": {
+		"FriendlyName": "Gazluk Plateau",
+		"ShortFriendlyName": "Gazluk"
+	},
+	"AreaGazlukCaves": {
+		"FriendlyName": "Caves Beneath Gazluk",
+		"ShortFriendlyName": "Gazluk Caves"
+	},
+	"AreaGazlukKeep": {
+		"FriendlyName": "Gazluk Keep",
+		"ShortFriendlyName": "Gazluk Keep"
+	},
+	"AreaGuildHall1": {
+		"FriendlyName": "Guild Hall",
+		"ShortFriendlyName": "Guild Hall"
+	},
+	"AreaKurCaves": {
+		"FriendlyName": "Caves Beneath Kur Mountains",
+		"ShortFriendlyName": "Beneath Kur"
+	},
+	"AreaKurMountains": {
+		"FriendlyName": "Kur Mountains"
+	},
+	"AreaMyconianCave": {
+		"FriendlyName": "Myconian Caverns",
+		"ShortFriendlyName": "Dungeon"
+	},
+	"AreaNewbieIsland": {
+		"FriendlyName": "Anagoge Island",
+		"ShortFriendlyName": "Anagoge"
+	},
+	"AreaPlanes": {
+		"FriendlyName": "Existential Planes",
+		"ShortFriendlyName": "Mysterious Locale"
+	},
+	"AreaPovus": {
+		"FriendlyName": "Povus",
+		"ShortFriendlyName": "Povus"
+	},
+	"AreaPovusCaves": {
+		"FriendlyName": "Povus Caves",
+		"ShortFriendlyName": "Povus Caves"
+	},
+	"AreaPovusCaves2": {
+		"FriendlyName": "Povus Caves",
+		"ShortFriendlyName": "Povus Caves"
+	},
+	"AreaRahu": {
+		"FriendlyName": "Rahu",
+		"ShortFriendlyName": "Rahu"
+	},
+	"AreaRahuCaves": {
+		"FriendlyName": "Rahu Sewers",
+		"ShortFriendlyName": "Rahu Sewers"
+	},
+	"AreaSerbule": {
+		"FriendlyName": "Serbule",
+		"ShortFriendlyName": "Serbule"
+	},
+	"AreaSerbule2": {
+		"FriendlyName": "Serbule Hills",
+		"ShortFriendlyName": "Serbule Hills"
+	},
+	"AreaSerbuleCaves": {
+		"FriendlyName": "Caves Under Serbule",
+		"ShortFriendlyName": "Caves"
+	},
+	"AreaStaging": {
+		"FriendlyName": "Staging Area",
+		"ShortFriendlyName": "Staging"
+	},
+	"AreaStatehelm": {
+		"FriendlyName": "Statehelm",
+		"ShortFriendlyName": "Statehelm"
+	},
+	"AreaStatehelmCaves": {
+		"FriendlyName": "Statehelm Undercity",
+		"ShortFriendlyName": "Under Statehelm"
+	},
+	"AreaStatehelmCaves2": {
+		"FriendlyName": "Statehelm Depths",
+		"ShortFriendlyName": "Statehelm Depths"
+	},
+	"AreaSunVale": {
+		"FriendlyName": "Sun Vale"
+	},
+	"AreaSunValeCaves": {
+		"FriendlyName": "Caves Beneath Sun Vale",
+		"ShortFriendlyName": "Sun Vale Caves"
+	},
+	"AreaTomb1": {
+		"FriendlyName": "Khyrulek's Crypt"
+	},
+	"AreaVidaria": {
+		"FriendlyName": "Vidaria",
+		"ShortFriendlyName": "Vidaria"
+	},
+	"AreaVidariaCaves": {
+		"FriendlyName": "Beneath Vidaria",
+		"ShortFriendlyName": "Under Vidaria"
+	}
+}

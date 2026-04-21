@@ -2,7 +2,14 @@
 
 Small tasks and notes that don't belong in a dedicated plan.
 
-*Last reviewed: 2026-04-19*
+*Last reviewed: 2026-04-21*
+
+---
+
+
+## TO SORT
+
+*(empty — all sorted below)*
 
 ---
 
@@ -29,6 +36,34 @@ These are investigated items kept for reference — the research is done but the
 - [x] Milking timers dashboard widget
   - NPC cow milking cooldown tracker. Detects milks from ProcessStartInteraction + chat "Bottle of Milk" gain. Backfills from cooldown error messages. Small dashboard widget with cows grouped by zone, 1h countdown timers, current zone floated to top.
 
+- [ ] Bug: instant-snack foods missing from gourmand report
+  - They used to show up and now they're gone. Likely a regression in filtering or category logic.
+  - **Effort: Low | Impact: Medium (data correctness)**
+
+- [ ] Bug: food tooltip parsing broken on gourmand tracker
+  - Tooltip parsing regressed at some point. Needs investigation into what changed.
+  - **Effort: Low | Impact: Medium (gourmand feature usability)**
+
+- [ ] Bug: rez counter not working
+  - Should be counting but isn't. Low priority.
+  - **Effort: Low | Impact: Low**
+
+- [ ] Bug: crafting levelling planner keeps first-time-craft XP after removal
+  - If you add a first-time craft and then remove it, the planner still thinks the first-time XP was used up. Logic bug in state cleanup.
+  - **Effort: Low | Impact: Medium (planner accuracy)**
+
+- [ ] Display last character.json and inventory.json import timestamps on dashboard
+  - Quick info display so users know how fresh their imported data is.
+  - **Effort: Low | Impact: Medium (user awareness)**
+
+- [ ] Bug: missing NPCs in NPC searches
+  - Some NPCs don't appear in search results. Needs investigation — could be CDN data gap or resolver issue.
+  - **Effort: Low (investigation) | Impact: Medium**
+
+- [ ] Clean up documents folder structure
+  - Better organization, establish clearer structure for docs.
+  - **Effort: Low | Impact: Low (maintainability)**
+
 - [ ] Parse ProcessUpdateDescription for entity state changes
   - Fires for nearby entities changing state (garden plants, crafting items with timers, etc.). Format: `(entityId, "name", "description", "action", actionType, "appearance", flags)`. This is the foundation event for gardening tracker and crafting timers — parsing it in the event parser is the first step.
   - **Effort: Low (parser only) | Impact: High (unblocks gardening + crafting features)**
@@ -36,6 +71,90 @@ These are investigated items kept for reference — the research is done but the
 ---
 
 ## Medium Effort, High Value
+
+- [ ] Manual food eaten/not eaten marking for gourmand
+  - Users should be able to manually mark foods if they can't get their skill report. Fallback for when auto-import isn't available.
+  - **Effort: Medium | Impact: Medium (accessibility)**
+
+- [ ] Bug: incorrect survey session start/end times
+  - Sometimes sessions get wrong timestamps. Needs investigation into what causes the mismatch.
+  - **Effort: Medium (investigation) | Impact: Medium (data accuracy)**
+
+- [ ] Bug: survey analytics "fastest method" times wildly off
+  - Calculated times show hundreds or thousands of hours. Should be average time per completion × number needed. Something is fundamentally wrong with the calculation.
+  - **Effort: Medium (investigation) | Impact: High (analytics credibility)**
+
+- [ ] Changelog formatting improvement
+  - Current in-app changelog rendering is poor. Needs better formatting/styling.
+  - **Effort: Medium | Impact: Medium (polish)**
+
+- [ ] Help popup redesign
+  - Current help popup is ugly. Could be made much prettier.
+  - **Effort: Medium | Impact: Medium (polish)**
+
+- [ ] Color standards write-up and enforcement
+  - Colors are scattershot across the app. Need documented standards and consistent usage.
+  - **Effort: Medium | Impact: Medium (visual consistency)**
+
+- [ ] Font size/family/color readability audit
+  - Evaluate typography across the app for readability and consistency.
+  - **Effort: Medium | Impact: Medium (accessibility/polish)**
+
+- [ ] More shared components (tables, etc.)
+  - Build reusable components for common patterns like tables to improve consistency.
+  - **Effort: Medium (iterative) | Impact: Medium (consistency)**
+
+- [ ] Smarter gamestate saving and initializing
+  - Initial log parse needs to be more intelligent about stack counts. Better state reconstruction.
+  - **Effort: Medium | Impact: Medium (data accuracy)**
+
+- [ ] Better screen persistence across the app
+  - Remember more navigation state so users don't lose their place.
+  - **Effort: Medium | Impact: Medium (UX)**
+
+- [ ] Boss kill loot timers
+  - Track loot timers from boss kills.
+  - **Effort: Medium | Impact: Medium**
+
+- [ ] Enemy database in data browser
+  - Add enemies as a browsable entity type in the data browser.
+  - **Effort: Medium | Impact: Medium (completeness)**
+
+- [ ] Area tooltips with useful information
+  - Add informative tooltips when hovering area references.
+  - **Effort: Medium | Impact: Medium (discoverability)**
+
+- [ ] Configurable critical resources widget
+  - Let users configure which resources appear in the critical resources dashboard widget.
+  - **Effort: Medium | Impact: Medium (personalization)**
+
+- [ ] Evaluate ingestion pipeline
+  - Review the current log ingestion pipeline for correctness and efficiency.
+  - **Effort: Medium | Impact: Medium (reliability)**
+
+- [ ] Standardize skeletons and loading states
+  - Create reusable skeleton/loading components for consistent loading UX across screens.
+  - **Effort: Medium | Impact: Medium (polish/consistency)**
+
+- [ ] Document standards around persistence, data access, naming
+  - Write up conventions so development stays consistent.
+  - **Effort: Medium | Impact: Medium (maintainability)**
+
+- [ ] Bug: occasional inventory item miscounts
+  - Rare cases where items coming into inventory aren't seen or are miscounted. Intermittent and hard to reproduce.
+  - **Effort: Medium (investigation) | Impact: Medium (data accuracy)**
+
+- [ ] Bug: cook's helper not updating after buying new recipes
+  - User-reported. After purchasing new recipes, cook's helper doesn't reflect them. Hard to reproduce but worth investigating.
+  - **Effort: Medium (investigation) | Impact: Medium**
+
+- [ ] Investigate detecting recipe learning without character.json import
+  - Currently recipes are only detected via character.json import. Are there log events when a player learns a recipe?
+  - **Effort: Medium (investigation) | Impact: Medium (reduces manual import dependency)**
+
+- [ ] Timer widget
+  - General-purpose timer widget for the dashboard. Related to the general-purpose timer system in Larger Efforts.
+  - **Effort: Medium | Impact: Medium**
 
 - [ ] Dashboard widget sizing pass — consistent heights
   - Widgets have inconsistent `max-h-*` values (some 80, some 52, some 40, many have none). No systematic height management exists. Need a standardized sizing approach in `DashboardCard.vue` or the widget registry.
@@ -93,6 +212,26 @@ These are investigated items kept for reference — the research is done but the
 ---
 
 ## Larger Efforts / Research Needed
+
+- [ ] Standardize search across the app (scryfall-inspired)
+  - Search is implemented differently in different places. Need a smart, unified search system. Take inspiration from Scryfall's search syntax for filtering and querying.
+  - **Effort: Large | Impact: High (UX consistency, power-user feature)**
+
+- [ ] Write 'how to use' docs for each screen
+  - Even brief docs for each screen would help users understand features. Could be in-app help or docs folder.
+  - **Effort: Large (breadth) | Impact: Medium (onboarding/discoverability)**
+
+- [ ] Repeatable quests / work orders tracking
+  - A lot more work needed with repeatable quests and work orders. Ties into Statehelm quest tracking below.
+  - **Effort: Large | Impact: High**
+
+- [ ] Reevaluate test suite
+  - Think about what tests make sense, what isn't giving value, and how to harden against future failures.
+  - **Effort: Large | Impact: Medium (reliability/confidence)**
+
+- [ ] Analyze what should move from frontend to Rust
+  - Some frontend logic may be better served on the Rust backend. Needs analysis to identify candidates.
+  - **Effort: Large (research) | Impact: Medium (performance/architecture)**
 
 - [ ] Statehelm repeatable quest tracking
   - StatehelmView already has full gift tracking. CDN quest data has `ReuseTime_*` fields and renown rewards. **Blocker:** quest events (`ProcessCompleteQuest`, `ProcessAddQuest`, etc.) are **not yet implemented** in the parser. Needs: (1) quest event parsing in `PlayerEventParser`, (2) new `game_state_quest_completions` table, (3) coordinator handler, (4) extract `ReuseTime_*` from CDN, (5) filter to Statehelm quests, (6) frontend UI with cooldown timers.

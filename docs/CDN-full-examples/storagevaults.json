@@ -1,0 +1,1256 @@
+{
+	"*AccountStorage_AnimalTown": {
+		"Area": "AreaSunVale",
+		"HasAssociatedNpc": false,
+		"ID": 110,
+		"NpcFriendlyName": "Animal Town Transfer Chest",
+		"NumSlots": 0
+	},
+	"*AccountStorage_Casino": {
+		"Area": "AreaCasino",
+		"HasAssociatedNpc": false,
+		"ID": 111,
+		"NpcFriendlyName": "Red Wing Casino Transfer Chest",
+		"NumSlots": 0
+	},
+	"*AccountStorage_Home1": {
+		"Area": "AreaApartment1",
+		"HasAssociatedNpc": false,
+		"ID": 117,
+		"NpcFriendlyName": "Home Vault",
+		"NumSlots": 0
+	},
+	"*AccountStorage_Rahu": {
+		"Area": "AreaRahu",
+		"HasAssociatedNpc": false,
+		"ID": 109,
+		"NpcFriendlyName": "Rahu Transfer Chest",
+		"NumSlots": 0
+	},
+	"*AccountStorage_Serbule": {
+		"Area": "AreaSerbule",
+		"HasAssociatedNpc": false,
+		"ID": 105,
+		"NpcFriendlyName": "Serbule Transfer Chest",
+		"NumSlots": 0
+	},
+	"*AccountStorage_Statehelm": {
+		"Area": "AreaStatehelm",
+		"HasAssociatedNpc": false,
+		"ID": 118,
+		"NpcFriendlyName": "Statehelm Transfer Chest",
+		"NumSlots": 0
+	},
+	"*AdminStorage": {
+		"Area": "AreaPlanes",
+		"HasAssociatedNpc": false,
+		"ID": 107,
+		"NpcFriendlyName": "Admin Storage Area",
+		"NumSlots": 0
+	},
+	"AdminTestNpc": {
+		"Area": "AreaPlanes",
+		"ID": 108,
+		"NpcFriendlyName": "Admin Test NPC",
+		"NumSlots": 24,
+		"RequiredItemKeywords": [
+			"Alchemy",
+			"AlchemyIngredient",
+			"AlchemyRelated",
+			"Potion",
+			"BottledItem"
+		],
+		"RequirementDescription": "Potions and Alchemy Ingredients"
+	},
+	"BoxOfSpace": {
+		"Area": "*",
+		"HasAssociatedNpc": false,
+		"ID": 113,
+		"NpcFriendlyName": "Small Box of Space",
+		"NumSlots": 0
+	},
+	"BoxOfSpace2": {
+		"Area": "*",
+		"HasAssociatedNpc": false,
+		"ID": 116,
+		"NpcFriendlyName": "Large Box of Space",
+		"NumSlots": 0
+	},
+	"CouncilVault": {
+		"Area": "*",
+		"HasAssociatedNpc": false,
+		"ID": 101,
+		"NpcFriendlyName": "Council Storage Machine",
+		"NumSlots": 0
+	},
+	"DalvosChest": {
+		"Area": "AreaSerbuleCaves",
+		"ID": 501,
+		"NpcFriendlyName": "Dalvos's Chest",
+		"NumSlots": 16
+	},
+	"DreamRealmChest": {
+		"Area": "AreaDesert2",
+		"Grouping": "AreaSerbule",
+		"HasAssociatedNpc": false,
+		"ID": 308,
+		"NpcFriendlyName": "Dream Realm Chest",
+		"NumSlots": 24,
+		"Requirements": {
+			"Flag": "DesertDream",
+			"T": "ServerRulesFlagSet"
+		}
+	},
+	"InstalledHomeVaultChest": {
+		"Area": "*",
+		"Grouping": "Apartment",
+		"ID": 115,
+		"NpcFriendlyName": "Home Storage",
+		"SlotAttribute": "MAX_PRIMARY_HOME_VAULT_SIZE"
+	},
+	"IvynsChest": {
+		"Area": "AreaSerbule",
+		"Grouping": "AreaSerbule",
+		"ID": 303,
+		"NpcFriendlyName": "Ivyn's Chest",
+		"NumSlots": 32,
+		"Requirements": {
+			"InteractionFlag": "Ivyn_Gave_Passcode",
+			"T": "InteractionFlagSet"
+		}
+	},
+	"KhyrulekMementoChest": {
+		"Area": "AreaTomb1",
+		"ID": 402,
+		"NpcFriendlyName": "Khyrulek's Memento Chest",
+		"NumSlots": 16,
+		"Requirements": {
+			"InteractionFlag": "Tomb1_StoryPuzzleComplete_Looted",
+			"T": "InteractionFlagSet"
+		}
+	},
+	"NPC_Agrashab": {
+		"Area": "AreaSunVale",
+		"Grouping": "AreaSunVale",
+		"ID": 905,
+		"Levels": {
+			"BestFriends": 28,
+			"CloseFriends": 24,
+			"Comfortable": 16,
+			"Despised": 0,
+			"Friends": 20,
+			"LikeFamily": 32,
+			"SoulMates": 36
+		},
+		"NpcFriendlyName": "Agrashab"
+	},
+	"NPC_Ashk": {
+		"Area": "AreaRahu",
+		"Grouping": "AreaRahu",
+		"ID": 1002,
+		"Levels": {
+			"BestFriends": 32,
+			"CloseFriends": 24,
+			"Comfortable": 8,
+			"Despised": 0,
+			"Friends": 16,
+			"LikeFamily": 40,
+			"SoulMates": 48
+		},
+		"NpcFriendlyName": "Ashk"
+	},
+	"NPC_Bendith": {
+		"Area": "AreaFaeRealm1",
+		"Grouping": "AreaFaeRealm1",
+		"ID": 1601,
+		"Levels": {
+			"BestFriends": 40,
+			"CloseFriends": 30,
+			"Comfortable": 10,
+			"Friends": 20,
+			"LikeFamily": 50,
+			"SoulMates": 60
+		},
+		"NpcFriendlyName": "Bendith the Banished",
+		"RequiredItemKeywords": [
+			"Alchemy",
+			"Potion",
+			"AlchemyIngredient",
+			"AlchemyRelated",
+			"BottledItem",
+			"CheesemakingIngredient",
+			"Cheese",
+			"Butter"
+		],
+		"RequirementDescription": "Potions, Alchemy, and Cheesemaking"
+	},
+	"NPC_CaptainGregory": {
+		"Area": "AreaStatehelm",
+		"Grouping": "AreaStatehelm",
+		"ID": 2006,
+		"Levels": {
+			"BestFriends": 48,
+			"CloseFriends": 36,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 24,
+			"LikeFamily": 60,
+			"Neutral": 0,
+			"SoulMates": 72
+		},
+		"NpcFriendlyName": "Captain Gregory"
+	},
+	"NPC_CharlesThompson": {
+		"Area": "AreaSerbule",
+		"Grouping": "AreaSerbule",
+		"ID": 305,
+		"Levels": {
+			"BestFriends": 48,
+			"CloseFriends": 40,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 32,
+			"LikeFamily": 56,
+			"SoulMates": 64
+		},
+		"NpcFriendlyName": "Charles Thompson",
+		"RequiredItemKeywords": [
+			"Alchemy",
+			"AlchemyIngredient",
+			"AlchemyRelated",
+			"Potion",
+			"BottledItem"
+		],
+		"RequirementDescription": "Potions and Alchemy Ingredients"
+	},
+	"NPC_Crall": {
+		"Area": "AreaVidaria",
+		"Grouping": "AreaVidaria",
+		"ID": 1902,
+		"Levels": {
+			"BestFriends": 30,
+			"CloseFriends": 20,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 10,
+			"LikeFamily": 40,
+			"SoulMates": 50
+		},
+		"NpcFriendlyName": "Engineer Crall"
+	},
+	"NPC_CynthiaRolfe": {
+		"Area": "AreaStatehelm",
+		"Grouping": "AreaStatehelm",
+		"ID": 2003,
+		"Levels": {
+			"BestFriends": 70,
+			"CloseFriends": 48,
+			"Comfortable": 24,
+			"Despised": 6,
+			"Friends": 36,
+			"LikeFamily": 72,
+			"Neutral": 12,
+			"SoulMates": 90
+		},
+		"NpcFriendlyName": "Cynthia Rolfe",
+		"Requirements": {
+			"Quest": "GoblinsArmpitRoaches",
+			"T": "QuestCompleted"
+		}
+	},
+	"NPC_DanielMurderdark": {
+		"Area": "AreaRahu",
+		"Grouping": "AreaRahu",
+		"ID": 1004,
+		"Levels": {
+			"BestFriends": 28,
+			"CloseFriends": 20,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 12,
+			"LikeFamily": 36,
+			"SoulMates": 44
+		},
+		"NpcFriendlyName": "Daniel Murderdark"
+	},
+	"NPC_DentonRazor": {
+		"Area": "AreaVidaria",
+		"Grouping": "AreaVidaria",
+		"ID": 1904,
+		"Levels": {
+			"BestFriends": 30,
+			"CloseFriends": 20,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 10,
+			"LikeFamily": 40,
+			"SoulMates": 50
+		},
+		"NpcFriendlyName": "Denton Razor",
+		"RequiredItemKeywords": [
+			"Equipment",
+			"AbilityIngredient",
+			"Fletching"
+		],
+		"RequirementDescription": "Equipment and Ammunition"
+	},
+	"NPC_ElectraBreakdawn": {
+		"Area": "AreaStatehelm",
+		"Grouping": "AreaStatehelm",
+		"ID": 2005,
+		"Levels": {
+			"BestFriends": 56,
+			"CloseFriends": 42,
+			"Comfortable": 14,
+			"Despised": 0,
+			"Friends": 28,
+			"LikeFamily": 70,
+			"Neutral": 0,
+			"SoulMates": 84
+		},
+		"NpcFriendlyName": "Electra Breakdawn"
+	},
+	"NPC_Elune": {
+		"Area": "AreaStatehelm",
+		"Grouping": "AreaStatehelm",
+		"ID": 2008,
+		"Levels": {
+			"BestFriends": 48,
+			"CloseFriends": 36,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 24,
+			"LikeFamily": 60,
+			"Neutral": 0,
+			"SoulMates": 72
+		},
+		"NpcFriendlyName": "Elune",
+		"RequiredItemKeywords": [
+			"Jewelry",
+			"Gem",
+			"EquipmentSlot:Ring",
+			"EquipmentSlot:Necklace"
+		],
+		"RequirementDescription": "Gems and Jewelry"
+	},
+	"NPC_FerrisBlueheart": {
+		"Area": "AreaVidaria",
+		"Grouping": "AreaVidaria",
+		"ID": 1901,
+		"Levels": {
+			"BestFriends": 40,
+			"CloseFriends": 30,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 0,
+			"LikeFamily": 50,
+			"SoulMates": 60
+		},
+		"NpcFriendlyName": "Ferris Blueheart"
+	},
+	"NPC_Fuzzlebun": {
+		"Area": "AreaStatehelmCaves",
+		"Grouping": "AreaStatehelm",
+		"ID": 2101,
+		"Levels": {
+			"BestFriends": 48,
+			"CloseFriends": 36,
+			"Comfortable": 12,
+			"Despised": 0,
+			"Friends": 24,
+			"LikeFamily": 60,
+			"Neutral": 0,
+			"SoulMates": 72
+		},
+		"NpcFriendlyName": "Fuzzlebun"
+	},
+	"NPC_Gossamyr": {
+		"Area": "AreaStatehelm",
+		"Grouping": "AreaStatehelm",
+		"ID": 2009,
+		"Levels": {
+			"BestFriends": 50,
+			"CloseFriends": 35,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 20,
+			"LikeFamily": 65,
+			"Neutral": 0,
+			"SoulMates": 80
+		},
+		"NpcFriendlyName": "Gossamyr"
+	},
+	"NPC_Gurki": {
+		"Area": "AreaKurMountains",
+		"Grouping": "AreaKurMountains",
+		"ID": 1101,
+		"Levels": {
+			"BestFriends": 25,
+			"CloseFriends": 20,
+			"Comfortable": 10,
+			"Friends": 15,
+			"LikeFamily": 30,
+			"SoulMates": 35
+		},
+		"NpcFriendlyName": "Gurki"
+	},
+	"NPC_HiredVendor": {
+		"Area": "AreaSerbule",
+		"ID": 306,
+		"NpcFriendlyName": "Hired Vendor",
+		"NumSlots": 0
+	},
+	"NPC_Ichin": {
+		"Area": "AreaRahu",
+		"Grouping": "AreaRahu",
+		"ID": 1003,
+		"Levels": {
+			"BestFriends": 28,
+			"CloseFriends": 24,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 16,
+			"LikeFamily": 36,
+			"SoulMates": 44
+		},
+		"NpcFriendlyName": "Ichin the Ice Master"
+	},
+	"NPC_JaceSoral": {
+		"Area": "AreaKurMountains",
+		"Grouping": "AreaKurMountains",
+		"ID": 1102,
+		"Levels": {
+			"BestFriends": 25,
+			"CloseFriends": 20,
+			"Comfortable": 0,
+			"Friends": 15,
+			"LikeFamily": 30,
+			"SoulMates": 35
+		},
+		"NpcFriendlyName": "Jace Soral"
+	},
+	"NPC_Joe": {
+		"Area": "AreaSerbule",
+		"Grouping": "AreaSerbule",
+		"ID": 301,
+		"Levels": {
+			"BestFriends": 34,
+			"CloseFriends": 28,
+			"Comfortable": 16,
+			"Despised": 10,
+			"Friends": 22,
+			"LikeFamily": 40,
+			"SoulMates": 46
+		},
+		"NpcFriendlyName": "Joeh"
+	},
+	"NPC_JuliusPatton": {
+		"Area": "AreaSerbule2",
+		"Grouping": "AreaSerbule2",
+		"ID": 701,
+		"Levels": {
+			"BestFriends": 28,
+			"CloseFriends": 0,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 0,
+			"LikeFamily": 32,
+			"SoulMates": 36
+		},
+		"NpcFriendlyName": "Julius Patton",
+		"RequiredItemKeywords": [
+			"Edible",
+			"CookingIngredient",
+			"CookingRelated",
+			"BrewingIngredient",
+			"BrewingRelated"
+		],
+		"RequirementDescription": "Food, Cooking, or Brewing Ingredients"
+	},
+	"NPC_Jumper": {
+		"Area": "AreaSunVale",
+		"Grouping": "AreaSunVale",
+		"ID": 901,
+		"Levels": {
+			"BestFriends": 40,
+			"CloseFriends": 32,
+			"Comfortable": 16,
+			"Despised": 0,
+			"Friends": 24,
+			"LikeFamily": 48,
+			"SoulMates": 56
+		},
+		"NpcFriendlyName": "Jumper",
+		"Requirements": {
+			"T": "IsLongtimeAnimal"
+		}
+	},
+	"NPC_Kib": {
+		"Area": "AreaCasino",
+		"Grouping": "AreaCasino",
+		"ID": 1503,
+		"Levels": {
+			"BestFriends": 48,
+			"CloseFriends": 36,
+			"Comfortable": 12,
+			"Friends": 24,
+			"LikeFamily": 60,
+			"SoulMates": 72
+		},
+		"NpcFriendlyName": "Kib the Unkillable",
+		"RequiredItemKeywords": [
+			"Equipment",
+			"AbilityIngredient",
+			"Fletching"
+		],
+		"RequirementDescription": "Equipment and Ammunition"
+	},
+	"NPC_Korbok": {
+		"Area": "AreaVidaria",
+		"Grouping": "AreaVidaria",
+		"ID": 1903,
+		"Levels": {
+			"BestFriends": 0,
+			"CloseFriends": 0,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 0,
+			"LikeFamily": 50,
+			"SoulMates": 65
+		},
+		"NpcFriendlyName": "Korbok"
+	},
+	"NPC_Lamashu": {
+		"Area": "AreaKurMountains",
+		"Grouping": "AreaKurMountains",
+		"ID": 1103,
+		"Levels": {
+			"BestFriends": 25,
+			"CloseFriends": 20,
+			"Comfortable": 10,
+			"Friends": 15,
+			"LikeFamily": 30,
+			"SoulMates": 35
+		},
+		"NpcFriendlyName": "Lamashu"
+	},
+	"NPC_LauraNeth": {
+		"Area": "AreaKurMountains",
+		"Grouping": "AreaKurMountains",
+		"ID": 1105,
+		"Levels": {
+			"BestFriends": 40,
+			"CloseFriends": 30,
+			"Comfortable": 0,
+			"Friends": 20,
+			"LikeFamily": 50,
+			"SoulMates": 60
+		},
+		"NpcFriendlyName": "Laura Neth",
+		"RequiredItemKeywords": [
+			"Edible",
+			"CookingIngredient",
+			"CookingRelated"
+		],
+		"RequirementDescription": "Food or Cooking Ingredients"
+	},
+	"NPC_Lawara": {
+		"Area": "AreaNewbieIsland",
+		"ID": 203,
+		"Levels": {
+			"BestFriends": 18,
+			"CloseFriends": 0,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 0,
+			"LikeFamily": 20,
+			"SoulMates": 24
+		},
+		"NpcFriendlyName": "Lawara"
+	},
+	"NPC_Mandibles": {
+		"Area": "AreaCasino",
+		"Grouping": "AreaCasino",
+		"ID": 1502,
+		"Levels": {
+			"BestFriends": 40,
+			"CloseFriends": 30,
+			"Comfortable": 10,
+			"Friends": 20,
+			"LikeFamily": 50,
+			"SoulMates": 60
+		},
+		"NpcFriendlyName": "Mandibles",
+		"RequiredItemKeywords": [
+			"Edible",
+			"CookingIngredient",
+			"CookingRelated"
+		],
+		"RequirementDescription": "Food and Cooking Ingredients"
+	},
+	"NPC_MarithFelgard": {
+		"Area": "AreaSerbule2",
+		"Grouping": "AreaSerbule2",
+		"ID": 704,
+		"Levels": {
+			"BestFriends": 30,
+			"CloseFriends": 20,
+			"Comfortable": 5,
+			"Despised": 0,
+			"Friends": 10,
+			"LikeFamily": 40,
+			"SoulMates": 50
+		},
+		"NpcFriendlyName": "Marith Felgard"
+	},
+	"NPC_Marna": {
+		"Area": "AreaSerbule",
+		"Grouping": "AreaSerbule",
+		"ID": 302,
+		"Levels": {
+			"BestFriends": 40,
+			"CloseFriends": 32,
+			"Comfortable": 16,
+			"Despised": 12,
+			"Friends": 24,
+			"LikeFamily": 48,
+			"SoulMates": 56
+		},
+		"NpcFriendlyName": "Marna"
+	},
+	"NPC_Melandria": {
+		"Area": "AreaGazlukKeep",
+		"ID": 1301,
+		"Levels": {
+			"BestFriends": 30,
+			"CloseFriends": 25,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 20,
+			"LikeFamily": 35,
+			"SoulMates": 40
+		},
+		"NpcFriendlyName": "Melandria"
+	},
+	"NPC_MidgeTheApothecary": {
+		"Area": "AreaFaeRealm1",
+		"Grouping": "AreaFaeRealm1",
+		"ID": 1603,
+		"Levels": {
+			"BestFriends": 32,
+			"CloseFriends": 24,
+			"Comfortable": 8,
+			"Friends": 16,
+			"LikeFamily": 40,
+			"SoulMates": 48
+		},
+		"NpcFriendlyName": "Midge the Apothecary"
+	},
+	"NPC_Mope": {
+		"Area": "AreaPovus",
+		"Grouping": "AreaPovus",
+		"ID": 1801,
+		"Levels": {
+			"BestFriends": 40,
+			"CloseFriends": 30,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 15,
+			"LikeFamily": 50,
+			"SoulMates": 60
+		},
+		"NpcFriendlyName": "Mope"
+	},
+	"NPC_Nishika": {
+		"Area": "AreaRahu",
+		"Grouping": "AreaRahu",
+		"ID": 1001,
+		"Levels": {
+			"BestFriends": 40,
+			"CloseFriends": 30,
+			"Comfortable": 10,
+			"Friends": 20,
+			"LikeFamily": 50,
+			"SoulMates": 60
+		},
+		"NpcFriendlyName": "Nishika",
+		"RequiredItemKeywords": [
+			"Edible",
+			"CookingIngredient",
+			"CookingRelated"
+		],
+		"RequirementDescription": "Food or Cooking Ingredients"
+	},
+	"NPC_NoitaTheGreen": {
+		"Area": "AreaFaeRealm1",
+		"Grouping": "AreaFaeRealm1",
+		"ID": 1604,
+		"Levels": {
+			"BestFriends": 40,
+			"CloseFriends": 30,
+			"Comfortable": 10,
+			"Friends": 20,
+			"LikeFamily": 50,
+			"SoulMates": 60
+		},
+		"NpcFriendlyName": "Noita the Green"
+	},
+	"NPC_Norbert": {
+		"Area": "AreaSunVale",
+		"Grouping": "AreaSunVale",
+		"ID": 902,
+		"Levels": {
+			"BestFriends": 40,
+			"CloseFriends": 32,
+			"Comfortable": 16,
+			"Despised": 0,
+			"Friends": 24,
+			"LikeFamily": 48,
+			"SoulMates": 56
+		},
+		"NpcFriendlyName": "Norbert",
+		"Requirements": {
+			"T": "IsLongtimeAnimal"
+		}
+	},
+	"NPC_Otis": {
+		"Area": "AreaCasino",
+		"Grouping": "AreaCasino",
+		"ID": 1506,
+		"Levels": {
+			"BestFriends": 32,
+			"CloseFriends": 24,
+			"Comfortable": 8,
+			"Friends": 16,
+			"LikeFamily": 40,
+			"SoulMates": 48
+		},
+		"NpcFriendlyName": "Otis"
+	},
+	"NPC_Qatik": {
+		"Area": "AreaCasino",
+		"Grouping": "AreaCasino",
+		"ID": 1507,
+		"NpcFriendlyName": "Qatik",
+		"SlotAttribute": "MAX_CASINO_VAULT_SIZE"
+	},
+	"NPC_Ragabir": {
+		"Area": "AreaCasino",
+		"Grouping": "AreaCasino",
+		"ID": 1505,
+		"Levels": {
+			"BestFriends": 40,
+			"CloseFriends": 30,
+			"Comfortable": 10,
+			"Friends": 20,
+			"LikeFamily": 50,
+			"SoulMates": 60
+		},
+		"NpcFriendlyName": "Ragabir",
+		"RequiredItemKeywords": [
+			"Alchemy",
+			"Potion",
+			"AlchemyIngredient",
+			"AlchemyRelated",
+			"BottledItem"
+		],
+		"RequirementDescription": "Potions and Alchemy Ingredients"
+	},
+	"NPC_Raina": {
+		"Area": "AreaFaeRealm1",
+		"Grouping": "AreaFaeRealm1",
+		"ID": 1602,
+		"Levels": {
+			"BestFriends": 32,
+			"CloseFriends": 24,
+			"Comfortable": 8,
+			"Friends": 16,
+			"LikeFamily": 40,
+			"SoulMates": 48
+		},
+		"NpcFriendlyName": "Raina"
+	},
+	"NPC_Raul": {
+		"Area": "AreaSunVale",
+		"Grouping": "AreaSunVale",
+		"ID": 903,
+		"Levels": {
+			"BestFriends": 40,
+			"CloseFriends": 32,
+			"Comfortable": 16,
+			"Despised": 0,
+			"Friends": 24,
+			"LikeFamily": 48,
+			"SoulMates": 56
+		},
+		"NpcFriendlyName": "Raul",
+		"Requirements": {
+			"T": "IsLongtimeAnimal"
+		}
+	},
+	"NPC_RebeccahTheWhisperer": {
+		"Area": "AreaStatehelm",
+		"Grouping": "AreaStatehelm",
+		"ID": 2002,
+		"Levels": {
+			"BestFriends": 50,
+			"CloseFriends": 40,
+			"Comfortable": 20,
+			"Despised": 10,
+			"Friends": 30,
+			"LikeFamily": 60,
+			"Neutral": 10,
+			"SoulMates": 70
+		},
+		"NpcFriendlyName": "Rebeccah The Whisperer",
+		"Requirements": {
+			"Quest": "BardEntranceExam",
+			"T": "QuestCompleted"
+		}
+	},
+	"NPC_Red": {
+		"Area": "AreaKurMountains",
+		"Grouping": "AreaKurMountains",
+		"ID": 1106,
+		"Levels": {
+			"BestFriends": 20,
+			"CloseFriends": 15,
+			"Comfortable": 5,
+			"Friends": 10,
+			"LikeFamily": 25,
+			"SoulMates": 30
+		},
+		"NpcFriendlyName": "Red"
+	},
+	"NPC_SageFestoon": {
+		"Area": "AreaStatehelm",
+		"Grouping": "AreaStatehelm",
+		"ID": 2013,
+		"Levels": {
+			"BestFriends": 48,
+			"CloseFriends": 36,
+			"Comfortable": 12,
+			"Despised": 0,
+			"Friends": 24,
+			"LikeFamily": 60,
+			"Neutral": 0,
+			"SoulMates": 72
+		},
+		"NpcFriendlyName": "Sage Festoon"
+	},
+	"NPC_SammieGrimspine": {
+		"Area": "AreaSerbule2",
+		"Grouping": "AreaSerbule2",
+		"ID": 705,
+		"Levels": {
+			"BestFriends": 30,
+			"CloseFriends": 20,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 10,
+			"LikeFamily": 40,
+			"SoulMates": 50
+		},
+		"NpcFriendlyName": "Sammie Grimspine"
+	},
+	"NPC_Selaxi": {
+		"Area": "AreaDesert1",
+		"ID": 1201,
+		"Levels": {
+			"BestFriends": 40,
+			"CloseFriends": 30,
+			"Comfortable": 10,
+			"Friends": 20,
+			"LikeFamily": 50,
+			"SoulMates": 60
+		},
+		"NpcFriendlyName": "Selaxi",
+		"RequiredItemKeywords": [
+			"Edible",
+			"CookingIngredient",
+			"CookingRelated"
+		],
+		"RequirementDescription": "Food or Cooking Ingredients"
+	},
+	"NPC_SerHackley": {
+		"Area": "AreaStatehelm",
+		"Grouping": "AreaStatehelm",
+		"ID": 2001,
+		"Levels": {
+			"BestFriends": 30,
+			"CloseFriends": 20,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 10,
+			"LikeFamily": 40,
+			"SoulMates": 50
+		},
+		"NpcFriendlyName": "Ser Hackley",
+		"RequiredItemKeywords": [
+			"CleaningSupplies"
+		],
+		"RequirementDescription": "Cleaning Supplies"
+	},
+	"NPC_SieAntry": {
+		"Area": "AreaEltibule",
+		"ID": 801,
+		"Levels": {
+			"BestFriends": 40,
+			"CloseFriends": 32,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 24,
+			"LikeFamily": 48,
+			"SoulMates": 56
+		},
+		"NpcFriendlyName": "Sie Antry"
+	},
+	"NPC_Silvia": {
+		"Area": "AreaSunVale",
+		"Grouping": "AreaSunVale",
+		"ID": 904,
+		"Levels": {
+			"BestFriends": 28,
+			"CloseFriends": 24,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 20,
+			"LikeFamily": 32,
+			"SoulMates": 36
+		},
+		"NpcFriendlyName": "Silvia"
+	},
+	"NPC_SirAbbley": {
+		"Area": "AreaStatehelm",
+		"Grouping": "AreaStatehelm",
+		"ID": 2007,
+		"Levels": {
+			"BestFriends": 48,
+			"CloseFriends": 36,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 24,
+			"LikeFamily": 60,
+			"Neutral": 0,
+			"SoulMates": 72
+		},
+		"NpcFriendlyName": "Sir Abbley"
+	},
+	"NPC_SirArif": {
+		"Area": "AreaTomb1",
+		"ID": 401,
+		"NpcFriendlyName": "Sir Arif",
+		"NumSlots": 8
+	},
+	"NPC_SlimOstren": {
+		"Area": "AreaStatehelm",
+		"Grouping": "AreaStatehelm",
+		"ID": 2011,
+		"NpcFriendlyName": "Slim Ostren",
+		"Requirements": {
+			"InteractionFlag": "SlimOstren_Storage_Rented",
+			"T": "InteractionFlagSet"
+		},
+		"SlotAttribute": "MAX_SLIMOSTREN_VAULT_SIZE"
+	},
+	"NPC_Sona": {
+		"Area": "AreaGazlukCaves",
+		"Grouping": "AreaGazlukCaves",
+		"ID": 1401,
+		"Levels": {
+			"BestFriends": 40,
+			"CloseFriends": 30,
+			"Comfortable": 10,
+			"Friends": 20,
+			"LikeFamily": 50,
+			"SoulMates": 60
+		},
+		"NpcFriendlyName": "Sona"
+	},
+	"NPC_StromFarblood": {
+		"Area": "AreaStatehelm",
+		"Grouping": "AreaStatehelm",
+		"ID": 2012,
+		"Levels": {
+			"BestFriends": 48,
+			"CloseFriends": 36,
+			"Comfortable": 12,
+			"Despised": 0,
+			"Friends": 24,
+			"LikeFamily": 60,
+			"Neutral": 0,
+			"SoulMates": 72
+		},
+		"NpcFriendlyName": "Strom Farblood",
+		"RequiredItemKeywords": [
+			"Alchemy",
+			"AlchemyIngredient",
+			"AlchemyRelated",
+			"Potion",
+			"BottledItem"
+		],
+		"RequirementDescription": "Alchemy Ingredients and Potions"
+	},
+	"NPC_Tadion": {
+		"Area": "AreaSerbule",
+		"Grouping": "AreaSerbule",
+		"ID": 304,
+		"Levels": {
+			"BestFriends": 0,
+			"CloseFriends": 0,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 0,
+			"LikeFamily": 36,
+			"SoulMates": 42
+		},
+		"NpcFriendlyName": "Tadion"
+	},
+	"NPC_Tavilak": {
+		"Area": "AreaCasino",
+		"Grouping": "AreaCasino",
+		"ID": 1504,
+		"Levels": {
+			"BestFriends": 36,
+			"CloseFriends": 30,
+			"Comfortable": 18,
+			"Friends": 24,
+			"LikeFamily": 42,
+			"Neutral": 12,
+			"SoulMates": 48
+		},
+		"NpcFriendlyName": "Tavilak",
+		"RequiredItemKeywords": [
+			"Nature",
+			"Vegetable",
+			"Fruit",
+			"Tool",
+			"GardeningRelated",
+			"Bone",
+			"Plant"
+		],
+		"RequirementDescription": "Gardening and Tools"
+	},
+	"NPC_Tessa": {
+		"Area": "AreaStatehelm",
+		"Grouping": "AreaStatehelm",
+		"ID": 2004,
+		"Levels": {
+			"BestFriends": 36,
+			"CloseFriends": 48,
+			"Comfortable": 12,
+			"Despised": 0,
+			"Friends": 24,
+			"LikeFamily": 48,
+			"Neutral": 0,
+			"SoulMates": 60
+		},
+		"NpcFriendlyName": "Tessa Starlight"
+	},
+	"NPC_Torgan": {
+		"Area": "AreaGazlukCaves",
+		"Grouping": "AreaGazlukCaves",
+		"ID": 1402,
+		"Levels": {
+			"BestFriends": 32,
+			"CloseFriends": 24,
+			"Friends": 16,
+			"LikeFamily": 40,
+			"SoulMates": 50
+		},
+		"NpcFriendlyName": "Torgan"
+	},
+	"NPC_TylerGreen": {
+		"Area": "AreaSerbule2",
+		"Grouping": "AreaSerbule2",
+		"ID": 702,
+		"Levels": {
+			"BestFriends": 28,
+			"CloseFriends": 0,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 0,
+			"LikeFamily": 32,
+			"SoulMates": 36
+		},
+		"NpcFriendlyName": "Tyler Green",
+		"RequiredItemKeywords": [
+			"Equipment",
+			"AbilityIngredient",
+			"Fletching"
+		],
+		"RequirementDescription": "Equipment and Ammunition"
+	},
+	"NPC_Ukorga": {
+		"Area": "AreaKurMountains",
+		"Grouping": "AreaKurMountains",
+		"ID": 1104,
+		"Levels": {
+			"BestFriends": 40,
+			"CloseFriends": 32,
+			"Comfortable": 16,
+			"Despised": 0,
+			"Friends": 24,
+			"LikeFamily": 48,
+			"SoulMates": 56
+		},
+		"NpcFriendlyName": "Ukorga"
+	},
+	"NPC_WillemFangblade": {
+		"Area": "AreaCasino",
+		"Grouping": "AreaCasino",
+		"ID": 1501,
+		"Levels": {
+			"BestFriends": 48,
+			"CloseFriends": 36,
+			"Comfortable": 12,
+			"Friends": 24,
+			"LikeFamily": 60,
+			"SoulMates": 72
+		},
+		"NpcFriendlyName": "Willem Fangblade",
+		"RequiredItemKeywords": [
+			"Gem",
+			"Ore",
+			"Crystal"
+		],
+		"RequirementDescription": "Gems, Crystals, and Ores"
+	},
+	"NPC_WinstonVeilmoor": {
+		"Area": "AreaStatehelm",
+		"Grouping": "AreaStatehelm",
+		"ID": 2010,
+		"Levels": {
+			"BestFriends": 50,
+			"CloseFriends": 35,
+			"Comfortable": 0,
+			"Despised": 0,
+			"Friends": 20,
+			"LikeFamily": 65,
+			"Neutral": 0,
+			"SoulMates": 80
+		},
+		"NpcFriendlyName": "Winston Veilmoor",
+		"RequiredItemKeywords": [
+			"Equipment",
+			"Tool",
+			"Blacksmithing",
+			"Ore"
+		],
+		"RequirementDescription": "Equipment and Blacksmithing Materials"
+	},
+	"PovusStorageChest": {
+		"Area": "AreaPovus",
+		"Grouping": "AreaPovus",
+		"ID": 1703,
+		"NpcFriendlyName": "Povus Town Vault",
+		"SlotAttribute": "MAX_POVUS_VAULT_SIZE"
+	},
+	"RiShinStorageChest": {
+		"Area": "AreaKurMountains",
+		"EventLevels": {
+			"RiShinShrine_Storage1On": 25,
+			"RiShinShrine_Storage2On": 50
+		},
+		"Grouping": "AreaKurMountains",
+		"ID": 1702,
+		"NpcFriendlyName": "Ri-Shin Shrine Storage Chest"
+	},
+	"RigersChest": {
+		"Area": "AreaNewbieIsland",
+		"ID": 202,
+		"NpcFriendlyName": "Chest Near Riger",
+		"NumSlots": 4
+	},
+	"Saddlebag": {
+		"Area": "*",
+		"HasAssociatedNpc": false,
+		"ID": 114,
+		"NpcFriendlyName": "Saddlebag",
+		"NumSlots": 0
+	},
+	"SerbuleCommunityChest": {
+		"Area": "AreaSerbule",
+		"Grouping": "AreaSerbule",
+		"ID": 307,
+		"NpcFriendlyName": "Serbule Dynamic Safebox",
+		"NumSlotsScriptAtomic": "SerbuleCommunityChestSize",
+		"NumSlotsScriptAtomicMaxValue": 150,
+		"NumSlotsScriptAtomicMinValue": 1
+	},
+	"StatehelmCommunityChest": {
+		"Area": "AreaStatehelm",
+		"Grouping": "AreaStatehelm",
+		"ID": 2014,
+		"NpcFriendlyName": "Statehelm Dynamic Safebox",
+		"NumSlotsScriptAtomic": "StatehelmCommunityChestSize",
+		"NumSlotsScriptAtomicMaxValue": 150,
+		"NumSlotsScriptAtomicMinValue": 1
+	},
+	"StorageCrate": {
+		"Area": "*",
+		"HasAssociatedNpc": false,
+		"ID": 103,
+		"NpcFriendlyName": "Player-Made Storage Crate",
+		"NumSlots": 0
+	},
+	"StorageCrateDruid": {
+		"Area": "*",
+		"HasAssociatedNpc": false,
+		"ID": 104,
+		"NpcFriendlyName": "Druid Storage Crate",
+		"NumSlots": 0
+	},
+	"StoragePortal": {
+		"Area": "*",
+		"HasAssociatedNpc": false,
+		"ID": 112,
+		"NpcFriendlyName": "Fae Pocket Dimension",
+		"NumSlots": 0
+	},
+	"TapestryInnChest": {
+		"Area": "AreaSerbule2",
+		"Grouping": "AreaSerbule2",
+		"ID": 703,
+		"NpcFriendlyName": "Tapestry Inn Footlocker",
+		"NumSlots": 32,
+		"Requirements": {
+			"InteractionFlag": "Serbule2_TapestryInnChest",
+			"T": "InteractionFlagSet"
+		}
+	},
+	"TutorialChest": {
+		"Area": "AreaNewbieIsland",
+		"ID": 201,
+		"NpcFriendlyName": "Chest Near Lawara",
+		"NumSlots": 16
+	},
+	"UrsulaHauntingStorage": {
+		"Area": "*",
+		"ID": 102,
+		"NpcFriendlyName": "Ursula",
+		"NumSlots": 16
+	},
+	"WardenStorageChest": {
+		"Area": "AreaKurCaves",
+		"Grouping": "AreaKurMountains",
+		"ID": 1701,
+		"NpcFriendlyName": "Warden Storage Chest",
+		"Requirements": {
+			"T": "IsWarden"
+		},
+		"SlotAttribute": "MAX_WARDEN_VAULT_SIZE"
+	},
+	"WerewolfAltar": {
+		"Area": "AreaCave2",
+		"ID": 106,
+		"NpcFriendlyName": "Altar of Norala",
+		"NumSlots": 0
+	},
+	"WinterCourtEntranceChest": {
+		"Area": "AreaCave2",
+		"ID": 601,
+		"NpcFriendlyName": "Chest in Winter Nexus",
+		"NumSlots": 16
+	}
+}

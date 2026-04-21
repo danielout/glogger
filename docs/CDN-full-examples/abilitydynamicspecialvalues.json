@@ -1,0 +1,59 @@
+[
+	{
+		"Label": "Restores",
+		"ReqAbilityKeywords": [
+			"Attack"
+		],
+		"ReqEffectKeywords": [
+			"TestEffect"
+		],
+		"SkipIfZero": true,
+		"Suffix": "Body Heat in cold environments",
+		"Value": 5
+	},
+	{
+		"AttributesThatDelta": [
+			"BOOST_MAJORHEAL_HOT_SENDER"
+		],
+		"Label": "Restores",
+		"ReqAbilityKeywords": [
+			"MajorHeal"
+		],
+		"ReqEffectKeywords": [
+			"ArisBloomHealth"
+		],
+		"SkipIfZero": true,
+		"Suffix": "Health every 3 seconds for 15 seconds",
+		"Value": 0
+	},
+	{
+		"AttributesThatDelta": [
+			"BOOST_MAJORHEAL_ARMORHOT_SENDER"
+		],
+		"Label": "Restores",
+		"ReqAbilityKeywords": [
+			"MajorHeal"
+		],
+		"ReqEffectKeywords": [
+			"ArisBloomArmor"
+		],
+		"SkipIfZero": true,
+		"Suffix": "Armor every 3 seconds for 15 seconds",
+		"Value": 0
+	},
+	{
+		"AttributesThatDelta": [
+			"BOOST_MAJORHEAL_POWERHOT_SENDER"
+		],
+		"Label": "Restores",
+		"ReqAbilityKeywords": [
+			"MajorHeal"
+		],
+		"ReqEffectKeywords": [
+			"ArisBloomPower"
+		],
+		"SkipIfZero": true,
+		"Suffix": "Power every 3 seconds for 15 seconds",
+		"Value": 0
+	}
+]

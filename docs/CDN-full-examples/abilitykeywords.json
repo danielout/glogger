@@ -1,0 +1,316 @@
+[
+	{
+		"AttributesThatDeltaCritChance": [
+			"DELTA_ANATOMY_CRITICAL_CHANCE"
+		],
+		"AttributesThatModCritDamage": [
+			"MOD_CRITICAL_HIT_DAMAGE_ANATOMY"
+		],
+		"MustHaveAbilityKeywords": [
+			"AnatomyCriticals"
+		]
+	},
+	{
+		"AttributesThatModCritDamage": [
+			"MOD_CRITICAL_HIT_DAMAGE"
+		],
+		"MustHaveAbilityKeywords": [
+			"PhrenologyCriticals"
+		]
+	},
+	{
+		"AttributesThatDeltaAccuracy": [
+			"ACCURACY_DELTA_BASICATTACK"
+		],
+		"AttributesThatDeltaDamage": [
+			"BOOST_ABILITY_BASICATTACK"
+		],
+		"AttributesThatDeltaPowerCost": [
+			"BASICATTACK_COST_DELTA"
+		],
+		"AttributesThatDeltaResetTime": [
+			"ABILITY_RESETTIME_BASICATTACK_DELTA"
+		],
+		"AttributesThatModDamage": [
+			"MOD_ABILITY_BASICATTACK"
+		],
+		"MustHaveAbilityKeywords": [
+			"BasicAttack"
+		]
+	},
+	{
+		"AttributesThatDeltaDamage": [
+			"BOOST_ABILITY_BITE"
+		],
+		"AttributesThatModDamage": [
+			"MOD_ABILITY_BITE"
+		],
+		"MustHaveAbilityKeywords": [
+			"Bite"
+		]
+	},
+	{
+		"AttributesThatDeltaAccuracy": [
+			"ACCURACY_BOOST_BURST"
+		],
+		"AttributesThatDeltaDamage": [
+			"BOOST_ABILITY_BURST"
+		],
+		"AttributesThatModDamage": [
+			"MOD_ABILITY_BURST"
+		],
+		"MustHaveAbilityKeywords": [
+			"Burst"
+		]
+	},
+	{
+		"AttributesThatDeltaAccuracy": [
+			"ACCURACY_DELTA_COREATTACK"
+		],
+		"AttributesThatDeltaDamage": [
+			"BOOST_ABILITY_COREATTACK"
+		],
+		"AttributesThatDeltaPowerCost": [
+			"ABILITY_COST_DELTA_COREATTACK"
+		],
+		"AttributesThatModDamage": [
+			"MOD_ABILITY_COREATTACK"
+		],
+		"MustHaveAbilityKeywords": [
+			"CoreAttack"
+		]
+	},
+	{
+		"AttributesThatDeltaAccuracy": [
+			"ACCURACY_DELTA_EPICATTACK"
+		],
+		"AttributesThatDeltaDamage": [
+			"BOOST_ABILITY_EPICATTACK"
+		],
+		"AttributesThatDeltaPowerCost": [
+			"ABILITY_COST_DELTA_EPICATTACK"
+		],
+		"AttributesThatModDamage": [
+			"MOD_ABILITY_EPICATTACK"
+		],
+		"MustHaveAbilityKeywords": [
+			"EpicAttack"
+		]
+	},
+	{
+		"AttributesThatDeltaDamage": [
+			"BOOST_ABILITY_KICK"
+		],
+		"AttributesThatModDamage": [
+			"MOD_ABILITY_KICK"
+		],
+		"MustHaveAbilityKeywords": [
+			"Kick"
+		]
+	},
+	{
+		"AttributesThatDeltaPowerCost": [
+			"ABILITY_COST_DELTA_MAJORHEAL"
+		],
+		"MustHaveAbilityKeywords": [
+			"MajorHeal"
+		]
+	},
+	{
+		"AttributesThatDeltaAccuracy": [
+			"ACCURACY_BOOST_MELEE"
+		],
+		"AttributesThatDeltaDamage": [
+			"BOOST_ABILITY_MELEE"
+		],
+		"AttributesThatDeltaPowerCost": [
+			"MELEEATTACK_COST_DELTA"
+		],
+		"AttributesThatModDamage": [
+			"MOD_ABILITY_MELEE"
+		],
+		"MustHaveAbilityKeywords": [
+			"Melee"
+		]
+	},
+	{
+		"AttributesThatDeltaPowerCost": [
+			"ABILITY_COST_DELTA_MINORHEAL"
+		],
+		"MustHaveAbilityKeywords": [
+			"MinorHeal"
+		]
+	},
+	{
+		"AttributesThatDeltaAccuracy": [
+			"ACCURACY_DELTA_NICEATTACK"
+		],
+		"AttributesThatDeltaDamage": [
+			"BOOST_ABILITY_NICEATTACK"
+		],
+		"AttributesThatDeltaPowerCost": [
+			"ABILITY_COST_DELTA_NICEATTACK"
+		],
+		"AttributesThatModDamage": [
+			"MOD_ABILITY_NICEATTACK"
+		],
+		"MustHaveAbilityKeywords": [
+			"NiceAttack"
+		]
+	},
+	{
+		"AttributesThatDeltaAccuracy": [
+			"ACCURACY_BOOST_RANGED"
+		],
+		"AttributesThatDeltaDamage": [
+			"BOOST_ABILITY_RANGED"
+		],
+		"AttributesThatModDamage": [
+			"MOD_ABILITY_RANGED"
+		],
+		"MustHaveAbilityKeywords": [
+			"Ranged"
+		]
+	},
+	{
+		"AttributesThatDeltaAccuracy": [
+			"ACCURACY_DELTA_SIGNATUREDEBUFF"
+		],
+		"AttributesThatDeltaDamage": [
+			"BOOST_ABILITY_SIGNATUREDEBUFF"
+		],
+		"AttributesThatDeltaPowerCost": [
+			"ABILITY_COST_DELTA_SIGNATUREDEBUFF"
+		],
+		"AttributesThatModDamage": [
+			"MOD_ABILITY_SIGNATUREDEBUFF"
+		],
+		"MustHaveAbilityKeywords": [
+			"SignatureDebuff"
+		]
+	},
+	{
+		"AttributesThatDeltaPowerCost": [
+			"ABILITY_COST_DELTA_SIGNATURESUPPORT"
+		],
+		"MustHaveAbilityKeywords": [
+			"SignatureSupport"
+		]
+	},
+	{
+		"AttributesThatDeltaDamage": [
+			"BOOST_ABILITY_KEYWORD_SONIC"
+		],
+		"AttributesThatModDamage": [
+			"MOD_ABILITY_KEYWORD_SONIC"
+		],
+		"MustHaveAbilityKeywords": [
+			"Sonic"
+		]
+	},
+	{
+		"AttributesThatDeltaPowerCost": [
+			"NON_PSYCHIC_ABILITY_COST_DELTA"
+		],
+		"MustHaveAbilityKeywords": [
+			"Attack"
+		],
+		"MustNotHaveAbilityKeywords": [
+			"PsychicAttack"
+		]
+	},
+	{
+		"AttributesThatDeltaDamage": [
+			"BOOST_ABILITY_NICEPOISONATTACK"
+		],
+		"AttributesThatModDamage": [
+			"MOD_ABILITY_NICEPOISONATTACK"
+		],
+		"MustHaveAbilityKeywords": [
+			"NiceAttack",
+			"PoisonAttack"
+		]
+	},
+	{
+		"AttributesThatDeltaDamage": [
+			"BOOST_ABILITY_NICEACIDATTACK"
+		],
+		"AttributesThatModDamage": [
+			"MOD_ABILITY_NICEACIDATTACK"
+		],
+		"MustHaveAbilityKeywords": [
+			"NiceAttack",
+			"AcidAttack"
+		]
+	},
+	{
+		"AttributesThatDeltaDamage": [
+			"BOOST_ABILITY_COREPOISONATTACK"
+		],
+		"AttributesThatModDamage": [
+			"MOD_ABILITY_COREPOISONATTACK"
+		],
+		"MustHaveAbilityKeywords": [
+			"CoreAttack",
+			"PoisonAttack"
+		]
+	},
+	{
+		"AttributesThatDeltaDamage": [
+			"BOOST_ABILITY_BARDBLAST"
+		],
+		"AttributesThatDeltaRange": [
+			"ABILITY_RANGE_DELTA_BARDBLAST"
+		],
+		"AttributesThatModDamage": [
+			"MOD_ABILITY_BARDBLAST"
+		],
+		"MustHaveAbilityKeywords": [
+			"BardBlast"
+		]
+	},
+	{
+		"MustHaveAbilityKeywords": [
+			"Projectile",
+			"Attack"
+		],
+		"MustHaveActiveSkill": "Druid",
+		"MustHaveEffectKeywords": [
+			"TSysProjectilesDealPoisonDoT"
+		]
+	},
+	{
+		"MustHaveAbilityKeywords": [
+			"Burst",
+			"Attack"
+		],
+		"MustHaveActiveSkill": "Druid",
+		"MustHaveEffectKeywords": [
+			"TSysBurstsDealNatureDoT"
+		]
+	},
+	{
+		"MustHaveAbilityKeywords": [
+			"MajorHeal"
+		],
+		"MustHaveEffectKeywords": [
+			"ArisBloomHealth"
+		]
+	},
+	{
+		"MustHaveAbilityKeywords": [
+			"MajorHeal"
+		],
+		"MustHaveEffectKeywords": [
+			"ArisBloomArmor"
+		]
+	},
+	{
+		"MustHaveAbilityKeywords": [
+			"MajorHeal"
+		],
+		"MustHaveEffectKeywords": [
+			"ArisBloomArmor"
+		]
+	}
+]
