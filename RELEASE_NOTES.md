@@ -1,7 +1,7 @@
-## What's Changed since v0.7.8
+## What's Changed since v0.7.9
 
 ### Improvements
-- impv: adding "self-milked" counter. sighing heavily. (`d7fc474`)
+- impv: update notif moved to about (`de7f06f`)
 
 ---
-*1 commits since v0.7.8*
+*2 commits since v0.7.9*
