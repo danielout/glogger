@@ -1,5 +1,11 @@
 <template>
   <div class="flex flex-col gap-2 text-sm h-full min-h-0">
+    <!-- Self-milked counter (cow form self-milking) -->
+    <div v-if="selfMilkedCount > 0" class="flex items-center justify-between px-2 shrink-0">
+      <span class="text-xs text-text-muted">Self-milked</span>
+      <span class="text-xs font-mono text-accent-gold">{{ selfMilkedCount }}</span>
+    </div>
+
     <!-- Tab bar -->
     <div class="flex gap-1 shrink-0">
       <button
@@ -132,6 +138,7 @@ const activeTab = ref<TabKey>('timers')
 const timers = ref<MilkingTimer[]>([])
 const milkedLeaderboard = ref<PlayerMilkingEntry[]>([])
 const milkedByLeaderboard = ref<PlayerMilkingEntry[]>([])
+const selfMilkedCount = ref(0)
 const now = ref(Date.now())
 
 let refreshInterval: ReturnType<typeof setInterval> | null = null
@@ -209,7 +216,7 @@ async function loadLeaderboards() {
   if (!char || !server) return
 
   try {
-    const [milked, milkedBy] = await Promise.all([
+    const [milked, milkedBy, selfMilked] = await Promise.all([
       invoke<PlayerMilkingEntry[]>('get_player_milking_leaderboard', {
         characterName: char,
         serverName: server,
@@ -220,9 +227,15 @@ async function loadLeaderboards() {
         serverName: server,
         direction: 'milked_by',
       }),
+      invoke<PlayerMilkingEntry[]>('get_player_milking_leaderboard', {
+        characterName: char,
+        serverName: server,
+        direction: 'self_milked',
+      }),
     ])
     milkedLeaderboard.value = milked
     milkedByLeaderboard.value = milkedBy
+    selfMilkedCount.value = selfMilked.reduce((sum, e) => sum + e.count, 0)
   } catch (e) {
     console.error('Failed to load milking leaderboards:', e)
   }

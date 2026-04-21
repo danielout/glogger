@@ -212,6 +212,11 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 37)?;
     }
 
+    if current_version < 38 {
+        migration_v38_self_milking(conn)?;
+        super::record_migration(conn, 38)?;
+    }
+
     Ok(())
 }
 
@@ -2060,5 +2065,26 @@ fn migration_v32_brewing_discoveries(conn: &Connection) -> Result<()> {
          CREATE INDEX IF NOT EXISTS idx_brewing_disc_recipe ON brewing_discoveries(recipe_id);",
     )?;
 
+    Ok(())
+}
+
+/// Migration V38: Allow 'self_milked' direction in player_milking_log.
+/// SQLite doesn't support ALTER CHECK constraints, so we recreate the table.
+fn migration_v38_self_milking(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE player_milking_log_new (
+             id INTEGER PRIMARY KEY AUTOINCREMENT,
+             character_name TEXT NOT NULL,
+             server_name TEXT NOT NULL,
+             other_player TEXT NOT NULL,
+             direction TEXT NOT NULL CHECK (direction IN ('milked', 'milked_by', 'self_milked')),
+             milked_at TEXT NOT NULL
+         );
+         INSERT INTO player_milking_log_new SELECT * FROM player_milking_log;
+         DROP TABLE player_milking_log;
+         ALTER TABLE player_milking_log_new RENAME TO player_milking_log;
+         CREATE INDEX idx_player_milking_char ON player_milking_log(character_name, server_name);
+         CREATE INDEX idx_player_milking_other ON player_milking_log(character_name, server_name, other_player, direction);",
+    )?;
     Ok(())
 }

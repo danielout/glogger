@@ -1017,6 +1017,22 @@ impl DataIngestCoordinator {
                         }
                     }
 
+                    // Check Combat channel for self-milking (cow player milking themselves).
+                    // Format: "[Combat] PlayerName: Collect Milk on PlayerName!"
+                    // No entity ID (unlike NPC attacks), so the existing combat parser skips it.
+                    if msg.channel.as_deref() == Some("Combat") {
+                        if let Some(character_name) = self.game_state.get_active_character() {
+                            let expected = format!(
+                                "{}: Collect Milk on {}!",
+                                character_name, character_name
+                            );
+                            if msg.message.trim() == expected {
+                                let ts = msg.timestamp.format("%Y-%m-%d %H:%M:%S").to_string();
+                                self.record_player_milk(character_name, "self_milked", &ts);
+                            }
+                        }
+                    }
+
                     // Check Action Emotes channel for resuscitate events
                     if let Some(rez_event) = parse_resuscitate_message(&msg) {
                         if let Err(e) = self.persist_resuscitate_event(&rez_event) {
