@@ -22,7 +22,7 @@
         class="flex justify-between"
       >
         <span class="text-text-secondary">{{ effect.label }}</span>
-        <span class="text-accent-green font-medium">+{{ effect.value }}</span>
+        <span class="text-accent-green font-medium">{{ effect.display }}</span>
       </div>
       <div
         v-for="text in textEffects"
@@ -36,8 +36,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
 import type { FoodItem } from '../../types/gourmand'
+
+interface ResolvedEffect {
+  label: string
+  value: string
+  display_type: string
+  formatted: string
+  icon_id: number | null
+}
 
 const props = defineProps<{
   selectedMeal: FoodItem | null
@@ -48,57 +57,58 @@ defineEmits<{
   clear: []
 }>()
 
-interface ParsedEffect {
-  label: string
-  value: number
-  suffix: string
-}
+const resolvedEffects = ref<ResolvedEffect[]>([])
 
-const effectPattern = /^(.+?)\s+\+(\d+(?:\.\d+)?)\s*(.*)$/
+const allDescs = computed(() => [
+  ...(props.selectedMeal?.effect_descs ?? []),
+  ...(props.selectedSnack?.effect_descs ?? []),
+])
 
-function parseEffects(descs: string[]): { numeric: ParsedEffect[]; text: string[] } {
-  const numeric: ParsedEffect[] = []
-  const text: string[] = []
-
-  for (const desc of descs) {
-    const match = desc.match(effectPattern)
-    if (match) {
-      const label = match[3] ? `${match[1]} ${match[3]}` : match[1]
-      numeric.push({ label, value: parseFloat(match[2]), suffix: match[3] })
-    } else {
-      text.push(desc)
-    }
+watch(allDescs, async (descs) => {
+  if (!descs.length) {
+    resolvedEffects.value = []
+    return
   }
-  return { numeric, text }
-}
+  try {
+    resolvedEffects.value = await invoke<ResolvedEffect[]>('resolve_effect_descs', { descs })
+  } catch {
+    resolvedEffects.value = descs.map(d => ({
+      label: d, value: '', display_type: '', formatted: d, icon_id: null,
+    }))
+  }
+}, { immediate: true })
 
 const combinedEffects = computed(() => {
-  const allDescs = [
-    ...(props.selectedMeal?.effect_descs ?? []),
-    ...(props.selectedSnack?.effect_descs ?? []),
-  ]
+  const merged = new Map<string, { value: number; formatted: string }>()
+  const textList: string[] = []
 
-  const { numeric } = parseEffects(allDescs)
-
-  const merged = new Map<string, number>()
-  for (const e of numeric) {
-    merged.set(e.label, (merged.get(e.label) ?? 0) + e.value)
+  for (const e of resolvedEffects.value) {
+    if (e.value) {
+      const numVal = parseFloat(e.value)
+      const existing = merged.get(e.label)
+      if (existing) {
+        existing.value += numVal
+      } else {
+        merged.set(e.label, { value: numVal, formatted: e.formatted })
+      }
+    } else {
+      textList.push(e.formatted)
+    }
   }
 
-  return Array.from(merged.entries()).map(([label, value]) => ({
+  return Array.from(merged.entries()).map(([label, { value }]) => ({
     label,
-    value: Number.isInteger(value) ? value.toString() : value.toFixed(1),
+    display: value > 0
+      ? `+${Number.isInteger(value) ? value : value.toFixed(1)}`
+      : Number.isInteger(value) ? value.toString() : value.toFixed(1),
   }))
 })
 
 const textEffects = computed(() => {
-  const allDescs = [
-    ...(props.selectedMeal?.effect_descs ?? []),
-    ...(props.selectedSnack?.effect_descs ?? []),
-  ]
-
-  const { text } = parseEffects(allDescs)
-  // Deduplicate text effects like "Lasts 1 hour (plus Gourmand bonus)"
-  return [...new Set(text)]
+  const texts: string[] = []
+  for (const e of resolvedEffects.value) {
+    if (!e.value) texts.push(e.formatted)
+  }
+  return [...new Set(texts)]
 })
 </script>
