@@ -25,9 +25,13 @@
                 v-for="tab in tabs"
                 :key="tab.id"
                 @click="activeTab = tab.id"
-                class="px-4 py-2.5 bg-transparent border-none rounded text-text-secondary cursor-pointer font-mono text-sm text-left transition-all whitespace-nowrap hover:text-text-primary hover:bg-surface-base"
+                class="relative px-4 py-2.5 bg-transparent border-none rounded text-text-secondary cursor-pointer font-mono text-sm text-left transition-all whitespace-nowrap hover:text-text-primary hover:bg-surface-base"
                 :class="{ 'text-accent-gold! bg-surface-base! border-l-2 border-l-accent-gold pl-3.5': activeTab === tab.id }">
                 {{ tab.label }}
+                <span
+                  v-if="tab.id === 'changelog' && updateStore.updateAvailable"
+                  class="absolute top-2 right-2 w-2 h-2 rounded-full bg-accent-blue animate-pulse"
+                />
               </button>
             </nav>
 
@@ -49,11 +53,14 @@
 
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
+import { useUpdateStore } from '../../stores/updateStore'
 import AboutTab from './AboutTab.vue'
 import HelpSetupTab from './HelpSetupTab.vue'
 import ChangelogTab from './ChangelogTab.vue'
 import KnownIssuesTab from './KnownIssuesTab.vue'
 import PgNewsTab from './PgNewsTab.vue'
+
+const updateStore = useUpdateStore()
 
 const props = defineProps<{
   show: boolean
@@ -81,8 +88,12 @@ function close() {
 }
 
 // Focus trap: listen for escape globally when open
+// Auto-navigate to changelog when opened with an update available
 watch(() => props.show, async (open) => {
   if (open) {
+    if (updateStore.updateAvailable) {
+      activeTab.value = 'changelog'
+    }
     await nextTick()
     window.addEventListener('keydown', handleKeydown)
   } else {

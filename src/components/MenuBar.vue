@@ -68,11 +68,15 @@
           ⚙
         </button>
         <button
-          class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer text-xl rounded transition-all leading-none hover:bg-surface-elevated hover:text-text-primary"
+          class="relative px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer text-xl rounded transition-all leading-none hover:bg-surface-elevated hover:text-text-primary"
           :class="{ 'bg-surface-elevated! text-accent-gold!': helpOpen }"
           @click="emit('toggleHelp')"
-          title="Help">
+          :title="updateStore.updateAvailable ? `Update available: v${updateStore.latestVersion}` : 'Help'">
           ?
+          <span
+            v-if="updateStore.updateAvailable"
+            class="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-accent-blue animate-pulse"
+          />
         </button>
       </div>
     </div>
@@ -101,11 +105,13 @@ import { computed, reactive, watch } from "vue";
 import { useCoordinatorStore } from "../stores/coordinatorStore";
 import { useDataBrowserStore } from "../stores/dataBrowserStore";
 import { useSettingsStore } from "../stores/settingsStore";
+import { useUpdateStore } from "../stores/updateStore";
 import { useKeyboard } from "../composables/useKeyboard";
 import { useDevPanel } from "../composables/useDevPanel";
 import CharacterPicker from "./CharacterPicker.vue";
 
 const settingsStore = useSettingsStore();
+const updateStore = useUpdateStore();
 const { openDevPanel } = useDevPanel();
 
 export type AppView = "dashboard" | "character" | "inventory" | "crafting" | "economics" | "chat" | "data-browser" | "search" | "settings";
