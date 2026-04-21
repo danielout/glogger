@@ -947,6 +947,26 @@ function removeEntry(levelIdx: number, entryIdx: number) {
     state.value.planLevels.splice(levelIdx, 1);
   }
 
+  // If the removed entry used a first-time bonus, check if any other entry
+  // in the plan still claims it. If not, restore the recipe's first-time XP.
+  if (entry.xp_first_time > 0) {
+    const stillUsed = state.value.planLevels.some(l =>
+      l.entries.some(e => e.recipe_id === entry.recipe_id && e.xp_first_time > 0),
+    );
+    if (!stillUsed) {
+      allRecipes.value = allRecipes.value.map(ar => {
+        if (ar.recipe.id !== entry.recipe_id) return ar;
+        const restored = ar.recipe.reward_skill_xp_first_time ?? 0;
+        return {
+          ...ar,
+          isCrafted: false,
+          firstTimeXp: restored,
+          effectiveFirstTimeXp: Math.round(restored * multiplier.value),
+        };
+      });
+    }
+  }
+
   refreshRecipeState();
 }
 
