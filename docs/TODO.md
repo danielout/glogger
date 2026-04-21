@@ -24,41 +24,13 @@ These are investigated items kept for reference — the research is done but the
 
 ## Quick Wins (Small Effort, Noticeable Value)
 
-- [x] Parse ProcessSetCelestialInfo for moon phase
-  - Parsed and persisted to `game_state_moon`. Also added parsers for ProcessGuildGeneralInfo, ProcessCompleteDirectedGoals, and ProcessSetString (9 known keys) — all persisted to new game state tables in migration v33.
-
-- [x] Auto-import gourmand report from ProcessBook
-  - When the Foods Consumed SkillReport book is opened in-game, the coordinator auto-imports it to `gourmand_eaten_foods` using the existing parser. No file save needed.
-
-- [x] Parse PlayerAge and Behavior Report stats from ProcessBook
-  - Structured stats (kills, deaths, damage, time played, badges, challenge restrictions, food stats, etc.) extracted from HelpScreen and PlayerAge book content, persisted to `character_report_stats`. Displayed on Character > Stats tab via `ReportStatsSection.vue`.
-
-- [x] Milking timers dashboard widget
-  - NPC cow milking cooldown tracker. Detects milks from ProcessStartInteraction + chat "Bottle of Milk" gain. Backfills from cooldown error messages. Small dashboard widget with cows grouped by zone, 1h countdown timers, current zone floated to top.
-
 - [ ] Bug: instant-snack foods missing from gourmand report
-  - They used to show up and now they're gone. Likely a regression in filtering or category logic.
+  - They used to show up and now they're gone. Static analysis of the code path (CDN parsing, DB query, store filtering, UI display) shows everything is wired correctly. Needs runtime debugging — either a CDN data issue or something only visible by querying the actual `foods` table.
   - **Effort: Low | Impact: Medium (data correctness)**
 
-- [ ] Bug: food tooltip parsing broken on gourmand tracker
-  - Tooltip parsing regressed at some point. Needs investigation into what changed. This is for the combined selected meal and snack buffs in the right panel. 
-  - **Effort: Low | Impact: Medium (gourmand feature usability)**
-
 - [ ] Bug: rez counter not working
-  - Should be counting but isn't. Low priority. Maybe need another capture or two? unsure what's wrong here.
+  - Should be counting but isn't. The full pipeline (parser → coordinator → DB → store → widget) looks correctly wired. Serde enum serialization uses `#[serde(tag = "kind")]` and frontend checks `payload.kind === 'Resuscitated'` — this should match. Needs a runtime debug capture with a rez event to confirm.
   - **Effort: Low | Impact: Low**
-
-- [ ] Bug: crafting levelling planner keeps first-time-craft XP after removal
-  - If you add a first-time craft and then remove it, the planner still thinks the first-time XP was used up. Logic bug in state cleanup.
-  - **Effort: Low | Impact: Medium (planner accuracy)**
-
-- [ ] Display last character.json and inventory.json import timestamps on dashboard... can show as tooltip when hovering the character name in the status widget.
-  - Quick info display so users know how fresh their imported data is.
-  - **Effort: Low | Impact: Medium (user awareness)**
-
-- [ ] Bug: missing NPCs in NPC searches
-  - Some NPCs don't appear in search results. Needs investigation — could be CDN data gap or resolver issue. Looks like maybe it is NPCs without an area? unsure.
-  - **Effort: Low (investigation) | Impact: Medium**
 
 - [ ] Show learned/unlearned status in recipe and skillbook tooltips
   - Recipe tooltips and recipe/skillbook item tooltips should indicate whether the current character has learned them.
@@ -273,17 +245,6 @@ These are investigated items kept for reference — the research is done but the
   - StatehelmView already has full gift tracking. CDN quest data has `ReuseTime_*` fields and renown rewards. **Blocker:** quest events (`ProcessCompleteQuest`, `ProcessAddQuest`, etc.) are **not yet implemented** in the parser. Needs: (1) quest event parsing in `PlayerEventParser`, (2) new `game_state_quest_completions` table, (3) coordinator handler, (4) extract `ReuseTime_*` from CDN, (5) filter to Statehelm quests, (6) frontend UI with cooldown timers.
   - Sub-task: track statehelm renown possible vs earned (depends on quest tracking above).
   - **Effort: High | Impact: Medium-High**
-
-- [x] Debug capture devtool
-  - 'Start/stop debug capture' that saves: gamestate at start+stop, all player.log lines during capture, Status and Combat chat channels, character/inventory JSONs if detected. Any glogger debug should be saved as well. Save as single file with optional notes field.
-  - **Effort: High | Impact: Medium (debugging/support)**
-
-- [x] Debug capture improvements (from capture analysis)
-  - [x] **Line truncation bug** — Fixed: PlayerLogWatcher now uses `read_to_end` with partial-line detection (only advances position to last complete newline), matching ChatLogWatcher's approach. Also fixed CRLF position tracking on Windows.
-  - [x] **Normal vs Full capture modes** — Done: "Save (Normal)" filters engine noise, "Save (Full)" keeps everything. Filtering happens at save time so raw data is always fully captured.
-  - [x] **Post-capture notes editing** — Done: Two-phase stop/save flow. Recording stops first (snapshot taken), then user reviews stats and edits notes before choosing save mode.
-  - [x] **Empty lines** — Fixed by the same partial-line detection fix (lines < 4 chars also filtered in normal mode).
-  - **Opaque .NET types** — Some events (ProcessSetStarredRecipes, ProcessInventoryFolderSettings) log .NET type names instead of data. Not fixable from our side.
 
 - [ ] Shop/stall tracking (reported by Reyetta)
   - Track what you put in, what sells, trends. Player vendor events are in the parser's "low priority / future" bucket. Manual entry fallback has questionable adoption (Reyetta said it's "too much effort").

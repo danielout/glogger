@@ -6,7 +6,7 @@ Browse NPCs with area filtering, descriptions, training info, and favor gift pre
 
 ## Search & Filters
 
-- **Area filter dropdown** — populated from preloaded NPC data
+- **Area filter dropdown** — populated from preloaded NPC data. Includes "Unknown Area" option for NPCs with no assigned area.
 - **Text search** — across name and description (computed, no debounce)
 
 ## Detail View

@@ -70,7 +70,7 @@ Uses `PaneLayout` (screen-key `char-gourmand`) with left + conditional right pan
 
 - **Progress bars** — overall and per-category (Meals, Snacks, Instant-Snacks), shown in left pane
 - **Favorites** — top 3 most-eaten foods per category, shown in left pane
-- **Food Buff panel** — select a meal + snack to see combined buff stats in the right pane
+- **Food Buff panel** — select a meal + snack to see combined buff stats in the right pane. Effect descriptions are resolved via the backend `resolve_effect_descs` command (same as item tooltips) to correctly display human-readable labels from CDN attribute tokens.
 - **Card and list views** — toggle between grid cards and compact three-column lists
 - **Sorting** — by gourmand level, food level, or alphabetical; ascending or descending
 - **Filtering** — hide eaten foods, hide unusable foods (gourmand level too low)
