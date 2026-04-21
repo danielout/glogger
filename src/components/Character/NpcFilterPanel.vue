@@ -261,10 +261,14 @@ const allRows = computed<NpcRow[]>(() => {
 // Collect available areas for the area dropdown
 const availableAreas = computed(() => {
   const areas = new Set<string>()
+  let hasUnknown = false
   for (const row of allRows.value) {
     if (row.area_friendly_name) areas.add(row.area_friendly_name)
+    else hasUnknown = true
   }
-  return Array.from(areas).sort()
+  const sorted = Array.from(areas).sort()
+  if (hasUnknown) sorted.push('Unknown Area')
+  return sorted
 })
 
 // Filter
@@ -280,7 +284,11 @@ const filteredAndSorted = computed(() => {
   }
 
   if (areaFilter.value) {
-    rows = rows.filter(r => r.area_friendly_name === areaFilter.value)
+    if (areaFilter.value === 'Unknown Area') {
+      rows = rows.filter(r => !r.area_friendly_name)
+    } else {
+      rows = rows.filter(r => r.area_friendly_name === areaFilter.value)
+    }
   }
 
   const f = filter.value.toLowerCase()

@@ -202,12 +202,17 @@ const filteredNpcs = ref<NpcInfo[]>([]);
 // Get unique areas for the filter dropdown
 const availableAreas = computed(() => {
   const areas = new Set<string>();
+  let hasUnknown = false;
   allNpcs.value.forEach(npc => {
     if (npc.area_friendly_name) {
       areas.add(npc.area_friendly_name);
+    } else {
+      hasUnknown = true;
     }
   });
-  return Array.from(areas).sort();
+  const sorted = Array.from(areas).sort();
+  if (hasUnknown) sorted.push('Unknown Area');
+  return sorted;
 });
 
 // Filter NPCs based on search query, area, and when data loads
@@ -216,7 +221,11 @@ watch([query, selectedArea, allNpcs], () => {
 
   // Filter by area
   if (selectedArea.value !== "All Areas") {
-    results = results.filter(npc => npc.area_friendly_name === selectedArea.value);
+    if (selectedArea.value === 'Unknown Area') {
+      results = results.filter(npc => !npc.area_friendly_name);
+    } else {
+      results = results.filter(npc => npc.area_friendly_name === selectedArea.value);
+    }
   }
 
   // Filter by search query
