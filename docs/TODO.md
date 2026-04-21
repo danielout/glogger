@@ -41,24 +41,28 @@ These are investigated items kept for reference — the research is done but the
   - **Effort: Low | Impact: Medium (data correctness)**
 
 - [ ] Bug: food tooltip parsing broken on gourmand tracker
-  - Tooltip parsing regressed at some point. Needs investigation into what changed.
+  - Tooltip parsing regressed at some point. Needs investigation into what changed. This is for the combined selected meal and snack buffs in the right panel. 
   - **Effort: Low | Impact: Medium (gourmand feature usability)**
 
 - [ ] Bug: rez counter not working
-  - Should be counting but isn't. Low priority.
+  - Should be counting but isn't. Low priority. Maybe need another capture or two? unsure what's wrong here.
   - **Effort: Low | Impact: Low**
 
 - [ ] Bug: crafting levelling planner keeps first-time-craft XP after removal
   - If you add a first-time craft and then remove it, the planner still thinks the first-time XP was used up. Logic bug in state cleanup.
   - **Effort: Low | Impact: Medium (planner accuracy)**
 
-- [ ] Display last character.json and inventory.json import timestamps on dashboard
+- [ ] Display last character.json and inventory.json import timestamps on dashboard... can show as tooltip when hovering the character name in the status widget.
   - Quick info display so users know how fresh their imported data is.
   - **Effort: Low | Impact: Medium (user awareness)**
 
 - [ ] Bug: missing NPCs in NPC searches
-  - Some NPCs don't appear in search results. Needs investigation — could be CDN data gap or resolver issue.
+  - Some NPCs don't appear in search results. Needs investigation — could be CDN data gap or resolver issue. Looks like maybe it is NPCs without an area? unsure.
   - **Effort: Low (investigation) | Impact: Medium**
+
+- [ ] Show learned/unlearned status in recipe and skillbook tooltips
+  - Recipe tooltips and recipe/skillbook item tooltips should indicate whether the current character has learned them.
+  - **Effort: Low | Impact: Medium (discoverability)**
 
 - [ ] Clean up documents folder structure
   - Better organization, establish clearer structure for docs.
@@ -156,6 +160,22 @@ These are investigated items kept for reference — the research is done but the
   - General-purpose timer widget for the dashboard. Related to the general-purpose timer system in Larger Efforts.
   - **Effort: Medium | Impact: Medium**
 
+- [ ] Show work order completion state in tooltips for all characters
+  - Work order tooltips should show completion/cooldown state across all tracked characters.
+  - **Effort: Medium | Impact: Medium (multi-character awareness)**
+
+- [ ] Recurrent event timer widget
+  - User-configurable recurring timers (e.g., "every other Wednesday @ 10") with countdowns. Distinct from the general-purpose timer system — this is calendar-based recurrence.
+  - **Effort: Medium | Impact: Medium (scheduling)**
+
+- [ ] Audit time handling across the app
+  - Suspicious that time handling isn't fully standardized. Need to dig in and verify consistency (timezones, UTC vs local, formatting).
+  - **Effort: Medium (investigation) | Impact: Medium (correctness)**
+
+- [ ] Investigate PGQuartermaster for feature ideas
+  - Users have reported it has features we need. Need to review: https://shamorshinf.github.io/PGQuartermaster/
+  - **Effort: Medium (research) | Impact: Unknown**
+
 - [ ] Dashboard widget sizing pass — consistent heights
   - Widgets have inconsistent `max-h-*` values (some 80, some 52, some 40, many have none). No systematic height management exists. Need a standardized sizing approach in `DashboardCard.vue` or the widget registry.
   - **Effort: Medium | Impact: Medium (visual consistency)**
@@ -212,6 +232,22 @@ These are investigated items kept for reference — the research is done but the
 ---
 
 ## Larger Efforts / Research Needed
+
+- [ ] Work order cooldown tracking
+  - Work orders have a 30-day cooldown when completed. Can track via recording completions, but also via character.json — completed work orders are removed from the array when cooldown expires, giving "available"/"unavailable" state even for completions we didn't witness. Should also support alt character tracking.
+  - **Effort: Large | Impact: High (multi-character workflow)**
+
+- [ ] Repeatable quest cooldown tracking (general)
+  - Same approach as work order tracking but for all repeatable quests with cooldowns. Ties into Statehelm quest tracking and work order tracking above.
+  - **Effort: Large | Impact: High**
+
+- [ ] Skillbook autowatchwords
+  - Automatically watch chat for item links of skill books the player could learn but doesn't own or know. Two modes: (1) books for currently-trained skills, (2) "future skill" mode where players select skills and we watch for any skillbooks they don't already own/know, even if skill level is too low to use them yet.
+  - **Effort: Large | Impact: High (proactive skill progression)**
+
+- [ ] Kaeus tool integration
+  - Make it easier for kaeus to integrate his tools with glogger. Repos: GorgonBetTracker, GorgonCraftingTools, KaeusGorgonTools (all at github.com/kaeus). Needs investigation into what integration points make sense.
+  - **Effort: Large (collaboration/research) | Impact: Medium (community/ecosystem)**
 
 - [ ] Standardize search across the app (scryfall-inspired)
   - Search is implemented differently in different places. Need a smart, unified search system. Take inspiration from Scryfall's search syntax for filtering and querying.
