@@ -412,16 +412,17 @@ const craftableItems = computed((): CraftableItem[] => {
 
   // Currently expanded intermediates — intermediates are now deduplicated
   // with correct cross-entry totals for quantity_produced.
+  // quantity_produced is the total needed (before stock subtraction);
+  // the actual craft shortfall is computed here from stock on hand.
   for (const inter of props.intermediates) {
     if (items.has(inter.item_id)) continue;
     const onHand = props.intermediateStock.get(inter.item_id) ?? 0;
-    const totalNeeded = inter.quantity_produced + onHand;
     items.set(inter.item_id, {
       item_id: inter.item_id,
       item_name: inter.item_name,
-      quantity: totalNeeded,
+      quantity: inter.quantity_produced,
       have: onHand,
-      toCraft: inter.quantity_produced,
+      toCraft: Math.max(0, inter.quantity_produced - onHand),
       isExpanded: true,
       intermediate: inter,
     });

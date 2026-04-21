@@ -459,9 +459,12 @@ async function resolveGroup(groupName: string) {
 
     let intermediateStock: Map<number, number> | undefined;
     if (expandItemIds.size > 0) {
-      intermediateStock = await store.queryItemStock(Array.from(expandItemIds));
+      const originalStock = await store.queryItemStock(Array.from(expandItemIds));
       if (gen !== resolveGeneration) return;
-      intermediateStockMap.value = intermediateStock;
+      intermediateStockMap.value = originalStock;
+      // Pass a mutable copy — the resolver consumes stock as entries are resolved
+      // so that the same stock isn't double-counted across entries.
+      intermediateStock = new Map(originalStock);
     } else {
       intermediateStockMap.value = new Map();
     }
@@ -553,9 +556,12 @@ async function resolveProject() {
 
     let intermediateStock: Map<number, number> | undefined;
     if (expandItemIds.size > 0) {
-      intermediateStock = await store.queryItemStock(Array.from(expandItemIds));
+      const originalStock = await store.queryItemStock(Array.from(expandItemIds));
       if (gen !== resolveGeneration) return;
-      intermediateStockMap.value = intermediateStock;
+      intermediateStockMap.value = originalStock;
+      // Pass a mutable copy — the resolver consumes stock as entries are resolved
+      // so that the same stock isn't double-counted across entries.
+      intermediateStock = new Map(originalStock);
     } else {
       intermediateStockMap.value = new Map();
     }

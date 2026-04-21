@@ -248,9 +248,14 @@ export const useCraftingStore = defineStore("crafting", () => {
           sourceRecipeId = sourceRecipe.id;
           sourceRecipeName = sourceRecipe.name;
 
-          // Subtract stock on hand — only craft the shortfall
+          // Subtract stock on hand — only craft the shortfall.
+          // Consume allocated stock so later entries don't double-count it.
           const onHand = intermediateStock?.get(ing.item_id) ?? 0;
           const toCraft = Math.max(0, expectedQty - onHand);
+          if (intermediateStock && onHand > 0) {
+            const consumed = Math.min(onHand, expectedQty);
+            intermediateStock.set(ing.item_id, onHand - consumed);
+          }
 
           // Recursively resolve (with cycle detection)
           visited.add(ing.item_id);
@@ -359,7 +364,6 @@ export const useCraftingStore = defineStore("crafting", () => {
           } else {
             continue; // Skip ingredients with no item and no keywords
           }
-
           const existing = flat.get(key);
           if (existing) {
             existing.quantity += ing.quantity_needed;
