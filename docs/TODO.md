@@ -48,9 +48,6 @@ These are investigated items kept for reference — the research is done but the
   - Sometimes sessions get wrong timestamps. Needs investigation into what causes the mismatch.
   - **Effort: Medium (investigation) | Impact: Medium (data accuracy)**
 
-- [x] Bug: survey analytics "fastest method" times wildly off
-  - Fixed: the `type_duration` CTE was joining `survey_uses` to `survey_sessions` directly, causing each session's duration to be counted once per use in that session (inflating times by the use count). Restructured to aggregate per-session first, then sum across sessions.
-
 - [ ] Changelog formatting improvement
   - Current in-app changelog rendering is poor. Needs better formatting/styling.
   - **Effort: Medium | Impact: Medium (polish)**
