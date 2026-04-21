@@ -248,6 +248,17 @@ pub enum PlayerEvent {
         effect_instance_id: u32,
         display_name: String,
     },
+    /// ProcessUpdateDescription — entity state change (garden plants, crafting items with timers, etc.)
+    EntityDescriptionUpdated {
+        timestamp: String,
+        entity_id: u32,
+        name: String,
+        description: String,
+        action: String,
+        action_type: String,
+        appearance: String,
+        flags: u32,
+    },
 }
 
 #[derive(serde::Serialize, Clone, Debug, PartialEq)]
@@ -1045,6 +1056,11 @@ impl PlayerEventParser {
         } else if line.contains("ProcessUpdateEffectName(") {
             self.flush_pending_deletes(&mut events);
             if let Some(ev) = self.parse_update_effect_name(line) {
+                events.push(ev);
+            }
+        } else if line.contains("ProcessUpdateDescription(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_update_description(line) {
                 events.push(ev);
             }
         } else if line.contains("ProcessSetCelestialInfo(") {
@@ -2280,6 +2296,64 @@ impl PlayerEventParser {
             entity_id,
             effect_instance_id,
             display_name,
+        })
+    }
+
+    /// ProcessUpdateDescription(entityId, "name", "description", "action", actionType, "appearance", flags)
+    fn parse_update_description(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let args_start =
+            line.find("ProcessUpdateDescription(")? + "ProcessUpdateDescription(".len();
+        let args = &line[args_start..];
+
+        // entityId is the first token before the first comma
+        let first_comma = args.find(',')?;
+        let entity_id: u32 = args[..first_comma].trim().parse().ok()?;
+
+        // Quoted strings: name(0), description(1), action(2), appearance(3)
+        let name = extract_quoted_string(args, 0)?;
+        let description = extract_quoted_string(args, 1)?;
+        let action = extract_quoted_string(args, 2)?;
+        let appearance = extract_quoted_string(args, 3)?;
+
+        // actionType is the unquoted token between the 3rd closing quote and 4th opening quote
+        // Find the end of the 3rd quoted string (action), then parse the token before the 4th quote
+        let action_end = {
+            let mut pos = 0;
+            for _ in 0..6 {
+                // skip 6 quote characters (3 pairs of open+close)
+                pos = args[pos..].find('"')? + pos + 1;
+            }
+            pos
+        };
+        let before_appearance = &args[action_end..];
+        let action_type = before_appearance
+            .split('"')
+            .next()?
+            .trim()
+            .trim_matches(',')
+            .trim()
+            .to_string();
+
+        // flags is the numeric value after the last closing quote
+        let last_quote = args.rfind('"')?;
+        let after_last = &args[last_quote + 1..];
+        let flags_str = after_last
+            .trim_start_matches(',')
+            .trim()
+            .trim_end_matches(')')
+            .trim();
+        let flags: u32 = flags_str.parse().unwrap_or(0);
+
+        Some(PlayerEvent::EntityDescriptionUpdated {
+            timestamp: ts,
+            entity_id,
+            name,
+            description,
+            action,
+            action_type,
+            appearance,
+            flags,
         })
     }
 
@@ -3829,6 +3903,63 @@ mod tests {
                 assert_eq!(display_name, "Performance Appreciation, Level 0");
             }
             _ => panic!("Expected EffectNameUpdated"),
+        }
+    }
+
+    #[test]
+    fn test_parse_update_description_gardening() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[21:12:31] LocalPlayer: ProcessUpdateDescription(9960026, "Ripe Onion", "This onion is fully grown and in peak condition.", "Harvest Onion", UseItem, "Onion(Scale=1)", 0)"#,
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::EntityDescriptionUpdated {
+                entity_id,
+                name,
+                description,
+                action,
+                action_type,
+                appearance,
+                flags,
+                ..
+            } => {
+                assert_eq!(*entity_id, 9960026);
+                assert_eq!(name, "Ripe Onion");
+                assert_eq!(
+                    description,
+                    "This onion is fully grown and in peak condition."
+                );
+                assert_eq!(action, "Harvest Onion");
+                assert_eq!(action_type, "UseItem");
+                assert_eq!(appearance, "Onion(Scale=1)");
+                assert_eq!(*flags, 0);
+            }
+            _ => panic!("Expected EntityDescriptionUpdated"),
+        }
+    }
+
+    #[test]
+    fn test_parse_update_description_crafting() {
+        let mut parser = PlayerEventParser::new();
+        let events = parser.process_line(
+            r#"[14:05:22] LocalPlayer: ProcessUpdateDescription(1601585, "Rising Simple Sourdough", "Proofing for 00:00:05", "Bake Simple Sourdough", UseItem, "Dough(Scale=0.36547)", 0)"#,
+        );
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            PlayerEvent::EntityDescriptionUpdated {
+                entity_id,
+                name,
+                description,
+                action,
+                ..
+            } => {
+                assert_eq!(*entity_id, 1601585);
+                assert_eq!(name, "Rising Simple Sourdough");
+                assert_eq!(description, "Proofing for 00:00:05");
+                assert_eq!(action, "Bake Simple Sourdough");
+            }
+            _ => panic!("Expected EntityDescriptionUpdated"),
         }
     }
 

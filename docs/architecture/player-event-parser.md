@@ -369,6 +369,7 @@ The parser currently handles 24 of ~60 known event types. See `docs/architecture
 | `ProcessAddEffects` | `EffectsAdded` | Effect IDs + login batch flag |
 | `ProcessRemoveEffects` | `EffectsRemoved` | Signal-only — opaque `System.Int32[]` |
 | `ProcessUpdateEffectName` | `EffectNameUpdated` | Display name for effect instance |
+| `ProcessUpdateDescription` | `EntityDescriptionUpdated` | Entity state change (garden plants, crafting timers, etc.) — includes name, description, action, action type, appearance with scale, flags |
 | `ProcessSetCelestialInfo` | `MoonPhaseChanged` | Server-authoritative moon phase (e.g. `WaxingCrescentMoon`) |
 | `ProcessGuildGeneralInfo` | `GuildInfoLoaded` | Guild id, name, MOTD on login |
 | `ProcessCompleteDirectedGoals` | `DirectedGoalsLoaded` | Completed directed goal IDs on login |

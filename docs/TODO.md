@@ -39,9 +39,8 @@ These are investigated items kept for reference — the research is done but the
   - Better organization, establish clearer structure for docs.
   - **Effort: Low | Impact: Low (maintainability)**
 
-- [ ] Parse ProcessUpdateDescription for entity state changes
-  - Fires for nearby entities changing state (garden plants, crafting items with timers, etc.). Format: `(entityId, "name", "description", "action", actionType, "appearance", flags)`. This is the foundation event for gardening tracker and crafting timers — parsing it in the event parser is the first step.
-  - **Effort: Low (parser only) | Impact: High (unblocks gardening + crafting features)**
+- [x] Parse ProcessUpdateDescription for entity state changes
+  - Added `EntityDescriptionUpdated` event to player event parser. Parses entity ID, name, description, action, action type, appearance (with scale), and flags. Foundation event for gardening tracker and crafting timer features.
 
 ---
 
