@@ -217,6 +217,11 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 38)?;
     }
 
+    if current_version < 39 {
+        migration_v39_teleportation_binds(conn)?;
+        super::record_migration(conn, 39)?;
+    }
+
     Ok(())
 }
 
@@ -2085,6 +2090,24 @@ fn migration_v38_self_milking(conn: &Connection) -> Result<()> {
          ALTER TABLE player_milking_log_new RENAME TO player_milking_log;
          CREATE INDEX idx_player_milking_char ON player_milking_log(character_name, server_name);
          CREATE INDEX idx_player_milking_other ON player_milking_log(character_name, server_name, other_player, direction);",
+    )?;
+    Ok(())
+}
+
+/// Migration V39: Teleportation bind locations parsed from SkillReport books.
+/// Stores primary/secondary bind pad locations and mushroom circle attunements.
+fn migration_v39_teleportation_binds(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS game_state_teleportation (
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            primary_bind TEXT,
+            secondary_bind TEXT,
+            mushroom_circle_1 TEXT,
+            mushroom_circle_2 TEXT,
+            last_updated TEXT NOT NULL,
+            PRIMARY KEY (character_name, server_name)
+        );"
     )?;
     Ok(())
 }

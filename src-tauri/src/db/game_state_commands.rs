@@ -1228,6 +1228,79 @@ pub fn get_attribute_extremes(
         .map_err(|e| format!("Attribute extremes row error: {e}"))
 }
 
+// ── Teleportation bind queries ───────────────────────────────────────────────
+
+#[derive(serde::Serialize)]
+pub struct TeleportationBinds {
+    pub primary_bind: Option<String>,
+    pub secondary_bind: Option<String>,
+    pub mushroom_circle_1: Option<String>,
+    pub mushroom_circle_2: Option<String>,
+    pub last_updated: Option<String>,
+}
+
+/// Get the player's known teleportation bind locations.
+#[tauri::command]
+pub async fn get_teleportation_binds(
+    character: String,
+    server: String,
+    db: State<'_, DbPool>,
+) -> Result<TeleportationBinds, String> {
+    let conn = db.get().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT primary_bind, secondary_bind, mushroom_circle_1, mushroom_circle_2, last_updated
+             FROM game_state_teleportation
+             WHERE character_name = ?1 AND server_name = ?2",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let result = stmt
+        .query_row(rusqlite::params![character, server], |row| {
+            Ok(TeleportationBinds {
+                primary_bind: row.get(0)?,
+                secondary_bind: row.get(1)?,
+                mushroom_circle_1: row.get(2)?,
+                mushroom_circle_2: row.get(3)?,
+                last_updated: row.get(4)?,
+            })
+        })
+        .ok();
+
+    Ok(result.unwrap_or(TeleportationBinds {
+        primary_bind: None,
+        secondary_bind: None,
+        mushroom_circle_1: None,
+        mushroom_circle_2: None,
+        last_updated: None,
+    }))
+}
+
+/// Manually set mushroom circle attunements (can't be parsed from logs).
+#[tauri::command]
+pub async fn set_mushroom_circles(
+    character: String,
+    server: String,
+    circle_1: Option<String>,
+    circle_2: Option<String>,
+    db: State<'_, DbPool>,
+) -> Result<(), String> {
+    let conn = db.get().map_err(|e| e.to_string())?;
+    let dt = chrono::Utc::now().to_rfc3339();
+    conn.execute(
+        "INSERT INTO game_state_teleportation
+            (character_name, server_name, mushroom_circle_1, mushroom_circle_2, last_updated)
+         VALUES (?1, ?2, ?3, ?4, ?5)
+         ON CONFLICT(character_name, server_name) DO UPDATE SET
+            mushroom_circle_1 = excluded.mushroom_circle_1,
+            mushroom_circle_2 = excluded.mushroom_circle_2,
+            last_updated = excluded.last_updated",
+        rusqlite::params![character, server, circle_1, circle_2, dt],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

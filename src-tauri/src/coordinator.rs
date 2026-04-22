@@ -741,6 +741,13 @@ impl DataIngestCoordinator {
                                 }
                             }
 
+                            // Auto-import teleportation bind locations.
+                            if book_type == "SkillReport"
+                                && content.contains("Primary Bind Location:")
+                            {
+                                self.ingest_teleportation_binds(content);
+                            }
+
                             // Parse structured stats from PlayerAge and Behavior Report
                             if book_type == "PlayerAge" || book_type == "HelpScreen" {
                                 self.ingest_report_stats(book_type, content);
@@ -1547,6 +1554,70 @@ impl DataIngestCoordinator {
         self.app_handle
             .emit("game-state-updated", vec!["milking"])
             .ok();
+    }
+
+    /// Parse teleportation bind locations from a "Skill Info" SkillReport book
+    /// and persist them to `game_state_teleportation`.
+    ///
+    /// Expected content format:
+    /// ```text
+    /// Teleportation Status:\n\n\n
+    /// Primary Bind Location: Red Wing Casino\n
+    /// Secondary Bind Location: Caves Beneath Gazluk\n
+    /// Last Used Location: Statehelm\n
+    /// Most Common Destination: Serbule\n
+    /// ```
+    fn ingest_teleportation_binds(&self, content: &str) {
+        let (character, server) = match self.active_character_server() {
+            Some(cs) => cs,
+            None => return,
+        };
+
+        let primary = Self::extract_bind_field(content, "Primary Bind Location:");
+        let secondary = Self::extract_bind_field(content, "Secondary Bind Location:");
+
+        let conn = match self.db_pool.get() {
+            Ok(c) => c,
+            Err(_) => return,
+        };
+
+        let dt = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO game_state_teleportation
+                (character_name, server_name, primary_bind, secondary_bind, last_updated)
+             VALUES (?1, ?2, ?3, ?4, ?5)
+             ON CONFLICT(character_name, server_name) DO UPDATE SET
+                primary_bind = excluded.primary_bind,
+                secondary_bind = excluded.secondary_bind,
+                last_updated = excluded.last_updated",
+            rusqlite::params![character, server, primary, secondary, dt],
+        )
+        .ok();
+
+        startup_log!(
+            "[coordinator] Teleportation binds updated: primary={:?}, secondary={:?}",
+            primary,
+            secondary
+        );
+        self.app_handle
+            .emit("game-state-updated", vec!["teleportation"])
+            .ok();
+    }
+
+    /// Extract a named field value from teleportation status text.
+    /// Returns `None` if the field is missing or has value "(none)".
+    fn extract_bind_field(content: &str, field: &str) -> Option<String> {
+        for line in content.split('\n') {
+            let trimmed = line.trim();
+            if let Some(rest) = trimmed.strip_prefix(field) {
+                let value = rest.trim();
+                if value.is_empty() || value == "(none)" {
+                    return None;
+                }
+                return Some(value.to_string());
+            }
+        }
+        None
     }
 
     /// Extract and persist a word of power from a "You discovered a word of power!" book.

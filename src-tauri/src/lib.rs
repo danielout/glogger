@@ -25,7 +25,9 @@ mod stall_year_resolver;
 mod survey;
 mod external_fetch;
 mod gst_manager;
+mod trip_router;
 mod watch_rules;
+mod zone_graph;
 
 use chrono::Local;
 use std::sync::{Arc, Mutex};
@@ -173,6 +175,8 @@ use db::game_state_commands::{
     get_computed_stats,
     get_attribute_extremes,
     get_player_milking_leaderboard,
+    get_teleportation_binds,
+    set_mushroom_circles,
 };
 use db::gourmand_commands::{
     export_text_file, get_all_foods, get_gourmand_eaten_foods, import_cooks_helper_file,
@@ -190,6 +194,7 @@ use db::player_commands::{
     log_event,
 };
 use replay::replay_dual_logs;
+use trip_router::plan_trip;
 use external_fetch::{fetch_github_releases, fetch_pg_news};
 use gst_manager::{gst_check_status, gst_download, gst_launch};
 use settings::{
@@ -643,6 +648,11 @@ pub fn run() {
             db::words_of_power_commands::get_words_of_power,
             db::words_of_power_commands::add_word_of_power,
             db::words_of_power_commands::delete_word_of_power,
+            // Teleportation binds
+            get_teleportation_binds,
+            set_mushroom_circles,
+            // Trip routing
+            plan_trip,
             // External content
             fetch_github_releases,
             fetch_pg_news,
