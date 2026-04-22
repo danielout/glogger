@@ -51,9 +51,39 @@ function getDisplayMode(): TimestampDisplayMode {
   return store.settings.timestampDisplayMode
 }
 
+/**
+ * Whether to render times in 24-hour format. Defaults to true.
+ */
+function use24HourTime(): boolean {
+  const store = useSettingsStore()
+  return store.settings.use24HourTime
+}
+
 /** Pad a number to 2 digits */
 function pad2(n: number): string {
   return String(n).padStart(2, '0')
+}
+
+/**
+ * Format "HH:MM" honoring the 12/24-hour setting.
+ * 24h → "14:30"; 12h → "2:30 PM".
+ */
+function formatHM(hours: number, minutes: number): string {
+  if (use24HourTime()) return `${pad2(hours)}:${pad2(minutes)}`
+  const period = hours >= 12 ? 'PM' : 'AM'
+  const h12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
+  return `${h12}:${pad2(minutes)} ${period}`
+}
+
+/**
+ * Format "HH:MM:SS" honoring the 12/24-hour setting.
+ * 24h → "14:30:00"; 12h → "2:30:00 PM".
+ */
+function formatHMS(hours: number, minutes: number, seconds: number): string {
+  if (use24HourTime()) return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}`
+  const period = hours >= 12 ? 'PM' : 'AM'
+  const h12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
+  return `${h12}:${pad2(minutes)}:${pad2(seconds)} ${period}`
 }
 
 /**
@@ -134,20 +164,20 @@ export function getTimezoneSuffix(): string {
 
 // ─── Granularity Formatters ──────────────────────────────────────
 
-/** Format a UTC timestamp as time: "14:30" */
+/** Format a UTC timestamp as time: "14:30" or "2:30 PM" */
 export function formatTimeShort(timestamp: string): string {
   const d = parseUtc(timestamp)
   if (isNaN(d.getTime())) return timestamp
   const t = toDisplayTime(d)
-  return `${pad2(t.hours)}:${pad2(t.minutes)}`
+  return formatHM(t.hours, t.minutes)
 }
 
-/** Format a UTC timestamp as time: "14:30:00" */
+/** Format a UTC timestamp as time: "14:30:00" or "2:30:00 PM" */
 export function formatTimeFull(timestamp: string): string {
   const d = parseUtc(timestamp)
   if (isNaN(d.getTime())) return timestamp
   const t = toDisplayTime(d)
-  return `${pad2(t.hours)}:${pad2(t.minutes)}:${pad2(t.seconds)}`
+  return formatHMS(t.hours, t.minutes, t.seconds)
 }
 
 /** Format a UTC timestamp as short date: "Mar 26" */
@@ -166,20 +196,20 @@ export function formatDate(timestamp: string): string {
   return `${t.year}-${pad2(t.month + 1)}-${pad2(t.day)}`
 }
 
-/** Format a UTC timestamp as short date+time: "Mar 26, 14:30" */
+/** Format a UTC timestamp as short date+time: "Mar 26, 14:30" or "Mar 26, 2:30 PM" */
 export function formatDateTimeShort(timestamp: string): string {
   const d = parseUtc(timestamp)
   if (isNaN(d.getTime())) return timestamp
   const t = toDisplayTime(d)
-  return `${MONTHS_SHORT[t.month]} ${t.day}, ${pad2(t.hours)}:${pad2(t.minutes)}`
+  return `${MONTHS_SHORT[t.month]} ${t.day}, ${formatHM(t.hours, t.minutes)}`
 }
 
-/** Format a UTC timestamp as full date+time: "2026-03-26 14:30:00" */
+/** Format a UTC timestamp as full date+time: "2026-03-26 14:30:00" or "2026-03-26 2:30:00 PM" */
 export function formatDateTimeFull(timestamp: string): string {
   const d = parseUtc(timestamp)
   if (isNaN(d.getTime())) return timestamp
   const t = toDisplayTime(d)
-  return `${t.year}-${pad2(t.month + 1)}-${pad2(t.day)} ${pad2(t.hours)}:${pad2(t.minutes)}:${pad2(t.seconds)}`
+  return `${t.year}-${pad2(t.month + 1)}-${pad2(t.day)} ${formatHMS(t.hours, t.minutes, t.seconds)}`
 }
 
 /** Format a UTC timestamp as relative time: "2m ago", "3h ago", "Yesterday", "Mar 26" */

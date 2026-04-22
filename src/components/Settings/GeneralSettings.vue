@@ -100,6 +100,28 @@
           </span>
         </p>
       </div>
+
+      <div>
+        <label class="block text-text-secondary mb-2 text-sm">Hour format</label>
+        <div class="flex gap-2">
+          <button
+            v-for="option in hourFormatOptions"
+            :key="String(option.value)"
+            @click="handleHourFormatChange(option.value)"
+            :class="[
+              'px-3 py-1.5 rounded text-sm border transition-colors',
+              use24Hour === option.value
+                ? 'bg-accent/20 border-accent text-accent'
+                : 'border-border text-text-secondary hover:border-text-muted'
+            ]">
+            {{ option.label }}
+          </button>
+        </div>
+        <p class="mt-2 text-text-muted text-xs leading-relaxed">
+          <span v-if="use24Hour">Times are shown in 24-hour format (e.g. 14:30).</span>
+          <span v-else>Times are shown in 12-hour format with AM/PM (e.g. 2:30 PM).</span>
+        </p>
+      </div>
     </div>
 
     <div class="settings-section">
@@ -136,11 +158,17 @@ const autoTailChat = ref(settingsStore.settings.autoTailChat);
 const autoTailPlayerLog = ref(settingsStore.settings.autoTailPlayerLog);
 const excludeMaxEnchanted = ref(settingsStore.settings.excludeMaxEnchantedRecipes);
 const timestampMode = ref(settingsStore.settings.timestampDisplayMode);
+const use24Hour = ref(settingsStore.settings.use24HourTime);
 
 const timestampOptions = [
   { value: 'local' as const, label: 'Local Time' },
   { value: 'server' as const, label: 'Server Time' },
   { value: 'utc' as const, label: 'UTC' },
+];
+
+const hourFormatOptions = [
+  { value: true, label: '24-hour' },
+  { value: false, label: '12-hour' },
 ];
 
 const hasServerOffset = computed(() => {
@@ -186,6 +214,11 @@ watch(
   (val) => { timestampMode.value = val; }
 );
 
+watch(
+  () => settingsStore.settings.use24HourTime,
+  (val) => { use24Hour.value = val; }
+);
+
 async function browseGameDataFolder() {
   const selected = await open({
     directory: true,
@@ -221,5 +254,10 @@ function handleExcludeMaxEnchantedToggle() {
 function handleTimestampModeChange(mode: 'local' | 'server' | 'utc') {
   timestampMode.value = mode;
   settingsStore.updateSettings({ timestampDisplayMode: mode });
+}
+
+function handleHourFormatChange(value: boolean) {
+  use24Hour.value = value;
+  settingsStore.updateSettings({ use24HourTime: value });
 }
 </script>

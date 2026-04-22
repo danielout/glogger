@@ -149,6 +149,11 @@ pub struct AppSettings {
     /// first-use detection. When false, sessions only start manually.
     #[serde(default = "default_true")]
     pub auto_start_survey_sessions: bool,
+
+    /// When true (default), display times in 24-hour format (e.g. "14:30").
+    /// When false, use 12-hour format with AM/PM (e.g. "2:30 PM").
+    #[serde(default = "default_true")]
+    pub use_24_hour_time: bool,
 }
 
 fn default_timestamp_display_mode() -> String {
@@ -290,6 +295,7 @@ impl Default for AppSettings {
             timezone_offset_seconds: None,
             manual_timezone_override: None,
             auto_start_survey_sessions: true,
+            use_24_hour_time: true,
         }
     }
 }

@@ -35,7 +35,14 @@
           <span
             v-for="code in group.codes"
             :key="code"
-            class="font-mono text-xs text-accent-gold bg-surface-2 px-1.5 py-0.5 rounded">
+            class="font-mono text-xs px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+            :class="
+              copiedCode === code
+                ? 'bg-green-500/20 text-green-400'
+                : 'bg-surface-2 text-accent-gold hover:bg-surface-3'
+            "
+            title="Click to copy"
+            @click="copyCode(code)">
             {{ code }}
           </span>
         </div>
@@ -47,7 +54,11 @@
     </div>
 
     <div class="text-xs text-text-dim">
-      {{ totalCodes }} codes across {{ groupedResults.length }} destinations. Codes last verified March 2025.
+      <span v-if="copiedCode" class="text-green-400">Copied {{ copiedCode }} to clipboard</span>
+      <span v-else
+        >{{ totalCodes }} codes across {{ groupedResults.length }} destinations. Codes last verified
+        March 2025.</span
+      >
     </div>
   </div>
 </template>
@@ -57,6 +68,21 @@ import { ref, computed } from 'vue'
 
 const search = ref('')
 const selectedZone = ref<string | null>(null)
+const copiedCode = ref('')
+let copiedTimeout: ReturnType<typeof setTimeout> | null = null
+
+async function copyCode(code: string) {
+  try {
+    await navigator.clipboard.writeText(code)
+    copiedCode.value = code
+    if (copiedTimeout) clearTimeout(copiedTimeout)
+    copiedTimeout = setTimeout(() => {
+      copiedCode.value = ''
+    }, 2000)
+  } catch {
+    // Clipboard may not be available
+  }
+}
 
 interface TeleportCode {
   code: string
