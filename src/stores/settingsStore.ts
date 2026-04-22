@@ -36,6 +36,7 @@ export interface AppSettings {
   timezoneOffsetSeconds: number | null;
   manualTimezoneOverride: number | null;
   autoStartSurveySessions: boolean;
+  use24HourTime: boolean;
   viewPreferences: Record<string, Record<string, unknown>>;
 }
 
@@ -73,6 +74,7 @@ interface BackendSettings {
   timezone_offset_seconds: number | null;
   manual_timezone_override: number | null;
   auto_start_survey_sessions: boolean;
+  use_24_hour_time: boolean;
   view_preferences: Record<string, Record<string, unknown>>;
 }
 
@@ -111,6 +113,7 @@ function toBackendSettings(settings: AppSettings): BackendSettings {
     timezone_offset_seconds: settings.timezoneOffsetSeconds,
     manual_timezone_override: settings.manualTimezoneOverride,
     auto_start_survey_sessions: settings.autoStartSurveySessions,
+    use_24_hour_time: settings.use24HourTime,
     view_preferences: settings.viewPreferences,
   };
 }
@@ -154,6 +157,7 @@ function fromBackendSettings(settings: BackendSettings): AppSettings {
     timezoneOffsetSeconds: settings.timezone_offset_seconds ?? null,
     manualTimezoneOverride: settings.manual_timezone_override ?? null,
     autoStartSurveySessions: settings.auto_start_survey_sessions ?? true,
+    use24HourTime: settings.use_24_hour_time ?? true,
     viewPreferences: settings.view_preferences ?? {},
   };
 }
@@ -193,6 +197,7 @@ function getDefaultSettings(): AppSettings {
     timezoneOffsetSeconds: null,
     manualTimezoneOverride: null,
     autoStartSurveySessions: true,
+    use24HourTime: true,
     viewPreferences: {},
   };
 }
