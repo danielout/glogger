@@ -161,3 +161,11 @@ CREATE TABLE brewing_discoveries (
 ### Auto-Scan Integration
 
 The brewery store exposes `onInventoryImported(character)` which is called from `characterStore` after any non-duplicate inventory import (manual, polling, or startup). Uses dynamic `import()` so the brewery store module is only loaded if the user has previously visited the Brewery tab. Scan runs in the background and silently updates discoveries.
+
+## Not Yet Implemented
+
+Remaining phases from the brewing plan (`docs/plans/brewing-helper.md`):
+
+- **Aging tracker** (Phase 5) — track wine use-count aging and liquor aged/un-aged transitions across inventory snapshots over time
+- **Live brew tracking** (Phase 6) — detect active brewing sessions from Player.log events (XP gains, recipe completions)
+- **Brew session summary** (Phase 7) — session view showing brews completed, XP earned, new discoveries during a session

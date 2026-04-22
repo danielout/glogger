@@ -29,6 +29,8 @@ Core structure, patterns, and standards used across the app.
 - [ux-composables.md](architecture/ux-composables.md) — UX composables: useKeyboard (nav/hotkeys), useToast (notifications), useViewPrefs (persistent screen preferences).
 - [toast-system.md](architecture/toast-system.md) — Toast notification system: store, composable, container component, types, and usage guidelines.
 - [time.md](architecture/time.md) — Time & timestamp standards: UTC storage, timezone offset detection, display modes, formatting API, and rules.
+- [pipeline-structure.md](architecture/pipeline-structure.md) — Data pipeline architecture: CDN ingestion, player data flow, 4-bucket game state scoping, coordinator design.
+- [capture-analysis-results.md](architecture/capture-analysis-results.md) — Devtools capture analysis: observed log events, parseable data formats, and feature opportunities identified from live gameplay captures.
 
 ## Features
 
@@ -39,6 +41,7 @@ Cross-cutting feature documentation not tied to a single screen.
 - [advanced-settings.md](features/advanced-settings.md) — Advanced Settings tab: log reparsing, database statistics, and diagnostics.
 - [dev-mode.md](features/dev-mode.md) — Dev Mode: toggle, dev panel window (game state, component showcase, testing helpers), hidden settings.
 - [update-notifications.md](features/update-notifications.md) — Update notifications: GitHub release check, bottom bar indicator, toast alert.
+- [trip-routing.md](features/trip-routing.md) — Trip routing: multi-zone route planner with zone graph, teleport-aware solver, bind location parsing.
 
 *Feature docs that were specific to a single screen have been merged into the corresponding screen docs below (character import → [character-stats](features/screens/character/character-stats.md), inventory import → [inventory-snapshots](features/screens/inventory/inventory-snapshots.md), farming → [economics-farming](features/screens/economics/economics-farming.md), surveying → [economics-surveying](features/screens/economics/economics-surveying.md), storage vaults → [inventory-vaults](features/screens/inventory/inventory-vaults.md), data browser → [data-browser](features/screens/data-browser.md), dashboard → [dashboard](features/screens/dashboard.md), gourmand → [character-gourmand](features/screens/character/character-gourmand.md)).*
 
@@ -62,6 +65,7 @@ Per-screen documentation organized by view.
   - [widget-watchword-alerts.md](features/screens/dashboard/widget-watchword-alerts.md) — Watchword Alerts widget: recent match feed.
   - [widget-death-tracker.md](features/screens/dashboard/widget-death-tracker.md) — Death Tracker widget: recent deaths, rez tracking, top rezzers.
   - [widget-words-of-power.md](features/screens/dashboard/widget-words-of-power.md) — Words of Power widget: auto-captured crafted words with age counters and click-to-copy.
+  - [widget-trip-planner.md](features/screens/dashboard/widget-trip-planner.md) — Trip Planner widget: zone-to-zone route planner with teleport-aware solver.
 
 ### Character
 - [character.md](features/screens/character.md) — Character screen: architecture, component hierarchy, data sources.
@@ -91,6 +95,7 @@ Per-screen documentation organized by view.
   - [crafting-cookshelper.md](features/screens/crafting/crafting-cookshelper.md) — Cook's Helper tab.
   - [crafting-skills.md](features/screens/crafting/crafting-skills.md) — Skills tab: per-skill summaries with charts and recipe lists.
   - [crafting-dynamic-items.md](features/screens/crafting/crafting-dynamic-items.md) — Dynamic Items tab: configure which items are allowed for wildcard ingredient slots.
+  - [crafting-brewery.md](features/screens/crafting/crafting-brewery.md) — Brewery tab: brewing discovery journal, per-player effect mapping, ingredient matrix.
 
 ### Economics
 - [economics.md](features/screens/economics.md) — Economics screen: architecture, component hierarchy, market/farming/surveying.
@@ -130,13 +135,23 @@ Per-screen documentation organized by view.
 
 ## Plans
 
-- [dashboard-improvements.md](plans/dashboard-improvements.md) — Dashboard cards, layout polish, and new tracker features.
-- [quick-reference-system.md](plans/quick-reference-system.md) — Reference Shelf: pinnable entity tooltips in a bottom tray (Phase 1 complete).
-- [unified-event-stream.md](plans/unified-event-stream.md) — Unifying Player.log and Chat.log into a single event stream (Phase 0+1 complete, Phase 2+ remaining).
-- [stall-tracker-implementation.md](plans/stall-tracker-implementation.md) — Stall Tracker build plan: phased Rust + Vue implementation guide with ASCII previews for every screen and modal.
-- [item-provenance-overhaul.md](plans/item-provenance-overhaul.md) — Attribute every inventory gain to a source context (mining, survey, corpse, vendor, etc.); use chat `[Status]` as authoritative quantity.
-- [survey-tracker-rewrite.md](plans/survey-tracker-rewrite.md) — Phase 5 implementation plan: nuke-and-pave the survey tracker on top of the provenance pipeline; new `src-tauri/src/survey/` module, schema v26, A3 stitching.
-- [projects-performance.md](plans/projects-performance.md) — Crafting projects performance: cascading re-resolve elimination, caching, batch queries.
+Active implementation plans and feature designs.
+
+- [brewing-helper.md](plans/brewing-helper.md) — Brewery tab: phases 1-4 implemented, phases 5-7 (aging, live tracking, session summary) remaining.
+- [quest-tracking.md](plans/quest-tracking.md) — Quest tracking system: quest event parsing, repeatable cooldowns, work orders, Statehelm quests, active quest browser.
+- [interactive-maps.md](plans/interactive-maps.md) — Interactive zone maps with NPC locations, landmarks, and live game state overlays.
+- [owned-quantity-tracking.md](plans/owned-quantity-tracking.md) — Track item/currency quantity changes over time with historical trend data.
+
+## Archive
+
+Completed plans are moved to `archive/plans/` for reference. These features are fully implemented with corresponding feature/screen docs.
+
+- [stall-tracker-implementation.md](archive/plans/stall-tracker-implementation.md)
+- [survey-tracker-rewrite.md](archive/plans/survey-tracker-rewrite.md)
+- [npc-tracking-improvements.md](archive/plans/npc-tracking-improvements.md)
+- [item-provenance-overhaul.md](archive/plans/item-provenance-overhaul.md)
+- [stats-improvements.md](archive/plans/stats-improvements.md)
+- [projects-performance.md](archive/plans/projects-performance.md) — top 3 perf fixes landed; remaining UX items moved to TODO.md.
 
 ## Scripts
 

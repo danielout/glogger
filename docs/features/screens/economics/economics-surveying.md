@@ -3,8 +3,8 @@
 Survey tracker built on the provenance pipeline. Three sub-tabs (Session, Session History, Analytics), all read-only views over `survey_sessions` + `survey_uses` + `item_transactions`. Backend owns session state; the frontend is a thin reader.
 
 For the full design rationale and history of the rewrite, see:
-- [item-provenance-overhaul.md](../../../plans/item-provenance-overhaul.md) — parent plan
-- [survey-tracker-rewrite.md](../../../plans/survey-tracker-rewrite.md) — Phase 5 plan (complete)
+- [item-provenance-overhaul.md](../../../archive/plans/item-provenance-overhaul.md) — parent plan (completed)
+- [survey-tracker-rewrite.md](../../../archive/plans/survey-tracker-rewrite.md) — Phase 5 plan (completed)
 - [survey-mechanics.md](../../../architecture/survey-mechanics.md) — Basic / Motherlode / Multihit behavior
 
 ## Architecture

@@ -206,7 +206,7 @@ The parser reconstructs what the player is currently *doing* at any point in the
 
 **Overlapping contexts are expected.** A common real-world sequence is: mining is interrupted by combat, the player kills the attacker, then searches the corpse — all before the mining delay-loop times out. Both contexts coexist on the stack during the overlap. Future attribution logic will decide which (if either) to credit for a given gain event.
 
-**Phase 1 scope**: the stack is built and exposed via `active_activities()` for tests/inspection, but no `PlayerEvent` is tagged with provenance yet. That's Phase 2. See [docs/plans/item-provenance-overhaul.md](../plans/item-provenance-overhaul.md).
+**Phase 1 scope**: the stack is built and exposed via `active_activities()` for tests/inspection, but no `PlayerEvent` is tagged with provenance yet. That's Phase 2. See [item-provenance-overhaul.md](../archive/plans/item-provenance-overhaul.md) (completed).
 
 ### Chat-primary Quantity Seeding
 
