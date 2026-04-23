@@ -24,6 +24,7 @@ Core structure, patterns, and standards used across the app.
 - [implementation-checklist.md](architecture/implementation-checklist.md) — Step-by-step checklists for common dev tasks (new parsers, DB tables, CDN fields, commands).
 - [startup-sequence.md](architecture/startup-sequence.md) — Full startup sequence: backend init, frontend phases, game data loading, and readiness audit.
 - [styling.md](architecture/styling.md) — CSS architecture using Tailwind v4, theme tokens, and component classes.
+- [color-standards.md](architecture/color-standards.md) — Color usage audit: current state, inconsistencies, proposed semantic token palette, migration plan.
 - [layout-patterns.md](architecture/layout-patterns.md) — Layout system: v-show navigation, TabBar, EmptyState, PaneLayout/SidePane, pane layout patterns.
 - [ux-standards.md](architecture/ux-standards.md) — UX/UI standards: desktop-first design principles, keyboard navigation, layout rules, state persistence, empty states, toasts, visual consistency.
 - [ux-composables.md](architecture/ux-composables.md) — UX composables: useKeyboard (nav/hotkeys), useToast (notifications), useViewPrefs (persistent screen preferences).
@@ -31,6 +32,7 @@ Core structure, patterns, and standards used across the app.
 - [time.md](architecture/time.md) — Time & timestamp standards: UTC storage, timezone offset detection, display modes, formatting API, and rules.
 - [pipeline-structure.md](architecture/pipeline-structure.md) — Data pipeline architecture: CDN ingestion, player data flow, 4-bucket game state scoping, coordinator design.
 - [capture-analysis-results.md](architecture/capture-analysis-results.md) — Devtools capture analysis: observed log events, parseable data formats, and feature opportunities identified from live gameplay captures.
+- [widget-sizing-audit.md](architecture/widget-sizing-audit.md) — Dashboard widget sizing audit: per-widget height inventory, grid system analysis, inconsistencies, and proposed standards.
 
 ## Features
 

@@ -22,14 +22,12 @@ These are investigated items kept for reference — the research is done but the
 
 - [ ] Bug: instant-snack foods missing from gourmand report
   - They used to show up and now they're gone. Static analysis of the code path (CDN parsing, DB query, store filtering, UI display) shows everything is wired correctly. Most likely cause: `parse_food_desc()` in `cdn_persistence.rs` silently skips items where parsing fails — items with unparseable `FoodDesc` are logged but never inserted into the `foods` table. Could also be a whitespace/encoding issue in CDN data (e.g. non-breaking space causing the split to miss). Needs runtime debugging — query the `foods` table directly to see if instant-snack rows exist at all.
+    - the gourmand completeness bars in the left panel show "0/0" for instant-snacks, so seems like we aren't loading them at all. i bet a couple debug lines can root cause this pretty quickly. seems like it all probably works still _if_ we solve why we aren't finding any in the CDN.
   - **Effort: Low | Impact: Medium (data correctness — entire food category invisible)**
 
 - [ ] Bug: rez counter not working
   - Should be counting but isn't. The full pipeline (parser → coordinator → DB → store → widget) looks correctly wired. **Most likely cause:** serde enum case mismatch. `ChatResuscitateEvent` uses `#[serde(tag = "kind")]` but has no `rename_all` directive — if Tauri or middleware applies snake_case serialization, the variant serializes as `"resuscitated"` instead of `"Resuscitated"`, causing the frontend `payload.kind === 'Resuscitated'` check to silently fail. DB persistence works independently (inserts directly), so the bug is likely live-event-only. Fix is probably 1 line: add `#[serde(rename_all = "PascalCase")]` or lowercase the frontend check.
   - **Effort: Low | Impact: Low**
-
-- [x] Clean up documents folder structure
-  - Completed: archived finished plans, moved research/architecture docs to proper folders, updated index.md with Plans and Archive sections, sorted TODO items.
 
 - [ ] Crafting projects: loading skeleton/shimmer states for material tables
   - When `resolvingAll` is true, show skeleton rows instead of empty space. From archived projects-performance plan (top 3 perf fixes already landed).
