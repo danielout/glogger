@@ -47,84 +47,48 @@
 
     <!-- Table -->
     <div class="flex-1 min-h-0 overflow-auto border border-border-default rounded">
-      <table class="w-full text-xs">
-        <thead class="sticky top-0 bg-surface-elevated z-10">
-          <tr class="text-text-secondary">
-            <th class="px-2 py-1.5 text-center w-8"></th>
-            <th
-              class="px-2 py-1.5 text-left cursor-pointer hover:text-text-primary"
-              @click="toggleSort('event_at')">
-              DATE {{ sortIndicator('event_at') }}
-            </th>
-            <th
-              class="px-2 py-1.5 text-left cursor-pointer hover:text-text-primary"
-              @click="toggleSort('player')">
-              BUYER {{ sortIndicator('player') }}
-            </th>
-            <th
-              class="px-2 py-1.5 text-left cursor-pointer hover:text-text-primary"
-              @click="toggleSort('item')">
-              ITEM {{ sortIndicator('item') }}
-            </th>
-            <th
-              class="px-2 py-1.5 text-right cursor-pointer hover:text-text-primary"
-              @click="toggleSort('quantity')">
-              QTY {{ sortIndicator('quantity') }}
-            </th>
-            <th
-              class="px-2 py-1.5 text-right cursor-pointer hover:text-text-primary"
-              @click="toggleSort('price_unit')">
-              UNIT {{ sortIndicator('price_unit') }}
-            </th>
-            <th
-              class="px-2 py-1.5 text-right cursor-pointer hover:text-text-primary"
-              @click="toggleSort('price_total')">
-              TOTAL {{ sortIndicator('price_total') }}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="row in rows"
-            :key="row.id"
-            class="border-t border-border-default/40 hover:bg-surface-hover"
-            :class="row.ignored ? 'opacity-35' : ''">
-            <td class="px-2 py-1 text-center">
-              <button
-                type="button"
-                class="text-text-secondary hover:text-text-primary"
-                :title="row.ignored ? 'Click to un-mute' : 'Click to mute (excludes from stats)'"
-                @click="handleToggleIgnored(row)">
-                {{ row.ignored ? '○' : '⊘' }}
-              </button>
-            </td>
-            <td class="px-2 py-1 text-text-secondary whitespace-nowrap">
-              {{ row.event_timestamp }}
-            </td>
-            <td class="px-2 py-1 text-entity-player">{{ row.player }}</td>
-            <td class="px-2 py-1">
-              <ItemInline
-                v-if="row.item"
-                :reference="row.item" />
-              <span
-                v-else
-                class="text-text-secondary">—</span>
-            </td>
-            <td class="px-2 py-1 text-right tabular-nums">{{ row.quantity }}</td>
-            <td class="px-2 py-1 text-right tabular-nums">{{ formatPrice(row.price_unit) }}</td>
-            <td class="px-2 py-1 text-right text-accent-gold tabular-nums">
-              {{ formatPrice(row.price_total) }}
-            </td>
-          </tr>
-          <tr v-if="rows.length === 0 && !loading">
-            <td
-              colspan="7"
-              class="px-2 py-8 text-center text-text-secondary">
-              No sales match the current filters.
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <DataTable
+        :columns="columns"
+        :rows="(rows as unknown as Record<string, unknown>[])"
+        :sort-key="displaySortKey"
+        :sort-dir="sortDir"
+        :loading="loading"
+        :hoverable="true"
+        :sticky-header="true"
+        compact
+        empty-text="No sales match the current filters."
+        :row-class="rowClassFn"
+        @sort="handleSort">
+        <template #cell-ignored="{ row }">
+          <button
+            type="button"
+            class="text-text-secondary hover:text-text-primary"
+            :title="row.ignored ? 'Click to un-mute' : 'Click to mute (excludes from stats)'"
+            @click="handleToggleIgnored(row as unknown as StallEvent)">
+            {{ row.ignored ? '○' : '⊘' }}
+          </button>
+        </template>
+        <template #cell-event_timestamp="{ value }">
+          <span class="text-text-secondary whitespace-nowrap">{{ value }}</span>
+        </template>
+        <template #cell-player="{ value }">
+          <span class="text-entity-player">{{ value }}</span>
+        </template>
+        <template #cell-item="{ value }">
+          <ItemInline
+            v-if="value"
+            :reference="(value as string)" />
+          <span
+            v-else
+            class="text-text-secondary">—</span>
+        </template>
+        <template #cell-price_unit="{ value }">
+          {{ formatPrice(value as number | null) }}
+        </template>
+        <template #cell-price_total="{ value }">
+          <span class="text-accent-gold">{{ formatPrice(value as number | null) }}</span>
+        </template>
+      </DataTable>
     </div>
 
     <!-- Load more -->
@@ -155,6 +119,7 @@ import { confirm } from '@tauri-apps/plugin-dialog'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
 import DatePicker from '../Shared/DatePicker.vue'
+import DataTable from '../Shared/DataTable.vue'
 import ItemInline from '../Shared/Item/ItemInline.vue'
 import StatCard from './StatCard.vue'
 import type { StallEvent, StallEventsPage, StallEventsParams } from '../../types/stallTracker'
@@ -162,6 +127,20 @@ import type { StallEvent, StallEventsPage, StallEventsParams } from '../../types
 const store = useStallTrackerStore()
 
 const PAGE_SIZE = 500
+
+const columns = [
+  { key: 'ignored', label: '', sortable: false, align: 'center' as const, width: '2rem' },
+  { key: 'event_timestamp', label: 'DATE', sortable: true },
+  { key: 'player', label: 'BUYER', sortable: true },
+  { key: 'item', label: 'ITEM', sortable: true },
+  { key: 'quantity', label: 'QTY', sortable: true, numeric: true },
+  { key: 'price_unit', label: 'UNIT', sortable: true, numeric: true },
+  { key: 'price_total', label: 'TOTAL', sortable: true, numeric: true },
+]
+
+// DataTable column keys differ from backend sort keys in one case.
+const toBackendKey: Record<string, string> = { event_timestamp: 'event_at' }
+const toDisplayKey: Record<string, string> = { event_at: 'event_timestamp' }
 
 const rows = ref<StallEvent[]>([])
 const totalCount = ref(0)
@@ -176,6 +155,8 @@ const filterItem = ref<string | null>(null)
 const sortBy = ref<string>('event_at')
 const sortDir = ref<'asc' | 'desc'>('desc')
 
+const displaySortKey = computed(() => toDisplayKey[sortBy.value] ?? sortBy.value)
+
 // In-flight request token: every reload bumps it. Stale loadMore/reload
 // responses (e.g. user clicked a sort header before the previous query
 // returned) check the token and discard themselves rather than clobbering
@@ -186,19 +167,13 @@ const hasActiveFilters = computed(
   () => !!(filterDateFrom.value || filterDateTo.value || filterBuyer.value || filterItem.value),
 )
 
-function sortIndicator(col: string): string {
-  if (sortBy.value !== col) return ''
-  return sortDir.value === 'asc' ? '▲' : '▼'
+function rowClassFn(row: Record<string, unknown>): string {
+  return (row as unknown as StallEvent).ignored ? 'opacity-35' : ''
 }
 
-function toggleSort(col: string) {
-  if (sortBy.value === col) {
-    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
-  } else {
-    sortBy.value = col
-    // Numeric/date columns default desc, text defaults asc.
-    sortDir.value = col === 'player' || col === 'item' ? 'asc' : 'desc'
-  }
+function handleSort(payload: { key: string; dir: 'asc' | 'desc' }) {
+  sortBy.value = toBackendKey[payload.key] ?? payload.key
+  sortDir.value = payload.dir
   void reload()
 }
 

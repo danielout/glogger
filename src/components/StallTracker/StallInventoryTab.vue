@@ -38,87 +38,48 @@
 
     <!-- In-stock table -->
     <div class="flex-1 min-h-0 overflow-auto border border-border-default rounded">
-      <table class="w-full text-xs">
-        <thead class="sticky top-0 bg-surface-elevated z-10">
-          <tr class="text-text-secondary">
-            <th
-              class="px-2 py-1.5 text-left cursor-pointer hover:text-text-primary"
-              @click="toggleSort('item')">
-              ITEM {{ sortIndicator('item') }}
-            </th>
-            <th
-              class="px-2 py-1.5 text-right cursor-pointer hover:text-text-primary"
-              @click="toggleSort('quantity')">
-              QTY {{ sortIndicator('quantity') }}
-            </th>
-            <th class="px-2 py-1.5 text-right">PRICE</th>
-            <th
-              class="px-2 py-1.5 text-right cursor-pointer hover:text-text-primary"
-              @click="toggleSort('estimated_value')">
-              EST. VALUE {{ sortIndicator('estimated_value') }}
-            </th>
-            <th
-              class="px-2 py-1.5 text-right cursor-pointer hover:text-text-primary"
-              @click="toggleSort('period_sold')">
-              SOLD {{ sortIndicator('period_sold') }}
-            </th>
-            <th
-              class="px-2 py-1.5 text-right cursor-pointer hover:text-text-primary"
-              @click="toggleSort('avg_per_day')">
-              AVG/DAY {{ sortIndicator('avg_per_day') }}
-            </th>
-            <th
-              class="px-2 py-1.5 text-right cursor-pointer hover:text-text-primary"
-              @click="toggleSort('last_activity_at')">
-              LAST {{ sortIndicator('last_activity_at') }}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="item in sortedInStockItems"
-            :key="item.item"
-            class="border-t border-border-default/40 hover:bg-surface-hover">
-            <td class="px-2 py-1">
-              <ItemInline :reference="item.item" />
-            </td>
-            <td class="px-2 py-1 text-right tabular-nums">{{ item.quantity }}</td>
-            <td class="px-2 py-1 text-right">
-              <span v-if="item.price_tiers.length === 1">
-                {{ formatPriceTier(item.price_tiers[0]) }}
-              </span>
-              <span
-                v-else-if="item.price_tiers.length > 1"
-                class="flex flex-col items-end gap-0.5">
-                <span
-                  v-for="(tier, idx) in item.price_tiers"
-                  :key="idx"
-                  class="text-xs">
-                  {{ tier.qty }}&times;{{ formatPriceTier(tier) }}
-                </span>
-              </span>
-              <span
-                v-else
-                class="text-text-secondary">—</span>
-            </td>
-            <td class="px-2 py-1 text-right text-accent-gold tabular-nums">
-              {{ formatGold(item.estimated_value) }}
-            </td>
-            <td class="px-2 py-1 text-right tabular-nums">{{ item.period_sold }}</td>
-            <td class="px-2 py-1 text-right tabular-nums">{{ item.avg_per_day.toFixed(1) }}</td>
-            <td class="px-2 py-1 text-right text-text-secondary whitespace-nowrap">
-              {{ formatShortDate(item.last_activity_at) }}
-            </td>
-          </tr>
-          <tr v-if="inStockItems.length === 0 && !loading">
-            <td
-              colspan="7"
-              class="px-2 py-8 text-center text-text-secondary">
-              No items currently in stock.
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <DataTable
+        :columns="inStockColumns"
+        :rows="(sortedInStockItems as unknown as Record<string, unknown>[])"
+        :sort-key="sortBy"
+        :sort-dir="sortDir"
+        :loading="loading"
+        :hoverable="true"
+        :sticky-header="true"
+        compact
+        empty-text="No items currently in stock."
+        @sort="handleInStockSort">
+        <template #cell-item="{ value }">
+          <ItemInline :reference="(value as string)" />
+        </template>
+        <template #cell-price="{ row }">
+          <span v-if="(row as unknown as InventoryItem).price_tiers.length === 1">
+            {{ formatPriceTier((row as unknown as InventoryItem).price_tiers[0]) }}
+          </span>
+          <span
+            v-else-if="(row as unknown as InventoryItem).price_tiers.length > 1"
+            class="flex flex-col items-end gap-0.5">
+            <span
+              v-for="(tier, idx) in (row as unknown as InventoryItem).price_tiers"
+              :key="idx"
+              class="text-[11px]">
+              {{ tier.qty }}&times;{{ formatPriceTier(tier) }}
+            </span>
+          </span>
+          <span
+            v-else
+            class="text-text-secondary">—</span>
+        </template>
+        <template #cell-estimated_value="{ value }">
+          <span class="text-accent-gold">{{ formatGold(value as number) }}</span>
+        </template>
+        <template #cell-avg_per_day="{ value }">
+          {{ (value as number).toFixed(1) }}
+        </template>
+        <template #cell-last_activity_at="{ value }">
+          <span class="text-text-secondary whitespace-nowrap">{{ formatShortDate(value as string | null) }}</span>
+        </template>
+      </DataTable>
     </div>
 
     <!-- Recently Sold Out collapsible — custom (not AccordionSection) so the
@@ -157,62 +118,31 @@
       <div
         v-show="soldOutOpen"
         class="px-3 pb-3">
-        <table class="w-full text-xs mt-2">
-          <thead>
-            <tr class="text-text-secondary">
-              <th
-                class="px-2 py-1 text-left cursor-pointer hover:text-text-primary"
-                @click="toggleSoldOutSort('item')">
-                ITEM {{ soldOutSortIndicator('item') }}
-              </th>
-              <th
-                class="px-2 py-1 text-right cursor-pointer hover:text-text-primary"
-                @click="toggleSoldOutSort('last_known_price')">
-                LAST PRICE {{ soldOutSortIndicator('last_known_price') }}
-              </th>
-              <th
-                class="px-2 py-1 text-right cursor-pointer hover:text-text-primary"
-                @click="toggleSoldOutSort('period_sold')">
-                SOLD {{ soldOutSortIndicator('period_sold') }}
-              </th>
-              <th
-                class="px-2 py-1 text-right cursor-pointer hover:text-text-primary"
-                @click="toggleSoldOutSort('avg_per_day')">
-                AVG/DAY {{ soldOutSortIndicator('avg_per_day') }}
-              </th>
-              <th
-                class="px-2 py-1 text-right cursor-pointer hover:text-text-primary"
-                @click="toggleSoldOutSort('last_activity_at')">
-                LAST ACTIVITY {{ soldOutSortIndicator('last_activity_at') }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="item in sortedRecentlySoldOut"
-              :key="item.item"
-              class="border-t border-border-default/40 opacity-60 hover:opacity-100 hover:bg-surface-hover">
-              <td class="px-2 py-1">
-                <ItemInline :reference="item.item" />
-              </td>
-              <td class="px-2 py-1 text-right tabular-nums">
-                {{ formatLastPrice(item.last_known_price) }}
-              </td>
-              <td class="px-2 py-1 text-right tabular-nums">{{ item.period_sold }}</td>
-              <td class="px-2 py-1 text-right tabular-nums">{{ item.avg_per_day.toFixed(1) }}</td>
-              <td class="px-2 py-1 text-right text-text-secondary whitespace-nowrap">
-                {{ formatShortDate(item.last_activity_at) }}
-              </td>
-            </tr>
-            <tr v-if="recentlySoldOut.length === 0">
-              <td
-                colspan="5"
-                class="px-2 py-3 text-center text-text-secondary italic">
-                Nothing has sold out in the selected window.
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <DataTable
+          :columns="soldOutColumns"
+          :rows="(sortedRecentlySoldOut as unknown as Record<string, unknown>[])"
+          :sort-key="soldOutSortBy"
+          :sort-dir="soldOutSortDir"
+          :hoverable="true"
+          :sticky-header="false"
+          compact
+          empty-text="Nothing has sold out in the selected window."
+          empty-hint=""
+          :row-class="soldOutRowClass"
+          @sort="handleSoldOutSort">
+          <template #cell-item="{ value }">
+            <ItemInline :reference="(value as string)" />
+          </template>
+          <template #cell-last_known_price="{ value }">
+            {{ formatLastPrice(value as number | null) }}
+          </template>
+          <template #cell-avg_per_day="{ value }">
+            {{ (value as number).toFixed(1) }}
+          </template>
+          <template #cell-last_activity_at="{ value }">
+            <span class="text-text-secondary whitespace-nowrap">{{ formatShortDate(value as string | null) }}</span>
+          </template>
+        </DataTable>
       </div>
     </div>
 
@@ -229,6 +159,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 import StatCard from './StatCard.vue'
+import DataTable from '../Shared/DataTable.vue'
 import ItemInline from '../Shared/Item/ItemInline.vue'
 import type {
   InventoryItem,
@@ -239,7 +170,7 @@ import type {
 
 const store = useStallTrackerStore()
 
-/** All-time sentinel: any value ≥ 99999 collapses to "all time" in the
+/** All-time sentinel: any value >= 99999 collapses to "all time" in the
  * Rust aggregator. 100000 is the canonical UI value. */
 const ALL_TIME = 100000
 
@@ -250,6 +181,24 @@ const periodOptions: { value: number; label: string }[] = [
   { value: 14, label: 'Last 14 days' },
   { value: 30, label: 'Last 30 days' },
   { value: ALL_TIME, label: 'All time' },
+]
+
+const inStockColumns = [
+  { key: 'item', label: 'ITEM', sortable: true },
+  { key: 'quantity', label: 'QTY', sortable: true, numeric: true },
+  { key: 'price', label: 'PRICE', sortable: false, align: 'right' as const },
+  { key: 'estimated_value', label: 'EST. VALUE', sortable: true, numeric: true },
+  { key: 'period_sold', label: 'SOLD', sortable: true, numeric: true },
+  { key: 'avg_per_day', label: 'AVG/DAY', sortable: true, numeric: true },
+  { key: 'last_activity_at', label: 'LAST', sortable: true, align: 'right' as const },
+]
+
+const soldOutColumns = [
+  { key: 'item', label: 'ITEM', sortable: true },
+  { key: 'last_known_price', label: 'LAST PRICE', sortable: true, numeric: true },
+  { key: 'period_sold', label: 'SOLD', sortable: true, numeric: true },
+  { key: 'avg_per_day', label: 'AVG/DAY', sortable: true, numeric: true },
+  { key: 'last_activity_at', label: 'LAST ACTIVITY', sortable: true, align: 'right' as const },
 ]
 
 const periodDays = ref<number>(7)
@@ -313,19 +262,9 @@ const sortedInStockItems = computed<InventoryItem[]>(() => {
   return items
 })
 
-function toggleSort(col: InventorySortKey) {
-  if (sortBy.value === col) {
-    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
-  } else {
-    sortBy.value = col
-    // Numeric / date columns default desc, text columns default asc.
-    sortDir.value = col === 'item' ? 'asc' : 'desc'
-  }
-}
-
-function sortIndicator(col: InventorySortKey): string {
-  if (sortBy.value !== col) return ''
-  return sortDir.value === 'asc' ? '▲' : '▼'
+function handleInStockSort(payload: { key: string; dir: 'asc' | 'desc' }) {
+  sortBy.value = payload.key as InventorySortKey
+  sortDir.value = payload.dir
 }
 
 const sortedRecentlySoldOut = computed<InventoryItem[]>(() => {
@@ -345,24 +284,19 @@ const sortedRecentlySoldOut = computed<InventoryItem[]>(() => {
   return items
 })
 
-function toggleSoldOutSort(col: SoldOutSortKey) {
-  if (soldOutSortBy.value === col) {
-    soldOutSortDir.value = soldOutSortDir.value === 'asc' ? 'desc' : 'asc'
-  } else {
-    soldOutSortBy.value = col
-    soldOutSortDir.value = col === 'item' ? 'asc' : 'desc'
-  }
+function handleSoldOutSort(payload: { key: string; dir: 'asc' | 'desc' }) {
+  soldOutSortBy.value = payload.key as SoldOutSortKey
+  soldOutSortDir.value = payload.dir
 }
 
-function soldOutSortIndicator(col: SoldOutSortKey): string {
-  if (soldOutSortBy.value !== col) return ''
-  return soldOutSortDir.value === 'asc' ? '▲' : '▼'
+function soldOutRowClass(): string {
+  return 'opacity-60 hover:opacity-100'
 }
 
 /** Recently-sold-out: items with quantity 0 whose last activity falls within
  * the most recent N **distinct active dates** (not calendar days). The
  * backend exposes `active_dates` newest-first specifically so we can slice
- * here without recomputing the window — see plan §10.2. */
+ * here without recomputing the window — see plan 10.2. */
 const recentlySoldOut = computed<InventoryItem[]>(() => {
   if (!result.value) return []
   const windowDates = new Set(result.value.active_dates.slice(0, soldOutDays.value))

@@ -2,14 +2,10 @@
   <div class="flex flex-col gap-2 min-h-0 h-full">
     <div class="flex items-center justify-between shrink-0">
       <h3 class="text-sm font-semibold text-text-secondary uppercase tracking-wider">Player Attributes</h3>
-      <div class="flex items-center gap-2">
-        <input
-          v-model="filter"
-          type="text"
-          placeholder="Filter..."
-          class="px-2 py-1 bg-surface-base border border-border-default rounded text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-gold/50 w-24" />
-        <span class="text-xs text-text-muted">{{ filtered.length }}</span>
-      </div>
+      <FilterBar
+        v-model="filter"
+        placeholder="Filter..."
+        :result-count="filtered.length" />
     </div>
 
     <div v-if="loading" class="text-xs text-text-muted italic">Loading...</div>
@@ -19,31 +15,29 @@
     </div>
 
     <div v-else class="flex-1 overflow-y-auto min-h-0">
-      <table class="w-full text-sm border-collapse">
-        <thead class="sticky top-0 bg-surface-elevated">
-          <tr class="text-left text-text-secondary border-b border-border-default">
-            <th class="py-1 px-2 text-xs">Attribute</th>
-            <th class="py-1 px-2 text-right text-xs">Current</th>
-            <th class="py-1 px-2 text-right text-xs">Min</th>
-            <th class="py-1 px-2 text-right text-xs">Max</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="attr in filtered"
-            :key="attr.attribute_name"
-            class="border-b border-border-default/30 hover:bg-surface-elevated/50">
-            <td class="py-0.5 px-2 text-text-primary">{{ formatAttrName(attr.attribute_name) }}</td>
-            <td class="py-0.5 px-2 text-right text-accent-gold font-mono">{{ fmtVal(attr.current_value) }}</td>
-            <td class="py-0.5 px-2 text-right font-mono" :class="attr.min_value < attr.current_value ? 'text-blue-400' : 'text-text-dim'">
-              {{ fmtVal(attr.min_value) }}
-            </td>
-            <td class="py-0.5 px-2 text-right font-mono" :class="attr.max_value > attr.current_value ? 'text-value-positive' : 'text-text-dim'">
-              {{ fmtVal(attr.max_value) }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <DataTable
+        :columns="attrColumns"
+        :rows="filtered as unknown as Record<string, unknown>[]"
+        :sticky-header="true"
+        compact
+        empty-text="No matching attributes">
+        <template #cell-attribute_name="{ row }">
+          {{ formatAttrName((row as unknown as AttributeExtreme).attribute_name) }}
+        </template>
+        <template #cell-current_value="{ row }">
+          <span class="text-accent-gold font-mono">{{ fmtVal((row as unknown as AttributeExtreme).current_value) }}</span>
+        </template>
+        <template #cell-min_value="{ row }">
+          <span class="font-mono" :class="(row as unknown as AttributeExtreme).min_value < (row as unknown as AttributeExtreme).current_value ? 'text-blue-400' : 'text-text-dim'">
+            {{ fmtVal((row as unknown as AttributeExtreme).min_value) }}
+          </span>
+        </template>
+        <template #cell-max_value="{ row }">
+          <span class="font-mono" :class="(row as unknown as AttributeExtreme).max_value > (row as unknown as AttributeExtreme).current_value ? 'text-value-positive' : 'text-text-dim'">
+            {{ fmtVal((row as unknown as AttributeExtreme).max_value) }}
+          </span>
+        </template>
+      </DataTable>
     </div>
   </div>
 </template>
@@ -53,6 +47,8 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { useSettingsStore } from '../../stores/settingsStore'
+import DataTable, { type ColumnDef } from '../Shared/DataTable.vue'
+import FilterBar from '../Shared/FilterBar.vue'
 
 interface AttributeExtreme {
   attribute_name: string
@@ -67,6 +63,13 @@ const loading = ref(false)
 const filter = ref('')
 
 let unlisten: UnlistenFn | null = null
+
+const attrColumns: ColumnDef[] = [
+  { key: 'attribute_name', label: 'Attribute' },
+  { key: 'current_value', label: 'Current', numeric: true },
+  { key: 'min_value', label: 'Min', numeric: true },
+  { key: 'max_value', label: 'Max', numeric: true },
+]
 
 const filtered = computed(() => {
   const f = filter.value.toLowerCase()

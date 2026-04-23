@@ -36,90 +36,55 @@
 
     <!-- Table -->
     <div class="flex-1 min-h-0 overflow-auto border border-border-default rounded">
-      <table class="w-full text-xs">
-        <thead class="sticky top-0 bg-surface-elevated z-10">
-          <tr class="text-text-secondary">
-            <th class="px-2 py-1.5 text-center w-8"></th>
-            <th
-              class="px-2 py-1.5 text-left cursor-pointer hover:text-text-primary"
-              @click="toggleSort('event_at')">
-              DATE {{ sortIndicator('event_at') }}
-            </th>
-            <th
-              class="px-2 py-1.5 text-left cursor-pointer hover:text-text-primary"
-              @click="toggleSort('player')">
-              PLAYER {{ sortIndicator('player') }}
-            </th>
-            <th
-              class="px-2 py-1.5 text-left cursor-pointer hover:text-text-primary"
-              @click="toggleSort('action')">
-              ACTION {{ sortIndicator('action') }}
-            </th>
-            <th
-              class="px-2 py-1.5 text-left cursor-pointer hover:text-text-primary"
-              @click="toggleSort('item')">
-              ITEM {{ sortIndicator('item') }}
-            </th>
-            <th
-              class="px-2 py-1.5 text-right cursor-pointer hover:text-text-primary"
-              @click="toggleSort('quantity')">
-              QTY {{ sortIndicator('quantity') }}
-            </th>
-            <th
-              class="px-2 py-1.5 text-right cursor-pointer hover:text-text-primary"
-              @click="toggleSort('price_total')">
-              GOLD {{ sortIndicator('price_total') }}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="row in rows"
-            :key="row.id"
-            class="border-t border-border-default/40 hover:bg-surface-hover"
-            :class="row.ignored ? 'opacity-35' : ''">
-            <td class="px-2 py-1 text-center">
-              <button
-                type="button"
-                class="text-text-secondary hover:text-text-primary"
-                :title="row.ignored ? 'Click to un-mute' : 'Click to mute'"
-                @click="handleToggleIgnored(row)">
-                {{ row.ignored ? '○' : '⊘' }}
-              </button>
-            </td>
-            <td class="px-2 py-1 text-text-secondary whitespace-nowrap">
-              {{ row.event_timestamp }}
-            </td>
-            <td class="px-2 py-1 text-entity-player">{{ row.player }}</td>
-            <td class="px-2 py-1">
-              <span
-                class="px-1.5 py-0.5 rounded text-[10px] uppercase font-medium"
-                :class="actionBadgeClass(row.action)">
-                {{ row.action }}
-              </span>
-            </td>
-            <td class="px-2 py-1">
-              <ItemInline
-                v-if="row.item"
-                :reference="row.item" />
-              <span
-                v-else
-                class="text-text-secondary">—</span>
-            </td>
-            <td class="px-2 py-1 text-right tabular-nums">{{ row.quantity || '' }}</td>
-            <td class="px-2 py-1 text-right text-accent-gold tabular-nums">
-              {{ formatGold(row.price_total) }}
-            </td>
-          </tr>
-          <tr v-if="rows.length === 0 && !loading">
-            <td
-              colspan="7"
-              class="px-2 py-8 text-center text-text-secondary">
-              No entries match the current filters.
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <DataTable
+        :columns="columns"
+        :rows="(rows as unknown as Record<string, unknown>[])"
+        :sort-key="displaySortKey"
+        :sort-dir="sortDir"
+        :loading="loading"
+        :hoverable="true"
+        :sticky-header="true"
+        compact
+        empty-text="No entries match the current filters."
+        :row-class="rowClassFn"
+        @sort="handleSort">
+        <template #cell-ignored="{ row }">
+          <button
+            type="button"
+            class="text-text-secondary hover:text-text-primary"
+            :title="row.ignored ? 'Click to un-mute' : 'Click to mute'"
+            @click="handleToggleIgnored(row as unknown as StallEvent)">
+            {{ row.ignored ? '○' : '⊘' }}
+          </button>
+        </template>
+        <template #cell-event_timestamp="{ value }">
+          <span class="text-text-secondary whitespace-nowrap">{{ value }}</span>
+        </template>
+        <template #cell-player="{ value }">
+          <span class="text-entity-player">{{ value }}</span>
+        </template>
+        <template #cell-action="{ value }">
+          <span
+            class="px-1.5 py-0.5 rounded text-[10px] uppercase font-medium"
+            :class="actionBadgeClass(value as string)">
+            {{ value }}
+          </span>
+        </template>
+        <template #cell-item="{ value }">
+          <ItemInline
+            v-if="value"
+            :reference="(value as string)" />
+          <span
+            v-else
+            class="text-text-secondary">—</span>
+        </template>
+        <template #cell-quantity="{ value }">
+          {{ value || '' }}
+        </template>
+        <template #cell-price_total="{ value }">
+          <span class="text-accent-gold">{{ formatGold(value as number | null) }}</span>
+        </template>
+      </DataTable>
     </div>
 
     <!-- Load more -->
@@ -150,12 +115,27 @@ import { confirm } from '@tauri-apps/plugin-dialog'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 import SearchableSelect from '../Shared/SearchableSelect.vue'
 import DatePicker from '../Shared/DatePicker.vue'
+import DataTable from '../Shared/DataTable.vue'
 import ItemInline from '../Shared/Item/ItemInline.vue'
 import type { StallEvent, StallEventsPage, StallEventsParams } from '../../types/stallTracker'
 
 const store = useStallTrackerStore()
 
 const PAGE_SIZE = 500
+
+const columns = [
+  { key: 'ignored', label: '', sortable: false, align: 'center' as const, width: '2rem' },
+  { key: 'event_timestamp', label: 'DATE', sortable: true },
+  { key: 'player', label: 'PLAYER', sortable: true },
+  { key: 'action', label: 'ACTION', sortable: true },
+  { key: 'item', label: 'ITEM', sortable: true },
+  { key: 'quantity', label: 'QTY', sortable: true, numeric: true },
+  { key: 'price_total', label: 'GOLD', sortable: true, numeric: true },
+]
+
+// DataTable column keys differ from backend sort keys in one case.
+const toBackendKey: Record<string, string> = { event_timestamp: 'event_at' }
+const toDisplayKey: Record<string, string> = { event_at: 'event_timestamp' }
 
 /** All seven action buckets, including `unknown` so the maintenance view can
  * surface unparseable entries (Sales tab hides them by default). */
@@ -183,6 +163,8 @@ const filterItem = ref<string | null>(null)
 const sortBy = ref<string>('event_at')
 const sortDir = ref<'asc' | 'desc'>('desc')
 
+const displaySortKey = computed(() => toDisplayKey[sortBy.value] ?? sortBy.value)
+
 let reloadToken = 0
 
 const hasActiveFilters = computed(
@@ -195,6 +177,16 @@ const hasActiveFilters = computed(
       filterItem.value
     ),
 )
+
+function rowClassFn(row: Record<string, unknown>): string {
+  return (row as unknown as StallEvent).ignored ? 'opacity-35' : ''
+}
+
+function handleSort(payload: { key: string; dir: 'asc' | 'desc' }) {
+  sortBy.value = toBackendKey[payload.key] ?? payload.key
+  sortDir.value = payload.dir
+  void reload()
+}
 
 function buildParams(offset: number): StallEventsParams {
   return {
@@ -214,23 +206,6 @@ function buildParams(offset: number): StallEventsParams {
     limit: PAGE_SIZE,
     offset,
   }
-}
-
-function toggleSort(col: string) {
-  if (sortBy.value === col) {
-    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
-  } else {
-    sortBy.value = col
-    // Numeric / date columns default desc, text columns default asc.
-    sortDir.value =
-      col === 'player' || col === 'item' || col === 'action' ? 'asc' : 'desc'
-  }
-  void reload()
-}
-
-function sortIndicator(col: string): string {
-  if (sortBy.value !== col) return ''
-  return sortDir.value === 'asc' ? '▲' : '▼'
 }
 
 async function reload() {
@@ -307,11 +282,11 @@ function formatGold(n: number | null): string {
 function actionBadgeClass(action: string): string {
   switch (action) {
     case 'bought':
-      return 'bg-green-500/15 text-value-positive'
+      return 'bg-green-500/15 text-green-400'
     case 'added':
       return 'bg-blue-500/15 text-blue-400'
     case 'removed':
-      return 'bg-red-500/15 text-value-negative'
+      return 'bg-red-500/15 text-red-400'
     case 'configured':
       return 'bg-amber-500/15 text-amber-400'
     case 'visible':

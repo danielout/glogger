@@ -52,13 +52,15 @@
 
     <!-- Search + Add -->
     <div class="flex gap-2 mb-4">
-      <input
+      <FilterBar
         v-model="search"
         placeholder="Search items..."
-        class="input flex-1" />
-      <button class="btn btn-primary text-sm" @click="openAddForm" v-if="!showAddForm">
-        + Add Value
-      </button>
+        :result-count="filteredValues.length"
+        :result-label="'of ' + marketStore.values.length + ' values'">
+        <button class="btn btn-primary text-sm" @click="openAddForm" v-if="!showAddForm">
+          + Add Value
+        </button>
+      </FilterBar>
     </div>
 
     <!-- Add form -->
@@ -110,78 +112,59 @@
     </div>
 
     <!-- Market values table -->
-    <div v-if="marketStore.loading" class="text-text-muted py-8 text-center">Loading...</div>
-
-    <EmptyState
-      v-else-if="filteredValues.length === 0"
-      variant="panel"
-      :primary="search ? 'No matching market values' : 'No market values set'"
-      :secondary="search ? undefined : 'Use item tooltips or the Add button to set prices.'" />
-
-    <table v-else class="w-full text-sm">
-      <thead>
-        <tr class="text-text-muted text-xs text-left border-b border-border-default">
-          <th class="py-2 pr-4 font-normal cursor-pointer hover:text-text-primary" @click="toggleSort('item_name')">
-            Item {{ sortIcon('item_name') }}
-          </th>
-          <th class="py-2 pr-4 font-normal text-right cursor-pointer hover:text-text-primary" @click="toggleSort('market_value')">
-            Price {{ sortIcon('market_value') }}
-          </th>
-          <th class="py-2 pr-4 font-normal">Notes</th>
-          <th class="py-2 pr-4 font-normal cursor-pointer hover:text-text-primary" @click="toggleSort('updated_at')">
-            Updated {{ sortIcon('updated_at') }}
-          </th>
-          <th class="py-2 w-16"></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="val in filteredValues"
-          :key="val.item_type_id"
-          class="border-b border-border-default/50 hover:bg-surface-elevated/30">
-          <td class="py-2 pr-4 text-text-primary">
-            {{ val.item_name }}
-            <span class="text-text-muted text-xs ml-1">#{{ val.item_type_id }}</span>
-          </td>
-          <td class="py-2 pr-4 text-right text-accent-gold tabular-nums">
-            <span v-if="editingId !== val.item_type_id">{{ val.market_value.toLocaleString() }}g</span>
-            <input
-              v-else
-              v-model.number="editPrice"
-              type="number"
-              min="0"
-              class="w-24 bg-surface-dark border border-border-default rounded px-1 py-0.5 text-sm text-text-primary text-right"
-              @keydown.enter="saveEdit(val)"
-              @keydown.escape="editingId = null" />
-          </td>
-          <td class="py-2 pr-4 text-text-muted text-xs">{{ val.notes ?? '' }}</td>
-          <td class="py-2 pr-4 text-text-muted text-xs">{{ formatDate(val.updated_at) }}</td>
-          <td class="py-2 text-right">
-            <button
-              v-if="editingId !== val.item_type_id"
-              class="text-text-muted hover:text-text-primary bg-transparent border-none cursor-pointer text-xs mr-1"
-              @click="startEdit(val)">
-              Edit
-            </button>
-            <button
-              v-if="editingId === val.item_type_id"
-              class="text-accent-green hover:text-green-400 bg-transparent border-none cursor-pointer text-xs mr-1"
-              @click="saveEdit(val)">
-              Save
-            </button>
-            <button
-              class="text-text-muted hover:text-red-400 bg-transparent border-none cursor-pointer text-xs"
-              @click="deleteValue(val.item_type_id)">
-              Del
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div v-if="filteredValues.length > 0" class="text-text-muted text-xs mt-2">
-      {{ filteredValues.length }} of {{ marketStore.values.length }} values shown
-    </div>
+    <DataTable
+      :columns="marketColumns"
+      :rows="filteredValues as Record<string, unknown>[]"
+      :sort-key="sortField"
+      :sort-dir="sortAsc ? 'asc' : 'desc'"
+      :loading="marketStore.loading"
+      :empty-text="search ? 'No matching market values' : 'No market values set'"
+      :empty-hint="search ? undefined : 'Use item tooltips or the Add button to set prices.'"
+      :sticky-header="true"
+      @sort="onSort">
+      <template #cell-item_name="{ row }">
+        {{ (row as unknown as MarketValue).item_name }}
+        <span class="text-text-muted text-xs ml-1">#{{ (row as unknown as MarketValue).item_type_id }}</span>
+      </template>
+      <template #cell-market_value="{ row }">
+        <span v-if="editingId !== (row as unknown as MarketValue).item_type_id" class="text-accent-gold">
+          {{ (row as unknown as MarketValue).market_value.toLocaleString() }}g
+        </span>
+        <input
+          v-else
+          v-model.number="editPrice"
+          type="number"
+          min="0"
+          class="w-24 bg-surface-dark border border-border-default rounded px-1 py-0.5 text-sm text-text-primary text-right"
+          @keydown.enter="saveEdit(row as unknown as MarketValue)"
+          @keydown.escape="editingId = null" />
+      </template>
+      <template #cell-notes="{ row }">
+        <span class="text-text-muted">{{ (row as unknown as MarketValue).notes ?? '' }}</span>
+      </template>
+      <template #cell-updated_at="{ row }">
+        <span class="text-text-muted">{{ formatDate((row as unknown as MarketValue).updated_at) }}</span>
+      </template>
+      <template #cell-actions="{ row }">
+        <button
+          v-if="editingId !== (row as unknown as MarketValue).item_type_id"
+          class="text-text-muted hover:text-text-primary bg-transparent border-none cursor-pointer text-xs mr-1"
+          @click="startEdit(row as unknown as MarketValue)">
+          Edit
+        </button>
+        <button
+          v-if="editingId === (row as unknown as MarketValue).item_type_id"
+          class="text-accent-green hover:text-green-400 bg-transparent border-none cursor-pointer text-xs mr-1"
+          @click="saveEdit(row as unknown as MarketValue)">
+          Save
+        </button>
+        <button
+          class="text-text-muted hover:text-red-400 bg-transparent border-none cursor-pointer text-xs"
+          @click="deleteValue((row as unknown as MarketValue).item_type_id)">
+          Del
+        </button>
+      </template>
+    </DataTable>
 
     <!-- Import dialog -->
     <div v-if="showImport" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showImport = false">
@@ -224,12 +207,21 @@ import { useMarketStore, type MarketValue, type ImportMarketValuesResult } from 
 import { useSettingsStore } from '../../stores/settingsStore'
 import { useGameDataStore } from '../../stores/gameDataStore'
 import type { ItemInfo } from '../../types/gameData'
-import EmptyState from '../Shared/EmptyState.vue'
+import DataTable, { type ColumnDef } from '../Shared/DataTable.vue'
+import FilterBar from '../Shared/FilterBar.vue'
 
 const toast = useToast()
 const marketStore = useMarketStore()
 const settingsStore = useSettingsStore()
 const gameDataStore = useGameDataStore()
+
+const marketColumns: ColumnDef[] = [
+  { key: 'item_name', label: 'Item', sortable: true },
+  { key: 'market_value', label: 'Price', sortable: true, numeric: true },
+  { key: 'notes', label: 'Notes' },
+  { key: 'updated_at', label: 'Updated', sortable: true },
+  { key: 'actions', label: '', width: '4rem' },
+]
 
 const search = ref('')
 const sortField = ref<'item_name' | 'market_value' | 'updated_at'>('item_name')
@@ -284,18 +276,9 @@ const filteredValues = computed(() => {
   return vals
 })
 
-function toggleSort(field: 'item_name' | 'market_value' | 'updated_at') {
-  if (sortField.value === field) {
-    sortAsc.value = !sortAsc.value
-  } else {
-    sortField.value = field
-    sortAsc.value = true
-  }
-}
-
-function sortIcon(field: string): string {
-  if (sortField.value !== field) return ''
-  return sortAsc.value ? '\u25B2' : '\u25BC'
+function onSort(payload: { key: string; dir: 'asc' | 'desc' }) {
+  sortField.value = payload.key as 'item_name' | 'market_value' | 'updated_at'
+  sortAsc.value = payload.dir === 'asc'
 }
 
 function formatDate(dateStr: string): string {
