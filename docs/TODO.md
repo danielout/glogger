@@ -2,16 +2,7 @@
 
 Small tasks and notes that don't belong in a dedicated plan.
 
-*Last reviewed: 2026-04-22*
-
----
-
-
-## TO SORT
-
-- impv: manual recipe adding to brewery
-- impv: search should be able to search effects/mods on things! 
-- impv: stack size in tooltips.
+*Last reviewed: 2026-04-23*
 
 ---
 
@@ -37,9 +28,8 @@ These are investigated items kept for reference — the research is done but the
   - Should be counting but isn't. The full pipeline (parser → coordinator → DB → store → widget) looks correctly wired. **Most likely cause:** serde enum case mismatch. `ChatResuscitateEvent` uses `#[serde(tag = "kind")]` but has no `rename_all` directive — if Tauri or middleware applies snake_case serialization, the variant serializes as `"resuscitated"` instead of `"Resuscitated"`, causing the frontend `payload.kind === 'Resuscitated'` check to silently fail. DB persistence works independently (inserts directly), so the bug is likely live-event-only. Fix is probably 1 line: add `#[serde(rename_all = "PascalCase")]` or lowercase the frontend check.
   - **Effort: Low | Impact: Low**
 
-- [ ] Clean up documents folder structure
-  - Better organization, establish clearer structure for docs.
-  - **Effort: Low | Impact: Low (maintainability)**
+- [x] Clean up documents folder structure
+  - Completed: archived finished plans, moved research/architecture docs to proper folders, updated index.md with Plans and Archive sections, sorted TODO items.
 
 - [ ] Crafting projects: loading skeleton/shimmer states for material tables
   - When `resolvingAll` is true, show skeleton rows instead of empty space. From archived projects-performance plan (top 3 perf fixes already landed).
@@ -56,6 +46,18 @@ These are investigated items kept for reference — the research is done but the
 - [ ] Crafting projects: pre-build `item_keyword_index` for dynamic ingredients
   - `getItemsByKeyword` (used for "Any Bone" etc.) currently does O(n) scan. Pre-built `HashMap<String, Vec<u32>>` at CDN load time would make it O(1).
   - **Effort: Low | Impact: Low-Medium (performance for keyword-heavy recipes)**
+
+- [ ] Manual recipe adding to brewery
+  - Let users manually add recipes/discoveries to the brewery journal instead of requiring JSON import.
+  - **Effort: Low-Medium | Impact: Medium (accessibility)**
+
+- [ ] Stack size in item tooltips
+  - Show stack size information in item tooltips.
+  - **Effort: Low | Impact: Low (polish)**
+
+- [ ] "Home zone" setting for route planner
+  - User-set per character. Option to start routes from home zone instead of current location.
+  - **Effort: Low | Impact: Medium (convenience)**
 
 - [ ] Configurable critical resources widget
   - Currently fully hardcoded — `CriticalResourcesWidget.vue` has a static `DEFAULT_TRACKED_ITEMS` array (`Diamond`, `Amethyst`, `Aquamarine`, `Eternal Greens`, `Salt`, `Fire Dust`). No config component registered in `dashboardWidgets.ts` (unlike other configurable widgets). Needs: config store per character, item selection UI, settings persistence. Widget already accepts computed data, just needs the binding change.
@@ -106,7 +108,7 @@ These are investigated items kept for reference — the research is done but the
   - **Effort: Medium | Impact: Medium (accessibility/polish)**
 
 - [ ] More shared components (tables, etc.)
-  - Build reusable components for common patterns like tables to improve consistency.
+  - Build reusable components for common patterns like tables to improve consistency. Audit existing components for duplicate behavior that should be consolidated.
   - **Effort: Medium (iterative) | Impact: Medium (consistency)**
 
 - [ ] Better screen persistence across the app
@@ -128,6 +130,14 @@ These are investigated items kept for reference — the research is done but the
 - [ ] Enemy database in data browser
   - Add enemies as a browsable entity type in the data browser.
   - **Effort: Medium | Impact: Medium (completeness)**
+
+- [ ] Storage view: "show totals" mode
+  - Items stored in multiple locations should optionally collapse into a single row with total quantity. Accordion to expand and see per-location breakdown.
+  - **Effort: Medium | Impact: Medium (usability)**
+
+- [ ] Color theme support
+  - Investigate whether supporting user-selectable color themes makes sense. Low priority but high delight.
+  - **Effort: Medium (investigation + implementation) | Impact: Low (personalization/delight)**
 
 - [ ] Area tooltips with useful information
   - Add informative tooltips when hovering area references.
@@ -195,7 +205,7 @@ These are investigated items kept for reference — the research is done but the
   - **Effort: Medium | Impact: Medium (usability)**
 
 - [ ] Continue UI/UX standardization across screens
-  - Some screens still don't look like they fit within the app, or have their own paradigms. Sidebars that don't use standardized panels, inconsistent patterns, etc.
+  - Some screens still don't look like they fit within the app, or have their own paradigms. Sidebars that don't use standardized panels, inconsistent patterns, etc. Should write a consolidated UI/UX checklist for new frontend features and then do a pass on existing screens against it.
   - **Effort: Medium (iterative) | Impact: Medium (consistency/polish)**
 
 - [ ] Investigate seedling/plant/milling product linkage in CDN data
@@ -224,7 +234,7 @@ These are investigated items kept for reference — the research is done but the
   - **Effort: Large | Impact: High (proactive skill progression)**
 
 - [ ] Standardize search across the app (scryfall-inspired)
-  - Search is implemented differently in different places. Need a smart, unified search system. Take inspiration from Scryfall's search syntax for filtering and querying.
+  - Search is implemented differently in different places. Need a smart, unified search system. Take inspiration from Scryfall's search syntax (https://scryfall.com/docs/syntax) for filtering and querying. Note: some game entity names contain `:` so syntax needs to account for that. Search should also cover descriptions, effects/mods, quest details/objectives — currently we search names only for most things.
   - **Effort: Large | Impact: High (UX consistency, power-user feature)**
 
 - [ ] Write 'how to use' docs for each screen
@@ -243,9 +253,6 @@ These are investigated items kept for reference — the research is done but the
   - Sub-task: track statehelm renown possible vs earned.
   - **Effort: High | Impact: Medium-High**
 
-- [ ] Shop/stall tracking (reported by Reyetta)
-  - Track what you put in, what sells, trends. **Partial parser support exists:** `ProcessVendorAddItem` → `VendorSold` and `ProcessVendorUpdateItem` → `VendorStackUpdated` events are parsed. Coordinator routes `BookOpened` with type `PlayerShopLog` to `ingest_shop_log()`. **Missing:** player-vendor stall initialization parsing, item-in/item-out correlation, trend analysis, multi-stall multi-character support. Manual entry fallback has questionable adoption (Reyetta said it's "too much effort").
-  - **Effort: Large | Impact: High (if automated), Low (if manual-only)**
 
 - [ ] Casino arena bet tracker
   - Parse Player.log for arena fight announcements, bet confirmations, outcomes. Parse chat for arena NPC messages. Track bet history with win/loss stats and P&L. Needs a cross-source state machine (Player.log + chat correlation) — similar pattern to survey aggregator. Originally from Kaeus's GorgonBetTracker. Niche but popular feature.
@@ -257,6 +264,22 @@ These are investigated items kept for reference — the research is done but the
 - [ ] CraftingCorner / community marketplace
   - Community platform for player crafting services (artisan listings, order tracking). Architecturally very different from glogger's local-first model — would need external service integration (Firebase or custom backend). Consider keeping as external link initially. Originally from Kaeus's GorgonCraftingTools.
   - **Effort: Very Large | Impact: Medium (community feature)**
+
+- [ ] Consolidate storage helper
+  - Uses the route planner and storage vault data to find items stored in multiple locations, then creates a pickup/dropoff route to consolidate them.
+  - **Effort: Large | Impact: Medium (inventory management)**
+
+- [ ] Statehelm favor planner
+  - Looks at storage vaults, finds appropriate gifts for Statehelm NPCs, creates a route to pick everything up before delivering. Respects remaining gift count needed per NPC that week. Combines storage data + gift preferences + route planner.
+  - **Effort: Large | Impact: High (cross-system planning)**
+
+- [ ] Work order route/crafting planner
+  - Looks at all available work orders, shows where to go/craft/turn-in in optimal order using route planner. Depends on quest tracking system for work order state.
+  - **Effort: Large | Impact: High (cross-system planning)**
+
+- [ ] Quest turn-in helper
+  - Looks at storage/inventory and active quests to find completable quests. Suggests pickup and turn-in routes using route planner. Depends on quest tracking system.
+  - **Effort: Large | Impact: High (cross-system planning)**
 
 - [ ] Nightmare cave challenge door tracker
   - Need to look up all the challenges and see which ones we can track. Some are easy (1200 armor) and some are harder (have 4x 10-second premonition buffs). Could also track letters of authority as alternate path. **No existing code found** — no parser events, coordinator handlers, or database tables. Requires research into all challenge types + log event identification + new persistence layer.
