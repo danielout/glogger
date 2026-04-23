@@ -21,7 +21,7 @@
         <div class="flex items-center gap-4">
           <template v-if="store.selectedCharacter">
             <select
-              class="bg-surface-elevated border border-border-default rounded px-3 py-1.5 text-sm text-text-primary font-mono cursor-pointer min-w-70"
+              class="bg-surface-elevated border border-border-default rounded px-3 py-1.5 text-sm text-text-primary cursor-pointer min-w-70"
               :value="store.selectedSnapshot?.id"
               @change="onSnapshotChange">
               <option v-for="snap in store.snapshots" :key="snap.id" :value="snap.id">

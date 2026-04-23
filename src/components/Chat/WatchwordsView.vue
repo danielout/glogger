@@ -50,7 +50,7 @@
             <span
               v-for="(cond, i) in rule.conditions"
               :key="i"
-              class="text-[0.7rem] px-1.5 py-0.5 rounded bg-surface-dark border border-border-default"
+              class="text-xs px-1.5 py-0.5 rounded bg-surface-dark border border-border-default"
               :class="conditionColor(cond.type)"
             >{{ conditionShortLabel(cond) }}</span>
           </div>

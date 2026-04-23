@@ -42,7 +42,7 @@
               ({{ effect.raceRestriction }})
             </span>
           </span>
-          <span class="text-text-dim font-mono text-xs shrink-0 ml-1">
+          <span class="text-text-dim text-xs shrink-0 ml-1">
             {{ effect.discoveryCount }}
           </span>
         </div>

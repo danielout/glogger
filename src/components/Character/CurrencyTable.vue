@@ -15,7 +15,7 @@
           :key="c.currency_key"
           class="border-b border-border-default/50 hover:bg-surface-elevated/50">
           <td class="py-1 px-2 text-text-primary">{{ formatKey(c.currency_key) }}</td>
-          <td class="py-1 px-2 text-right text-accent-gold">{{ c.amount.toLocaleString() }}</td>
+          <td class="py-1 px-2 text-right text-accent-gold tabular-nums">{{ c.amount.toLocaleString() }}</td>
         </tr>
       </tbody>
     </table>

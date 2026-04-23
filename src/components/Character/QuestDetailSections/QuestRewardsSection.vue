@@ -1,11 +1,11 @@
 <template>
   <div v-if="hasRewards" class="flex flex-col gap-1.5">
-    <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+    <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
       Rewards
     </div>
 
     <!-- Favor -->
-    <div v-if="quest.raw?.Reward_Favor && quest.raw?.FavorNpc" class="flex items-baseline gap-2 text-[0.82rem]">
+    <div v-if="quest.raw?.Reward_Favor && quest.raw?.FavorNpc" class="flex items-baseline gap-2 text-xs">
       <span class="text-[#c0a0e0] font-bold">+{{ quest.raw.Reward_Favor }} Favor</span>
       <NpcInline :reference="extractNpcKeyFromFavorPath(quest.raw.FavorNpc)" />
     </div>
@@ -14,7 +14,7 @@
     <div
       v-for="(reward, idx) in quest.raw?.Rewards ?? []"
       :key="'r' + idx"
-      class="flex items-baseline gap-2 text-[0.82rem] text-[#60e090]">
+      class="flex items-baseline gap-2 text-xs text-[#60e090]">
       <span class="text-xs">&#x2726;</span>
       <template v-if="reward.T === 'SkillXp' && reward.Skill">
         <SkillInline :reference="reward.Skill" />
@@ -29,7 +29,7 @@
     <div
       v-for="(item, idx) in quest.raw?.Rewards_Items ?? []"
       :key="'i' + idx"
-      class="flex items-baseline gap-2 text-[0.82rem] text-[#60e090]">
+      class="flex items-baseline gap-2 text-xs text-[#60e090]">
       <span class="text-xs">&#x2726;</span>
       <ItemInline :reference="item.Item" />
       <span v-if="item.StackSize > 1" class="text-text-muted text-xs">&times; {{ item.StackSize }}</span>

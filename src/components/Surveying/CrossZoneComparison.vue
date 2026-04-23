@@ -1,12 +1,12 @@
 <template>
   <div class="flex flex-col gap-3">
     <div v-if="zones.length > 1" class="flex items-center gap-2 text-xs">
-      <span class="text-[0.6rem] uppercase tracking-wide text-text-secondary font-semibold">Sort by</span>
+      <span class="text-[10px] uppercase tracking-wide text-text-secondary font-semibold">Sort by</span>
       <div class="flex gap-0.5 bg-surface-elevated border border-border-default rounded p-0.5">
         <button
           v-for="col in sortColumns"
           :key="col.key"
-          class="px-2 py-0.5 text-[0.7rem] rounded transition-colors"
+          class="px-2 py-0.5 text-xs rounded transition-colors"
           :class="
             sortBy === col.key
               ? 'bg-accent-gold/20 text-accent-gold font-semibold'
@@ -22,7 +22,7 @@
 
     <table class="w-full text-xs border-collapse">
       <thead>
-        <tr class="text-[0.6rem] uppercase tracking-wide text-text-secondary font-semibold border-b border-border-default">
+        <tr class="text-[10px] uppercase tracking-wide text-text-secondary font-semibold border-b border-border-default">
           <th class="text-left py-1.5 px-2">Zone</th>
           <th class="text-right py-1.5 px-2">Surveys</th>
           <th class="text-right py-1.5 px-2">Basic</th>

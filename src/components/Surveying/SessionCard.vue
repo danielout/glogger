@@ -11,11 +11,11 @@
       </span>
       <span
         v-if="isActive"
-        class="text-[0.6rem] px-1.5 py-0.5 rounded bg-accent-green/20 text-accent-green uppercase tracking-wider font-semibold shrink-0"
+        class="text-[10px] px-1.5 py-0.5 rounded bg-accent-green/20 text-accent-green uppercase tracking-wider font-semibold shrink-0"
       >
         Active
       </span>
-      <span v-else class="text-[0.6rem] text-text-dim shrink-0">
+      <span v-else class="text-[10px] text-text-dim shrink-0">
         ended
       </span>
     </div>
@@ -25,14 +25,14 @@
       <span
         v-for="zone in row.zones"
         :key="zone"
-        class="text-[0.6rem] text-text-secondary"
+        class="text-[10px] text-text-secondary"
       >
         <AreaInline :reference="zone" />
       </span>
     </div>
 
     <!-- Stats row: surveys, profit/hr, date, duration -->
-    <div class="flex items-center gap-3 text-[0.65rem] text-text-secondary tabular-nums">
+    <div class="flex items-center gap-3 text-[10px] text-text-secondary tabular-nums">
       <span>
         <span class="text-text-primary font-semibold">{{ row.total_uses }}</span>
         surveys
@@ -47,7 +47,7 @@
     </div>
 
     <!-- Date + duration -->
-    <div class="text-[0.6rem] text-text-dim tabular-nums">
+    <div class="text-[10px] text-text-dim tabular-nums">
       {{ formatDateTimeShort(effectiveStart) }}
       <span v-if="row.duration_seconds !== null">
         · {{ formatDuration(row.duration_seconds) }}

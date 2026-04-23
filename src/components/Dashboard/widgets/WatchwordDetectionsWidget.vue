@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col h-full min-h-0">
+  <div class="flex flex-col h-full">
     <div v-if="rules.length === 0" class="text-xs text-text-dim italic">
       No watch rules configured. Set up rules in the Chat &gt; Watchwords tab.
     </div>
@@ -11,17 +11,17 @@
         No recent matches found.
       </div>
 
-      <div v-else class="flex flex-col gap-0.5 flex-1 overflow-y-auto min-h-0 pr-1">
+      <div v-else class="flex flex-col gap-0.5 overflow-y-auto max-h-52 pr-1">
         <div
           v-for="match in recentMatches"
           :key="`${match.ruleId}-${match.message.id}`"
           class="flex items-start gap-2 py-1 px-2 rounded text-xs hover:bg-surface-elevated/50 cursor-pointer"
           @click="goToRule(match.ruleId)">
           <!-- Timestamp -->
-          <span class="text-text-dim font-mono shrink-0">{{ formatTs(match.message.timestamp) }}</span>
+          <span class="text-text-dim shrink-0">{{ formatTs(match.message.timestamp) }}</span>
 
           <!-- Rule badge -->
-          <span class="px-1.5 py-0.5 rounded text-[0.6rem] font-bold uppercase tracking-wide bg-accent-gold/15 text-accent-gold border border-accent-gold/20 shrink-0 leading-none">
+          <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-accent-gold/15 text-accent-gold border border-accent-gold/20 shrink-0 leading-none">
             {{ match.ruleName }}
           </span>
 

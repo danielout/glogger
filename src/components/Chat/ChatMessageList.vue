@@ -47,7 +47,7 @@
               <span class="text-xs font-semibold" :class="msg.from_player ? 'text-accent-blue' : 'text-accent-gold'">
                 {{ msg.from_player ? 'You' : msg.sender || 'Unknown' }}
               </span>
-              <span class="text-text-dim text-xs font-mono">{{ formatTime(msg.timestamp) }}</span>
+              <span class="text-text-dim text-xs">{{ formatTime(msg.timestamp) }}</span>
             </div>
             <span class="text-text-primary text-sm break-words">
               <MessageWithItemLinks v-if="msg.item_links && msg.item_links.length > 0" :message="msg.message" :item-links="msg.item_links" />
@@ -71,10 +71,10 @@
           }"
           @click="clickable ? emit('message-click', msg) : undefined"
         >
-          <span class="shrink-0 whitespace-nowrap text-text-muted text-sm font-mono">{{ formatTime(msg.timestamp) }}</span>
+          <span class="shrink-0 whitespace-nowrap text-text-muted text-sm">{{ formatTime(msg.timestamp) }}</span>
           <span
             v-if="showChannel && msg.channel"
-            class="shrink-0 font-semibold text-[0.9rem]"
+            class="shrink-0 font-semibold text-sm"
             :class="channelColorClass(msg.channel)"
           >
             [{{ msg.channel }}]

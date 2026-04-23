@@ -28,7 +28,7 @@
     <!-- Sort control -->
     <select
       v-model="sortMode"
-      class="px-2 py-0.5 bg-surface-base border border-border-default rounded text-[0.65rem] text-text-muted cursor-pointer">
+      class="px-2 py-0.5 bg-surface-base border border-border-default rounded text-[10px] text-text-muted cursor-pointer">
       <option value="recent">Recent</option>
       <option value="az">A-Z</option>
       <option value="za">Z-A</option>
@@ -54,7 +54,7 @@
               </span>
               <span class="text-text-secondary font-semibold">{{ group.name }}</span>
             </div>
-            <span class="text-text-muted text-[0.6rem]">{{ group.projects.length }}</span>
+            <span class="text-text-muted text-[10px]">{{ group.projects.length }}</span>
           </div>
         </li>
         <template v-if="!collapsedGroups.has(group.name)">
@@ -66,7 +66,7 @@
             @click="store.loadProject(project.id)">
             <div class="flex items-center justify-between">
               <span class="text-text-primary/75 font-medium">{{ project.name }}</span>
-              <span class="text-text-muted text-[0.65rem]">{{ project.entry_count }} recipes</span>
+              <span class="text-text-muted text-[10px]">{{ project.entry_count }} recipes</span>
             </div>
           </li>
         </template>
@@ -81,7 +81,7 @@
         @click="store.loadProject(project.id)">
         <div class="flex items-center justify-between">
           <span class="text-text-primary/75 font-medium">{{ project.name }}</span>
-          <span class="text-text-muted text-[0.65rem]">{{ project.entry_count }} recipes</span>
+          <span class="text-text-muted text-[10px]">{{ project.entry_count }} recipes</span>
         </div>
       </li>
     </ul>

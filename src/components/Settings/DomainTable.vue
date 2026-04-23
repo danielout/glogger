@@ -2,11 +2,11 @@
   <AccordionSection :default-open="false">
     <template #title>{{ title }}</template>
     <template #badge>
-      <span class="text-text-muted text-xs font-mono">{{ count }} rows</span>
+      <span class="text-text-muted text-xs">{{ count }} rows</span>
     </template>
     <div v-if="count === 0" class="text-text-muted text-xs italic">No data</div>
     <div v-else class="overflow-x-auto max-h-80 overflow-y-auto">
-      <table class="w-full text-xs font-mono border-collapse">
+      <table class="w-full text-xs border-collapse">
         <thead class="sticky top-0 bg-surface-base">
           <tr class="text-text-muted text-left">
             <th

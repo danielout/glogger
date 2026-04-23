@@ -11,7 +11,7 @@
         <RecipeInline :reference="craft.recipe_name" />
         <span class="text-text-muted">→</span>
         <ItemInline :reference="craft.item_name" />
-        <span class="ml-auto text-text-primary font-mono shrink-0">
+        <span class="ml-auto text-text-primary shrink-0">
           ×{{ craft.crafts_needed }} crafts
         </span>
       </div>

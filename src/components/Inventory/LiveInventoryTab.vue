@@ -68,13 +68,13 @@
               class="border-b border-border-default/30 hover:bg-surface-elevated/50 transition-colors"
               :class="{ 'border-l-2 border-l-accent-gold/60': item.is_new }"
             >
-              <td class="py-1 px-2 text-text-muted text-xs font-mono">
+              <td class="py-1 px-2 text-text-muted text-xs">
                 {{ item.slot_index >= 0 ? item.slot_index : '-' }}
               </td>
               <td class="py-1 px-2">
                 <ItemInline :reference="item.item_name" />
               </td>
-              <td class="py-1 px-2 text-right font-mono text-text-primary">
+              <td class="py-1 px-2 text-right text-text-primary">
                 {{ item.stack_size > 0 ? item.stack_size.toLocaleString() : '-' }}
               </td>
             </tr>

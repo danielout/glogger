@@ -93,7 +93,7 @@
                 <span
                   v-for="(tier, idx) in item.price_tiers"
                   :key="idx"
-                  class="text-[11px]">
+                  class="text-xs">
                   {{ tier.qty }}&times;{{ formatPriceTier(tier) }}
                 </span>
               </span>

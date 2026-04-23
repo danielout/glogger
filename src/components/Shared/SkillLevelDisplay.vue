@@ -1,7 +1,7 @@
 <template>
   <span class="skill-level-display" :title="tooltipText">
     <slot>{{ skill.level }}</slot>
-    <span v-if="skill.bonus_levels > 0" class="text-accent-gold/60 ml-0.5 text-[0.65rem]">({{ skill.base_level }}+{{ skill.bonus_levels }})</span>
+    <span v-if="skill.bonus_levels > 0" class="text-accent-gold/60 ml-0.5 text-[10px]">({{ skill.base_level }}+{{ skill.bonus_levels }})</span>
   </span>
 </template>
 

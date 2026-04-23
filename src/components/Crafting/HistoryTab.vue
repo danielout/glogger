@@ -59,7 +59,7 @@
               <td class="text-right py-1 text-text-muted">
                 {{ recipe.skill_level_req ?? '—' }}
               </td>
-              <td class="text-right py-1 text-text-primary font-mono font-semibold">
+              <td class="text-right py-1 text-text-primary font-semibold">
                 {{ recipe.completions.toLocaleString() }}
               </td>
             </tr>

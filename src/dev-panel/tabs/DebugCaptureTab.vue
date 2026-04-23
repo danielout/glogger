@@ -4,12 +4,12 @@
       <h3 class="m-0 text-text-primary">Debug Capture</h3>
       <span
         v-if="status?.active"
-        class="text-xs font-mono px-2 py-0.5 rounded bg-red-900/40 text-red-400 animate-pulse">
+        class="text-xs px-2 py-0.5 rounded bg-red-900/40 text-red-400 animate-pulse">
         RECORDING
       </span>
       <span
         v-else-if="status?.pending_save"
-        class="text-xs font-mono px-2 py-0.5 rounded bg-yellow-900/40 text-yellow-400">
+        class="text-xs px-2 py-0.5 rounded bg-yellow-900/40 text-yellow-400">
         READY TO SAVE
       </span>
     </div>
@@ -37,7 +37,7 @@
 
       <!-- Recording state: live stats + stop button -->
       <div v-else-if="status?.active" class="space-y-3">
-        <div class="grid grid-cols-3 gap-3 text-xs font-mono">
+        <div class="grid grid-cols-3 gap-3 text-xs">
           <div class="bg-surface-elevated rounded p-2">
             <div class="text-text-muted mb-1">Total Lines</div>
             <div class="text-text-primary text-sm">{{ (status.player_line_count + status.chat_line_count).toLocaleString() }}</div>
@@ -53,7 +53,7 @@
         </div>
 
         <div class="text-text-muted text-xs">
-          Started: <span class="text-text-secondary font-mono">{{ formatStartTime }}</span>
+          Started: <span class="text-text-secondary">{{ formatStartTime }}</span>
         </div>
 
         <div class="flex gap-2">
@@ -74,7 +74,7 @@
 
       <!-- Pending save state: review, edit notes, choose save mode -->
       <div v-else-if="status?.pending_save" class="space-y-3">
-        <div class="grid grid-cols-3 gap-3 text-xs font-mono">
+        <div class="grid grid-cols-3 gap-3 text-xs">
           <div class="bg-surface-elevated rounded p-2">
             <div class="text-text-muted mb-1">Total Lines</div>
             <div class="text-text-primary text-sm">{{ status.line_count.toLocaleString() }}</div>
@@ -129,7 +129,7 @@
     <!-- Last capture result -->
     <section v-if="lastResult" class="border border-border-default rounded p-4">
       <h4 class="text-text-secondary text-sm mb-3 mt-0">Last Capture</h4>
-      <div class="text-xs font-mono space-y-1">
+      <div class="text-xs space-y-1">
         <div v-if="lastResult.success" class="text-green-400">
           Saved {{ lastResult.lineCount?.toLocaleString() }} lines to: {{ lastResult.path }}
         </div>

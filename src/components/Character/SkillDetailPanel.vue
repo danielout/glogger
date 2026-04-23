@@ -23,18 +23,18 @@
             Level <SkillLevelDisplay :skill="skill"><span class="text-white font-bold">{{ skillTotalLevel(skill) }}</span></SkillLevelDisplay>
           </div>
           <div class="flex items-center gap-2">
-            <span v-if="cdnData?.combat === true" class="text-[0.65rem] px-1.5 py-0.5 bg-red-900/30 border border-red-700/40 text-red-300 rounded">Combat</span>
-            <span v-else-if="cdnData?.combat === false" class="text-[0.65rem] px-1.5 py-0.5 bg-blue-900/30 border border-blue-700/40 text-blue-300 rounded">Non-Combat</span>
-            <span v-if="isActive" class="text-[0.65rem] px-1.5 py-0.5 bg-accent-gold/20 border border-accent-gold/40 text-accent-gold rounded">Active</span>
+            <span v-if="cdnData?.combat === true" class="text-[10px] px-1.5 py-0.5 bg-red-900/30 border border-red-700/40 text-red-300 rounded">Combat</span>
+            <span v-else-if="cdnData?.combat === false" class="text-[10px] px-1.5 py-0.5 bg-blue-900/30 border border-blue-700/40 text-blue-300 rounded">Non-Combat</span>
+            <span v-if="isActive" class="text-[10px] px-1.5 py-0.5 bg-accent-gold/20 border border-accent-gold/40 text-accent-gold rounded">Active</span>
           </div>
         </div>
 
         <!-- XP Progress with Track button -->
         <div class="flex flex-col gap-1">
           <div class="flex items-center gap-2">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim flex-1">XP Progress</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim flex-1">XP Progress</div>
             <button
-              class="px-2 py-0.5 text-[0.65rem] rounded cursor-pointer transition-all border shrink-0"
+              class="px-2 py-0.5 text-[10px] rounded cursor-pointer transition-all border shrink-0"
               :class="isTracked
                 ? 'bg-accent-gold/20 border-accent-gold/40 text-accent-gold hover:bg-accent-gold/30'
                 : 'bg-surface-base border-border-default text-text-muted hover:text-accent-gold hover:border-accent-gold/40'"
@@ -53,7 +53,7 @@
 
         <!-- Session Stats -->
         <div v-if="session" class="flex flex-col gap-1">
-          <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Session</div>
+          <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Session</div>
           <div class="grid grid-cols-2 gap-1">
             <div class="text-xs">
               <span class="text-text-muted">XP Gained:</span>
@@ -77,13 +77,13 @@
 
       <!-- ═══ Row 1, Col 2: Description ═══ -->
       <div v-if="cdnData?.description" class="flex flex-col gap-1" style="grid-area: desc;">
-        <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Description</div>
+        <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Description</div>
         <div class="text-xs text-text-secondary italic">{{ cdnData.description }}</div>
       </div>
 
       <!-- ═══ Row 2, Col 1: Bonus Level Sources ═══ -->
       <div v-if="bonusSources.length" class="flex flex-col gap-1.5" style="grid-area: bonus;">
-        <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+        <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
           Bonus Levels ({{ skill.bonus_levels }}/{{ cdnData?.max_bonus_levels ?? '?' }})
         </div>
         <div class="flex flex-col gap-0.5">
@@ -103,7 +103,7 @@
 
       <!-- ═══ Row 2, Col 2: Advancement Hints ═══ -->
       <div v-if="allHints.length" class="flex flex-col gap-1.5" style="grid-area: hints;">
-        <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Advancement Hints</div>
+        <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Advancement Hints</div>
         <div class="flex flex-col gap-0.5">
           <div
             v-for="hint in allHints"
@@ -122,7 +122,7 @@
       <!-- ═══ Row 3, Col 1-2: Related Abilities + Keywords ═══ -->
       <div class="flex flex-col gap-4" style="grid-area: abilities;">
         <div v-if="abilities.length" class="flex flex-col gap-1.5">
-          <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+          <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
             Related Abilities ({{ abilities.length }})
           </div>
           <div class="flex flex-col gap-0.5">
@@ -130,9 +130,9 @@
               v-for="ability in abilities"
               :key="ability.id"
               class="text-xs flex items-center gap-2 px-2 py-0.5 border-b border-[#151515] hover:bg-surface-base">
-              <span class="text-text-muted text-[0.72rem] min-w-10 shrink-0">[Lv {{ ability.level || 0 }}]</span>
+              <span class="text-text-muted text-xs min-w-10 shrink-0">[Lv {{ ability.level || 0 }}]</span>
               <AbilityInline :ability="ability" class="flex-1" />
-              <span v-if="abilitySourceLabels[ability.id]" class="text-text-dim text-[0.6rem] shrink-0">
+              <span v-if="abilitySourceLabels[ability.id]" class="text-text-dim text-[10px] shrink-0">
                 {{ abilitySourceLabels[ability.id] }}
               </span>
             </div>
@@ -140,19 +140,19 @@
         </div>
 
         <div v-if="cdnData?.keywords?.length" class="flex flex-col gap-1.5">
-          <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
+          <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
           <div class="flex flex-wrap gap-1">
             <span
               v-for="kw in cdnData.keywords"
               :key="kw"
-              class="text-[0.72rem] px-1.5 py-0.5 bg-surface-card border border-[#2a2a4e] text-entity-item">{{ kw }}</span>
+              class="text-xs px-1.5 py-0.5 bg-surface-card border border-[#2a2a4e] text-entity-item">{{ kw }}</span>
           </div>
         </div>
       </div>
 
       <!-- ═══ Row 1-3, Col 3: Rewards (spans full height) ═══ -->
       <div v-if="allRewards.length" class="flex flex-col gap-1.5" style="grid-area: rewards;">
-        <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Rewards</div>
+        <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Rewards</div>
         <div class="flex flex-col gap-0.5">
           <div
             v-for="reward in allRewards"

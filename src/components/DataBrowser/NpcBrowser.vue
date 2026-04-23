@@ -55,7 +55,7 @@
             }"
             @click="selectNpc(npc)">
             <span class="text-text-primary/75 flex-1">{{ npc.name }}</span>
-            <span v-if="npc.area_friendly_name" class="text-text-dim text-[0.72rem]">{{
+            <span v-if="npc.area_friendly_name" class="text-text-dim text-xs">{{
               npc.area_friendly_name
             }}</span>
           </li>
@@ -96,7 +96,7 @@
           <div class="flex flex-col gap-4 px-4 pb-4">
             <!-- Vendor Inventory (items they sell with prices) -->
             <div v-if="vendorItems.length" class="flex flex-col gap-1.5">
-              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Sells Items ({{ vendorItems.length }})</div>
+              <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Sells Items ({{ vendorItems.length }})</div>
               <div class="max-h-80 overflow-y-auto border border-surface-dark">
                 <table class="w-full text-xs border-collapse">
                   <thead class="sticky top-0 bg-surface-base">
@@ -113,7 +113,7 @@
                       <td class="py-0.5 px-2">
                         <ItemInline :reference="String(item.item_id)" />
                       </td>
-                      <td class="py-0.5 px-2 text-right text-text-muted font-mono">
+                      <td class="py-0.5 px-2 text-right text-text-muted">
                         <template v-if="item.value">{{ Math.ceil(item.value * 1.5) }}c</template>
                         <span v-else class="text-text-dim">--</span>
                       </td>
@@ -125,8 +125,8 @@
 
             <!-- Raw JSON -->
             <div v-if="settingsStore.settings.showRawJsonInDataBrowser" class="flex flex-col gap-1.5">
-              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
-              <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
+              <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
+              <pre class="bg-surface-dark border border-surface-card p-3 text-xs text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
             </div>
           </div>
         </template>

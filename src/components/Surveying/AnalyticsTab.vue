@@ -41,7 +41,7 @@
         <header class="flex items-center justify-between">
           <div class="flex items-baseline gap-3">
             <h2 class="text-sm text-text-primary font-semibold">Survey Analytics</h2>
-            <span class="text-[0.65rem] text-text-dim">
+            <span class="text-[10px] text-text-dim">
               {{ store.analytics?.total_uses.toLocaleString() }} surveys across
               {{ store.analytics?.zones.length }} zone{{ store.analytics?.zones.length === 1 ? '' : 's' }}
             </span>

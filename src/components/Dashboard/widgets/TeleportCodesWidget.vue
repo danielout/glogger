@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-2 h-full min-h-0">
+  <div class="flex flex-col gap-2">
     <input
       v-model="search"
       type="text"
@@ -21,7 +21,7 @@
       </button>
     </div>
 
-    <div class="flex flex-col gap-1.5 flex-1 overflow-y-auto min-h-0 pr-1">
+    <div class="flex flex-col gap-1.5 overflow-y-auto max-h-80 pr-1">
       <div
         v-for="group in groupedResults"
         :key="group.zone + group.destination"
@@ -35,7 +35,7 @@
           <span
             v-for="code in group.codes"
             :key="code"
-            class="font-mono text-xs px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+            class="text-xs px-1.5 py-0.5 rounded cursor-pointer transition-colors"
             :class="
               copiedCode === code
                 ? 'bg-green-500/20 text-green-400'

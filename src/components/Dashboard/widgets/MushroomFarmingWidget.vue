@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-2 h-full min-h-0">
+  <div class="flex flex-col gap-2">
     <!-- Current moon phase -->
     <div v-if="phase" class="flex items-center gap-2 text-sm">
       <span class="text-lg">{{ phase.emoji }}</span>
@@ -33,7 +33,7 @@
     </div>
 
     <!-- Mushroom table -->
-    <div class="flex-1 overflow-y-auto min-h-0">
+    <div class="overflow-y-auto max-h-80">
       <table class="w-full text-sm">
         <thead>
           <tr class="text-text-dim text-xs border-b border-border">
@@ -59,8 +59,8 @@
             <td class="py-1.5 pr-2">
               <ItemInline :reference="m.name" />
             </td>
-            <td class="text-center py-1.5 px-2 text-text-dim font-mono">{{ m.level }}</td>
-            <td class="text-center py-1.5 px-2 text-text-dim font-mono">{{ m.growTime }}h</td>
+            <td class="text-center py-1.5 px-2 text-text-dim">{{ m.level }}</td>
+            <td class="text-center py-1.5 px-2 text-text-dim">{{ m.growTime }}h</td>
             <td class="py-1.5 px-2">
               <span class="text-accent-gold">{{ m.optimalSubstrate }}</span>
               <span class="text-text-dim"> / {{ m.adequateSubstrate }}</span>

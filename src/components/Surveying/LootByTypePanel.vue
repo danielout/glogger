@@ -1,10 +1,10 @@
 <template>
   <section class="bg-surface-card border border-border-default rounded p-3 flex flex-col gap-3">
     <header class="flex items-baseline justify-between">
-      <h3 class="text-[0.65rem] uppercase tracking-widest text-text-secondary font-semibold">
+      <h3 class="text-[10px] uppercase tracking-widest text-text-secondary font-semibold">
         Breakdown by Survey Type
       </h3>
-      <span v-if="bonusSummary" class="text-[0.6rem] text-accent-gold">
+      <span v-if="bonusSummary" class="text-[10px] text-accent-gold">
         {{ bonusSummary }}
       </span>
     </header>
@@ -20,9 +20,9 @@
         @click="toggleType(group.displayName)"
       >
         <div class="flex items-center gap-2 min-w-0">
-          <span class="text-text-dim text-[0.65rem]">{{ expanded[group.displayName] ? '▼' : '▶' }}</span>
+          <span class="text-text-dim text-[10px]">{{ expanded[group.displayName] ? '▼' : '▶' }}</span>
           <span class="text-text-primary font-semibold truncate">{{ group.displayName }}</span>
-          <span class="text-[0.6rem] text-text-dim">{{ group.kind }}</span>
+          <span class="text-[10px] text-text-dim">{{ group.kind }}</span>
         </div>
         <div class="flex items-center gap-3 shrink-0 tabular-nums">
           <span>
@@ -43,7 +43,7 @@
           <div
             v-for="item in group.primaryItems"
             :key="`primary:${item.item_name}`"
-            class="flex items-center gap-1 text-[0.7rem] bg-surface-elevated rounded px-1.5 py-0.5 border border-border-default/50"
+            class="flex items-center gap-1 text-xs bg-surface-elevated rounded px-1.5 py-0.5 border border-border-default/50"
           >
             <ItemInline :reference="item.item_name" :show-icon="false" />
             <span class="text-text-primary font-semibold tabular-nums">&times;{{ item.total_qty }}</span>
@@ -52,13 +52,13 @@
 
         <!-- Bonus items -->
         <div v-if="group.bonusItems.length > 0" class="flex flex-wrap gap-1.5 py-1">
-          <span class="text-[0.6rem] text-accent-gold uppercase tracking-wider font-semibold self-center mr-1">
+          <span class="text-[10px] text-accent-gold uppercase tracking-wider font-semibold self-center mr-1">
             Bonus
           </span>
           <div
             v-for="item in group.bonusItems"
             :key="`bonus:${item.item_name}`"
-            class="flex items-center gap-1 text-[0.7rem] bg-accent-gold/5 rounded px-1.5 py-0.5 border border-accent-gold/20"
+            class="flex items-center gap-1 text-xs bg-accent-gold/5 rounded px-1.5 py-0.5 border border-accent-gold/20"
           >
             <ItemInline :reference="item.item_name" :show-icon="false" />
             <span class="text-accent-gold font-semibold tabular-nums">&times;{{ item.bonus_qty }}</span>

@@ -20,13 +20,13 @@
             :key="word.id"
             class="flex items-center gap-2 py-0.5 group">
             <span
-              class="font-mono text-xs px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+              class="text-xs px-1.5 py-0.5 rounded cursor-pointer transition-colors"
               :class="wordAgeClass(word)"
               :title="'Click to copy — Discovered ' + formatWordAge(word)"
               @click="copyWord(word.word)">
               {{ word.word }}
             </span>
-            <span class="text-[11px] text-text-dim flex-1 truncate" :title="word.description ?? ''">
+            <span class="text-xs text-text-dim flex-1 truncate" :title="word.description ?? ''">
               {{ formatWordAge(word) }}
             </span>
             <button
@@ -67,7 +67,7 @@
           v-model="newWord"
           type="text"
           placeholder="Word (e.g. TOAEOACHROF)"
-          class="w-full px-2 py-1 rounded bg-surface-2 border border-border text-xs text-text-primary placeholder:text-text-dim focus:outline-none focus:border-accent-blue font-mono" />
+          class="w-full px-2 py-1 rounded bg-surface-2 border border-border text-xs text-text-primary placeholder:text-text-dim focus:outline-none focus:border-accent-blue" />
         <input
           v-model="newPowerName"
           type="text"

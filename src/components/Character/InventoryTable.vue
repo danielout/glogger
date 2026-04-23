@@ -74,7 +74,7 @@
                 </span>
               </div>
             </td>
-            <td class="py-1 px-2 text-right text-text-primary">{{ item.stack_size }}</td>
+            <td class="py-1 px-2 text-right text-text-primary tabular-nums">{{ item.stack_size }}</td>
             <td class="py-1 px-2 text-text-secondary text-xs">{{ formatVault(getLocation(item)) }}</td>
             <td class="py-1 px-2">
               <span v-if="item.rarity" :class="rarityClass(item.rarity)" class="text-xs font-medium">
@@ -82,8 +82,8 @@
               </span>
             </td>
             <td class="py-1 px-2 text-text-secondary text-xs">{{ item.slot ?? '' }}</td>
-            <td class="py-1 px-2 text-right text-text-secondary">{{ item.level ?? '' }}</td>
-            <td class="py-1 px-2 text-right text-accent-gold">
+            <td class="py-1 px-2 text-right text-text-secondary tabular-nums">{{ item.level ?? '' }}</td>
+            <td class="py-1 px-2 text-right text-accent-gold tabular-nums">
               <template v-if="item.value">
                 {{ formatNumber(item.value * item.stack_size) }}
               </template>

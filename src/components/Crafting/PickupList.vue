@@ -4,7 +4,7 @@
       <h4 class="text-text-secondary text-xs font-semibold uppercase tracking-wide m-0">
         Pickup List
       </h4>
-      <span class="text-text-muted text-[0.65rem]">{{ areas.length }} area{{ areas.length !== 1 ? 's' : '' }} to visit</span>
+      <span class="text-text-muted text-[10px]">{{ areas.length }} area{{ areas.length !== 1 ? 's' : '' }} to visit</span>
     </div>
 
     <div v-if="areas.length === 0" class="text-text-dim text-xs italic">
@@ -26,13 +26,13 @@
             class="accent-accent-gold cursor-pointer"
             @click.stop="item.checked = !item.checked" />
           <ItemInline :reference="item.item_name" />
-          <span class="text-text-muted text-[0.6rem] ml-auto mr-1" :title="item.vault_name">
+          <span class="text-text-muted text-[10px] ml-auto mr-1" :title="item.vault_name">
             {{ item.vault_label }}
           </span>
-          <span class="text-text-primary font-mono shrink-0">
+          <span class="text-text-primary shrink-0">
             ×{{ item.pickup_quantity }}
           </span>
-          <span v-if="item.pickup_quantity < item.available" class="text-text-muted text-[0.65rem]">
+          <span v-if="item.pickup_quantity < item.available" class="text-text-muted text-[10px]">
             ({{ item.available }} avail)
           </span>
         </li>

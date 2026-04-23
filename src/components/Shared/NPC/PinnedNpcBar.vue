@@ -15,26 +15,26 @@
       <!-- Favor badge -->
       <span
         v-if="entry.favorTier"
-        class="text-[0.6rem] px-1 py-0.5 rounded border shrink-0"
+        class="text-[10px] px-1 py-0.5 rounded border shrink-0"
         :class="favorBadgeClasses(entry.favorTier)"
       >
         {{ tierDisplayName(entry.favorTier) }}
       </span>
 
       <!-- Vendor gold -->
-      <span v-if="entry.vendorGold != null" class="text-[0.6rem] text-text-secondary shrink-0 whitespace-nowrap">
+      <span v-if="entry.vendorGold != null" class="text-[10px] text-text-secondary shrink-0 whitespace-nowrap">
         <span class="text-accent-gold">$</span>
         {{ entry.vendorGold.toLocaleString() }}<span v-if="entry.vendorGoldMax != null" class="text-text-dim">/{{ entry.vendorGoldMax.toLocaleString() }}</span>
       </span>
 
       <!-- Storage -->
-      <span v-if="entry.storageUsed != null" class="text-[0.6rem] text-text-secondary shrink-0 whitespace-nowrap">
+      <span v-if="entry.storageUsed != null" class="text-[10px] text-text-secondary shrink-0 whitespace-nowrap">
         <span class="text-cyan-400">&#x25A3;</span>
         {{ entry.storageUsed }}<span v-if="entry.storageTotal != null" class="text-text-dim">/{{ entry.storageTotal }}</span>
       </span>
 
       <!-- Vendor timer -->
-      <span v-if="entry.timerRemaining" class="text-[0.6rem] text-text-dim shrink-0 whitespace-nowrap">
+      <span v-if="entry.timerRemaining" class="text-[10px] text-text-dim shrink-0 whitespace-nowrap">
         &#x23F1; {{ entry.timerRemaining }}
       </span>
 

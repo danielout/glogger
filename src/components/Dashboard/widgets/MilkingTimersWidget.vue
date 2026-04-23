@@ -3,7 +3,7 @@
     <!-- Self-milked counter (cow form self-milking) -->
     <div v-if="selfMilkedCount > 0" class="flex items-center justify-between px-2 shrink-0">
       <span class="text-xs text-text-muted">Self-milked</span>
-      <span class="text-xs font-mono text-accent-gold">{{ selfMilkedCount }}</span>
+      <span class="text-xs text-accent-gold">{{ selfMilkedCount }}</span>
     </div>
 
     <!-- Tab bar -->
@@ -43,7 +43,7 @@
               class="flex items-center justify-between gap-2 py-0.5 pl-2">
               <span class="text-text-primary text-xs truncate">{{ timer.cow_name }}</span>
               <span
-                class="text-xs font-mono whitespace-nowrap shrink-0"
+                class="text-xs whitespace-nowrap shrink-0"
                 :class="timer.remaining <= 0 ? 'text-green-400' : 'text-text-dim'">
                 {{ timer.remaining <= 0 ? 'Ready!' : formatRemaining(timer.remaining) }}
               </span>
@@ -64,10 +64,10 @@
           :key="entry.player_name"
           class="flex items-center justify-between gap-2 py-0.5 px-2">
           <div class="flex items-center gap-2 min-w-0">
-            <span class="text-xs text-text-dim font-mono w-4 text-right shrink-0">{{ i + 1 }}</span>
+            <span class="text-xs text-text-dim w-4 text-right shrink-0">{{ i + 1 }}</span>
             <span class="text-text-primary text-xs truncate">{{ entry.player_name }}</span>
           </div>
-          <span class="text-xs font-mono text-accent-gold shrink-0">{{ entry.count }}</span>
+          <span class="text-xs text-accent-gold shrink-0">{{ entry.count }}</span>
         </div>
       </div>
     </div>
@@ -83,10 +83,10 @@
           :key="entry.player_name"
           class="flex items-center justify-between gap-2 py-0.5 px-2">
           <div class="flex items-center gap-2 min-w-0">
-            <span class="text-xs text-text-dim font-mono w-4 text-right shrink-0">{{ i + 1 }}</span>
+            <span class="text-xs text-text-dim w-4 text-right shrink-0">{{ i + 1 }}</span>
             <span class="text-text-primary text-xs truncate">{{ entry.player_name }}</span>
           </div>
-          <span class="text-xs font-mono text-accent-gold shrink-0">{{ entry.count }}</span>
+          <span class="text-xs text-accent-gold shrink-0">{{ entry.count }}</span>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 <template>
   <div class="bg-surface-dark border border-border-default rounded-lg p-3 overflow-y-auto">
-    <div class="text-[0.65rem] uppercase tracking-widest text-text-dim mb-2 font-bold">Activity Log</div>
+    <div class="text-[10px] uppercase tracking-widest text-text-dim mb-2 font-bold">Activity Log</div>
     <div v-if="store.log.length === 0" class="text-text-dim italic text-xs">No events yet.</div>
     <div
       v-for="(entry, i) in store.log"
@@ -8,7 +8,7 @@
       class="px-2 py-1 border-l-3 border-border-light mb-1 text-xs"
       :style="{ borderLeftColor: kindColor[entry.kind] }">
       <div class="flex items-baseline gap-2">
-        <span class="text-text-dim text-[0.65rem] shrink-0">{{ formatTs(entry.timestamp) }}</span>
+        <span class="text-text-dim text-[10px] shrink-0">{{ formatTs(entry.timestamp) }}</span>
         <span class="shrink-0">{{ kindIcon[entry.kind] }}</span>
         <span class="text-text-primary/75">{{ entry.label }}</span>
       </div>

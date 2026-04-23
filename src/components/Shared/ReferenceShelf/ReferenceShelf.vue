@@ -9,7 +9,7 @@
       class="flex items-center justify-between px-3 h-7 cursor-pointer hover:bg-surface-raised/50 transition-colors"
       @click="shelf.toggleCollapsed()"
     >
-      <div class="flex items-center gap-1.5 text-text-muted text-[0.65rem]">
+      <div class="flex items-center gap-1.5 text-text-muted text-[10px]">
         <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M12 2L12 12M12 12L8 8M12 12L16 8" />
           <rect x="3" y="14" width="18" height="7" rx="1" />

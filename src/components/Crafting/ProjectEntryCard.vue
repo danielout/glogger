@@ -11,10 +11,10 @@
 
       <!-- Quantity / target display -->
       <template v-if="isTargetMode">
-        <span class="text-accent-gold font-mono text-[0.65rem]" title="Stock target mode">
+        <span class="text-accent-gold text-[10px]" title="Stock target mode">
           target {{ entry.target_stock }}
         </span>
-        <span v-if="stockTarget" class="text-text-muted text-[0.65rem]">
+        <span v-if="stockTarget" class="text-text-muted text-[10px]">
           <template v-if="stockTarget.effectiveQty <= 0">
             <span class="text-green-400">met</span>
           </template>
@@ -24,15 +24,15 @@
         </span>
       </template>
       <template v-else>
-        <span class="text-text-primary font-mono">&times;{{ entry.quantity }}</span>
+        <span class="text-text-primary">&times;{{ entry.quantity }}</span>
       </template>
 
-      <span v-if="estimatedTotalCost" class="text-text-muted text-[0.65rem]">~{{ estimatedTotalCost.toLocaleString() }}g</span>
+      <span v-if="estimatedTotalCost" class="text-text-muted text-[10px]">~{{ estimatedTotalCost.toLocaleString() }}g</span>
 
       <div class="ml-auto flex items-center gap-2" @click.stop>
         <!-- Mode toggle -->
         <button
-          class="text-[0.6rem] cursor-pointer bg-transparent border border-border-light rounded px-1.5 py-0.5 hover:border-border-default"
+          class="text-[10px] cursor-pointer bg-transparent border border-border-light rounded px-1.5 py-0.5 hover:border-border-default"
           :class="isTargetMode ? 'text-accent-gold border-accent-gold/30' : 'text-text-muted'"
           :title="isTargetMode ? 'Switch to manual quantity' : 'Switch to stock target mode'"
           @click="toggleTargetMode">

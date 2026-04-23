@@ -34,11 +34,11 @@
             :key="attr.attribute_name"
             class="border-b border-border-default/30 hover:bg-surface-elevated/50">
             <td class="py-0.5 px-2 text-text-primary">{{ formatAttrName(attr.attribute_name) }}</td>
-            <td class="py-0.5 px-2 text-right text-accent-gold font-mono">{{ fmtVal(attr.current_value) }}</td>
-            <td class="py-0.5 px-2 text-right font-mono" :class="attr.min_value < attr.current_value ? 'text-blue-400' : 'text-text-dim'">
+            <td class="py-0.5 px-2 text-right text-accent-gold tabular-nums">{{ fmtVal(attr.current_value) }}</td>
+            <td class="py-0.5 px-2 text-right" :class="attr.min_value < attr.current_value ? 'text-blue-400' : 'text-text-dim'">
               {{ fmtVal(attr.min_value) }}
             </td>
-            <td class="py-0.5 px-2 text-right font-mono" :class="attr.max_value > attr.current_value ? 'text-green-400' : 'text-text-dim'">
+            <td class="py-0.5 px-2 text-right" :class="attr.max_value > attr.current_value ? 'text-green-400' : 'text-text-dim'">
               {{ fmtVal(attr.max_value) }}
             </td>
           </tr>

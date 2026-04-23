@@ -33,7 +33,7 @@
         class="flex items-center gap-2 py-1 border-b border-surface-dark/50 text-xs">
         <ItemInline :reference="item.name" />
       </li>
-      <li v-if="filteredItems.length > 50" class="text-text-dim text-[0.65rem] italic py-1">
+      <li v-if="filteredItems.length > 50" class="text-text-dim text-[10px] italic py-1">
         ...and {{ filteredItems.length - 50 }} more
       </li>
     </ul>

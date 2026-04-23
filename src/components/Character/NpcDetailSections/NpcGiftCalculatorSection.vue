@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col gap-1.5">
-    <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+    <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
       Gift Calculator
     </div>
 
@@ -30,10 +30,10 @@
             :class="{ 'bg-accent-gold/10 border border-accent-gold/30': selectedPref === match }"
             @click="selectedPref = match">
             <span class="text-text-secondary flex-1">{{ match.name ?? match.keywords.join(', ') }}</span>
-            <span class="text-green-400 font-mono text-[0.6rem]">+{{ match.pref }}</span>
+            <span class="text-green-400 text-[10px]">+{{ match.pref }}</span>
           </div>
         </div>
-        <div v-else-if="itemQuery.length >= 2" class="text-[0.6rem] text-text-dim italic">
+        <div v-else-if="itemQuery.length >= 2" class="text-[10px] text-text-dim italic">
           No matching preferences found
         </div>
       </div>
@@ -46,13 +46,13 @@
         </div>
         <div class="flex items-center gap-2 text-xs">
           <span class="text-text-muted">Per gift:</span>
-          <span class="text-green-400 font-mono">+{{ calculation.prefValue }}</span>
+          <span class="text-green-400">+{{ calculation.prefValue }}</span>
         </div>
         <div class="flex items-center gap-2 text-xs">
           <span class="text-text-muted">Items needed:</span>
           <span class="text-accent-gold font-bold text-sm">~{{ calculation.itemsNeeded.toLocaleString() }}</span>
         </div>
-        <div class="text-[0.55rem] text-text-dim italic mt-1">
+        <div class="text-[10px] text-text-dim italic mt-1">
           Estimate only — actual favor may vary with gift bonuses, tier, and other factors.
         </div>
       </div>

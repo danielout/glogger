@@ -3,7 +3,7 @@
     <!-- Inputs -->
     <div class="flex flex-col gap-2">
       <div class="flex flex-col gap-1">
-        <label class="text-[0.6rem] uppercase tracking-wide text-text-secondary font-semibold">
+        <label class="text-[10px] uppercase tracking-wide text-text-secondary font-semibold">
           Item
         </label>
         <SearchableSelect
@@ -17,7 +17,7 @@
 
       <div class="grid grid-cols-2 gap-2">
         <div class="flex flex-col gap-1">
-          <label class="text-[0.6rem] uppercase tracking-wide text-text-secondary font-semibold">
+          <label class="text-[10px] uppercase tracking-wide text-text-secondary font-semibold">
             Target Qty
           </label>
           <NumberInput
@@ -30,7 +30,7 @@
           />
         </div>
         <div class="flex flex-col gap-1">
-          <label class="text-[0.6rem] uppercase tracking-wide text-text-secondary font-semibold">
+          <label class="text-[10px] uppercase tracking-wide text-text-secondary font-semibold">
             Sell Price
           </label>
           <NumberInput
@@ -45,14 +45,14 @@
       </div>
 
       <div class="flex flex-col gap-1">
-        <label class="text-[0.6rem] uppercase tracking-wide text-text-secondary font-semibold">
+        <label class="text-[10px] uppercase tracking-wide text-text-secondary font-semibold">
           Sort By
         </label>
         <div class="flex gap-0.5 bg-surface-elevated border border-border-default rounded p-0.5">
           <button
             v-for="opt in sortOptions"
             :key="opt.key"
-            class="flex-1 px-2 py-1 text-[0.7rem] rounded transition-colors"
+            class="flex-1 px-2 py-1 text-xs rounded transition-colors"
             :class="
               sortMode === opt.key
                 ? 'bg-accent-gold/20 text-accent-gold font-semibold'
@@ -94,49 +94,49 @@
         <!-- Row header -->
         <div class="flex items-baseline gap-2">
           <span class="text-text-primary font-semibold">{{ r.survey_type }}</span>
-          <span v-if="idx === 0" class="text-[0.55rem] uppercase tracking-wider text-accent-gold font-bold">
+          <span v-if="idx === 0" class="text-[10px] uppercase tracking-wider text-accent-gold font-bold">
             Best
           </span>
-          <span v-if="r.zone" class="text-[0.6rem] text-text-dim ml-auto">
+          <span v-if="r.zone" class="text-[10px] text-text-dim ml-auto">
             <AreaInline :reference="r.zone" />
           </span>
         </div>
 
         <!-- Numbers grid -->
-        <div class="grid grid-cols-[repeat(auto-fit,minmax(64px,1fr))] gap-1 text-[0.7rem] tabular-nums">
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(64px,1fr))] gap-1 text-xs tabular-nums">
           <div>
-            <div class="text-[0.55rem] uppercase tracking-wider text-text-dim">Yield</div>
+            <div class="text-[10px] uppercase tracking-wider text-text-dim">Yield</div>
             <div class="text-text-primary font-semibold">{{ r.effective_yield.toFixed(1) }}</div>
           </div>
           <div>
-            <div class="text-[0.55rem] uppercase tracking-wider text-text-dim">Needed</div>
+            <div class="text-[10px] uppercase tracking-wider text-text-dim">Needed</div>
             <div class="text-text-primary font-semibold">{{ r.surveys_needed.toLocaleString() }}</div>
           </div>
           <div>
-            <div class="text-[0.55rem] uppercase tracking-wider text-text-dim">Cost Each</div>
+            <div class="text-[10px] uppercase tracking-wider text-text-dim">Cost Each</div>
             <div class="text-text-secondary">{{ formatGold(r.crafting_cost) }}</div>
           </div>
           <div>
-            <div class="text-[0.55rem] uppercase tracking-wider text-text-dim">Total Cost</div>
+            <div class="text-[10px] uppercase tracking-wider text-text-dim">Total Cost</div>
             <div :class="idx === 0 && sortMode === 'cost' ? 'text-accent-green font-bold' : 'text-text-primary'">
               {{ formatGold(r.total_cost) }}
             </div>
           </div>
           <div>
-            <div class="text-[0.55rem] uppercase tracking-wider text-text-dim">Est. Time</div>
+            <div class="text-[10px] uppercase tracking-wider text-text-dim">Est. Time</div>
             <div :class="timeValueClass(r, idx)">
               {{ r.avg_seconds_per_survey > 0 ? formatTime(r.total_time_seconds) : 'N/A' }}
             </div>
           </div>
           <template v-if="hasSellPrice">
             <div>
-              <div class="text-[0.55rem] uppercase tracking-wider text-text-dim">Profit</div>
+              <div class="text-[10px] uppercase tracking-wider text-text-dim">Profit</div>
               <div :class="r.profit >= 0 ? 'text-accent-green' : 'text-accent-red'">
                 {{ r.profit >= 0 ? '+' : '' }}{{ formatGold(r.profit) }}
               </div>
             </div>
             <div>
-              <div class="text-[0.55rem] uppercase tracking-wider text-text-dim">Profit/hr</div>
+              <div class="text-[10px] uppercase tracking-wider text-text-dim">Profit/hr</div>
               <div :class="profitPerHourClass(r, idx)">
                 {{ r.avg_seconds_per_survey > 0
                   ? (r.profit_per_hour >= 0 ? '+' : '') + formatGold(r.profit_per_hour) + '/hr'
@@ -147,7 +147,7 @@
         </div>
 
         <!-- Yield breakdown footer -->
-        <div class="text-[0.6rem] text-text-dim flex flex-wrap gap-x-3">
+        <div class="text-[10px] text-text-dim flex flex-wrap gap-x-3">
           <span v-if="r.primary_avg > 0">
             Primary: <span class="text-text-secondary">{{ r.primary_avg.toFixed(1) }}/survey</span>
             ({{ r.primary_times_seen }}/{{ r.total_completions }})
@@ -162,7 +162,7 @@
         </div>
       </div>
 
-      <p class="text-[0.6rem] text-text-dim italic">
+      <p class="text-[10px] text-text-dim italic">
         Yield includes primary loot + expected speed-bonus contribution. Time estimates are averaged
         from ended sessions only — they improve as you complete more runs.
       </p>

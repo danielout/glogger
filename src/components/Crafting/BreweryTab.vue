@@ -20,7 +20,7 @@
             v-for="option in categoryOptions"
             :key="option.value"
             :class="[
-              'text-[0.6rem] px-1.5 py-0.5 rounded border cursor-pointer transition-colors',
+              'text-[10px] px-1.5 py-0.5 rounded border cursor-pointer transition-colors',
               store.categoryFilter === option.value
                 ? 'bg-accent-gold/20 border-accent-gold/40 text-accent-gold'
                 : 'bg-transparent border-border-light text-text-muted hover:text-text-primary',
@@ -44,7 +44,7 @@
           <template v-else>
             <div v-for="group in store.filteredRecipesByCategory" :key="group.category">
               <!-- Category header -->
-              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim px-2 pt-2 pb-0.5 border-b border-surface-card sticky top-0 bg-surface-base z-10">
+              <div class="text-[10px] uppercase tracking-widest text-text-dim px-2 pt-2 pb-0.5 border-b border-surface-card sticky top-0 bg-surface-base z-10">
                 {{ group.label }}
               </div>
 
@@ -61,10 +61,10 @@
                 <span class="flex items-center gap-1.5 shrink-0 ml-2">
                   <span
                     v-if="store.discoveryCountByRecipe.get(recipe.recipe_id)"
-                    class="text-xs font-mono text-accent-green">
+                    class="text-xs text-accent-green">
                     {{ store.discoveryCountByRecipe.get(recipe.recipe_id) }}
                   </span>
-                  <span class="text-text-muted font-mono text-xs">Lv{{ recipe.skill_level_req }}</span>
+                  <span class="text-text-muted text-xs">Lv{{ recipe.skill_level_req }}</span>
                 </span>
               </button>
             </div>
@@ -131,7 +131,7 @@
                 <li><code class="text-accent-gold">power_tier</code>, <code class="text-accent-gold">type_id</code>, <code class="text-accent-gold">item_name</code></li>
               </ul>
               <p class="m-0 text-text-dim">At minimum, <code>recipe_name</code> + ingredients records what you tried. Adding <code>effect_desc</code> or <code>effect_name</code> records what you got. We'll auto-match effect text to the game's internal data.</p>
-              <div class="bg-surface-base rounded p-2 mt-1 font-mono text-[0.65rem] text-text-dim overflow-x-auto whitespace-nowrap">
+              <div class="bg-surface-base rounded p-2 mt-1 text-[10px] text-text-dim overflow-x-auto whitespace-nowrap">
                 recipe_name,ingredient1,ingredient2,ingredient3,ingredient4,effect_desc<br>
                 Dwarven Stout,Corn,Green Apple,Groxmax Powder,Cinnamon,Rakshasa gain +38 Max Power<br>
                 Dwarven Stout,Corn,Pear,Groxmax Powder,Cinnamon,Rakshasa earn +11.8% Combat XP<br>

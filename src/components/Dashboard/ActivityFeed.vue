@@ -1,12 +1,12 @@
 <template>
-  <div class="flex flex-col h-full min-h-0">
+  <div class="flex flex-col h-full">
     <EmptyState
       v-if="entries.length === 0"
       variant="compact"
       :primary="emptyText"
       :secondary="emptyHint" />
 
-    <div v-else class="flex flex-col gap-0.5 flex-1 overflow-y-auto min-h-0 pr-1">
+    <div v-else class="flex flex-col gap-0.5 overflow-y-auto max-h-52 pr-1">
       <div
         v-for="entry in entries"
         :key="`${entry.timestamp}-${entry.label}-${entry.amount}-${entry.detail}`"
@@ -15,7 +15,7 @@
         <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="dotColor" />
 
         <!-- Timestamp -->
-        <span class="text-text-dim font-mono shrink-0">{{ formatTs(entry.timestamp) }}</span>
+        <span class="text-text-dim shrink-0">{{ formatTs(entry.timestamp) }}</span>
 
         <!-- Label (item name, NPC name, etc.) -->
         <ItemInline v-if="showItemLinks" :reference="entry.label" />
@@ -23,7 +23,7 @@
         <span v-else class="text-text-primary truncate">{{ entry.label }}</span>
 
         <!-- Amount -->
-        <span class="ml-auto shrink-0 font-mono" :class="amountClass(entry.amount)">
+        <span class="ml-auto shrink-0" :class="amountClass(entry.amount)">
           {{ formatAmount(entry.amount) }}
         </span>
 
@@ -47,7 +47,7 @@
           </span>
         </span>
       </span>
-      <span class="font-mono" :class="amountClass(total)">
+      <span :class="amountClass(total)">
         {{ signedTotal ? formatSigned(total) : total.toLocaleString() }} {{ unit }}
       </span>
     </div>

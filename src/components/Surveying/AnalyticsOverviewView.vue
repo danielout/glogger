@@ -33,7 +33,7 @@
         <h3 class="text-xs uppercase tracking-widest text-accent-blue font-semibold">
           Cross-Zone Comparison
         </h3>
-        <span class="text-[0.6rem] text-text-dim">click a zone to drill in</span>
+        <span class="text-[10px] text-text-dim">click a zone to drill in</span>
       </header>
       <CrossZoneComparison :zones="analytics.zones" @select-zone="emitZone" />
     </section>
@@ -44,11 +44,11 @@
         <h3 class="text-xs uppercase tracking-widest text-accent-blue font-semibold">
           All Survey Types
         </h3>
-        <span class="text-[0.6rem] text-text-dim">sorted by most-used · click to drill in</span>
+        <span class="text-[10px] text-text-dim">sorted by most-used · click to drill in</span>
       </header>
       <table class="w-full text-xs border-collapse">
         <thead>
-          <tr class="text-[0.6rem] uppercase tracking-wide text-text-secondary font-semibold border-b border-border-default">
+          <tr class="text-[10px] uppercase tracking-wide text-text-secondary font-semibold border-b border-border-default">
             <th class="text-left py-1.5 px-2">Survey Type</th>
             <th class="text-left py-1.5 px-2">Zone</th>
             <th class="text-left py-1.5 px-2">Kind</th>

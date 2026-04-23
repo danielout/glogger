@@ -61,11 +61,11 @@
               </span>
               <span
                 v-if="row.session.ended_at === null"
-                class="text-[0.6rem] px-1.5 py-0.5 rounded bg-accent-green/20 text-accent-green uppercase tracking-wider font-semibold"
+                class="text-[10px] px-1.5 py-0.5 rounded bg-accent-green/20 text-accent-green uppercase tracking-wider font-semibold"
               >
                 Active
               </span>
-              <span class="text-[0.65rem] text-text-muted">
+              <span class="text-[10px] text-text-muted">
                 {{ row.session.start_trigger }}
               </span>
             </div>
@@ -120,7 +120,7 @@
 
             <!-- Notes editor -->
             <div>
-              <div class="text-[0.65rem] uppercase tracking-wider text-text-secondary font-semibold mb-1">
+              <div class="text-[10px] uppercase tracking-wider text-text-secondary font-semibold mb-1">
                 Notes
               </div>
               <textarea
@@ -135,7 +135,7 @@
             <!-- Danger zone -->
             <div class="flex justify-end">
               <button
-                class="text-[0.7rem] px-2.5 py-1 rounded border border-accent-red/50 text-accent-red hover:bg-accent-red/10 transition-colors"
+                class="text-xs px-2.5 py-1 rounded border border-accent-red/50 text-accent-red hover:bg-accent-red/10 transition-colors"
                 @click="pendingDeleteId = row.session.id; showDeleteConfirm = true"
               >
                 Delete session

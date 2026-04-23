@@ -7,14 +7,14 @@
         alt="glogger"
         class="size-24 rounded-2xl mb-4 ring-2 ring-border-default" />
       <h2 class="m-0 text-accent-gold text-2xl tracking-wide">{{ appName }}</h2>
-      <p class="m-0 mt-1 text-text-muted text-sm font-mono">
+      <p class="m-0 mt-1 text-text-muted text-sm">
         By Zenith of Dreva
       </p>
-      <p class="m-0 mt-1 text-text-muted text-sm font-mono">
+      <p class="m-0 mt-1 text-text-muted text-sm">
         (Also known as Daniel Auchenpaugh)
       </p>
 
-      <p class="m-0 mt-1 text-text-muted text-sm font-mono">
+      <p class="m-0 mt-1 text-text-muted text-sm">
         v{{ appVersion }}
       </p>
       <p class="m-0 mt-4 text-text-secondary text-sm leading-relaxed max-w-sm">

@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-1 h-full min-h-0">
+  <div class="flex flex-col gap-1">
     <!-- Loading -->
     <div v-if="!areaName" class="text-text-dim text-sm italic">No zone data yet.</div>
     <div v-else-if="loading" class="text-text-dim text-xs italic">Loading NPCs...</div>
@@ -12,7 +12,7 @@
     <!-- NPC compact list -->
     <div
       v-else
-      class="flex flex-col gap-1.5 flex-1 overflow-y-auto min-h-0"
+      class="flex flex-col gap-1.5 overflow-y-auto max-h-80"
     >
       <div
         v-for="entry in displayNpcs"
@@ -27,13 +27,13 @@
               <span
                 v-for="skill in entry.trainedSkills"
                 :key="skill"
-                class="text-[0.6rem] text-entity-skill shrink-0"
+                class="text-[10px] text-entity-skill shrink-0"
               >&#x2666;{{ skill }}</span>
             </template>
           </span>
           <span
             v-if="entry.favorTier"
-            class="text-[0.6rem] px-1 py-0 rounded border shrink-0 leading-tight"
+            class="text-[10px] px-1 py-0 rounded border shrink-0 leading-tight"
             :class="favorBadgeClasses(entry.favorTier)"
           >
             {{ tierDisplayName(entry.favorTier) }}
@@ -48,7 +48,7 @@
           <span v-if="entry.goldLabel" class="flex items-center gap-1">
             <span class="text-accent-gold">$</span>
             Gold: {{ entry.goldLabel }}
-            <span v-if="entry.timerLabel" class="text-text-dim text-[0.6rem]">
+            <span v-if="entry.timerLabel" class="text-text-dim text-[10px]">
               (resets ~{{ entry.timerLabel }})
             </span>
           </span>

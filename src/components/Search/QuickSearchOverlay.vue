@@ -18,14 +18,14 @@
               class="flex-1 bg-transparent border-none text-sm text-text-primary placeholder-text-muted focus:outline-none"
               @keydown="handleKeydown"
             />
-            <kbd v-if="!query" class="text-[0.6rem] text-text-muted bg-surface-elevated border border-border-default rounded px-1.5 py-0.5">ESC</kbd>
+            <kbd v-if="!query" class="text-[10px] text-text-muted bg-surface-elevated border border-border-default rounded px-1.5 py-0.5">ESC</kbd>
           </div>
 
           <!-- Results -->
           <div v-if="categories.length > 0" ref="resultsRef" class="flex-1 overflow-y-auto py-1">
             <template v-for="category in categories" :key="category.name">
               <div class="px-3 py-1">
-                <div class="text-[0.6rem] font-semibold text-text-muted uppercase tracking-wider">{{ category.name }}</div>
+                <div class="text-[10px] font-semibold text-text-muted uppercase tracking-wider">{{ category.name }}</div>
               </div>
               <button
                 v-for="(result, rIdx) in category.results"
@@ -66,7 +66,7 @@
           </div>
 
           <!-- Footer -->
-          <div v-if="categories.length > 0" class="px-3 py-1.5 border-t border-border-default flex items-center gap-3 text-[0.6rem] text-text-muted">
+          <div v-if="categories.length > 0" class="px-3 py-1.5 border-t border-border-default flex items-center gap-3 text-[10px] text-text-muted">
             <span><kbd class="bg-surface-elevated border border-border-default rounded px-1 py-0.5">↑↓</kbd> navigate</span>
             <span><kbd class="bg-surface-elevated border border-border-default rounded px-1 py-0.5">↵</kbd> open</span>
             <span><kbd class="bg-surface-elevated border border-border-default rounded px-1 py-0.5">esc</kbd> close</span>

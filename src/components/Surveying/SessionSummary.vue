@@ -28,7 +28,7 @@
     <!-- Price-gap notice when some items are unpriced -->
     <div
       v-if="liveItemsUnpriced > 0"
-      class="text-[0.65rem] text-text-dim italic px-1"
+      class="text-[10px] text-text-dim italic px-1"
     >
       {{ liveItemsUnpriced }} item{{ liveItemsUnpriced === 1 ? '' : 's' }}
       have no market value set — revenue and profit are low-balled.
@@ -38,10 +38,10 @@
     <!-- Uses list -->
     <section v-if="detail.uses.length > 0" class="flex flex-col gap-1">
       <header class="flex items-baseline justify-between">
-        <h4 class="text-[0.65rem] uppercase tracking-widest text-text-secondary font-semibold">
+        <h4 class="text-[10px] uppercase tracking-widest text-text-secondary font-semibold">
           Uses
         </h4>
-        <span class="text-[0.6rem] text-text-dim">{{ detail.uses.length }} recorded</span>
+        <span class="text-[10px] text-text-dim">{{ detail.uses.length }} recorded</span>
       </header>
       <div class="flex flex-col gap-1 max-h-64 overflow-y-auto pr-1">
         <div
@@ -54,7 +54,7 @@
               <div class="text-xs text-text-primary truncate">
                 {{ u.map_display_name }}
               </div>
-              <div class="text-[0.65rem] text-text-secondary">
+              <div class="text-[10px] text-text-secondary">
                 {{ kindBadge(u.kind) }}
                 · {{ formatTimeFull(u.used_at) }}
                 <span v-if="u.area"> · <AreaInline :reference="u.area" /></span>
@@ -65,7 +65,7 @@
                 <span class="text-accent-gold font-semibold">{{ u.loot_qty }}</span>
                 <span class="text-text-dim"> loot</span>
               </div>
-              <div class="text-[0.6rem]" :class="statusColor(u.status)">
+              <div class="text-[10px]" :class="statusColor(u.status)">
                 {{ u.status.replace('_', ' ') }}
               </div>
             </div>

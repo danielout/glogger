@@ -4,7 +4,7 @@
       <h4 class="text-xs font-semibold" :class="categoryTextClass">
         {{ mapDisplayName }}
       </h4>
-      <span class="text-[0.6rem] text-text-dim">
+      <span class="text-[10px] text-text-dim">
         {{ totalCompletions }} completed
         <template v-if="(craftingCost ?? 0) > 0">
           · cost {{ formatGold(craftingCost ?? 0) }}
@@ -14,7 +14,7 @@
 
     <table v-if="items.length > 0" class="w-full text-xs border-collapse">
       <thead>
-        <tr class="text-[0.6rem] uppercase tracking-wide text-text-secondary font-semibold border-b border-border-default">
+        <tr class="text-[10px] uppercase tracking-wide text-text-secondary font-semibold border-b border-border-default">
           <th class="text-left py-1 px-2">Item</th>
           <th class="text-right py-1 px-2">Total</th>
           <th class="text-right py-1 px-2">Primary</th>

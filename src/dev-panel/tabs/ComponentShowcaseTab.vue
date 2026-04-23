@@ -9,7 +9,7 @@
       <AccordionSection :default-open="true">
         <template #title>Example Accordion</template>
         <template #badge>
-          <span class="text-text-muted text-xs font-mono">3 items</span>
+          <span class="text-text-muted text-xs">3 items</span>
         </template>
         <div class="text-xs text-text-secondary">
           This is the accordion content. It supports a title slot, badge slot, and default content slot.

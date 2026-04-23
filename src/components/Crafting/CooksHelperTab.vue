@@ -57,7 +57,7 @@
           v-for="option in skillOptions"
           :key="option.value"
           :class="[
-            'text-[0.65rem] px-2 py-0.5 rounded border cursor-pointer transition-colors',
+            'text-[10px] px-2 py-0.5 rounded border cursor-pointer transition-colors',
             store.filterSkill === option.value
               ? 'bg-accent-gold/20 border-accent-gold/40 text-accent-gold'
               : 'bg-transparent border-border-light text-text-muted hover:text-text-primary',

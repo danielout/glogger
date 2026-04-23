@@ -6,7 +6,7 @@
     <div class="text-base text-text-primary font-semibold tabular-nums" :class="valueClass">
       {{ value }}
     </div>
-    <div v-if="sub" class="text-[0.6rem] text-text-dim tabular-nums">
+    <div v-if="sub" class="text-[10px] text-text-dim tabular-nums">
       {{ sub }}
     </div>
   </div>

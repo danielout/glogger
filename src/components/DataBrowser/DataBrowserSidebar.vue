@@ -17,14 +17,14 @@
       <button
         v-for="tab in tabs"
         :key="tab.id"
-        class="flex-1 px-2 py-1.5 bg-transparent border-none text-[0.7rem] font-mono cursor-pointer transition-all rounded-t"
+        class="flex-1 px-2 py-1.5 bg-transparent border-none text-xs cursor-pointer transition-all rounded-t"
         :class="activeTab === tab.id
           ? 'text-accent-gold bg-surface-base border-b-2 border-b-accent-gold'
           : 'text-text-muted hover:text-text-secondary hover:bg-surface-elevated'"
         @click="activeTab = tab.id"
       >
         {{ tab.label }}
-        <span v-if="tab.count > 0" class="text-[0.55rem] text-text-dim ml-0.5">({{ tab.count }})</span>
+        <span v-if="tab.count > 0" class="text-[10px] text-text-dim ml-0.5">({{ tab.count }})</span>
       </button>
     </div>
 
@@ -43,16 +43,16 @@
               class="w-full flex items-center gap-2 px-3 py-2 bg-transparent border-none border-b border-surface-dark/50 text-left cursor-pointer text-xs transition-colors hover:bg-surface-elevated"
               @click="navigate(entry)"
             >
-              <span class="shrink-0 text-[0.6rem] font-mono px-1 py-0.5 rounded" :class="typeBadgeClass(entry.type)">
+              <span class="shrink-0 text-[10px] px-1 py-0.5 rounded" :class="typeBadgeClass(entry.type)">
                 {{ typeLabel(entry.type) }}
               </span>
               <span class="flex-1 text-text-secondary truncate">{{ entry.label }}</span>
-              <span class="shrink-0 text-[0.55rem] text-text-dim">{{ relativeTime(entry.timestamp) }}</span>
+              <span class="shrink-0 text-[10px] text-text-dim">{{ relativeTime(entry.timestamp) }}</span>
             </button>
           </div>
           <div class="shrink-0 border-t border-border-default px-3 py-2">
             <button
-              class="bg-transparent border-none text-text-muted text-[0.65rem] cursor-pointer hover:text-accent-red transition-colors"
+              class="bg-transparent border-none text-text-muted text-[10px] cursor-pointer hover:text-accent-red transition-colors"
               @click="store.clearHistory()"
             >Clear history</button>
           </div>
@@ -71,7 +71,7 @@
             <button
               v-for="ft in favoriteTypeFilters"
               :key="ft.type"
-              class="text-[0.6rem] px-1.5 py-0.5 rounded border cursor-pointer transition-colors"
+              class="text-[10px] px-1.5 py-0.5 rounded border cursor-pointer transition-colors"
               :class="favTypeFilter === ft.type
                 ? 'bg-accent-gold/20 border-accent-gold/40 text-accent-gold'
                 : 'bg-transparent border-border-default text-text-muted hover:text-text-secondary'"
@@ -95,7 +95,7 @@
             @keydown.enter="navigate(entry)"
             @keydown.space.prevent="navigate(entry)"
           >
-            <span class="shrink-0 text-[0.6rem] font-mono px-1 py-0.5 rounded" :class="typeBadgeClass(entry.type)">
+            <span class="shrink-0 text-[10px] px-1 py-0.5 rounded" :class="typeBadgeClass(entry.type)">
               {{ typeLabel(entry.type) }}
             </span>
             <span class="flex-1 text-text-secondary truncate">{{ entry.label }}</span>
@@ -125,7 +125,7 @@
               @keydown.enter="navigate(pin)"
               @keydown.space.prevent="navigate(pin)"
             >
-              <span class="shrink-0 text-[0.6rem] font-mono px-1 py-0.5 rounded" :class="typeBadgeClass(pin.type)">
+              <span class="shrink-0 text-[10px] px-1 py-0.5 rounded" :class="typeBadgeClass(pin.type)">
                 {{ typeLabel(pin.type) }}
               </span>
               <span class="flex-1 text-text-secondary truncate">{{ pin.label }}</span>
@@ -138,7 +138,7 @@
           </div>
           <div class="shrink-0 border-t border-border-default px-3 py-2">
             <button
-              class="bg-transparent border-none text-text-muted text-[0.65rem] cursor-pointer hover:text-accent-red transition-colors"
+              class="bg-transparent border-none text-text-muted text-[10px] cursor-pointer hover:text-accent-red transition-colors"
               @click="clearAllPins"
             >Clear all pins</button>
           </div>

@@ -18,7 +18,7 @@
           <span v-if="powerInfo.suffix">Suffix: <span class="text-text-secondary">{{ powerInfo.suffix }}</span></span>
         </div>
         <div v-if="powerInfo.tier_effects.length" class="border-t border-purple-500/30 pt-1.5 mt-1.5">
-          <div class="text-text-muted text-[0.65rem] uppercase tracking-wide mb-1">Tier {{ tier }} Effects</div>
+          <div class="text-text-muted text-[10px] uppercase tracking-wide mb-1">Tier {{ tier }} Effects</div>
           <div
             v-for="(effect, i) in powerInfo.tier_effects"
             :key="i"

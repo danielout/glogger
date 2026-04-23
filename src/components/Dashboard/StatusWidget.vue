@@ -1,6 +1,6 @@
 <template>
   <div class="bg-[#1a1a2e] border border-border-default rounded-lg p-4">
-    <div class="text-[0.65rem] text-text-muted uppercase tracking-wide mb-2">System Status</div>
+    <div class="text-[10px] text-text-muted uppercase tracking-wide mb-2">System Status</div>
     <div class="flex flex-col gap-2">
       <div class="flex items-center gap-2">
         <span

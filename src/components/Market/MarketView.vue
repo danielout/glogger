@@ -143,7 +143,7 @@
             {{ val.item_name }}
             <span class="text-text-muted text-xs ml-1">#{{ val.item_type_id }}</span>
           </td>
-          <td class="py-2 pr-4 text-right text-accent-gold">
+          <td class="py-2 pr-4 text-right text-accent-gold tabular-nums">
             <span v-if="editingId !== val.item_type_id">{{ val.market_value.toLocaleString() }}g</span>
             <input
               v-else
@@ -192,7 +192,7 @@
           <textarea
             v-model="importJson"
             rows="6"
-            class="input w-full font-mono text-xs"
+            class="input w-full text-xs"
             placeholder='[{"item_type_id": 123, "item_name": "Item", "market_value": 500, "notes": null, "updated_at": "2026-01-01 00:00:00"}]'
           ></textarea>
         </div>

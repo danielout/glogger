@@ -1,7 +1,7 @@
 <template>
   <div class="relative" ref="containerRef">
     <button
-      class="bg-transparent border-none text-text-muted text-xs font-mono cursor-pointer rounded transition-all hover:text-text-secondary text-left px-0 py-0"
+      class="bg-transparent border-none text-text-muted text-xs cursor-pointer rounded transition-all hover:text-text-secondary text-left px-0 py-0"
       @click="toggleDropdown"
       title="Switch character">
       <span v-if="activeServer" class="text-text-muted">{{ activeServer }}</span>

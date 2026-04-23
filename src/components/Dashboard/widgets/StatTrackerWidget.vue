@@ -8,7 +8,7 @@
       :key="stat.key"
       class="flex items-center justify-between gap-2 py-0.5">
       <span class="text-xs text-text-primary truncate">{{ stat.label }}</span>
-      <span class="text-xs font-mono text-accent-gold shrink-0">{{ stat.display }}</span>
+      <span class="text-xs text-accent-gold shrink-0">{{ stat.display }}</span>
     </div>
   </div>
 </template>

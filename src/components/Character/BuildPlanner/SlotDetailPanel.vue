@@ -92,7 +92,7 @@
                 <div
                   v-for="(effect, i) in itemEffects"
                   :key="i"
-                  class="text-accent-green text-[11px] leading-snug">
+                  class="text-accent-green text-xs leading-snug">
                   {{ effect }}
                 </div>
               </div>

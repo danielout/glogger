@@ -6,7 +6,7 @@
       class="flex items-center justify-between gap-2 py-1 px-1 rounded text-sm"
       :class="item.count > 0 ? '' : 'opacity-40'">
       <ItemInline :reference="item.name" />
-      <span class="font-mono text-accent-gold shrink-0">{{ item.count.toLocaleString() }}</span>
+      <span class="text-accent-gold shrink-0">{{ item.count.toLocaleString() }}</span>
     </div>
 
     <div v-if="trackedItems.length === 0" class="text-xs text-text-dim italic">

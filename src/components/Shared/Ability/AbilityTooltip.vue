@@ -38,7 +38,7 @@
     <span
       v-for="keyword in ability.keywords"
       :key="keyword"
-      class="bg-entity-ability/10 text-entity-ability px-1.5 py-0.5 rounded-sm text-[0.65rem] uppercase tracking-wide"
+      class="bg-entity-ability/10 text-entity-ability px-1.5 py-0.5 rounded-sm text-[10px] uppercase tracking-wide"
     >
       {{ keyword }}
     </span>

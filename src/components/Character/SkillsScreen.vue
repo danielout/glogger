@@ -20,11 +20,11 @@
               <span class="text-xs text-text-primary font-semibold">
                 {{ settingsStore.settings.activeCharacterName ?? 'Character' }}
               </span>
-              <span v-if="settingsStore.settings.activeServerName" class="text-[0.65rem] text-text-muted">
+              <span v-if="settingsStore.settings.activeServerName" class="text-[10px] text-text-muted">
                 {{ settingsStore.settings.activeServerName }}
               </span>
             </div>
-            <div class="text-[0.65rem] text-text-dim">
+            <div class="text-[10px] text-text-dim">
               {{ totalLevels.toLocaleString() }} levels
               <span v-if="totalBonusLevels > 0">({{ totalBonusLevels }} bonus)</span>
             </div>

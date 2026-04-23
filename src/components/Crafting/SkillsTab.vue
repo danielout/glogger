@@ -23,7 +23,7 @@
             : 'bg-transparent text-text-secondary hover:bg-surface-base border border-transparent'"
           @click="selectSkill(entry.skill_name)">
           <span class="truncate">{{ entry.skill_name }}</span>
-          <span class="text-text-muted font-mono shrink-0 ml-2">{{ entry.level ?? '—' }}</span>
+          <span class="text-text-muted shrink-0 ml-2">{{ entry.level ?? '—' }}</span>
         </button>
 
         <div v-if="!loading && sortedSkills.length === 0" class="text-text-dim text-xs italic px-1">
@@ -53,14 +53,14 @@
             <!-- Left: crafting stats -->
             <div class="shrink-0 text-sm leading-snug">
               <div class="text-text-primary">
-                <span class="font-bold font-mono">{{ formatCompact(stats?.total_completions ?? 0) }}</span>
+                <span class="font-bold">{{ formatCompact(stats?.total_completions ?? 0) }}</span>
                 <span class="text-text-muted"> Total Crafts</span>
                 <span class="text-text-dim"> ({{ stats?.crafted_recipes ?? 0 }} Unique)</span>
               </div>
               <div class="text-text-primary">
-                <span class="font-bold font-mono">{{ stats?.crafted_recipes ?? 0 }}</span>
+                <span class="font-bold">{{ stats?.crafted_recipes ?? 0 }}</span>
                 <span class="text-text-muted"> Recipes Known of </span>
-                <span class="font-bold font-mono">{{ stats?.total_recipes ?? 0 }}</span>
+                <span class="font-bold">{{ stats?.total_recipes ?? 0 }}</span>
                 <span class="text-text-muted"> Possible</span>
                 <span class="text-text-dim"> ({{ stats?.completion_percent ?? 0 }}%)</span>
               </div>
@@ -98,15 +98,15 @@
             <div v-if="materialSummary" class="shrink-0 text-right text-sm leading-snug">
               <div class="text-text-muted">
                 <span class="text-text-dim">estimated material cost </span>
-                <span class="text-text-primary font-bold font-mono">{{ formatCompact(materialSummary.totalInputCost) }}</span>
+                <span class="text-text-primary font-bold">{{ formatCompact(materialSummary.totalInputCost) }}</span>
               </div>
               <div class="text-text-muted">
                 <span class="text-text-dim">estimated craft value </span>
-                <span class="text-text-primary font-bold font-mono">{{ formatCompact(materialSummary.totalOutputValue) }}</span>
+                <span class="text-text-primary font-bold">{{ formatCompact(materialSummary.totalOutputValue) }}</span>
               </div>
               <div class="text-text-muted">
                 <span class="text-text-dim">estimated total profit </span>
-                <span class="font-bold font-mono" :class="profitLoss >= 0 ? 'text-green-400' : 'text-red-400'">
+                <span class="font-bold" :class="profitLoss >= 0 ? 'text-green-400' : 'text-red-400'">
                   {{ profitLoss >= 0 ? '+' : '' }}{{ formatCompact(Math.abs(profitLoss)) }}
                 </span>
               </div>
@@ -121,7 +121,7 @@
           <div v-if="materialSummary && (materialSummary.topInputs.length > 0 || materialSummary.topOutputs.length > 0)"
                class="flex gap-3 min-h-0" style="width: 65%; min-width: 400px;">
             <div v-if="materialSummary.topInputs.length > 0" class="flex-1 bg-surface-base border border-surface-elevated rounded p-3 flex flex-col min-w-0 min-h-0">
-              <div class="text-text-dim text-[0.65rem] uppercase tracking-widest mb-2 shrink-0">Top Materials Used</div>
+              <div class="text-text-dim text-[10px] uppercase tracking-widest mb-2 shrink-0">Top Materials Used</div>
               <div v-if="inputChartDataset.length > 0" class="h-56 shrink-0">
                 <VueUiDonut :dataset="inputChartDataset" :config="donutConfig" />
               </div>
@@ -129,20 +129,20 @@
                 <div v-for="mat in allInputItems" :key="mat.itemId" class="flex items-center justify-between text-text-secondary shrink-0">
                   <span v-if="mat.isDynamic" class="text-text-muted italic">{{ mat.name }}</span>
                   <ItemInline v-else :reference="String(mat.itemId)" />
-                  <span class="text-text-muted font-mono ml-2 shrink-0">&times;{{ mat.quantity.toLocaleString() }}</span>
+                  <span class="text-text-muted ml-2 shrink-0">&times;{{ mat.quantity.toLocaleString() }}</span>
                 </div>
               </div>
             </div>
 
             <div v-if="materialSummary.topOutputs.length > 0" class="flex-1 bg-surface-base border border-surface-elevated rounded p-3 flex flex-col min-w-0 min-h-0">
-              <div class="text-text-dim text-[0.65rem] uppercase tracking-widest mb-2 shrink-0">Top Items Crafted</div>
+              <div class="text-text-dim text-[10px] uppercase tracking-widest mb-2 shrink-0">Top Items Crafted</div>
               <div v-if="outputChartDataset.length > 0" class="h-56 shrink-0">
                 <VueUiDonut :dataset="outputChartDataset" :config="donutConfig" />
               </div>
               <div class="flex flex-col gap-1 text-xs mt-2 overflow-y-auto flex-1 min-h-0 pr-1.5">
                 <div v-for="out in allOutputItems" :key="out.itemId" class="flex items-center justify-between text-text-secondary shrink-0">
                   <ItemInline :reference="String(out.itemId)" />
-                  <span class="text-text-muted font-mono ml-2 shrink-0">&times;{{ out.quantity.toLocaleString() }}</span>
+                  <span class="text-text-muted ml-2 shrink-0">&times;{{ out.quantity.toLocaleString() }}</span>
                 </div>
               </div>
             </div>
@@ -151,7 +151,7 @@
           <!-- Recipe list — independently scrollable -->
           <div class="flex-1 min-w-0 min-h-0 flex flex-col gap-2">
             <div class="flex items-center justify-between">
-              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim">
+              <div class="text-[10px] uppercase tracking-widest text-text-dim">
                 Recipes ({{ filteredRecipes.length }})
               </div>
               <div class="flex items-center gap-2">
@@ -190,13 +190,13 @@
                     <td class="py-1">
                       <RecipeInline :reference="recipe.name" />
                     </td>
-                    <td class="text-right py-1 text-text-muted font-mono">
+                    <td class="text-right py-1 text-text-muted">
                       {{ recipe.skill_level_req ?? '—' }}
                     </td>
-                    <td class="text-right py-1 font-mono" :class="recipe.completions > 0 ? 'text-text-primary font-semibold' : 'text-text-muted'">
+                    <td class="text-right py-1" :class="recipe.completions > 0 ? 'text-text-primary font-semibold' : 'text-text-muted'">
                       {{ recipe.completions > 0 ? recipe.completions.toLocaleString() : '—' }}
                     </td>
-                    <td class="text-right py-1 text-text-muted font-mono">
+                    <td class="text-right py-1 text-text-muted">
                       {{ recipe.reward_skill_xp ?? '—' }}
                     </td>
                   </tr>

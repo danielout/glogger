@@ -59,7 +59,7 @@
             class="flex items-baseline gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
             :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === recipe.id, 'bg-surface-elevated': selectedIndex === idx && selected?.id !== recipe.id }"
             @click="selectRecipe(recipe)">
-            <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
+            <span class="text-text-muted text-xs min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
             <span class="text-text-primary/75 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ recipe.name }}</span>
           </li>
         </ul>
@@ -84,30 +84,30 @@
                 :src="iconSrc"
                 class="w-12 h-12 [image-rendering:pixelated] border border-border-default"
                 alt="recipe icon" />
-              <div v-else-if="iconLoading" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[0.65rem] text-accent-gold animate-spin">
+              <div v-else-if="iconLoading" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[10px] text-accent-gold animate-spin">
                 ⟳
               </div>
-              <div v-else-if="selected.icon_id" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[0.65rem] text-text-dim">
+              <div v-else-if="selected.icon_id" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[10px] text-text-dim">
                 {{ selected.icon_id }}
               </div>
-              <div v-else class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[0.65rem] text-border-default">—</div>
+              <div v-else class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[10px] text-border-default">—</div>
             </div>
 
             <div class="flex-1 min-w-0">
               <div class="text-accent-gold text-base font-bold mb-1">{{ selected.name }}</div>
               <div class="text-xs text-text-dim mb-1">
-                ID: <span class="text-text-secondary font-mono">{{ selected.id }}</span>
+                ID: <span class="text-text-secondary">{{ selected.id }}</span>
                 <template v-if="selected.skill">
                   · Skill:
                   <SkillInline :reference="selected.skill" /></template
                 >
                 <template v-if="selected.skill_level_req !== null">
                   · Level:
-                  <span class="text-text-secondary font-mono">{{ selected.skill_level_req }}</span></template
+                  <span class="text-text-secondary">{{ selected.skill_level_req }}</span></template
                 >
                 <template v-if="selected.internal_name">
                   · Internal:
-                  <span class="text-text-secondary font-mono">{{ selected.internal_name }}</span></template
+                  <span class="text-text-secondary">{{ selected.internal_name }}</span></template
                 >
               </div>
               <div v-if="selected.description" class="text-xs text-text-secondary italic">
@@ -126,14 +126,14 @@
 
           <!-- Ingredients -->
           <div v-if="selected.ingredients.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Ingredients</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Ingredients</div>
             <div class="flex flex-col gap-1">
               <div
                 v-for="(ingredient, idx) in selected.ingredients"
                 :key="idx"
                 class="flex gap-2 items-center text-sm px-1.5 py-0.5 bg-[#151515] border-l-2"
                 :class="ingredient.item_id !== null ? 'border-l-surface-elevated' : 'border-l-[#4a3a1a]'">
-                <span class="text-text-muted text-[0.72rem] min-w-10 shrink-0">{{ ingredient.stack_size }}x</span>
+                <span class="text-text-muted text-xs min-w-10 shrink-0">{{ ingredient.stack_size }}x</span>
                 <span class="flex-1">
                   <!-- Specific item ingredient -->
                   <template v-if="ingredient.item_id !== null">
@@ -145,12 +145,12 @@
                   <!-- Wildcard/keyword ingredient -->
                   <template v-else>
                     <span class="text-[#c8a84a]">{{ ingredient.description || 'Any matching item' }}</span>
-                    <span v-if="ingredient.item_keys.length" class="text-text-muted text-[0.65rem] ml-1">
+                    <span v-if="ingredient.item_keys.length" class="text-text-muted text-[10px] ml-1">
                       [{{ ingredient.item_keys.join(', ') }}]
                     </span>
                   </template>
                 </span>
-                <span v-if="ingredient.chance_to_consume !== null && ingredient.chance_to_consume < 100" class="text-text-muted text-[0.72rem] italic">
+                <span v-if="ingredient.chance_to_consume !== null && ingredient.chance_to_consume < 100" class="text-text-muted text-xs italic">
                   ({{ ingredient.chance_to_consume }}% consume)
                 </span>
               </div>
@@ -159,20 +159,20 @@
 
           <!-- Results -->
           <div v-if="selected.result_items.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Results</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Results</div>
             <div class="flex flex-col gap-1">
               <div
                 v-for="(result, idx) in selected.result_items"
                 :key="idx"
                 class="flex gap-2 items-center text-sm px-1.5 py-0.5 bg-[#151515] border-l-2 border-l-surface-elevated">
-                <span class="text-text-muted text-[0.72rem] min-w-10 shrink-0">{{ result.stack_size }}x</span>
+                <span class="text-text-muted text-xs min-w-10 shrink-0">{{ result.stack_size }}x</span>
                 <span class="flex-1">
                   <ItemInline
                     v-if="resultItems[result.item_id]?.name"
                     :reference="String(result.item_id)" />
                   <span v-else class="text-text-secondary text-xs">Item #{{ result.item_id }}</span>
                 </span>
-                <span v-if="result.percent_chance !== null && result.percent_chance < 100" class="text-text-muted text-[0.72rem] italic">
+                <span v-if="result.percent_chance !== null && result.percent_chance < 100" class="text-text-muted text-xs italic">
                   ({{ result.percent_chance }}% chance)
                 </span>
               </div>
@@ -181,22 +181,22 @@
 
           <!-- Material Cost -->
           <div v-if="recipeCost.breakdown.value" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Estimated Cost</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Estimated Cost</div>
             <div class="flex flex-col gap-1">
               <div
                 v-for="(ic, idx) in recipeCost.breakdown.value.ingredients"
                 :key="idx"
                 class="flex gap-2 items-center text-xs px-1.5 py-0.5 bg-[#151515] border-l-2"
                 :class="ic.total_price !== null ? 'border-l-[#2a3a4a]' : 'border-l-[#3a2a2a]'">
-                <span class="text-text-muted min-w-10 shrink-0 text-[0.72rem]">{{ ic.stack_size }}x</span>
+                <span class="text-text-muted min-w-10 shrink-0 text-xs">{{ ic.stack_size }}x</span>
                 <span class="flex-1 text-text-secondary truncate">{{ ic.item_name }}</span>
-                <span v-if="ic.total_price !== null" class="text-accent-gold text-[0.72rem] shrink-0">
+                <span v-if="ic.total_price !== null" class="text-accent-gold text-xs shrink-0">
                   {{ formatGold(ic.total_price) }}
                 </span>
-                <span v-else class="text-text-dim text-[0.72rem] italic shrink-0">—</span>
-                <span v-if="ic.price_source === 'craft'" class="text-[0.6rem] text-[#7a9a7a] shrink-0" :title="'Craft cost via ' + ic.craft_recipe_name">craft</span>
-                <span v-else-if="ic.price_source === 'market'" class="text-[0.6rem] text-[#7a7aaa] shrink-0">market</span>
-                <span v-else-if="ic.price_source === 'vendor'" class="text-[0.6rem] text-text-dim shrink-0">vendor</span>
+                <span v-else class="text-text-dim text-xs italic shrink-0">—</span>
+                <span v-if="ic.price_source === 'craft'" class="text-[10px] text-[#7a9a7a] shrink-0" :title="'Craft cost via ' + ic.craft_recipe_name">craft</span>
+                <span v-else-if="ic.price_source === 'market'" class="text-[10px] text-[#7a7aaa] shrink-0">market</span>
+                <span v-else-if="ic.price_source === 'vendor'" class="text-[10px] text-text-dim shrink-0">vendor</span>
               </div>
             </div>
             <div class="flex items-center gap-3 text-xs px-1.5 pt-1 border-t border-surface-card">
@@ -205,10 +205,10 @@
                 {{ formatGold(recipeCost.breakdown.value.total_cost) }}
               </span>
               <span v-else class="text-text-dim italic">Unknown</span>
-              <span v-if="recipeCost.breakdown.value.cost_per_unit !== null && (selected.result_items[0]?.stack_size ?? 1) > 1" class="text-text-muted text-[0.72rem]">
+              <span v-if="recipeCost.breakdown.value.cost_per_unit !== null && (selected.result_items[0]?.stack_size ?? 1) > 1" class="text-text-muted text-xs">
                 ({{ formatGold(recipeCost.breakdown.value.cost_per_unit) }}/ea)
               </span>
-              <span v-if="recipeCost.breakdown.value.has_unknown_prices" class="text-text-dim text-[0.65rem] italic ml-auto">
+              <span v-if="recipeCost.breakdown.value.has_unknown_prices" class="text-text-dim text-[10px] italic ml-auto">
                 * some prices unknown
               </span>
             </div>
@@ -219,12 +219,12 @@
 
           <!-- XP Rewards -->
           <div v-if="selected.reward_skill" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">XP Rewards</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">XP Rewards</div>
             <div class="flex flex-col gap-1">
               <div class="flex gap-2 text-sm px-2 py-1 bg-[#151515] border-l-2 border-l-[#2a4a2a]">
                 <span class="text-[#9a9] font-bold">{{ selected.reward_skill }}:</span>
                 <span class="text-[#7a7]">{{ selected.reward_skill_xp || 0 }} XP</span>
-                <span v-if="selected.reward_skill_xp_first_time && selected.reward_skill_xp_first_time !== selected.reward_skill_xp" class="text-text-muted text-[0.72rem] italic">
+                <span v-if="selected.reward_skill_xp_first_time && selected.reward_skill_xp_first_time !== selected.reward_skill_xp" class="text-text-muted text-xs italic">
                   ({{ selected.reward_skill_xp_first_time }} XP first time)
                 </span>
               </div>
@@ -236,7 +236,7 @@
 
           <!-- Result Effects -->
           <div v-if="selected.result_effects?.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Result Effects</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Result Effects</div>
             <ul class="m-0 pl-4 p-0">
               <li
                 v-for="(eff, i) in selected.result_effects"
@@ -249,7 +249,7 @@
 
           <!-- Usage Info -->
           <div v-if="selected.usage_delay || selected.action_label" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Usage</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Usage</div>
             <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-1.5">
               <div v-if="selected.action_label" class="text-xs flex gap-2">
                 <span class="text-text-muted min-w-20">Action:</span>
@@ -268,7 +268,7 @@
 
           <!-- Prerequisites -->
           <div v-if="selected.prereq_recipe" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Prerequisites</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Prerequisites</div>
             <div class="text-sm px-2 py-1 bg-[#151515] border-l-2 border-l-[#4a2a2a] text-text-secondary flex items-center gap-1">
               Requires: <RecipeInline :reference="selected.prereq_recipe" />
             </div>
@@ -279,12 +279,12 @@
 
           <!-- Keywords -->
           <div v-if="selected.keywords.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
             <div class="flex flex-wrap gap-1">
               <span
                 v-for="kw in selected.keywords"
                 :key="kw"
-                class="text-[0.72rem] px-1.5 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-[#7ec8e3]"
+                class="text-xs px-1.5 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-[#7ec8e3]"
                 :class="{ 'bg-[#1e1a10]! border-[#3a3010]! text-[#887040]!': kw.startsWith('Lint_') }"
                 >{{ kw }}</span
               >
@@ -293,8 +293,8 @@
 
           <!-- Raw JSON -->
           <div v-if="settingsStore.settings.showRawJsonInDataBrowser" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
-            <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
+            <pre class="bg-surface-dark border border-surface-card p-3 text-xs text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
           </div>
         </template>
     </div>

@@ -9,7 +9,7 @@
 
     <!-- Grouping & Sorting -->
     <div class="flex flex-col gap-1.5">
-      <label class="text-[0.65rem] uppercase tracking-widest text-text-dim">Group By</label>
+      <label class="text-[10px] uppercase tracking-widest text-text-dim">Group By</label>
       <select
         v-model="groupBy"
         class="px-2 py-1.5 bg-surface-base border border-border-default rounded text-xs text-text-primary cursor-pointer w-full">
@@ -20,7 +20,7 @@
     </div>
 
     <div class="flex flex-col gap-1.5">
-      <label class="text-[0.65rem] uppercase tracking-widest text-text-dim">Sort By</label>
+      <label class="text-[10px] uppercase tracking-widest text-text-dim">Sort By</label>
       <select
         v-model="sortBy"
         class="px-2 py-1.5 bg-surface-base border border-border-default rounded text-xs text-text-primary cursor-pointer w-full">
@@ -31,7 +31,7 @@
 
     <!-- Favor tier filter -->
     <div class="flex flex-col gap-1.5">
-      <label class="text-[0.65rem] uppercase tracking-widest text-text-dim">Favor Tier</label>
+      <label class="text-[10px] uppercase tracking-widest text-text-dim">Favor Tier</label>
       <select
         v-model="favorFilter"
         class="px-2 py-1.5 bg-surface-base border border-border-default rounded text-xs text-text-primary cursor-pointer w-full">
@@ -44,7 +44,7 @@
 
     <!-- Area filter -->
     <div class="flex flex-col gap-1.5">
-      <label class="text-[0.65rem] uppercase tracking-widest text-text-dim">Area</label>
+      <label class="text-[10px] uppercase tracking-widest text-text-dim">Area</label>
       <select
         v-model="areaFilter"
         class="px-2 py-1.5 bg-surface-base border border-border-default rounded text-xs text-text-primary cursor-pointer w-full">
@@ -66,7 +66,7 @@
     <!-- Service Filters (collapsible) -->
     <div class="mt-2 border-t border-surface-elevated pt-2">
       <button
-        class="flex items-center gap-1 text-[0.65rem] uppercase tracking-widest text-text-dim w-full cursor-pointer"
+        class="flex items-center gap-1 text-[10px] uppercase tracking-widest text-text-dim w-full cursor-pointer"
         @click="showServiceFilters = !showServiceFilters"
       >
         <span class="transition-transform" :class="showServiceFilters ? 'rotate-90' : ''">&#x25B6;</span>
@@ -91,7 +91,7 @@
     <!-- Status Filters (collapsible) -->
     <div class="border-t border-surface-elevated pt-2">
       <button
-        class="flex items-center gap-1 text-[0.65rem] uppercase tracking-widest text-text-dim w-full cursor-pointer"
+        class="flex items-center gap-1 text-[10px] uppercase tracking-widest text-text-dim w-full cursor-pointer"
         @click="showStatusFilters = !showStatusFilters"
       >
         <span class="transition-transform" :class="showStatusFilters ? 'rotate-90' : ''">&#x25B6;</span>
@@ -120,7 +120,7 @@
     <!-- Skill Filter (collapsible) -->
     <div class="border-t border-surface-elevated pt-2">
       <button
-        class="flex items-center gap-1 text-[0.65rem] uppercase tracking-widest text-text-dim w-full cursor-pointer"
+        class="flex items-center gap-1 text-[10px] uppercase tracking-widest text-text-dim w-full cursor-pointer"
         @click="showSkillFilter = !showSkillFilter"
       >
         <span class="transition-transform" :class="showSkillFilter ? 'rotate-90' : ''">&#x25B6;</span>
@@ -138,7 +138,7 @@
     <!-- Item Type Filter (collapsible) -->
     <div class="border-t border-surface-elevated pt-2">
       <button
-        class="flex items-center gap-1 text-[0.65rem] uppercase tracking-widest text-text-dim w-full cursor-pointer"
+        class="flex items-center gap-1 text-[10px] uppercase tracking-widest text-text-dim w-full cursor-pointer"
         @click="showItemTypeFilter = !showItemTypeFilter"
       >
         <span class="transition-transform" :class="showItemTypeFilter ? 'rotate-90' : ''">&#x25B6;</span>

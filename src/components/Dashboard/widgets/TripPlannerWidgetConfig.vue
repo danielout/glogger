@@ -2,14 +2,14 @@
   <div class="flex flex-col gap-3 p-1 min-w-56">
     <div class="text-xs text-text-primary font-medium">Travel Binds</div>
 
-    <div class="text-[0.6rem] text-text-dim">
+    <div class="text-[10px] text-text-dim">
       Bind pad locations are auto-detected when you open your Teleportation skill info in-game.
       You can also set them manually here.
     </div>
 
     <!-- Primary Bind -->
     <div>
-      <label class="text-[0.6rem] text-text-dim uppercase tracking-wide">Primary Bind</label>
+      <label class="text-[10px] text-text-dim uppercase tracking-wide">Primary Bind</label>
       <select
         v-model="config.primaryBind"
         class="w-full px-2 py-1 rounded bg-surface-elevated border border-border-light text-xs text-text-primary"
@@ -21,7 +21,7 @@
 
     <!-- Secondary Bind -->
     <div>
-      <label class="text-[0.6rem] text-text-dim uppercase tracking-wide">Secondary Bind</label>
+      <label class="text-[10px] text-text-dim uppercase tracking-wide">Secondary Bind</label>
       <select
         v-model="config.secondaryBind"
         class="w-full px-2 py-1 rounded bg-surface-elevated border border-border-light text-xs text-text-primary"
@@ -33,12 +33,12 @@
 
     <div class="border-t border-border-light pt-2">
       <div class="text-xs text-text-primary font-medium mb-1">Mushroom Circles</div>
-      <div class="text-[0.6rem] text-text-dim mb-2">
+      <div class="text-[10px] text-text-dim mb-2">
         Circle attunements can't be auto-detected. Set them manually.
       </div>
 
       <div>
-        <label class="text-[0.6rem] text-text-dim uppercase tracking-wide">Mushroom Circle</label>
+        <label class="text-[10px] text-text-dim uppercase tracking-wide">Mushroom Circle</label>
         <select
           v-model="config.mushroomCircle"
           class="w-full px-2 py-1 rounded bg-surface-elevated border border-border-light text-xs text-text-primary"

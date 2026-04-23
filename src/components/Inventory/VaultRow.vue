@@ -24,7 +24,7 @@
       <!-- Right: favor + capacity -->
       <div class="flex items-center gap-3 shrink-0">
         <!-- Favor tier badge (NPC vaults only) -->
-        <span v-if="favorTier" class="text-[0.65rem] px-1.5 py-0.5 rounded bg-bg-primary text-text-secondary">
+        <span v-if="favorTier" class="text-[10px] px-1.5 py-0.5 rounded bg-bg-primary text-text-secondary">
           {{ favorTier }}
         </span>
 

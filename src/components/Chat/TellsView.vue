@@ -15,7 +15,7 @@
           @click="selectConversation(conv.name)"
         >
           <span class="font-medium">{{ conv.name }}</span>
-          <span class="text-sm text-text-muted font-mono">{{ conv.count }}</span>
+          <span class="text-sm text-text-muted">{{ conv.count }}</span>
         </button>
         <div v-if="conversations.length === 0" class="py-8 px-4 text-center text-text-muted">
           <p class="my-1">No conversations yet</p>

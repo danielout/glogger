@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col gap-2">
-    <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+    <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
       Favor
     </div>
 
@@ -11,10 +11,10 @@
         :class="favorBadgeClasses(effectiveTier)">
         {{ tierDisplayName(effectiveTier) }}
       </span>
-      <span v-if="snapshotTier && gamestateTier && snapshotTier !== gamestateTier" class="text-[0.6rem] text-text-dim">
+      <span v-if="snapshotTier && gamestateTier && snapshotTier !== gamestateTier" class="text-[10px] text-text-dim">
         Snapshot: <span :class="favorColor(snapshotTier)">{{ tierDisplayName(snapshotTier) }}</span>
       </span>
-      <span v-if="gamestateFavor?.cumulative_delta" class="text-[0.6rem] text-text-dim">
+      <span v-if="gamestateFavor?.cumulative_delta" class="text-[10px] text-text-dim">
         Session: <span class="text-accent-gold">{{ gamestateFavor.cumulative_delta > 0 ? '+' : '' }}{{ gamestateFavor.cumulative_delta.toFixed(1) }}</span> favor
       </span>
     </div>
@@ -37,17 +37,17 @@
         <span class="min-w-24">{{ tierDisplayName(tier) }}</span>
 
         <!-- Storage slots at this tier -->
-        <span v-if="slotsAtTier(tier) != null" class="text-[0.6rem] text-text-dim">
+        <span v-if="slotsAtTier(tier) != null" class="text-[10px] text-text-dim">
           {{ slotsAtTier(tier) }} slots
         </span>
 
         <!-- Vendor gold cap at this tier -->
-        <span v-if="goldCapExactAtTier(tier) != null" class="text-[0.6rem] text-text-dim">
+        <span v-if="goldCapExactAtTier(tier) != null" class="text-[10px] text-text-dim">
           {{ formatGold(goldCapExactAtTier(tier)!) }}
         </span>
 
         <!-- Points to reach (for tiers above current) -->
-        <span v-if="!isUnlocked(tier) && pointsNeeded(tier) !== null" class="text-text-dim text-[0.6rem] ml-auto">
+        <span v-if="!isUnlocked(tier) && pointsNeeded(tier) !== null" class="text-text-dim text-[10px] ml-auto">
           {{ pointsNeeded(tier) }} favor
         </span>
 
@@ -56,7 +56,7 @@
           <span
             v-for="svc in servicesUnlockedAt(tier)"
             :key="svc"
-            class="text-[0.55rem] px-1 py-px rounded bg-surface-elevated text-text-dim">
+            class="text-[10px] px-1 py-px rounded bg-surface-elevated text-text-dim">
             {{ svc }}
           </span>
         </span>
@@ -68,7 +68,7 @@
           <div class="flex-1 h-1 bg-border-default rounded-sm overflow-hidden">
             <div class="h-full bg-accent-gold/60 rounded-sm" :style="{ width: progressPercent + '%' }"></div>
           </div>
-          <span class="text-[0.6rem] text-text-dim shrink-0">{{ progressPercent }}%</span>
+          <span class="text-[10px] text-text-dim shrink-0">{{ progressPercent }}%</span>
         </div>
       </div>
     </div>

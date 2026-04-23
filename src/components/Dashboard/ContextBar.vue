@@ -25,15 +25,15 @@
       <div v-if="showAnyTime" class="flex flex-col gap-0.5">
         <div v-if="prefs.showGameTime" class="flex items-center gap-2">
           <span class="text-text-muted text-xs uppercase tracking-wide w-14">Game</span>
-          <span class="text-text-primary font-mono text-xs">{{ formattedGameTime }}</span>
+          <span class="text-text-primary text-xs">{{ formattedGameTime }}</span>
         </div>
         <div v-if="prefs.showServerTime" class="flex items-center gap-2">
           <span class="text-text-muted text-xs uppercase tracking-wide w-14">Server</span>
-          <span class="text-text-primary font-mono text-xs">{{ formattedServerTime }}</span>
+          <span class="text-text-primary text-xs">{{ formattedServerTime }}</span>
         </div>
         <div v-if="prefs.showLocalTime" class="flex items-center gap-2">
           <span class="text-text-muted text-xs uppercase tracking-wide w-14">Local</span>
-          <span class="text-text-primary font-mono text-xs">{{ formattedLocalTime }}</span>
+          <span class="text-text-primary text-xs">{{ formattedLocalTime }}</span>
         </div>
       </div>
 
@@ -131,7 +131,7 @@
         :key="c.currency_name"
         class="flex items-center justify-between text-xs">
         <span class="text-text-muted">{{ formatCurrencyName(c.currency_name) }}</span>
-        <span class="text-accent-gold font-bold font-mono">{{ c.amount.toLocaleString() }}</span>
+        <span class="text-accent-gold font-bold">{{ c.amount.toLocaleString() }}</span>
       </div>
     </div>
 

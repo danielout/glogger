@@ -64,7 +64,7 @@
                   </div>
                   <div v-if="result.detail" class="text-xs text-text-muted truncate">{{ result.detail }}</div>
                 </div>
-                <span class="text-[0.6rem] text-text-muted shrink-0">{{ categoryNavHint(result) }}</span>
+                <span class="text-[10px] text-text-muted shrink-0">{{ categoryNavHint(result) }}</span>
               </div>
             </div>
           </div>

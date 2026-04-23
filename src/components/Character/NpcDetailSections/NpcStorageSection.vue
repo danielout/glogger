@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col gap-1.5">
     <div
-      class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 cursor-pointer select-none flex items-center gap-1"
+      class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 cursor-pointer select-none flex items-center gap-1"
       @click="collapsed = !collapsed">
       <span>{{ collapsed ? '\u25B8' : '\u25BE' }}</span>
       <span>Storage</span>
@@ -21,7 +21,7 @@
             <span v-if="usagePercent != null">({{ usagePercent }}%)</span>
           </span>
         </div>
-        <div v-if="maxPossibleSlots != null && maxPossibleSlots !== unlockedSlots" class="text-[0.6rem] text-text-dim">
+        <div v-if="maxPossibleSlots != null && maxPossibleSlots !== unlockedSlots" class="text-[10px] text-text-dim">
           Max at Soul Mates: {{ maxPossibleSlots }} slots
         </div>
       </div>
@@ -33,7 +33,7 @@
           :key="item.instance_id"
           class="flex items-center gap-2 text-xs bg-[#151515] rounded px-2 py-0.5">
           <ItemInline :reference="item.item_name" />
-          <span v-if="item.stack_size > 1" class="text-text-dim text-[0.6rem] ml-auto">
+          <span v-if="item.stack_size > 1" class="text-text-dim text-[10px] ml-auto">
             x{{ item.stack_size }}
           </span>
         </div>

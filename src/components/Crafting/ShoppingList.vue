@@ -10,7 +10,7 @@
         <h4 class="text-text-secondary text-xs font-semibold uppercase tracking-wide m-0">
           Shopping / Gathering List
         </h4>
-        <span class="text-text-muted text-[0.65rem]">
+        <span class="text-text-muted text-[10px]">
           Est. cost: <span class="text-accent-red font-semibold">{{ totalCost.toLocaleString() }}g</span>
         </span>
       </div>
@@ -31,8 +31,8 @@
             <td class="py-1">
               <ItemInline :reference="item.item_name" />
             </td>
-            <td class="text-right py-1 font-mono text-text-primary">{{ item.shortfall }}</td>
-            <td class="text-right py-1 font-mono text-accent-red">
+            <td class="text-right py-1 text-text-primary">{{ item.shortfall }}</td>
+            <td class="text-right py-1 text-accent-red">
               {{ Math.round(item.cost!).toLocaleString() }}g
             </td>
           </tr>
@@ -45,7 +45,7 @@
       <h4 class="text-text-secondary text-xs font-semibold uppercase tracking-wide m-0">
         Source Elsewhere
       </h4>
-      <p class="text-text-dim text-[0.65rem] -mt-2 m-0">
+      <p class="text-text-dim text-[10px] -mt-2 m-0">
         No price data available — set a market price or find these in-game.
       </p>
 
@@ -63,13 +63,13 @@
             class="border-b border-surface-dark">
             <td class="py-1">
               <template v-if="item.is_dynamic">
-                <span class="text-accent-gold/60 text-[0.65rem] mr-1">&#9670;</span>
+                <span class="text-accent-gold/60 text-[10px] mr-1">&#9670;</span>
                 <span class="text-text-secondary">{{ item.item_name }}</span>
               </template>
               <ItemInline v-else :reference="item.item_name" />
-              <span v-if="item.is_craftable" class="text-accent-gold/70 text-[0.6rem] ml-1" title="Can be crafted">craftable</span>
+              <span v-if="item.is_craftable" class="text-accent-gold/70 text-[10px] ml-1" title="Can be crafted">craftable</span>
             </td>
-            <td class="text-right py-1 font-mono text-text-primary">{{ item.shortfall }}</td>
+            <td class="text-right py-1 text-text-primary">{{ item.shortfall }}</td>
           </tr>
         </tbody>
       </table>

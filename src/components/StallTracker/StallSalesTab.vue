@@ -110,9 +110,9 @@
                 v-else
                 class="text-text-secondary">—</span>
             </td>
-            <td class="px-2 py-1 text-right">{{ row.quantity }}</td>
-            <td class="px-2 py-1 text-right">{{ formatPrice(row.price_unit) }}</td>
-            <td class="px-2 py-1 text-right text-accent-gold">
+            <td class="px-2 py-1 text-right tabular-nums">{{ row.quantity }}</td>
+            <td class="px-2 py-1 text-right tabular-nums">{{ formatPrice(row.price_unit) }}</td>
+            <td class="px-2 py-1 text-right text-accent-gold tabular-nums">
               {{ formatPrice(row.price_total) }}
             </td>
           </tr>

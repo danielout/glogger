@@ -20,7 +20,7 @@
         <div class="text-text-primary text-xs font-medium truncate">
           {{ itemData?.name ?? reference }}
         </div>
-        <div class="flex items-center gap-2 text-[0.65rem] leading-tight mt-0.5">
+        <div class="flex items-center gap-2 text-[10px] leading-tight mt-0.5">
           <span v-if="vendorPrice !== null" class="text-accent-gold">{{ vendorPrice }}g</span>
           <span
             v-if="marketPrice !== null"
@@ -28,7 +28,7 @@
           >{{ marketPrice.toLocaleString() }}g</span>
           <button
             v-else
-            class="text-text-dim hover:text-accent-green bg-transparent border-none cursor-pointer p-0 text-[0.65rem] underline"
+            class="text-text-dim hover:text-accent-green bg-transparent border-none cursor-pointer p-0 text-[10px] underline"
             @click.stop="startSetMarket"
           >???</button>
           <span v-if="ownedCount > 0" class="text-text-secondary">×{{ ownedCount.toLocaleString() }}</span>

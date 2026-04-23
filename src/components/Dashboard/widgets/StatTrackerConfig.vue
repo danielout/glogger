@@ -34,7 +34,7 @@
         class="flex items-center justify-between gap-2 py-0.5 cursor-pointer hover:bg-surface-elevated/50 px-1 rounded"
         @click="addStat(option.key)">
         <span class="text-xs text-text-primary truncate">{{ option.label }}</span>
-        <span v-if="option.value != null" class="text-xs text-text-dim font-mono shrink-0">{{ option.value }}</span>
+        <span v-if="option.value != null" class="text-xs text-text-dim shrink-0">{{ option.value }}</span>
       </div>
       <div v-if="filteredOptions.length === 0" class="text-xs text-text-dim italic py-1">
         No matching stats found.

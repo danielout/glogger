@@ -27,7 +27,7 @@
             :key="recipe.recipe_key"
             class="border-b border-border-default/50 hover:bg-surface-elevated/50">
             <td class="py-1 px-2 text-text-primary">{{ recipe.recipe_key }}</td>
-            <td class="py-1 px-2 text-right text-text-secondary">{{ recipe.completions.toLocaleString() }}</td>
+            <td class="py-1 px-2 text-right text-text-secondary tabular-nums">{{ recipe.completions.toLocaleString() }}</td>
           </tr>
         </tbody>
       </table>

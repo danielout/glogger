@@ -3,7 +3,7 @@
     class="flex gap-2 px-2 py-1 text-sm hover:bg-gray-800 rounded"
     :class="messageClass"
   >
-    <span class="text-gray-500 flex-shrink-0 font-mono text-xs">
+    <span class="text-gray-500 flex-shrink-0 text-xs">
       {{ formatTime(message.timestamp) }}
     </span>
     <span

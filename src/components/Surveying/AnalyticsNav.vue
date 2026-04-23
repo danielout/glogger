@@ -15,7 +15,7 @@
 
     <!-- Zones -->
     <template v-if="zones.length > 0">
-      <div class="text-[0.6rem] uppercase tracking-widest text-text-dim mt-3 mb-1 px-2 font-semibold">
+      <div class="text-[10px] uppercase tracking-widest text-text-dim mt-3 mb-1 px-2 font-semibold">
         Zones
       </div>
       <button
@@ -30,13 +30,13 @@
         @click="$emit('update:view', { kind: 'zone', area: z.area })"
       >
         <span class="truncate"><AreaInline :reference="z.area" /></span>
-        <span class="text-[0.65rem] text-text-dim tabular-nums shrink-0">{{ z.total_uses }}</span>
+        <span class="text-[10px] text-text-dim tabular-nums shrink-0">{{ z.total_uses }}</span>
       </button>
     </template>
 
     <!-- Survey Types -->
     <template v-if="surveyTypes.length > 0">
-      <div class="text-[0.6rem] uppercase tracking-widest text-text-dim mt-3 mb-1 px-2 font-semibold">
+      <div class="text-[10px] uppercase tracking-widest text-text-dim mt-3 mb-1 px-2 font-semibold">
         Survey Types
       </div>
       <button
@@ -52,7 +52,7 @@
       >
         <span class="truncate">{{ t.map_display_name }}</span>
         <span
-          class="text-[0.65rem] tabular-nums shrink-0"
+          class="text-[10px] tabular-nums shrink-0"
           :class="t.kind === 'basic' ? 'text-accent-blue' : 'text-text-dim'"
         >
           {{ t.total_uses }}

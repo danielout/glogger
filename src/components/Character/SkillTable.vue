@@ -32,11 +32,11 @@
             :key="skill.skill_name"
             class="border-b border-border-default/50 hover:bg-surface-elevated/50">
             <td class="py-1 px-2 text-text-primary">{{ skill.skill_name }}</td>
-            <td class="py-1 px-2 text-right text-accent-gold">{{ skill.level }}</td>
-            <td class="py-1 px-2 text-right text-text-muted">
+            <td class="py-1 px-2 text-right text-accent-gold tabular-nums">{{ skill.level }}</td>
+            <td class="py-1 px-2 text-right text-text-muted tabular-nums">
               {{ skill.bonus_levels > 0 ? `+${skill.bonus_levels}` : '' }}
             </td>
-            <td class="py-1 px-2 text-right text-text-secondary">
+            <td class="py-1 px-2 text-right text-text-secondary tabular-nums">
               <template v-if="skill.xp_needed_for_next === -1">MAX</template>
               <template v-else>{{ formatNumber(skill.xp_toward_next) }} / {{ formatNumber(skill.xp_needed_for_next) }}</template>
             </td>

@@ -17,11 +17,11 @@
     <AccordionSection :default-open="false">
       <template #title>Session</template>
       <template #badge>
-        <span class="text-text-muted text-xs font-mono">
+        <span class="text-text-muted text-xs">
           {{ gameState.activeSkills ? 'active' : 'no data' }}
         </span>
       </template>
-      <div class="space-y-1 text-xs font-mono">
+      <div class="space-y-1 text-xs">
         <div v-if="gameState.activeSkills">
           <span class="text-text-muted">Active Skills:</span>
           {{ gameState.activeSkills.skill1_name }} / {{ gameState.activeSkills.skill2_name }}
@@ -121,11 +121,11 @@
     <AccordionSection :default-open="false">
       <template #title>Live Inventory (in-memory)</template>
       <template #badge>
-        <span class="text-text-muted text-xs font-mono">{{ gameState.liveItemCount }} items</span>
+        <span class="text-text-muted text-xs">{{ gameState.liveItemCount }} items</span>
       </template>
       <div v-if="gameState.liveItemCount === 0" class="text-text-muted text-xs italic">No live inventory data</div>
       <div v-else class="overflow-x-auto">
-        <table class="w-full text-xs font-mono border-collapse">
+        <table class="w-full text-xs border-collapse">
           <thead>
             <tr class="text-text-muted text-left">
               <th class="px-2 py-1 border-b border-border-default">instance_id</th>
@@ -152,11 +152,11 @@
     <AccordionSection :default-open="false">
       <template #title>Live Event Log</template>
       <template #badge>
-        <span class="text-text-muted text-xs font-mono">{{ gameState.liveEventLog.length }} events</span>
+        <span class="text-text-muted text-xs">{{ gameState.liveEventLog.length }} events</span>
       </template>
       <div v-if="gameState.liveEventLog.length === 0" class="text-text-muted text-xs italic">No events yet</div>
       <div v-else class="overflow-x-auto max-h-60 overflow-y-auto">
-        <table class="w-full text-xs font-mono border-collapse">
+        <table class="w-full text-xs border-collapse">
           <thead class="sticky top-0 bg-surface-base">
             <tr class="text-text-muted text-left">
               <th class="px-2 py-1 border-b border-border-default">time</th>
@@ -181,11 +181,11 @@
     <AccordionSection :default-open="false">
       <template #title>Session Skills (in-memory)</template>
       <template #badge>
-        <span class="text-text-muted text-xs font-mono">{{ gameState.sessionSkillList.length }} skills</span>
+        <span class="text-text-muted text-xs">{{ gameState.sessionSkillList.length }} skills</span>
       </template>
       <div v-if="gameState.sessionSkillList.length === 0" class="text-text-muted text-xs italic">No session skill data</div>
       <div v-else class="overflow-x-auto">
-        <table class="w-full text-xs font-mono border-collapse">
+        <table class="w-full text-xs border-collapse">
           <thead>
             <tr class="text-text-muted text-left">
               <th class="px-2 py-1 border-b border-border-default">skill</th>

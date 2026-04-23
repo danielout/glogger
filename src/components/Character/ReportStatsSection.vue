@@ -4,7 +4,7 @@
       <h3 class="text-sm font-semibold text-text-secondary uppercase tracking-wider">
         Character Report Stats
       </h3>
-      <span v-if="lastUpdated" class="text-xs text-text-dim font-mono">
+      <span v-if="lastUpdated" class="text-xs text-text-dim">
         Last updated {{ formatTimestamp(lastUpdated) }}
       </span>
     </div>
@@ -37,7 +37,7 @@
               :key="stat.stat_name"
               class="border-b border-border-default/30 hover:bg-surface-elevated/50">
               <td class="py-0.5 px-2 text-text-primary">{{ formatStatName(stat.stat_name) }}</td>
-              <td class="py-0.5 px-2 text-right text-accent-gold font-mono">{{ formatValue(stat.stat_value) }}</td>
+              <td class="py-0.5 px-2 text-right text-accent-gold">{{ formatValue(stat.stat_value) }}</td>
             </tr>
           </tbody>
         </table>

@@ -44,7 +44,7 @@
         <h3 class="text-xs uppercase tracking-widest text-accent-blue font-semibold">
           All Items from <AreaInline :reference="zone.area" />
         </h3>
-        <span class="text-[0.6rem] text-text-dim">{{ zone.items.length }} unique</span>
+        <span class="text-[10px] text-text-dim">{{ zone.items.length }} unique</span>
       </header>
       <ZoneRewardsCard
         map-display-name=""

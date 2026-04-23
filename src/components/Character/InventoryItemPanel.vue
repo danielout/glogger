@@ -16,11 +16,11 @@
             :src="iconCache[item.type_id]"
             :alt="item.item_name"
             class="w-7 h-7 object-contain" />
-          <span v-else class="text-[0.5rem] text-text-muted">?</span>
+          <span v-else class="text-[10px] text-text-muted">?</span>
         </div>
         <div class="flex flex-col items-start min-w-0 gap-0.5">
           <span class="text-entity-item text-xs font-medium truncate w-full">{{ item.item_name }}</span>
-          <div class="flex gap-2 text-[0.65rem] text-text-muted">
+          <div class="flex gap-2 text-[10px] text-text-muted">
             <span v-if="item.stack_size > 1">x{{ item.stack_size }}</span>
             <span v-if="item.rarity && item.rarity !== 'Common'" :class="rarityClass(item.rarity)">{{ item.rarity }}</span>
           </div>

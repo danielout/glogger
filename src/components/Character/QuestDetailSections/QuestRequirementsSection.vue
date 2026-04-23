@@ -1,12 +1,12 @@
 <template>
   <div v-if="requirements.length" class="flex flex-col gap-1.5">
-    <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+    <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
       Requirements
     </div>
     <div
       v-for="(evReq, idx) in requirements"
       :key="idx"
-      class="flex items-baseline gap-2 text-[0.82rem]">
+      class="flex items-baseline gap-2 text-xs">
       <span
         class="w-4 text-center shrink-0 text-xs font-bold"
         :class="requirementStatusColor(evReq.status)">

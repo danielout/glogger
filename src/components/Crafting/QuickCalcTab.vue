@@ -20,7 +20,7 @@
           :key="recipe.id"
           class="flex items-baseline gap-2 px-3 py-1.5 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
           @click="selectRecipe(recipe)">
-          <span class="text-text-muted text-[0.72rem] min-w-12 shrink-0">
+          <span class="text-text-muted text-xs min-w-12 shrink-0">
             [{{ recipe.skill ?? '?' }} {{ recipe.skill_level_req ?? 0 }}]
           </span>
           <span class="text-text-primary/75 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">

@@ -9,7 +9,7 @@
           v-for="tab in tabs"
           :key="tab.id"
           @click="activeTab = tab.id"
-          class="px-4 py-2.5 bg-transparent border-none rounded text-text-secondary cursor-pointer font-mono text-sm text-left transition-all whitespace-nowrap hover:text-text-primary hover:bg-surface-base"
+          class="px-4 py-2.5 bg-transparent border-none rounded text-text-secondary cursor-pointer text-sm text-left transition-all whitespace-nowrap hover:text-text-primary hover:bg-surface-base"
           :class="{ 'text-accent-gold! bg-surface-base! border-l-2 border-l-accent-gold pl-3.5': activeTab === tab.id }">
           {{ tab.label }}
         </button>

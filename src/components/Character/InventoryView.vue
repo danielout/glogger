@@ -5,7 +5,7 @@
       <label class="text-sm text-text-secondary">Inventory Snapshot</label>
       <select
         v-if="store.inventorySnapshots.length"
-        class="bg-surface-elevated border border-border-default rounded px-3 py-1.5 text-sm text-text-primary font-mono cursor-pointer min-w-70"
+        class="bg-surface-elevated border border-border-default rounded px-3 py-1.5 text-sm text-text-primary cursor-pointer min-w-70"
         :value="store.selectedInventorySnapshot?.id"
         @change="onSnapshotChange">
         <option v-for="snap in store.inventorySnapshots" :key="snap.id" :value="snap.id">

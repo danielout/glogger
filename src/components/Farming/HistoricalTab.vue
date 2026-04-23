@@ -8,19 +8,19 @@
       <!-- Aggregate stats -->
       <div class="flex gap-6 flex-wrap text-center">
         <div>
-          <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Sessions</div>
+          <div class="text-[10px] text-text-muted uppercase tracking-wide">Sessions</div>
           <div class="text-lg font-bold text-text-primary">{{ sessions.length }}</div>
         </div>
         <div>
-          <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Total Time</div>
+          <div class="text-[10px] text-text-muted uppercase tracking-wide">Total Time</div>
           <div class="text-lg font-bold text-text-primary">{{ formatDuration(totalElapsed) }}</div>
         </div>
         <div>
-          <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Total XP</div>
+          <div class="text-[10px] text-text-muted uppercase tracking-wide">Total XP</div>
           <div class="text-lg font-bold text-[#7ec87e]">{{ totalXp.toLocaleString() }}</div>
         </div>
         <div v-if="totalGold > 0">
-          <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Total Vendor Gold</div>
+          <div class="text-[10px] text-text-muted uppercase tracking-wide">Total Vendor Gold</div>
           <div class="text-lg font-bold text-[#d4af37]">{{ totalGold.toLocaleString() }}g</div>
         </div>
       </div>
@@ -79,7 +79,7 @@
 
             <!-- Skills -->
             <div v-if="session.skills.length > 0" class="mb-3">
-              <div class="text-[0.6rem] uppercase tracking-widest text-entity-item mb-1 font-bold">Skills</div>
+              <div class="text-[10px] uppercase tracking-widest text-entity-item mb-1 font-bold">Skills</div>
               <div class="flex gap-2 flex-wrap">
                 <div
                   v-for="skill in session.skills"
@@ -87,7 +87,7 @@
                   class="flex items-center gap-2 px-3 py-1.5 rounded text-xs bg-[#1a2e1a] border border-[#3a5a3a]">
                   <SkillInline :reference="skill.skill_name" />
                   <span class="text-[#7ec87e] font-bold">+{{ skill.xp_gained.toLocaleString() }}</span>
-                  <span class="text-text-dim text-[0.6rem]">{{ skillXpPerHour(skill.xp_gained, session.elapsed_seconds).toLocaleString() }}/hr</span>
+                  <span class="text-text-dim text-[10px]">{{ skillXpPerHour(skill.xp_gained, session.elapsed_seconds).toLocaleString() }}/hr</span>
                   <span v-if="skill.levels_gained > 0" class="text-[#c8b47e] font-bold">(+{{ skill.levels_gained }} lvl)</span>
                 </div>
               </div>
@@ -95,7 +95,7 @@
 
             <!-- Items -->
             <div v-if="session.items.length > 0" class="mb-3">
-              <div class="text-[0.6rem] uppercase tracking-widest text-text-dim mb-1 font-bold">Items</div>
+              <div class="text-[10px] uppercase tracking-widest text-text-dim mb-1 font-bold">Items</div>
               <div class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-1">
                 <div
                   v-for="item in session.items"
@@ -105,12 +105,12 @@
                   <div class="flex items-center gap-2">
                     <span
                       :class="[
-                        'font-mono font-bold',
+                        'font-bold',
                         item.net_quantity > 0 ? 'text-[#7ec87e]' : 'text-[#c87e7e]'
                       ]">
                       {{ item.net_quantity > 0 ? '+' : '' }}{{ item.net_quantity }}
                     </span>
-                    <span class="text-text-dim text-[0.6rem]">{{ itemPerHour(item.net_quantity, session.elapsed_seconds) }}/hr</span>
+                    <span class="text-text-dim text-[10px]">{{ itemPerHour(item.net_quantity, session.elapsed_seconds) }}/hr</span>
                   </div>
                 </div>
               </div>
@@ -118,7 +118,7 @@
 
             <!-- Favors -->
             <div v-if="session.favors.length > 0" class="mb-3">
-              <div class="text-[0.6rem] uppercase tracking-widest text-text-dim mb-1 font-bold">Favor</div>
+              <div class="text-[10px] uppercase tracking-widest text-text-dim mb-1 font-bold">Favor</div>
               <div class="flex gap-2 flex-wrap">
                 <div
                   v-for="fav in session.favors"
@@ -127,7 +127,7 @@
                   <NpcInline :reference="fav.npc_name" />
                   <span
                     :class="[
-                      'font-mono font-bold ml-1',
+                      'font-bold ml-1',
                       fav.delta > 0 ? 'text-[#c8b47e]' : 'text-[#c87e7e]'
                     ]">
                     {{ fav.delta > 0 ? '+' : '' }}{{ fav.delta.toFixed(1) }}

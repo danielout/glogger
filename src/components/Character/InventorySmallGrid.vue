@@ -15,10 +15,10 @@
           :src="iconCache[item.type_id]"
           :alt="item.item_name"
           class="absolute inset-0 w-full h-full object-cover" />
-        <span v-else class="text-[0.5rem] text-text-muted">?</span>
+        <span v-else class="text-[10px] text-text-muted">?</span>
         <span
           v-if="item.stack_size > 1"
-          class="absolute bottom-0 right-0 text-[0.5rem] leading-none bg-black/70 text-text-primary px-0.5 rounded-tl-sm"
+          class="absolute bottom-0 right-0 text-[10px] leading-none bg-black/70 text-text-primary px-0.5 rounded-tl-sm"
         >{{ item.stack_size }}</span>
       </button>
       <template #tooltip>

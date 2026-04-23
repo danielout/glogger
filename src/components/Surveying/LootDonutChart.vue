@@ -1,7 +1,7 @@
 <template>
   <section class="bg-surface-card border border-border-default rounded p-3 flex flex-col gap-2 h-full">
     <header class="shrink-0">
-      <h3 class="text-[0.65rem] uppercase tracking-widest text-text-secondary font-semibold">
+      <h3 class="text-[10px] uppercase tracking-widest text-text-secondary font-semibold">
         Loot Distribution
       </h3>
     </header>

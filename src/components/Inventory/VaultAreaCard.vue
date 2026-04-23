@@ -28,12 +28,12 @@
             :style="{ width: capacityPercent + '%' }"
           />
         </div>
-        <span class="text-[0.65rem] text-text-secondary whitespace-nowrap">
+        <span class="text-[10px] text-text-secondary whitespace-nowrap">
           {{ totalUsed }} / {{ totalUnlocked ?? '?' }}
         </span>
       </div>
       <!-- Max possible note -->
-      <div v-if="totalUnlocked != null && totalUnlocked < totalMaxPossible" class="text-[0.6rem] text-text-muted">
+      <div v-if="totalUnlocked != null && totalUnlocked < totalMaxPossible" class="text-[10px] text-text-muted">
         {{ totalMaxPossible }} max possible
       </div>
     </div>

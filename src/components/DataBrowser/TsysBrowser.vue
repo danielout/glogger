@@ -44,9 +44,9 @@
             @click="selectEntry(entry)">
             <div class="flex items-baseline gap-2">
               <span class="text-text-primary/75 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ entry.internal_name || entry.key }}</span>
-              <span v-if="entry.skill" class="text-text-muted text-[0.65rem] shrink-0">{{ entry.skill }}</span>
+              <span v-if="entry.skill" class="text-text-muted text-[10px] shrink-0">{{ entry.skill }}</span>
             </div>
-            <div v-if="entry.prefix || entry.suffix" class="text-text-dim text-[0.65rem]">
+            <div v-if="entry.prefix || entry.suffix" class="text-text-dim text-[10px]">
               <span v-if="entry.prefix">{{ entry.prefix }}</span>
               <span v-if="entry.prefix && entry.suffix"> · </span>
               <span v-if="entry.suffix">{{ entry.suffix }}</span>
@@ -71,7 +71,7 @@
             <div class="flex-1 min-w-0">
               <div class="text-accent-gold text-base font-bold mb-1">{{ selected.internal_name || selected.key }}</div>
               <div class="text-xs text-text-dim mb-1">
-                Key: <span class="text-text-secondary font-mono">{{ selected.key }}</span>
+                Key: <span class="text-text-secondary">{{ selected.key }}</span>
                 <template v-if="selected.skill">
                   · Skill: <SkillInline :reference="selected.skill" />
                 </template>
@@ -82,8 +82,8 @@
             </div>
 
             <div class="flex gap-1 shrink-0">
-              <span v-if="selected.is_unavailable" class="text-[0.65rem] px-1.5 py-0.5 bg-accent-red/20 border border-accent-red/40 text-accent-red">Unavailable</span>
-              <span v-if="selected.is_hidden_from_transmutation" class="text-[0.65rem] px-1.5 py-0.5 bg-yellow-900/30 border border-yellow-700/40 text-yellow-400">Hidden from Transmute</span>
+              <span v-if="selected.is_unavailable" class="text-[10px] px-1.5 py-0.5 bg-accent-red/20 border border-accent-red/40 text-accent-red">Unavailable</span>
+              <span v-if="selected.is_hidden_from_transmutation" class="text-[10px] px-1.5 py-0.5 bg-yellow-900/30 border border-yellow-700/40 text-yellow-400">Hidden from Transmute</span>
               <button
                 class="bg-transparent border-none cursor-pointer px-1 py-0 text-sm transition-colors"
                 :class="isFav ? 'text-accent-gold' : 'text-text-dim hover:text-accent-gold'"
@@ -96,7 +96,7 @@
 
           <!-- Prefix / Suffix -->
           <div v-if="selected.prefix || selected.suffix" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Naming</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Naming</div>
             <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-1.5">
               <div v-if="selected.prefix" class="text-xs flex gap-2">
                 <span class="text-text-muted min-w-16">Prefix:</span>
@@ -111,12 +111,12 @@
 
           <!-- Slots -->
           <div v-if="selected.slots.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Equipment Slots</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Equipment Slots</div>
             <div class="flex flex-wrap gap-1">
               <span
                 v-for="slot in selected.slots"
                 :key="slot"
-                class="text-[0.72rem] px-1.5 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-entity-item">
+                class="text-xs px-1.5 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-entity-item">
                 {{ slot }}
               </span>
             </div>
@@ -124,7 +124,7 @@
 
           <!-- Tiers -->
           <div v-if="selected.tiers && Object.keys(selected.tiers).length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
               Tiers ({{ Object.keys(selected.tiers).length }})
             </div>
             <div class="flex flex-col gap-2">
@@ -133,12 +133,12 @@
                 :key="tierKey"
                 class="bg-surface-dark border border-surface-card p-2 text-xs">
                 <div class="flex items-baseline gap-3 mb-1">
-                  <span class="text-text-dim font-mono text-[0.65rem]">{{ tierKey }}</span>
+                  <span class="text-text-dim text-[10px]">{{ tierKey }}</span>
                   <span v-if="tier.min_level != null" class="text-text-muted">
                     Lv {{ tier.min_level }}–{{ tier.max_level }}
                   </span>
-                  <span v-if="tier.min_rarity" class="text-entity-item text-[0.65rem]">{{ tier.min_rarity }}</span>
-                  <span v-if="tier.skill_level_prereq" class="text-text-muted text-[0.65rem]">
+                  <span v-if="tier.min_rarity" class="text-entity-item text-[10px]">{{ tier.min_rarity }}</span>
+                  <span v-if="tier.skill_level_prereq" class="text-text-muted text-[10px]">
                     Prereq: {{ tier.skill_level_prereq }}
                   </span>
                 </div>
@@ -146,7 +146,7 @@
                   <span
                     v-for="(effect, i) in tier.effect_descs"
                     :key="i"
-                    class="text-text-secondary font-mono text-[0.72rem]">
+                    class="text-text-secondary text-xs">
                     {{ effect }}
                   </span>
                 </div>
@@ -156,7 +156,7 @@
 
           <!-- Related Abilities -->
           <div v-if="relatedAbilitiesLoading || relatedAbilities.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
               Related Abilities
               <span v-if="relatedAbilities.length" class="text-text-muted">({{ relatedAbilities.length }})</span>
             </div>
@@ -167,16 +167,16 @@
                 :key="ab.id"
                 class="flex items-baseline gap-2 px-2 py-1 bg-surface-dark border border-surface-card text-xs">
                 <AbilityInline :reference="ab.name" />
-                <span v-if="ab.skill" class="text-text-muted text-[0.65rem]">{{ ab.skill }}</span>
-                <span v-if="ab.level" class="text-text-dim text-[0.65rem]">Lv {{ ab.level }}</span>
+                <span v-if="ab.skill" class="text-text-muted text-[10px]">{{ ab.skill }}</span>
+                <span v-if="ab.level" class="text-text-dim text-[10px]">Lv {{ ab.level }}</span>
               </div>
             </div>
           </div>
 
           <!-- Raw JSON -->
           <div v-if="settingsStore.settings.showRawJsonInDataBrowser" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
-            <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected.raw_json, null, 2) }}</pre>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
+            <pre class="bg-surface-dark border border-surface-card p-3 text-xs text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected.raw_json, null, 2) }}</pre>
           </div>
         </template>
     </div>

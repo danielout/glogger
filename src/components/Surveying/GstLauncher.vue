@@ -1,11 +1,11 @@
 <template>
-  <div class="flex flex-col text-[0.7rem]">
+  <div class="flex flex-col text-xs">
     <!-- Accordion header -->
     <button
       class="w-full flex items-center gap-1.5 text-left text-text-secondary hover:text-text-primary transition-colors"
       @click="toggle"
     >
-      <span class="text-[0.6rem] text-text-dim transition-transform" :class="expanded ? 'rotate-90' : ''">&#9654;</span>
+      <span class="text-[10px] text-text-dim transition-transform" :class="expanded ? 'rotate-90' : ''">&#9654;</span>
       <span>GorgonSurveyTracker by Kaeus</span>
       <span v-if="status?.installed_version" class="text-text-dim">
         {{ status.installed_version }}
@@ -47,7 +47,7 @@
               {{ busy ? '...' : 'Update' }}
             </button>
           </div>
-          <div v-if="status.update_available" class="text-text-dim text-[0.65rem]">
+          <div v-if="status.update_available" class="text-text-dim text-[10px]">
             {{ status.latest_version }} available
           </div>
         </template>
@@ -55,7 +55,7 @@
 
       <!-- Mac/Linux: setup instructions hint -->
       <template v-else-if="status && !isWindows">
-        <div class="text-text-dim text-[0.65rem]">
+        <div class="text-text-dim text-[10px]">
           Requires Python 3.8+ — see the GST page for
           {{ status.platform === 'macos' ? 'macOS' : 'Linux' }} setup steps.
         </div>
@@ -67,13 +67,13 @@
       </template>
 
       <button
-        class="text-[0.65rem] text-text-dim hover:text-accent-gold transition-colors text-left"
+        class="text-[10px] text-text-dim hover:text-accent-gold transition-colors text-left"
         @click="openGstPage"
       >
         GST Homepage &amp; Instructions &#8599;
       </button>
 
-      <div v-if="error" class="text-red-400 text-[0.65rem]">{{ error }}</div>
+      <div v-if="error" class="text-red-400 text-[10px]">{{ error }}</div>
     </div>
   </div>
 </template>

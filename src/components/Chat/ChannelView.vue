@@ -15,7 +15,7 @@
           @click="selectChannel(channel.name)"
         >
           <span class="font-medium">{{ channel.name }}</span>
-          <span class="text-sm text-text-muted font-mono">{{ channel.count }}</span>
+          <span class="text-sm text-text-muted">{{ channel.count }}</span>
         </button>
       </div>
     </div>

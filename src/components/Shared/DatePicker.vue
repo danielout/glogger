@@ -70,7 +70,7 @@
             v-for="cell in cells"
             :key="cell.key"
             type="button"
-            class="text-[11px] tabular-nums rounded h-7 cursor-pointer transition-colors"
+            class="text-xs tabular-nums rounded h-7 cursor-pointer transition-colors"
             :class="dayCellClass(cell)"
             @click="selectCell(cell)">
             {{ cell.day }}
@@ -81,14 +81,14 @@
         <div class="flex items-center justify-between mt-2 pt-2 border-t border-border-default/60">
           <button
             type="button"
-            class="text-[11px] text-accent-gold hover:underline cursor-pointer"
+            class="text-xs text-accent-gold hover:underline cursor-pointer"
             @click="selectToday">
             Today
           </button>
           <button
             v-if="modelValue"
             type="button"
-            class="text-[11px] text-text-secondary hover:text-text-primary cursor-pointer"
+            class="text-xs text-text-secondary hover:text-text-primary cursor-pointer"
             @click="clearAndClose">
             Clear
           </button>

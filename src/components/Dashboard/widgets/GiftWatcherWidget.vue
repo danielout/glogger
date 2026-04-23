@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-3 h-full min-h-0">
+  <div class="flex flex-col gap-3">
     <!-- Header area with edit toggle -->
     <div class="flex items-center justify-between">
       <button
@@ -74,7 +74,7 @@
         Resolving items...
       </div>
 
-      <div v-else class="flex flex-col gap-3 flex-1 overflow-y-auto min-h-0">
+      <div v-else class="flex flex-col gap-3">
         <div
           v-for="entry in npcMatches"
           :key="entry.npcKey"
@@ -89,7 +89,7 @@
               class="flex items-center justify-between text-sm"
             >
               <ItemInline :reference="match.itemName" :show-icon="false" />
-              <span class="text-xs font-mono text-text-muted shrink-0 ml-2">
+              <span class="text-xs text-text-muted shrink-0 ml-2">
                 ×{{ match.count }}
                 <span
                   class="ml-1"

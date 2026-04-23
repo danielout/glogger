@@ -43,7 +43,7 @@
               'bg-surface-elevated': selectedIndex === idx && selected?.id !== skill.id
             }"
             @click="selectSkill(skill)">
-            <span class="text-text-dim text-[0.72rem] min-w-12 shrink-0">#{{ skill.id }}</span>
+            <span class="text-text-dim text-xs min-w-12 shrink-0">#{{ skill.id }}</span>
             <span class="text-text-primary/75 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ skill.name }}</span>
           </li>
         </ul>
@@ -68,26 +68,26 @@
                 :src="iconSrc"
                 class="w-12 h-12 [image-rendering:pixelated] border border-border-default"
                 alt="skill icon" />
-              <div v-else-if="iconLoading" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[0.65rem] text-accent-gold animate-spin">
+              <div v-else-if="iconLoading" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[10px] text-accent-gold animate-spin">
                 ⟳
               </div>
-              <div v-else-if="selected.icon_id" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[0.65rem] text-text-dim">
+              <div v-else-if="selected.icon_id" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[10px] text-text-dim">
                 {{ selected.icon_id }}
               </div>
-              <div v-else class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[0.65rem] text-border-default">—</div>
+              <div v-else class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[10px] text-border-default">—</div>
             </div>
 
             <div class="flex-1 min-w-0">
               <div class="text-accent-gold text-base font-bold mb-1">{{ selected.name }}</div>
               <div class="text-xs text-text-dim mb-1">
-                ID: <span class="text-text-secondary font-mono">{{ selected.id }}</span>
+                ID: <span class="text-text-secondary">{{ selected.id }}</span>
                 <template v-if="selected.icon_id">
                   · Icon:
-                  <span class="text-text-secondary font-mono">{{ selected.icon_id }}</span></template
+                  <span class="text-text-secondary">{{ selected.icon_id }}</span></template
                 >
                 <template v-if="selected.xp_table">
                   · XP Table:
-                  <span class="text-text-secondary font-mono">{{ selected.xp_table }}</span></template
+                  <span class="text-text-secondary">{{ selected.xp_table }}</span></template
                 >
               </div>
               <div v-if="selected.description" class="text-xs text-text-secondary italic">
@@ -106,7 +106,7 @@
 
           <!-- Skill Details -->
           <div class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Details</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Details</div>
             <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-1.5">
               <div class="text-xs flex gap-2">
                 <span class="text-text-muted min-w-24">Type:</span>
@@ -122,7 +122,7 @@
               </div>
               <div v-if="selected.advancement_table" class="text-xs flex gap-2">
                 <span class="text-text-muted min-w-24">Advancement:</span>
-                <span class="text-text-secondary font-mono">{{ selected.advancement_table }}</span>
+                <span class="text-text-secondary">{{ selected.advancement_table }}</span>
               </div>
               <div v-if="selected.parents?.length" class="text-xs flex gap-2">
                 <span class="text-text-muted min-w-24">Parents:</span>
@@ -137,7 +137,7 @@
 
           <!-- Advancement Hints -->
           <div v-if="selected.advancement_hints && Object.keys(selected.advancement_hints).length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Advancement Hints</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Advancement Hints</div>
             <div class="flex flex-col gap-1">
               <div
                 v-for="(hint, level) in selected.advancement_hints"
@@ -151,13 +151,13 @@
 
           <!-- Related Abilities -->
           <div v-if="relatedAbilities.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Related Abilities ({{ relatedAbilities.length }})</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Related Abilities ({{ relatedAbilities.length }})</div>
             <ul class="m-0 p-0 list-none max-h-75 overflow-y-auto border border-surface-dark">
               <li
                 v-for="ability in relatedAbilities"
                 :key="ability.id"
                 class="text-xs text-text-secondary px-2 py-0.5 flex gap-2 border-b border-[#151515] hover:bg-surface-base">
-                <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ ability.level || 0 }}]</span>
+                <span class="text-text-muted text-xs min-w-14 shrink-0">[Lv {{ ability.level || 0 }}]</span>
                 <span class="text-[#7ec8e3] flex-1">{{ ability.name }}</span>
               </li>
             </ul>
@@ -165,13 +165,13 @@
 
           <!-- Related Recipes -->
           <div v-if="relatedRecipes.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Recipes ({{ relatedRecipes.length }})</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Recipes ({{ relatedRecipes.length }})</div>
             <ul class="m-0 p-0 list-none max-h-75 overflow-y-auto border border-surface-dark">
               <li
                 v-for="recipe in relatedRecipes"
                 :key="recipe.id"
                 class="text-xs px-2 py-0.5 flex gap-2 items-center border-b border-[#151515] hover:bg-surface-base">
-                <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
+                <span class="text-text-muted text-xs min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
                 <RecipeInline :reference="recipe.name" />
               </li>
             </ul>
@@ -179,7 +179,7 @@
 
           <!-- NPCs Training This Skill -->
           <div v-if="npcsTraining.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Trained By ({{ npcsTraining.length }})</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Trained By ({{ npcsTraining.length }})</div>
             <div class="flex flex-wrap gap-1.5">
               <NpcInline v-for="npc in npcsTraining" :key="npc.key" :reference="npc.key" />
             </div>
@@ -187,7 +187,7 @@
 
           <!-- Work Order Quests -->
           <div v-if="workOrderQuests.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Work Order Quests ({{ workOrderQuests.length }})</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Work Order Quests ({{ workOrderQuests.length }})</div>
             <ul class="m-0 p-0 list-none max-h-50 overflow-y-auto border border-surface-dark">
               <li
                 v-for="quest in workOrderQuests"
@@ -200,12 +200,12 @@
 
           <!-- Keywords -->
           <div v-if="selected.keywords.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
             <div class="flex flex-wrap gap-1">
               <span
                 v-for="kw in selected.keywords"
                 :key="kw"
-                class="text-[0.72rem] px-1.5 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-[#7ec8e3]"
+                class="text-xs px-1.5 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-[#7ec8e3]"
                 :class="{ 'bg-[#1e1a10]! border-[#3a3010]! text-[#887040]!': kw.startsWith('Lint_') }"
                 >{{ kw }}</span
               >
@@ -214,8 +214,8 @@
 
           <!-- Raw JSON -->
           <div v-if="settingsStore.settings.showRawJsonInDataBrowser" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
-            <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
+            <pre class="bg-surface-dark border border-surface-card p-3 text-xs text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
           </div>
         </template>
     </div>

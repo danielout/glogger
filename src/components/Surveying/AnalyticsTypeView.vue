@@ -34,7 +34,7 @@
         <h3 class="text-xs uppercase tracking-widest text-accent-blue font-semibold">
           Also in Other Zones
         </h3>
-        <span class="text-[0.6rem] text-text-dim">same map, different area</span>
+        <span class="text-[10px] text-text-dim">same map, different area</span>
       </header>
       <ZoneRewardsCard
         v-for="t in otherZoneMatches"

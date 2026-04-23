@@ -1,10 +1,10 @@
 <template>
   <section class="bg-surface-card border border-border-default rounded p-3 flex flex-col gap-2 h-full overflow-hidden">
     <header class="flex items-baseline justify-between shrink-0">
-      <h3 class="text-[0.65rem] uppercase tracking-widest text-text-secondary font-semibold">
+      <h3 class="text-[10px] uppercase tracking-widest text-text-secondary font-semibold">
         Loot Found
       </h3>
-      <span class="text-[0.6rem] text-text-dim">{{ rows.length }} unique</span>
+      <span class="text-[10px] text-text-dim">{{ rows.length }} unique</span>
     </header>
 
     <div v-if="rows.length === 0" class="text-text-dim text-xs italic py-2">
@@ -14,7 +14,7 @@
     <div v-else class="flex-1 min-h-0 overflow-y-auto -mr-1 pr-1">
       <table class="w-full text-xs border-collapse">
         <thead class="sticky top-0 bg-surface-card">
-          <tr class="text-[0.6rem] uppercase tracking-wide text-text-secondary font-semibold border-b border-border-default">
+          <tr class="text-[10px] uppercase tracking-wide text-text-secondary font-semibold border-b border-border-default">
             <th class="text-left py-1 px-1">Item</th>
             <th class="text-right py-1 px-1">Qty</th>
             <th v-if="hasBonus" class="text-right py-1 px-1">Split</th>

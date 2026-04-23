@@ -11,7 +11,7 @@
       <div class="flex flex-col items-start gap-0.5 min-w-0">
         <span class="text-entity-item text-sm font-bold truncate max-w-48">{{ itemData?.name ?? name }}</span>
         <span v-if="itemData?.value" class="text-accent-gold text-xs">{{ itemData.value }}g</span>
-        <span v-if="typeline" class="text-text-muted text-[0.65rem] uppercase tracking-wide">{{ typeline }}</span>
+        <span v-if="typeline" class="text-text-muted text-[10px] uppercase tracking-wide">{{ typeline }}</span>
       </div>
     </button>
     <template #tooltip>

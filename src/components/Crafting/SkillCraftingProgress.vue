@@ -29,11 +29,11 @@
         <!-- Stats -->
         <div class="flex gap-4 shrink-0 text-text-dim">
           <span>
-            <span class="text-text-primary font-mono">{{ skill.crafted_recipes }}</span>
+            <span class="text-text-primary">{{ skill.crafted_recipes }}</span>
             / {{ skill.total_recipes }} recipes
           </span>
           <span>
-            <span class="text-text-primary font-mono">{{ skill.total_completions.toLocaleString() }}</span>
+            <span class="text-text-primary">{{ skill.total_completions.toLocaleString() }}</span>
             crafts
           </span>
           <span v-if="skill.uncrafted_count > 0" class="text-accent-gold">

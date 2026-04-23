@@ -1,10 +1,10 @@
 <template>
   <section v-if="rows.length > 0" class="flex flex-col gap-2">
     <div v-if="title" class="flex items-baseline justify-between">
-      <h4 class="text-[0.65rem] uppercase tracking-widest font-semibold" :class="titleClass ?? 'text-text-secondary'">
+      <h4 class="text-[10px] uppercase tracking-widest font-semibold" :class="titleClass ?? 'text-text-secondary'">
         {{ title }}
       </h4>
-      <span v-if="subtitle" class="text-[0.6rem] text-text-dim">{{ subtitle }}</span>
+      <span v-if="subtitle" class="text-[10px] text-text-dim">{{ subtitle }}</span>
     </div>
 
     <div class="flex flex-wrap gap-2">
@@ -14,7 +14,7 @@
           width="max"
         />
         <!-- Count / bonus breakdown / value row, right-aligned under the card -->
-        <div class="flex items-center gap-2 px-2 pt-1 text-[0.65rem] tabular-nums">
+        <div class="flex items-center gap-2 px-2 pt-1 text-[10px] tabular-nums">
           <span class="text-text-primary font-semibold">&times;{{ row.total_qty.toLocaleString() }}</span>
           <span
             v-if="row.bonus_qty > 0"

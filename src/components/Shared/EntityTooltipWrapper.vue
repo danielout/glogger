@@ -10,7 +10,7 @@
       <div
         v-if="showTooltip && !disabled"
         ref="tooltipEl"
-        class="fixed z-[9999] min-w-62 max-w-87 bg-[#1a1a2e] border rounded-md p-3 shadow-lg"
+        class="fixed z-[9999] min-w-62 max-w-87 bg-surface-card border rounded-md p-3 shadow-lg"
         :class="[borderClass, isInteractive ? '' : 'pointer-events-none']"
         :style="tooltipStyle"
         @mouseenter="onTooltipMouseEnter"

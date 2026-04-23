@@ -1,7 +1,7 @@
 <template>
   <pre
     class="bg-surface-dark border border-surface-card p-2 text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed rounded"
-    :class="compact ? 'text-[0.65rem]' : 'text-[0.72rem]'"
+    :class="compact ? 'text-[10px]' : 'text-xs'"
   >{{ formatted }}</pre>
 </template>
 

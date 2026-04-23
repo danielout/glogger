@@ -92,7 +92,7 @@
                 <td class="py-1 px-2 text-text-dim text-xs">
                   <span class="inline-block transition-transform" :class="expandedDeathId === death.id ? 'rotate-90' : ''">&#9654;</span>
                 </td>
-                <td class="py-1 px-2 text-text-muted font-mono text-xs whitespace-nowrap">
+                <td class="py-1 px-2 text-text-muted text-xs whitespace-nowrap">
                   {{ formatTs(death.died_at) }}
                 </td>
                 <td class="py-1 px-2">
@@ -135,13 +135,13 @@
                       </thead>
                       <tbody>
                         <tr v-for="src in expandedSources" :key="src.id" class="text-text-secondary">
-                          <td class="py-0.5 pr-3 font-mono text-text-dim whitespace-nowrap">{{ formatTs(src.timestamp) }}</td>
+                          <td class="py-0.5 pr-3 text-text-dim whitespace-nowrap">{{ formatTs(src.timestamp) }}</td>
                           <td class="py-0.5 pr-3">
                             <EnemyInline :reference="src.attacker_name" />
                           </td>
                           <td class="py-0.5 pr-3">
                             <AbilityInline :reference="src.ability_name" :show-icon="false" />
-                            <span v-if="src.is_crit" class="text-yellow-400 ml-1 text-[0.6rem]">CRIT</span>
+                            <span v-if="src.is_crit" class="text-yellow-400 ml-1 text-[10px]">CRIT</span>
                           </td>
                           <td class="py-0.5 text-right">
                             <span class="text-vital-health">{{ src.health_damage }}</span>

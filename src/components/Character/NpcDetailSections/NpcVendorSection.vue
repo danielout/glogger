@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col gap-1.5">
-    <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+    <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
       Vendor Status
     </div>
 
@@ -8,7 +8,7 @@
       <!-- Gold display -->
       <div class="flex items-center gap-2 px-2 text-xs">
         <span class="text-text-muted">Gold:</span>
-        <span class="font-bold font-mono" :class="goldColorClass">
+        <span class="font-bold" :class="goldColorClass">
           {{ formatGold(vendorStatus.vendor_gold_available) }}
         </span>
         <span v-if="vendorStatus.vendor_gold_max != null" class="text-text-dim">
@@ -17,14 +17,14 @@
         <span v-else-if="currentCapGold != null" class="text-text-dim">
           / ~{{ currentCapGold.toLocaleString() }}
         </span>
-        <span class="text-text-dim text-[0.6rem]">councils</span>
+        <span class="text-text-dim text-[10px]">councils</span>
       </div>
 
       <!-- Timer -->
       <div v-if="resetTimeLabel" class="flex items-center gap-2 px-2 text-xs">
         <span class="text-text-muted">Resets in:</span>
         <span class="text-text-secondary">~{{ resetTimeLabel }}</span>
-        <span class="text-text-dim text-[0.55rem] italic">(estimated)</span>
+        <span class="text-text-dim text-[10px] italic">(estimated)</span>
       </div>
 
       <!-- Last sell -->

@@ -24,12 +24,12 @@
         <option value="session">Session XP</option>
       </select>
 
-      <label class="flex items-center gap-1 text-[0.65rem] text-text-muted cursor-pointer">
+      <label class="flex items-center gap-1 text-[10px] text-text-muted cursor-pointer">
         <input type="checkbox" v-model="hideMaxed" class="cursor-pointer" />
         Hide maxed
       </label>
 
-      <label class="flex items-center gap-1 text-[0.65rem] text-text-muted cursor-pointer">
+      <label class="flex items-center gap-1 text-[10px] text-text-muted cursor-pointer">
         <input type="checkbox" v-model="hideZero" class="cursor-pointer" />
         Hide zero
       </label>
@@ -42,7 +42,7 @@
       <template v-for="group in groupedSkills" :key="group.label">
         <div
           v-if="group.label"
-          class="sticky top-0 z-10 bg-surface-base px-2 py-1 text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-elevated cursor-pointer flex items-center gap-1"
+          class="sticky top-0 z-10 bg-surface-base px-2 py-1 text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-elevated cursor-pointer flex items-center gap-1"
           @click="toggleGroup(group.label)">
           <span class="text-text-secondary text-xs">{{ collapsedGroups.has(group.label) ? '▶' : '▼' }}</span>
           {{ group.label }} ({{ group.skills.length }})
@@ -68,7 +68,7 @@
             <!-- Active skill badge -->
             <span
               v-if="row.isActive"
-              class="text-[0.6rem] text-accent-gold/70 shrink-0"
+              class="text-[10px] text-accent-gold/70 shrink-0"
               title="Equipped combat skill">&#x2694;</span>
 
             <!-- Level: always show effective (base+bonus) -->

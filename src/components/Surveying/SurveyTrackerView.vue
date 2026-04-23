@@ -28,7 +28,7 @@
             Start New Session
           </button>
 
-          <label class="flex items-center gap-2 text-[0.7rem] text-text-secondary cursor-pointer px-1">
+          <label class="flex items-center gap-2 text-xs text-text-secondary cursor-pointer px-1">
             <input
               type="checkbox"
               class="accent-accent-gold"
@@ -64,7 +64,7 @@
               @update:model-value="update({ filterZone: $event })"
             />
             <select
-              class="bg-surface-elevated border border-border-default rounded px-1.5 py-1 text-[0.7rem] text-text-primary min-w-0"
+              class="bg-surface-elevated border border-border-default rounded px-1.5 py-1 text-xs text-text-primary min-w-0"
               :value="prefs.sortBy"
               @change="update({ sortBy: ($event.target as HTMLSelectElement).value as any })"
             >
@@ -74,7 +74,7 @@
               <option value="surveys">Surveys</option>
             </select>
             <button
-              class="text-[0.7rem] text-text-secondary hover:text-text-primary px-1"
+              class="text-xs text-text-secondary hover:text-text-primary px-1"
               @click="update({ sortDir: prefs.sortDir === 'desc' ? 'asc' : 'desc' })"
               :title="`Sort ${prefs.sortDir === 'desc' ? 'ascending' : 'descending'}`"
             >
@@ -126,11 +126,11 @@
             </h2>
             <span
               v-if="isSelectedActive"
-              class="text-[0.6rem] px-1.5 py-0.5 rounded bg-accent-green/20 text-accent-green uppercase tracking-wider font-semibold"
+              class="text-[10px] px-1.5 py-0.5 rounded bg-accent-green/20 text-accent-green uppercase tracking-wider font-semibold"
             >
               Active
             </span>
-            <span class="text-[0.65rem] text-text-dim">
+            <span class="text-[10px] text-text-dim">
               {{ selectedDetail.session.start_trigger }}
             </span>
           </div>
@@ -176,7 +176,7 @@
         <template v-else>
           <!-- Session name (editable) -->
           <div>
-            <div class="text-[0.65rem] uppercase tracking-wider text-text-secondary font-semibold mb-1">
+            <div class="text-[10px] uppercase tracking-wider text-text-secondary font-semibold mb-1">
               Session Name
             </div>
             <input
@@ -189,7 +189,7 @@
 
           <!-- Notes (editable) -->
           <div>
-            <div class="text-[0.65rem] uppercase tracking-wider text-text-secondary font-semibold mb-1">
+            <div class="text-[10px] uppercase tracking-wider text-text-secondary font-semibold mb-1">
               Notes
             </div>
             <textarea
@@ -203,7 +203,7 @@
 
           <!-- Crafting cost breakdown -->
           <div v-if="selectedDetail.craft_materials.length > 0" class="flex flex-col gap-2">
-            <div class="text-[0.65rem] uppercase tracking-wider text-text-secondary font-semibold">
+            <div class="text-[10px] uppercase tracking-wider text-text-secondary font-semibold">
               Crafting Cost
             </div>
             <div class="flex flex-col gap-1">
@@ -231,7 +231,7 @@
 
           <!-- Revenue + Profit -->
           <div class="flex flex-col gap-2">
-            <div class="text-[0.65rem] uppercase tracking-wider text-text-secondary font-semibold">
+            <div class="text-[10px] uppercase tracking-wider text-text-secondary font-semibold">
               Revenue &amp; Profit
             </div>
             <div class="flex flex-col gap-1.5 text-xs tabular-nums">
@@ -276,7 +276,7 @@
           <!-- Delete -->
           <div class="flex justify-end mt-4">
             <button
-              class="text-[0.7rem] px-2.5 py-1 rounded border border-accent-red/50 text-accent-red hover:bg-accent-red/10 transition-colors"
+              class="text-xs px-2.5 py-1 rounded border border-accent-red/50 text-accent-red hover:bg-accent-red/10 transition-colors"
               @click="pendingDeleteId = selectedDetail!.session.id; showDeleteConfirm = true"
             >
               Delete session

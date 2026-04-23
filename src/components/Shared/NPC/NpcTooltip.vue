@@ -9,12 +9,12 @@
   </div>
 
   <div v-if="npc.trains_skills?.length" class="mb-2">
-    <div class="text-text-muted text-[0.65rem] uppercase tracking-wide mb-1">Trains</div>
+    <div class="text-text-muted text-[10px] uppercase tracking-wide mb-1">Trains</div>
     <div class="flex flex-wrap gap-1">
       <span
         v-for="skill in npc.trains_skills"
         :key="skill"
-        class="bg-entity-skill/10 text-entity-skill px-1.5 py-0.5 rounded-sm text-[0.65rem]"
+        class="bg-entity-skill/10 text-entity-skill px-1.5 py-0.5 rounded-sm text-[10px]"
       >
         {{ skill }}
       </span>
@@ -27,7 +27,7 @@
     <div v-if="favorTier" class="flex items-center gap-1.5 text-xs">
       <span class="text-text-muted">Favor:</span>
       <span
-        class="px-1.5 py-0.5 rounded-sm text-[0.65rem] border"
+        class="px-1.5 py-0.5 rounded-sm text-[10px] border"
         :class="favorBadgeClasses(favorTier)"
       >
         {{ tierDisplayName(favorTier) }}
@@ -39,7 +39,7 @@
       <div class="flex-1 h-1 bg-border-default rounded-sm overflow-hidden">
         <div class="h-full bg-accent-gold/60 rounded-sm" :style="{ width: favorProgressPercent + '%' }"></div>
       </div>
-      <span class="text-[0.6rem] text-text-dim shrink-0">&rarr; {{ tierDisplayName(nextTierName) }}: {{ favorProgressPercent }}%</span>
+      <span class="text-[10px] text-text-dim shrink-0">&rarr; {{ tierDisplayName(nextTierName) }}: {{ favorProgressPercent }}%</span>
     </div>
 
     <!-- Vendor gold -->
@@ -52,13 +52,13 @@
         </span>
       </span>
       <span v-else class="text-text-dim">unknown</span>
-      <span v-if="timerRemaining" class="text-text-dim text-[0.6rem]">
+      <span v-if="timerRemaining" class="text-text-dim text-[10px]">
         (resets in {{ timerRemaining }})
       </span>
     </div>
 
     <!-- Vendor item types -->
-    <div v-if="showVendor && vendorItemTypes.length" class="text-[0.6rem] text-text-dim truncate">
+    <div v-if="showVendor && vendorItemTypes.length" class="text-[10px] text-text-dim truncate">
       Buys: {{ vendorItemTypes.join(', ') }}
     </div>
 
@@ -72,7 +72,7 @@
   </div>
 
   <div v-if="topPrefs.length" class="mb-1">
-    <div class="text-text-muted text-[0.65rem] uppercase tracking-wide mb-1">Preferences</div>
+    <div class="text-text-muted text-[10px] uppercase tracking-wide mb-1">Preferences</div>
     <div v-for="pref in topPrefs" :key="pref.name ?? pref.desire" class="text-xs flex gap-1.5 py-0.5">
       <span :class="desireColor(pref.desire)">{{ pref.desire }}</span>
       <span class="text-text-secondary">{{ pref.name ?? pref.keywords?.join(', ') }}</span>

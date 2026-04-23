@@ -19,7 +19,7 @@
           :class="kindColor(event.kind)" />
 
         <!-- Timestamp -->
-        <span class="text-text-dim font-mono shrink-0">{{ formatTs(event.timestamp) }}</span>
+        <span class="text-text-dim shrink-0">{{ formatTs(event.timestamp) }}</span>
 
         <!-- Item name -->
         <ItemInline :reference="event.item_name" />

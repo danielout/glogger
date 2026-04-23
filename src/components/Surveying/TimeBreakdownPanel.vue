@@ -1,7 +1,7 @@
 <template>
   <section class="bg-surface-card border border-border-default rounded p-3 flex flex-col gap-2 h-full overflow-hidden">
     <header class="shrink-0">
-      <h3 class="text-[0.65rem] uppercase tracking-widest text-text-secondary font-semibold">
+      <h3 class="text-[10px] uppercase tracking-widest text-text-secondary font-semibold">
         Time
       </h3>
     </header>
@@ -27,7 +27,7 @@
             <span class="text-text-primary">{{ effectiveStart ? formatStartEnd(effectiveStart) : '—' }}</span>
             <button
               v-if="!isActive"
-              class="text-text-dim hover:text-accent-gold text-[0.6rem] px-0.5"
+              class="text-text-dim hover:text-accent-gold text-[10px] px-0.5"
               title="Edit start time"
               @click="startEditing('start')"
             >
@@ -36,7 +36,7 @@
           </template>
           <button
             v-if="!editingField && session.user_started_at && !isActive"
-            class="text-text-dim hover:text-accent-red text-[0.55rem] px-0.5"
+            class="text-text-dim hover:text-accent-red text-[10px] px-0.5"
             title="Reset to auto-detected start"
             @click="resetTime('start')"
           >
@@ -67,7 +67,7 @@
             </span>
             <button
               v-if="!isActive"
-              class="text-text-dim hover:text-accent-gold text-[0.6rem] px-0.5"
+              class="text-text-dim hover:text-accent-gold text-[10px] px-0.5"
               title="Edit end time"
               @click="startEditing('end')"
             >
@@ -76,7 +76,7 @@
           </template>
           <button
             v-if="!editingField && session.user_ended_at && !isActive"
-            class="text-text-dim hover:text-accent-red text-[0.55rem] px-0.5"
+            class="text-text-dim hover:text-accent-red text-[10px] px-0.5"
             title="Reset to auto-detected end"
             @click="resetTime('end')"
           >
@@ -88,7 +88,7 @@
       <!-- User-override hint -->
       <div
         v-if="(session.user_started_at || session.user_ended_at) && !editingField"
-        class="text-[0.55rem] text-text-dim italic"
+        class="text-[10px] text-text-dim italic"
       >
         Manually adjusted
       </div>

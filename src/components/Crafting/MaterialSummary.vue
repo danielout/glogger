@@ -4,7 +4,7 @@
       <h4 class="text-text-secondary text-xs font-semibold uppercase tracking-wide m-0">
         Material Availability
       </h4>
-      <div class="flex gap-3 text-[0.65rem] text-text-muted">
+      <div class="flex gap-3 text-[10px] text-text-muted">
         <span>
           <span class="text-green-400">{{ coveredCount }}</span> covered
         </span>
@@ -38,14 +38,14 @@
               <template v-if="mat.is_dynamic">
                 <span
                   v-if="mat.dynamic_breakdown?.length"
-                  class="text-text-muted text-[0.6rem] mr-1 inline-block transition-transform"
+                  class="text-text-muted text-[10px] mr-1 inline-block transition-transform"
                   :class="expandedKeys.has(mat.item_name) ? 'rotate-90' : ''">▸</span>
-                <span class="text-accent-gold/60 text-[0.65rem] mr-1">&#9670;</span>
+                <span class="text-accent-gold/60 text-[10px] mr-1">&#9670;</span>
                 <span class="text-text-secondary">{{ mat.item_name }}</span>
               </template>
               <ItemInline v-else :reference="mat.item_name" />
             </td>
-            <td class="text-right py-1 font-mono text-text-primary">{{ mat.quantity_needed }}</td>
+            <td class="text-right py-1 text-text-primary">{{ mat.quantity_needed }}</td>
             <td v-if="pricingMode" class="text-right py-1">
               <input
                 :value="getCustomerProvides(mat)"
@@ -55,13 +55,13 @@
                 class="input w-14 text-xs text-right py-0"
                 @change="onCustomerProvidesChange(getMaterialKey(mat), mat.quantity_needed, $event)" />
             </td>
-            <td class="text-right py-1 font-mono" :class="mat.inventory_have > 0 ? 'text-green-400' : 'text-text-muted'">
+            <td class="text-right py-1" :class="mat.inventory_have > 0 ? 'text-green-400' : 'text-text-muted'">
               {{ mat.inventory_have }}
             </td>
-            <td class="text-right py-1 font-mono" :class="mat.storage_have > 0 ? 'text-green-400' : 'text-text-muted'">
+            <td class="text-right py-1" :class="mat.storage_have > 0 ? 'text-green-400' : 'text-text-muted'">
               {{ mat.storage_have }}
             </td>
-            <td class="text-right py-1 font-mono font-semibold" :class="mat.shortfall > 0 ? 'text-accent-red' : 'text-green-400'">
+            <td class="text-right py-1 font-semibold" :class="mat.shortfall > 0 ? 'text-accent-red' : 'text-green-400'">
               {{ mat.shortfall > 0 ? mat.shortfall : '✓' }}
             </td>
           </tr>
@@ -74,10 +74,10 @@
               <ItemInline :reference="String(sub.item_id)" />
             </td>
             <td class="text-right py-0.5"></td>
-            <td class="text-right py-0.5 font-mono text-[0.65rem]" :class="sub.inventory_qty > 0 ? 'text-green-400/70' : 'text-text-dim'">
+            <td class="text-right py-0.5 text-[10px]" :class="sub.inventory_qty > 0 ? 'text-green-400/70' : 'text-text-dim'">
               {{ sub.inventory_qty }}
             </td>
-            <td class="text-right py-0.5 font-mono text-[0.65rem]" :class="sub.storage_qty > 0 ? 'text-green-400/70' : 'text-text-dim'">
+            <td class="text-right py-0.5 text-[10px]" :class="sub.storage_qty > 0 ? 'text-green-400/70' : 'text-text-dim'">
               {{ sub.storage_qty }}
             </td>
             <td class="text-right py-0.5"></td>

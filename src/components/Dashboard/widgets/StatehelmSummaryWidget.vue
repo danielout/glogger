@@ -33,7 +33,7 @@
           :key="status.npc.key"
           class="flex items-center justify-between gap-2 text-sm">
           <NpcInline :reference="status.npc.key" :npc="status.npc" />
-          <span class="text-xs font-mono shrink-0 tracking-wide">
+          <span class="text-xs shrink-0 tracking-wide">
             <span
               v-for="i in status.maxGifts"
               :key="i"

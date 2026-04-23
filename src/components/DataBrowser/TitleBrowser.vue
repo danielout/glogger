@@ -40,14 +40,14 @@
             class="flex items-baseline gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
             :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === title.id, 'bg-surface-elevated': selectedIndex === idx && selected?.id !== title.id }"
             @click="selectTitle(title)">
-            <span class="text-text-dim text-[0.72rem] min-w-12 shrink-0">#{{ title.id }}</span>
+            <span class="text-text-dim text-xs min-w-12 shrink-0">#{{ title.id }}</span>
             <span
               class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
               :style="parseColorTag(title.title).color ? { color: parseColorTag(title.title).color! } : {}"
               :class="{ 'text-text-primary/75': !parseColorTag(title.title).color }">
               {{ parseColorTag(title.title).text || 'Untitled' }}
             </span>
-            <span v-if="title.account_wide" class="text-[0.65rem] text-[#c0a0e0] shrink-0">acct</span>
+            <span v-if="title.account_wide" class="text-[10px] text-[#c0a0e0] shrink-0">acct</span>
           </li>
         </ul>
       </div>
@@ -72,7 +72,7 @@
                 {{ parseColorTag(selected.title).text || 'Untitled' }}
               </div>
               <div class="text-xs text-text-dim mb-1">
-                ID: <span class="text-text-secondary font-mono">{{ selected.id }}</span>
+                ID: <span class="text-text-secondary">{{ selected.id }}</span>
               </div>
               <div v-if="selected.tooltip" class="text-xs text-text-secondary italic">
                 {{ selected.tooltip }}
@@ -90,21 +90,21 @@
 
           <!-- Scope -->
           <div v-if="selected.account_wide || selected.soul_wide" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Scope</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Scope</div>
             <div class="flex flex-wrap gap-1">
-              <span v-if="selected.account_wide" class="text-[0.72rem] px-1.5 py-0.5 bg-[#2a1a3a] border border-[#4a2a5a] text-[#c0a0e0]">Account-Wide</span>
-              <span v-if="selected.soul_wide" class="text-[0.72rem] px-1.5 py-0.5 bg-[#1a2a3a] border border-[#2a4a5a] text-[#a0c0e0]">Soul-Wide</span>
+              <span v-if="selected.account_wide" class="text-xs px-1.5 py-0.5 bg-[#2a1a3a] border border-[#4a2a5a] text-[#c0a0e0]">Account-Wide</span>
+              <span v-if="selected.soul_wide" class="text-xs px-1.5 py-0.5 bg-[#1a2a3a] border border-[#2a4a5a] text-[#a0c0e0]">Soul-Wide</span>
             </div>
           </div>
 
           <!-- Keywords -->
           <div v-if="selected.keywords.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
             <div class="flex flex-wrap gap-1">
               <span
                 v-for="kw in selected.keywords"
                 :key="kw"
-                class="text-[0.72rem] px-1.5 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-entity-item">
+                class="text-xs px-1.5 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-entity-item">
                 {{ kw }}
               </span>
             </div>
@@ -112,8 +112,8 @@
 
           <!-- Raw JSON -->
           <div v-if="settingsStore.settings.showRawJsonInDataBrowser" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
-            <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
+            <pre class="bg-surface-dark border border-surface-card p-3 text-xs text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
           </div>
         </template>
     </div>

@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="shrink-0 flex items-center justify-between px-4 py-2 border-b border-border-default">
       <h1 class="text-accent-gold font-bold text-base m-0">Dev Panel</h1>
-      <span class="text-text-muted text-xs font-mono">glogger dev tools</span>
+      <span class="text-text-muted text-xs">glogger dev tools</span>
     </div>
 
     <!-- Tabs -->
@@ -11,7 +11,7 @@
       <button
         v-for="tab in tabs"
         :key="tab.id"
-        class="px-3 py-2 bg-transparent border-none text-text-secondary cursor-pointer font-mono text-xs rounded-t transition-all hover:bg-surface-elevated hover:text-text-primary"
+        class="px-3 py-2 bg-transparent border-none text-text-secondary cursor-pointer text-xs rounded-t transition-all hover:bg-surface-elevated hover:text-text-primary"
         :class="{ 'text-accent-gold! bg-surface-elevated!': activeTab === tab.id }"
         @click="activeTab = tab.id">
         {{ tab.label }}

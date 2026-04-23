@@ -80,14 +80,14 @@
           <template #gift-actions>
             <div class="flex items-center gap-0.5">
               <button
-                class="w-4 h-4 flex items-center justify-center rounded text-[0.6rem] text-text-muted hover:text-text-primary hover:bg-surface-default transition-colors"
+                class="w-4 h-4 flex items-center justify-center rounded text-[10px] text-text-muted hover:text-text-primary hover:bg-surface-default transition-colors"
                 :class="{ 'opacity-30 pointer-events-none': status.giftsThisWeek <= 0 }"
                 title="Remove a gift"
                 @click.stop="removeGift(status.npc.key)">
                 -
               </button>
               <button
-                class="w-4 h-4 flex items-center justify-center rounded text-[0.6rem] text-text-muted hover:text-text-primary hover:bg-surface-default transition-colors"
+                class="w-4 h-4 flex items-center justify-center rounded text-[10px] text-text-muted hover:text-text-primary hover:bg-surface-default transition-colors"
                 :class="{ 'opacity-30 pointer-events-none': status.giftsThisWeek >= status.maxGifts }"
                 title="Add a gift"
                 @click.stop="addGift(status.npc.key, status.npc.name)">

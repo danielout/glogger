@@ -16,11 +16,11 @@
     </div>
 
     <!-- Session stats or idle -->
-    <div v-if="session" class="flex items-center justify-between text-[0.65rem]">
+    <div v-if="session" class="flex items-center justify-between text-[10px]">
       <span class="text-accent-gold">+{{ session.xpGained.toLocaleString() }} XP</span>
       <span class="text-text-muted">{{ xphr }}/hr</span>
     </div>
-    <div v-else class="text-[0.65rem] text-text-dim italic">idle</div>
+    <div v-else class="text-[10px] text-text-dim italic">idle</div>
   </div>
 </template>
 

@@ -27,13 +27,13 @@
 
         <!-- Advanced filters toggle -->
         <button
-          class="bg-transparent border-none text-text-dim text-[0.7rem] cursor-pointer px-0 py-0 flex items-center gap-1 hover:text-text-secondary"
+          class="bg-transparent border-none text-text-dim text-xs cursor-pointer px-0 py-0 flex items-center gap-1 hover:text-text-secondary"
           @click="showFilters = !showFilters">
           <span class="text-xs">{{ showFilters ? '▾' : '▸' }}</span>
           Filters
           <span
             v-if="hasActiveFilters"
-            class="text-[0.6rem] text-accent-gold ml-1"
+            class="text-[10px] text-accent-gold ml-1"
             >● active</span
           >
         </button>
@@ -55,7 +55,7 @@
                 <div
                   v-for="kw in filteredKeywords"
                   :key="kw"
-                  class="px-2 py-1 cursor-pointer text-[0.72rem] hover:bg-[#1e1e1e]"
+                  class="px-2 py-1 cursor-pointer text-xs hover:bg-[#1e1e1e]"
                   :class="{ 'text-[#887040]': kw.startsWith('Lint_'), 'text-[#7ec8e3]': !kw.startsWith('Lint_') }"
                   @mousedown.prevent="selectKeyword(kw)">
                   {{ kw }}
@@ -64,7 +64,7 @@
             </div>
             <div v-else class="flex items-center gap-1 flex-1">
               <span
-                class="text-[0.72rem] px-1.5 py-0.5 border"
+                class="text-xs px-1.5 py-0.5 border"
                 :class="filterKeyword.startsWith('Lint_') ? 'bg-[#1e1a10] border-[#3a3010] text-[#887040]' : 'bg-[#1a1a2e] border-[#2a2a4e] text-[#7ec8e3]'">
                 {{ filterKeyword }}
               </span>
@@ -100,7 +100,7 @@
           </div>
           <button
             v-if="hasActiveFilters"
-            class="bg-transparent border border-surface-elevated text-text-dim text-[0.65rem] cursor-pointer px-2 py-0.5 self-end hover:text-text-secondary hover:border-border-default"
+            class="bg-transparent border border-surface-elevated text-text-dim text-[10px] cursor-pointer px-2 py-0.5 self-end hover:text-text-secondary hover:border-border-default"
             @click="clearFilters">
             Clear filters
           </button>
@@ -122,11 +122,11 @@
             class="flex items-baseline gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
             :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === item.id, 'bg-surface-elevated': selectedIndex === idx && selected?.id !== item.id }"
             @click="selectItem(item)">
-            <span class="text-text-dim text-[0.72rem] min-w-12 shrink-0">#{{ item.id }}</span>
+            <span class="text-text-dim text-xs min-w-12 shrink-0">#{{ item.id }}</span>
             <span class="text-text-primary/75 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ item.name }}</span>
             <span
               v-if="item.keywords.includes('Lint_NotObtainable')"
-              class="text-[0.65rem] text-[#664] border border-[#443] px-1 shrink-0"
+              class="text-[10px] text-[#664] border border-[#443] px-1 shrink-0"
               >unobtainable</span
             >
           </li>
@@ -152,30 +152,30 @@
                 :src="iconSrc"
                 class="w-12 h-12 [image-rendering:pixelated] border border-border-default"
                 alt="item icon" />
-              <div v-else-if="iconLoading" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[0.65rem] text-accent-gold animate-spin">
+              <div v-else-if="iconLoading" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[10px] text-accent-gold animate-spin">
                 ⟳
               </div>
-              <div v-else-if="selected.icon_id" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[0.65rem] text-text-dim">
+              <div v-else-if="selected.icon_id" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[10px] text-text-dim">
                 {{ selected.icon_id }}
               </div>
-              <div v-else class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[0.65rem] text-border-default">—</div>
+              <div v-else class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[10px] text-border-default">—</div>
             </div>
 
             <div class="flex-1 min-w-0">
               <div class="text-accent-gold text-base font-bold mb-1">{{ selected.name }}</div>
               <div class="text-xs text-text-dim mb-1">
-                ID: <span class="text-text-secondary font-mono">{{ selected.id }}</span>
+                ID: <span class="text-text-secondary">{{ selected.id }}</span>
                 <template v-if="selected.icon_id">
                   · Icon:
-                  <span class="text-text-secondary font-mono">{{ selected.icon_id }}</span></template
+                  <span class="text-text-secondary">{{ selected.icon_id }}</span></template
                 >
                 <template v-if="selected.value">
                   · Value:
-                  <span class="text-text-secondary font-mono">{{ selected.value }}c</span></template
+                  <span class="text-text-secondary">{{ selected.value }}c</span></template
                 >
                 <template v-if="selected.max_stack_size">
                   · Stack:
-                  <span class="text-text-secondary font-mono">{{
+                  <span class="text-text-secondary">{{
                     selected.max_stack_size
                   }}</span></template
                 >
@@ -196,7 +196,7 @@
 
           <!-- Equipment Info -->
           <div v-if="selected.equip_slot || selected.skill_reqs" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Equipment</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Equipment</div>
             <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-1.5">
               <div v-if="selected.equip_slot" class="text-xs flex gap-2">
                 <span class="text-text-muted min-w-20">Slot:</span>
@@ -213,11 +213,11 @@
 
           <!-- Crafting Info -->
           <div v-if="selected.tsys_profile || selected.craft_points" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Crafting</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Crafting</div>
             <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-1.5">
               <div v-if="selected.tsys_profile" class="text-xs flex gap-2">
                 <span class="text-text-muted min-w-20">TSys Profile:</span>
-                <span class="text-text-secondary font-mono">{{ selected.tsys_profile }}</span>
+                <span class="text-text-secondary">{{ selected.tsys_profile }}</span>
               </div>
               <div v-if="selected.craft_points" class="text-xs flex gap-2">
                 <span class="text-text-muted min-w-20">Craft Points:</span>
@@ -232,7 +232,7 @@
 
           <!-- Food Description -->
           <div v-if="selected.food_desc" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Food</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Food</div>
             <div class="text-xs text-[#c8a86e] italic px-2 py-1 bg-[#151515] border-l-2 border-l-[#4a3a1a]">
               {{ selected.food_desc }}
             </div>
@@ -240,7 +240,7 @@
 
           <!-- Bestow Info -->
           <div v-if="selected.bestow_ability || selected.bestow_quest || selected.bestow_recipes?.length || selected.bestow_title" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Bestows</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Bestows</div>
             <div class="flex flex-col gap-1">
               <div v-if="selected.bestow_ability" class="text-xs flex gap-2 items-center px-2 py-0.5">
                 <span class="text-text-muted min-w-16">Ability:</span>
@@ -267,7 +267,7 @@
 
           <!-- Uses -->
           <div v-if="selected.num_uses" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Usage</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Usage</div>
             <div class="text-xs text-text-secondary px-2 py-1">
               {{ selected.num_uses }} use{{ selected.num_uses > 1 ? 's' : '' }}
             </div>
@@ -278,37 +278,37 @@
 
           <!-- Recipes Producing This Item -->
           <div v-if="recipesProducing.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Produced By ({{ recipesProducing.length }})</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Produced By ({{ recipesProducing.length }})</div>
             <div class="flex flex-col gap-1">
               <div
                 v-for="recipe in recipesProducing"
                 :key="recipe.id"
                 class="flex gap-2 items-center text-xs px-2 py-0.5 bg-[#151515] border-l-2 border-l-[#2a4a2a]">
-                <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
+                <span class="text-text-muted text-xs min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
                 <RecipeInline :reference="recipe.name" />
-                <span v-if="recipe.skill" class="text-text-dim text-[0.65rem] ml-auto">{{ recipe.skill }}</span>
+                <span v-if="recipe.skill" class="text-text-dim text-[10px] ml-auto">{{ recipe.skill }}</span>
               </div>
             </div>
           </div>
 
           <!-- Recipes Using This Item -->
           <div v-if="recipesUsing.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Used In ({{ recipesUsing.length }})</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Used In ({{ recipesUsing.length }})</div>
             <div class="flex flex-col gap-1">
               <div
                 v-for="recipe in recipesUsing"
                 :key="recipe.id"
                 class="flex gap-2 items-center text-xs px-2 py-0.5 bg-[#151515] border-l-2 border-l-[#4a3a1a]">
-                <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
+                <span class="text-text-muted text-xs min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
                 <RecipeInline :reference="recipe.name" />
-                <span v-if="recipe.skill" class="text-text-dim text-[0.65rem] ml-auto">{{ recipe.skill }}</span>
+                <span v-if="recipe.skill" class="text-text-dim text-[10px] ml-auto">{{ recipe.skill }}</span>
               </div>
             </div>
           </div>
 
           <!-- NPCs Who Want This Item -->
           <div v-if="npcsWantingItem.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">NPC Favor ({{ npcsWantingItem.length }})</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">NPC Favor ({{ npcsWantingItem.length }})</div>
             <div class="flex flex-col gap-1 max-h-60 overflow-y-auto">
               <div
                 v-for="entry in npcsWantingItem"
@@ -321,7 +321,7 @@
                   'border-l-[#aa4444]': entry.desire.toLowerCase() === 'hate',
                 }">
                 <span
-                  class="text-[0.65rem] uppercase font-bold px-1 py-0.5 min-w-12 text-center shrink-0"
+                  class="text-[10px] uppercase font-bold px-1 py-0.5 min-w-12 text-center shrink-0"
                   :class="{
                     'bg-[#4a1a3a] text-[#ff69b4] border border-[#6a2a5a]': entry.desire.toLowerCase() === 'love',
                     'bg-[#1a3a1a] text-[#7ec8e3] border border-[#2a5a2a]': entry.desire.toLowerCase() === 'like',
@@ -332,34 +332,34 @@
                 </span>
                 <NpcInline :reference="entry.npc_key" />
                 <span class="text-[#7ec8e3] font-bold ml-auto shrink-0">+{{ entry.pref.toFixed(0) }}</span>
-                <span v-if="entry.match_type !== 'name'" class="text-text-dim text-[0.6rem] italic shrink-0">({{ entry.match_type }})</span>
+                <span v-if="entry.match_type !== 'name'" class="text-text-dim text-[10px] italic shrink-0">({{ entry.match_type }})</span>
               </div>
             </div>
           </div>
 
           <!-- Keyword Recipe Uses -->
           <div v-if="keywordRecipes.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Could Fill Keyword Slots In ({{ keywordRecipes.length }})</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Could Fill Keyword Slots In ({{ keywordRecipes.length }})</div>
             <div class="flex flex-col gap-1">
               <div
                 v-for="recipe in keywordRecipes"
                 :key="recipe.id"
                 class="flex gap-2 items-center text-xs px-2 py-0.5 bg-[#151515] border-l-2 border-l-[#4a4a1a]">
-                <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
+                <span class="text-text-muted text-xs min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
                 <RecipeInline :reference="recipe.name" />
-                <span v-if="recipe.skill" class="text-text-dim text-[0.65rem] ml-auto">{{ recipe.skill }}</span>
+                <span v-if="recipe.skill" class="text-text-dim text-[10px] ml-auto">{{ recipe.skill }}</span>
               </div>
             </div>
           </div>
 
           <!-- Keywords -->
           <div v-if="selected.keywords.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
             <div class="flex flex-wrap gap-1">
               <span
                 v-for="kw in selected.keywords"
                 :key="kw"
-                class="text-[0.72rem] px-1.5 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-[#7ec8e3]"
+                class="text-xs px-1.5 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-[#7ec8e3]"
                 :class="{ 'bg-[#1e1a10]! border-[#3a3010]! text-[#887040]!': kw.startsWith('Lint_') }"
                 >{{ kw }}</span
               >
@@ -368,7 +368,7 @@
 
           <!-- Effect descs -->
           <div v-if="selected.effect_descs.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Effects</div>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Effects</div>
             <ul class="m-0 pl-4 p-0">
               <li
                 v-for="(eff, i) in selected.effect_descs"
@@ -381,8 +381,8 @@
 
           <!-- Raw JSON -->
           <div v-if="settingsStore.settings.showRawJsonInDataBrowser" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
-            <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
+            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
+            <pre class="bg-surface-dark border border-surface-card p-3 text-xs text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
           </div>
         </template>
     </div>

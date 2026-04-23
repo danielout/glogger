@@ -1,6 +1,6 @@
 <template>
   <div v-if="sortedQuests.length" class="flex flex-col gap-1.5">
-    <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+    <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
       Quests ({{ sortedQuests.length }})
     </div>
 
@@ -10,10 +10,10 @@
         :key="quest.internal_name"
         class="flex items-center gap-2 px-2 py-0.5 text-xs bg-[#151515] rounded">
         <QuestInline :reference="quest.internal_name" />
-        <span v-if="isRepeatable(quest)" class="text-[0.55rem] text-cyan-400 shrink-0" title="Repeatable">
+        <span v-if="isRepeatable(quest)" class="text-[10px] text-cyan-400 shrink-0" title="Repeatable">
           &#x21BB;
         </span>
-        <span v-if="quest.raw.Reward_Favor" class="text-[0.6rem] text-accent-gold font-mono ml-auto shrink-0">
+        <span v-if="quest.raw.Reward_Favor" class="text-[10px] text-accent-gold ml-auto shrink-0">
           +{{ quest.raw.Reward_Favor }}
         </span>
       </div>

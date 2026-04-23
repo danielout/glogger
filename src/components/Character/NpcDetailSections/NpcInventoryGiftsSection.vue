@@ -3,7 +3,7 @@
     <!-- Inventory Gifts -->
     <div class="flex flex-col gap-1.5">
       <div
-        class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 cursor-pointer select-none flex items-center gap-1"
+        class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 cursor-pointer select-none flex items-center gap-1"
         @click="inventoryCollapsed = !inventoryCollapsed">
         <span>{{ inventoryCollapsed ? '\u25B8' : '\u25BE' }}</span>
         <span>Giftable Items — Inventory</span>
@@ -18,16 +18,16 @@
               :key="gift.itemName"
               class="flex items-center gap-2 text-xs bg-[#151515] rounded px-2 py-0.5">
               <ItemInline :reference="gift.itemName" />
-              <span class="text-text-dim text-[0.6rem]">x{{ gift.quantity }}</span>
+              <span class="text-text-dim text-[10px]">x{{ gift.quantity }}</span>
               <span
-                class="text-[0.6rem] px-1 py-0.5 rounded border ml-auto shrink-0"
+                class="text-[10px] px-1 py-0.5 rounded border ml-auto shrink-0"
                 :class="desireBadgeClasses(gift.desire)">
                 {{ gift.desire }}
               </span>
-              <span class="text-green-400 text-[0.6rem] font-mono shrink-0">+{{ gift.prefValue }}</span>
+              <span class="text-green-400 text-[10px] shrink-0">+{{ gift.prefValue }}</span>
             </div>
           </div>
-          <div v-if="estimatedTotalFavor > 0" class="text-[0.6rem] text-text-dim px-2">
+          <div v-if="estimatedTotalFavor > 0" class="text-[10px] text-text-dim px-2">
             Estimated total favor from gifting all: <span class="text-accent-gold font-bold">~{{ estimatedTotalFavor }}</span>
           </div>
         </template>
@@ -41,7 +41,7 @@
     <!-- Storage Gifts -->
     <div class="flex flex-col gap-1.5">
       <div
-        class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 cursor-pointer select-none flex items-center gap-1"
+        class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 cursor-pointer select-none flex items-center gap-1"
         @click="storageCollapsed = !storageCollapsed">
         <span>{{ storageCollapsed ? '\u25B8' : '\u25BE' }}</span>
         <span>Giftable Items — Storage</span>
@@ -56,14 +56,14 @@
               :key="`${gift.vaultKey}-${gift.itemName}`"
               class="flex items-center gap-2 text-xs bg-[#151515] rounded px-2 py-0.5">
               <ItemInline :reference="gift.itemName" />
-              <span class="text-text-dim text-[0.6rem]">x{{ gift.quantity }}</span>
+              <span class="text-text-dim text-[10px]">x{{ gift.quantity }}</span>
               <span
-                class="text-[0.6rem] px-1 py-0.5 rounded border ml-auto shrink-0"
+                class="text-[10px] px-1 py-0.5 rounded border ml-auto shrink-0"
                 :class="desireBadgeClasses(gift.desire)">
                 {{ gift.desire }}
               </span>
-              <span class="text-green-400 text-[0.6rem] font-mono shrink-0">+{{ gift.prefValue }}</span>
-              <span class="text-text-dim text-[0.6rem] italic shrink-0">{{ gift.vaultLabel }}</span>
+              <span class="text-green-400 text-[10px] shrink-0">+{{ gift.prefValue }}</span>
+              <span class="text-text-dim text-[10px] italic shrink-0">{{ gift.vaultLabel }}</span>
             </div>
           </div>
         </template>

@@ -24,7 +24,7 @@
 
     <!-- Fixed Ingredients -->
     <div v-if="recipe.fixed_ingredients.length > 0">
-      <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
+      <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
         Fixed Ingredients
       </div>
       <div class="flex flex-col gap-1">
@@ -32,9 +32,9 @@
           v-for="(ing, i) in recipe.fixed_ingredients"
           :key="i"
           class="flex items-center gap-2 text-xs">
-          <span class="font-mono text-text-muted w-6 text-right shrink-0">{{ ing.stack_size }}x</span>
+          <span class="text-text-muted w-6 text-right shrink-0">{{ ing.stack_size }}x</span>
           <ItemInline :reference="String(ing.item_id)" />
-          <span v-if="getOwnedCount(ing.item_id) > 0" class="text-xs text-accent-green font-mono">
+          <span v-if="getOwnedCount(ing.item_id) > 0" class="text-xs text-accent-green">
             (×{{ getOwnedCount(ing.item_id) }})
           </span>
           <span v-if="ing.chance_to_consume != null && ing.chance_to_consume < 1"
@@ -47,14 +47,14 @@
 
     <!-- Variable Ingredient Slots -->
     <div v-if="recipe.variable_slots.length > 0">
-      <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
+      <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
         Variable Ingredient Slots
         <span class="normal-case tracking-normal text-text-dim ml-1">({{ recipe.variable_slots.length }} slots determine the effect)</span>
       </div>
       <div class="flex flex-col gap-3">
         <div v-for="(slot, i) in recipe.variable_slots" :key="i" class="bg-surface-base border border-surface-elevated rounded px-3 py-2">
           <div class="flex items-center gap-2 mb-1.5">
-            <span class="text-xs font-mono text-accent-gold bg-accent-gold/10 rounded px-1.5 py-0.5">
+            <span class="text-xs text-accent-gold bg-accent-gold/10 rounded px-1.5 py-0.5">
               {{ slot.keyword }}
             </span>
             <span class="text-text-muted text-xs">{{ slot.stack_size }}x needed</span>
@@ -65,7 +65,7 @@
               :key="itemId"
               class="text-xs inline-flex items-center gap-0.5">
               <ItemInline :reference="String(itemId)" />
-              <span v-if="getOwnedCount(itemId) > 0" class="text-xs text-accent-green font-mono">
+              <span v-if="getOwnedCount(itemId) > 0" class="text-xs text-accent-green">
                 (×{{ getOwnedCount(itemId) }})
               </span>
             </span>
@@ -79,7 +79,7 @@
 
     <!-- Effect Pool Info -->
     <div v-if="recipe.brew_item_effect">
-      <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
+      <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
         Possible Effect Categories
         <span class="normal-case tracking-normal text-text-dim ml-1">(your brew will get one of these)</span>
       </div>
@@ -116,7 +116,7 @@
 
     <!-- Discoveries -->
     <div v-if="discoveries.length > 0">
-      <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
+      <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
         Your Discoveries
         <span class="normal-case tracking-normal text-text-dim ml-1">({{ discoveries.length }} found)</span>
       </div>
@@ -148,7 +148,7 @@
               <template v-if="ingId !== null">
                 <div class="inline-flex items-center gap-0.5">
                   <ItemInline :reference="String(ingId)" />
-                  <span v-if="getOwnedCount(ingId) > 0" class="text-xs text-accent-green font-mono">
+                  <span v-if="getOwnedCount(ingId) > 0" class="text-xs text-accent-green">
                     ×{{ getOwnedCount(ingId) }}
                   </span>
                 </div>
@@ -205,7 +205,7 @@
 
     <!-- Try Next suggestions -->
     <div v-if="suggestions.length > 0">
-      <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
+      <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
         Try Next
         <span class="normal-case tracking-normal text-text-dim ml-1">(untried combos you have ingredients for)</span>
       </div>
@@ -226,7 +226,7 @@
           </span>
           <span
             v-else
-            class="text-xs text-text-dim font-mono shrink-0 w-12">
+            class="text-xs text-text-dim shrink-0 w-12">
             {{ sug.ownedCount }}/{{ sug.totalCount }}
           </span>
           <div class="flex flex-wrap gap-x-2 gap-y-0.5">

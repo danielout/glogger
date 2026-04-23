@@ -33,7 +33,7 @@
     </div>
 
     <!-- Results header -->
-    <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+    <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
       {{ store.selectedEffectDiscoveries.length }} recipe{{ store.selectedEffectDiscoveries.length === 1 ? '' : 's' }} discovered
     </div>
 
@@ -59,7 +59,7 @@
             <span v-else-if="hasSomeIngredients(disc)" class="text-xs text-accent-gold">
               Partial
             </span>
-            <span class="text-xs text-text-dim font-mono">
+            <span class="text-xs text-text-dim">
               T{{ disc.power_tier }}
             </span>
           </div>
@@ -75,7 +75,7 @@
               class="w-2 h-2 rounded-full shrink-0"
               :class="hasItem(ingId) ? 'bg-accent-green' : 'bg-surface-elevated border border-border-light'" />
             <ItemInline :reference="String(ingId)" />
-            <span v-if="getOwnedCount(ingId) > 0" class="text-xs text-accent-green font-mono">
+            <span v-if="getOwnedCount(ingId) > 0" class="text-xs text-accent-green">
               ×{{ getOwnedCount(ingId) }}
             </span>
           </div>
@@ -91,7 +91,7 @@
             <span
               class="w-2 h-2 rounded-full shrink-0"
               :class="hasItemById(fixed.item_id) ? 'bg-accent-green/50' : 'bg-surface-elevated border border-border-light'" />
-            <span class="font-mono text-xs">{{ fixed.stack_size }}×</span>
+            <span class="text-xs">{{ fixed.stack_size }}×</span>
             <ItemInline :reference="String(fixed.item_id)" />
           </div>
         </div>

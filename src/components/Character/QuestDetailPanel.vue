@@ -13,13 +13,13 @@
           <div class="text-accent-gold text-base font-bold">{{ getQuestDisplayName(quest) }}</div>
           <span
             v-if="evaluated.requirements.length"
-            class="text-[0.65rem] px-1.5 py-0.5 rounded border shrink-0"
+            class="text-[10px] px-1.5 py-0.5 rounded border shrink-0"
             :class="eligibilityClasses(evaluated.eligibility)">
             {{ eligibilityLabel(evaluated.eligibility) }}
           </span>
         </div>
         <div class="text-xs text-text-dim flex gap-2 flex-wrap">
-          <span class="text-text-secondary font-mono">{{ quest.internal_name }}</span>
+          <span class="text-text-secondary">{{ quest.internal_name }}</span>
           <span v-if="getQuestLevel(quest)">Lv {{ getQuestLevel(quest) }}</span>
           <span v-if="getQuestArea(quest)">
             <AreaInline :reference="getQuestArea(quest)!" />
@@ -34,15 +34,15 @@
 
       <!-- Preface Text -->
       <div v-if="quest.raw?.PrefaceText" class="flex flex-col gap-2">
-        <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Quest Giver Dialog</div>
-        <div class="text-[0.85rem] text-text-secondary leading-relaxed px-3 py-2 bg-surface-base border-l-3 border-l-[#4a4a2a]">
+        <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Quest Giver Dialog</div>
+        <div class="text-sm text-text-secondary leading-relaxed px-3 py-2 bg-surface-base border-l-3 border-l-[#4a4a2a]">
           {{ quest.raw.PrefaceText }}
         </div>
       </div>
 
       <!-- Quest Info -->
       <div class="flex flex-col gap-2">
-        <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Quest Info</div>
+        <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Quest Info</div>
         <div class="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-2">
           <div v-if="quest.raw?.FavorNpc" class="text-sm flex items-baseline gap-2">
             <span class="text-text-muted min-w-24">Favor NPC:</span>
@@ -76,8 +76,8 @@
 
       <!-- Success Text -->
       <div v-if="quest.raw?.SuccessText" class="flex flex-col gap-2">
-        <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Completion Dialog</div>
-        <div class="text-[0.85rem] text-text-secondary leading-relaxed px-3 py-2 bg-surface-base border-l-3 border-l-[#4a4a2a]">
+        <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Completion Dialog</div>
+        <div class="text-sm text-text-secondary leading-relaxed px-3 py-2 bg-surface-base border-l-3 border-l-[#4a4a2a]">
           {{ quest.raw.SuccessText }}
         </div>
       </div>
@@ -87,12 +87,12 @@
 
       <!-- Keywords -->
       <div v-if="quest.raw?.Keywords?.length" class="flex flex-col gap-2">
-        <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
+        <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
         <div class="flex flex-wrap gap-1">
           <span
             v-for="kw in quest.raw.Keywords"
             :key="kw"
-            class="text-[0.7rem] px-2 py-0.5 bg-[#1a1a2a] text-[#8888bb] rounded-sm">
+            class="text-xs px-2 py-0.5 bg-[#1a1a2a] text-[#8888bb] rounded-sm">
             {{ kw }}
           </span>
         </div>

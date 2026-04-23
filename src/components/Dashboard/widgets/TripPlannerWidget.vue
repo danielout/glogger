@@ -1,9 +1,9 @@
 <template>
-  <div class="flex flex-col gap-2 h-full min-h-0">
+  <div class="flex flex-col gap-2">
     <!-- Zone selection row -->
     <div class="flex items-center gap-2">
       <div class="flex-1">
-        <label class="text-[0.6rem] text-text-dim uppercase tracking-wide">From</label>
+        <label class="text-[10px] text-text-dim uppercase tracking-wide">From</label>
         <div class="flex items-center gap-1">
           <select
             v-model="startZone"
@@ -11,7 +11,7 @@
             <option v-for="z in ZONES" :key="z.key" :value="z.key">{{ z.name }}</option>
           </select>
           <button
-            class="px-1.5 py-1 rounded text-[0.6rem] bg-surface-elevated border border-border-light text-text-muted hover:text-text-primary shrink-0"
+            class="px-1.5 py-1 rounded text-[10px] bg-surface-elevated border border-border-light text-text-muted hover:text-text-primary shrink-0"
             title="Use current zone"
             @click="useCurrentZone">
             Current
@@ -22,7 +22,7 @@
       <span class="text-text-muted text-xs mt-3.5">&rarr;</span>
 
       <div class="flex-1">
-        <label class="text-[0.6rem] text-text-dim uppercase tracking-wide">To</label>
+        <label class="text-[10px] text-text-dim uppercase tracking-wide">To</label>
         <select
           v-model="endZone"
           class="w-full px-2 py-1 rounded bg-surface-elevated border border-border-light text-xs text-text-primary">
@@ -32,7 +32,7 @@
     </div>
 
     <!-- Travel options -->
-    <div class="flex items-center gap-3 text-[0.6rem] text-text-dim">
+    <div class="flex items-center gap-3 text-[10px] text-text-dim">
       <label class="flex items-center gap-1 cursor-pointer">
         <input v-model="useTeleports" type="checkbox" class="accent-accent-gold" />
         Use teleports
@@ -44,7 +44,7 @@
     </div>
 
     <!-- Bind summary (compact) -->
-    <div v-if="useTeleports" class="flex flex-wrap gap-x-3 gap-y-0.5 text-[0.6rem] text-text-dim">
+    <div v-if="useTeleports" class="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-text-dim">
       <span v-if="config.primaryBind">
         Bind 1: <span class="text-text-secondary">{{ config.primaryBind }}</span>
       </span>
@@ -70,8 +70,8 @@
     </button>
 
     <!-- Route display -->
-    <div v-if="route" class="flex flex-col gap-0.5 flex-1 overflow-y-auto min-h-0 pr-1">
-      <div class="flex items-center justify-between text-[0.6rem] text-text-dim mb-1">
+    <div v-if="route" class="flex flex-col gap-0.5 overflow-y-auto max-h-64 pr-1">
+      <div class="flex items-center justify-between text-[10px] text-text-dim mb-1">
         <span>{{ route.steps.length }} steps</span>
         <span>{{ route.total_hops }} hop{{ route.total_hops !== 1 ? 's' : '' }}</span>
       </div>
@@ -80,7 +80,7 @@
         :key="i"
         class="flex items-start gap-2 py-1 px-1.5 rounded text-xs"
         :class="stepClass(step)">
-        <span class="shrink-0 w-4 text-text-muted text-[0.6rem] text-right mt-0.5">{{ i + 1 }}</span>
+        <span class="shrink-0 w-4 text-text-muted text-[10px] text-right mt-0.5">{{ i + 1 }}</span>
         <span :class="step.action === 'travel' ? 'text-text-dim italic' : 'text-text-primary'">
           {{ step.details }}
         </span>
