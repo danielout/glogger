@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-3">
+  <div class="flex flex-col gap-3 h-full min-h-0">
     <!-- Header area with edit toggle -->
     <div class="flex items-center justify-between">
       <button
@@ -74,7 +74,7 @@
         Resolving items...
       </div>
 
-      <div v-else class="flex flex-col gap-3">
+      <div v-else class="flex flex-col gap-3 flex-1 overflow-y-auto min-h-0">
         <div
           v-for="entry in npcMatches"
           :key="entry.npcKey"

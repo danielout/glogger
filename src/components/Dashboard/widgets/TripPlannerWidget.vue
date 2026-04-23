@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-2">
+  <div class="flex flex-col gap-2 h-full min-h-0">
     <!-- Zone selection row -->
     <div class="flex items-center gap-2">
       <div class="flex-1">
@@ -70,7 +70,7 @@
     </button>
 
     <!-- Route display -->
-    <div v-if="route" class="flex flex-col gap-0.5 overflow-y-auto max-h-64 pr-1">
+    <div v-if="route" class="flex flex-col gap-0.5 flex-1 overflow-y-auto min-h-0 pr-1">
       <div class="flex items-center justify-between text-[0.6rem] text-text-dim mb-1">
         <span>{{ route.steps.length }} steps</span>
         <span>{{ route.total_hops }} hop{{ route.total_hops !== 1 ? 's' : '' }}</span>

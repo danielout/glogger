@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-2">
+  <div class="flex flex-col gap-2 h-full min-h-0">
     <input
       v-model="search"
       type="text"
@@ -21,7 +21,7 @@
       </button>
     </div>
 
-    <div class="flex flex-col gap-1.5 overflow-y-auto max-h-80 pr-1">
+    <div class="flex flex-col gap-1.5 flex-1 overflow-y-auto min-h-0 pr-1">
       <div
         v-for="group in groupedResults"
         :key="group.zone + group.destination"

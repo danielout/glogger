@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col h-full">
+  <div class="flex flex-col h-full min-h-0">
     <div v-if="rules.length === 0" class="text-xs text-text-dim italic">
       No watch rules configured. Set up rules in the Chat &gt; Watchwords tab.
     </div>
@@ -11,7 +11,7 @@
         No recent matches found.
       </div>
 
-      <div v-else class="flex flex-col gap-0.5 overflow-y-auto max-h-52 pr-1">
+      <div v-else class="flex flex-col gap-0.5 flex-1 overflow-y-auto min-h-0 pr-1">
         <div
           v-for="match in recentMatches"
           :key="`${match.ruleId}-${match.message.id}`"

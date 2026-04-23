@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-1">
+  <div class="flex flex-col gap-1 h-full min-h-0">
     <!-- Loading -->
     <div v-if="!areaName" class="text-text-dim text-sm italic">No zone data yet.</div>
     <div v-else-if="loading" class="text-text-dim text-xs italic">Loading NPCs...</div>
@@ -12,7 +12,7 @@
     <!-- NPC compact list -->
     <div
       v-else
-      class="flex flex-col gap-1.5 overflow-y-auto max-h-80"
+      class="flex flex-col gap-1.5 flex-1 overflow-y-auto min-h-0"
     >
       <div
         v-for="entry in displayNpcs"

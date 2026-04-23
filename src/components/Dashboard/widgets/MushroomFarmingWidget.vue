@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-2">
+  <div class="flex flex-col gap-2 h-full min-h-0">
     <!-- Current moon phase -->
     <div v-if="phase" class="flex items-center gap-2 text-sm">
       <span class="text-lg">{{ phase.emoji }}</span>
@@ -33,7 +33,7 @@
     </div>
 
     <!-- Mushroom table -->
-    <div class="overflow-y-auto max-h-80">
+    <div class="flex-1 overflow-y-auto min-h-0">
       <table class="w-full text-sm">
         <thead>
           <tr class="text-text-dim text-xs border-b border-border">

@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-3 text-sm">
+  <div class="flex flex-col gap-3 text-sm h-full min-h-0">
     <div v-if="loading" class="text-xs text-text-dim italic">Loading recipe items...</div>
 
     <EmptyState
@@ -9,66 +9,68 @@
       secondary="Recipe scrolls and skill books will appear here when detected in your inventory." />
 
     <template v-else>
-      <!-- Known duplicates (safe to sell/trade) -->
-      <div v-if="knownDuplicates.length > 0">
-        <h3 class="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-          Already Known ({{ knownDuplicates.length }})
-        </h3>
-        <div class="flex flex-col gap-0.5 overflow-y-auto max-h-40 pr-1">
-          <div
-            v-for="item in knownDuplicates"
-            :key="item.item_id"
-            class="flex items-center gap-2 py-1 px-2 rounded text-xs hover:bg-surface-elevated/50">
-            <ItemInline :reference="item.item_name" />
-            <span v-if="item.stack_size > 1" class="text-text-muted font-mono shrink-0">
-              x{{ item.stack_size }}
-            </span>
-            <span class="ml-auto text-green-400 text-xs shrink-0">safe to sell</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Ready to learn (meets requirements, not yet known) -->
-      <div v-if="readyToLearn.length > 0">
-        <h3 class="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-          Ready to Learn ({{ readyToLearn.length }})
-        </h3>
-        <div class="flex flex-col gap-0.5 overflow-y-auto max-h-40 pr-1">
-          <div
-            v-for="item in readyToLearn"
-            :key="item.item_id"
-            class="flex items-center gap-2 py-1 px-2 rounded text-xs hover:bg-surface-elevated/50">
-            <ItemInline :reference="item.item_name" />
-            <span class="ml-auto text-accent-blue text-xs shrink-0">can learn</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Not yet learnable (missing skill requirements) -->
-      <div v-if="notYetLearnable.length > 0">
-        <h3 class="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-          Missing Requirements ({{ notYetLearnable.length }})
-        </h3>
-        <div class="flex flex-col gap-0.5 overflow-y-auto max-h-40 pr-1">
-          <div
-            v-for="item in notYetLearnable"
-            :key="item.item_id"
-            class="flex flex-col gap-0.5 py-1 px-2 rounded text-xs hover:bg-surface-elevated/50">
-            <div class="flex items-center gap-2">
+      <div class="flex-1 overflow-y-auto min-h-0 flex flex-col gap-3 pr-1">
+        <!-- Known duplicates (safe to sell/trade) -->
+        <div v-if="knownDuplicates.length > 0">
+          <h3 class="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
+            Already Known ({{ knownDuplicates.length }})
+          </h3>
+          <div class="flex flex-col gap-0.5">
+            <div
+              v-for="item in knownDuplicates"
+              :key="item.item_id"
+              class="flex items-center gap-2 py-1 px-2 rounded text-xs hover:bg-surface-elevated/50">
               <ItemInline :reference="item.item_name" />
-              <span class="ml-auto text-text-muted text-xs shrink-0">needs skills</span>
-            </div>
-            <div class="text-text-dim pl-4">
-              <span v-for="(req, i) in item.unmet_requirements" :key="i">
-                {{ req.skill_name }} {{ req.current }}/{{ req.required }}<span v-if="i < item.unmet_requirements.length - 1">, </span>
+              <span v-if="item.stack_size > 1" class="text-text-muted font-mono shrink-0">
+                x{{ item.stack_size }}
               </span>
+              <span class="ml-auto text-green-400 text-xs shrink-0">safe to sell</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ready to learn (meets requirements, not yet known) -->
+        <div v-if="readyToLearn.length > 0">
+          <h3 class="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
+            Ready to Learn ({{ readyToLearn.length }})
+          </h3>
+          <div class="flex flex-col gap-0.5">
+            <div
+              v-for="item in readyToLearn"
+              :key="item.item_id"
+              class="flex items-center gap-2 py-1 px-2 rounded text-xs hover:bg-surface-elevated/50">
+              <ItemInline :reference="item.item_name" />
+              <span class="ml-auto text-accent-blue text-xs shrink-0">can learn</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Not yet learnable (missing skill requirements) -->
+        <div v-if="notYetLearnable.length > 0">
+          <h3 class="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
+            Missing Requirements ({{ notYetLearnable.length }})
+          </h3>
+          <div class="flex flex-col gap-0.5">
+            <div
+              v-for="item in notYetLearnable"
+              :key="item.item_id"
+              class="flex flex-col gap-0.5 py-1 px-2 rounded text-xs hover:bg-surface-elevated/50">
+              <div class="flex items-center gap-2">
+                <ItemInline :reference="item.item_name" />
+                <span class="ml-auto text-text-muted text-xs shrink-0">needs skills</span>
+              </div>
+              <div class="text-text-dim pl-4">
+                <span v-for="(req, i) in item.unmet_requirements" :key="i">
+                  {{ req.skill_name }} {{ req.current }}/{{ req.required }}<span v-if="i < item.unmet_requirements.length - 1">, </span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Summary -->
-      <div class="text-xs text-text-dim border-t border-border-default pt-2">
+      <div class="text-xs text-text-dim border-t border-border-default pt-2 shrink-0">
         {{ recipeItems.length }} recipe item{{ recipeItems.length !== 1 ? 's' : '' }} in inventory
       </div>
     </template>

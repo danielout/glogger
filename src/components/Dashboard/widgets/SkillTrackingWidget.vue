@@ -4,7 +4,7 @@
     variant="compact"
     primary="No skill updates yet."
     secondary="Start playing to see XP gains here." />
-  <div v-else class="flex flex-wrap gap-4">
+  <div v-else class="flex flex-wrap gap-4 h-full overflow-y-auto min-h-0">
     <SkillCard v-for="skill in store.sessionSkillList" :key="skill.skillType" :skill="skill" />
   </div>
 </template>

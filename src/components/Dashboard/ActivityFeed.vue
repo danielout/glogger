@@ -1,12 +1,12 @@
 <template>
-  <div class="flex flex-col h-full">
+  <div class="flex flex-col h-full min-h-0">
     <EmptyState
       v-if="entries.length === 0"
       variant="compact"
       :primary="emptyText"
       :secondary="emptyHint" />
 
-    <div v-else class="flex flex-col gap-0.5 overflow-y-auto max-h-52 pr-1">
+    <div v-else class="flex flex-col gap-0.5 flex-1 overflow-y-auto min-h-0 pr-1">
       <div
         v-for="entry in entries"
         :key="`${entry.timestamp}-${entry.label}-${entry.amount}-${entry.detail}`"

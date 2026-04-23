@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col h-full">
+  <div class="flex flex-col h-full min-h-0">
     <!-- Add note input -->
     <div class="flex gap-1 mb-2">
       <input
@@ -19,7 +19,7 @@
     <!-- Notes list -->
     <div v-if="notes.length === 0" class="text-xs text-text-dim italic">No notes yet.</div>
 
-    <div v-else class="flex flex-col gap-0.5 overflow-y-auto max-h-64 pr-1">
+    <div v-else class="flex flex-col gap-0.5 flex-1 overflow-y-auto min-h-0 pr-1">
       <div
         v-for="note in notes"
         :key="note.id"
