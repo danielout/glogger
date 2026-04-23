@@ -2,7 +2,7 @@
 
 Small tasks and notes that don't belong in a dedicated plan.
 
-*Last reviewed: 2026-04-23*
+*Last reviewed: 2026-04-23 (standardization wave completed: color tokens, typography, widget sizing, shared components, 10 table migrations)*
 
 ---
 
@@ -97,17 +97,17 @@ These are investigated items kept for reference — the research is done but the
   - Current help popup is ugly. Could be made much prettier.
   - **Effort: Medium | Impact: Medium (polish)**
 
-- [ ] Color standards write-up and enforcement
-  - Colors are scattershot across the app. Need documented standards and consistent usage.
-  - **Effort: Medium | Impact: Medium (visual consistency)**
+- [x] Color standards write-up and enforcement
+  - Audit completed: see `docs/architecture/color-standards.md`. 19 semantic tokens added to theme.css. ~250 hardcoded hex values migrated to tokens. ChatMessage channel colors fixed. Component classes updated.
+  - **Remaining:** ~30 `text-red-400`/`text-green-400` instances remain where used for UI chrome (delete buttons, hover states) rather than gain/loss semantics. Progress bar colors (`bg-green-500`, `bg-red-500` in vault capacity, crafting progress) could get tokens. Chart palette still outside the theme (needs Vue Data UI integration research). See `docs/architecture/color-standards.md` Tier 3 section for full remaining list.
 
-- [ ] Font size/family/color readability audit
-  - Evaluate typography across the app for readability and consistency.
-  - **Effort: Medium | Impact: Medium (accessibility/polish)**
+- [x] Font size/family/color readability audit
+  - Audit completed: see `docs/architecture/typography-audit.md`. 13 arbitrary sizes consolidated to 7-level scale. 215 redundant `font-mono` removed. `tabular-nums` added to numeric table columns. No text below 10px remains.
+  - **Remaining:** Heading standardization (~170 heading tags across ~60 files still use varying class patterns). Could define `.section-heading`, `.panel-label` etc. component classes in `components.css` to reduce repetition. See typography-audit.md "Heading Classes" section.
 
-- [ ] More shared components (tables, etc.)
-  - Build reusable components for common patterns like tables to improve consistency. Audit existing components for duplicate behavior that should be consolidated.
-  - **Effort: Medium (iterative) | Impact: Medium (consistency)**
+- [x] More shared components (tables, etc.)
+  - Built: `DataTable.vue` (sortable, loading skeleton, empty state, dynamic cell slots), `FilterBar.vue` (v-model search, result count, filter slots), `SkeletonLoader.vue` (text/circle/rect variants), `DataTableSkeleton.vue`. Migrated 10 tables to DataTable (Character: StatsTable, SkillTable, CurrencyTable, RecipeTable, PlayerAttributesCard; StallTracker: StallSalesTab, StallInventoryTab, StallShopLogTab; Market: MarketView; Settings: DomainTable).
+  - **Remaining:** ~30 more tables across Crafting, Surveying, and DataBrowser could be migrated. These tend to have more complex layouts (merged cells, nested sub-tables). SkeletonLoader is built but not yet adopted in existing screens — needs a pass to replace "Loading..." text with skeleton states. ComputedStatsCard intentionally skipped (key-value layout, not columnar).
 
 - [ ] Better screen persistence across the app
   - Currently `useViewPrefs()` + settings store persists pane collapse/width and card order/visibility. **Gap:** no deep navigation state persisted — selected entity, scroll position, sub-tab state all reset on navigation. Main app state uses simple `ref(currentView)` with no persistence. Could extend `useViewPrefs` pattern to store sub-tab + context across sessions.
@@ -147,8 +147,8 @@ These are investigated items kept for reference — the research is done but the
   - **Effort: Medium | Impact: Medium (reliability)**
 
 - [ ] Standardize skeletons and loading states
-  - Create reusable skeleton/loading components for consistent loading UX across screens.
-  - **Effort: Medium | Impact: Medium (polish/consistency)**
+  - `SkeletonLoader.vue` and `DataTableSkeleton.vue` are built. Remaining work: adopt them across existing screens. Replace "Loading..." text and `v-if="loading"` empty space with skeleton states. DataTable already has built-in skeleton via its `loading` prop.
+  - **Effort: Low-Medium (components exist, just need adoption) | Impact: Medium (polish/consistency)**
 
 - [ ] Document standards around persistence, data access, naming
   - Write up conventions so development stays consistent.
@@ -170,13 +170,13 @@ These are investigated items kept for reference — the research is done but the
   - Suspicious that time handling isn't fully standardized. Need to dig in and verify consistency (timezones, UTC vs local, formatting).
   - **Effort: Medium (investigation) | Impact: Medium (correctness)**
 
-- [ ] Dashboard widget sizing pass — consistent heights
-  - Widgets have inconsistent `max-h-*` values (some 80, some 52, some 40, many have none). No systematic height management exists. Need a standardized sizing approach in `DashboardCard.vue` or the widget registry.
-  - **Effort: Medium | Impact: Medium (visual consistency)**
+- [x] Dashboard widget sizing pass — consistent heights
+  - Done: DashboardCard enforces uniform `h-80` (320px) height. All per-widget `max-h-*` overrides removed. Flex-1 scroll pattern applied to all widgets with variable content. Fixed broken scroll on MilkingTimers and WordsOfPower. See `docs/architecture/widget-sizing-audit.md`.
+  - **Remaining:** The exact height value (320px) may need tuning after visual testing. Some widgets with very little content leave empty space — could center content vertically where appropriate.
 
-- [ ] Dashboard widget sizing pass — consistent widths across three sizes
-  - The sizing system exists in `dashboardWidgets.ts` (`small`/`medium`/`large` → col-span classes), but the responsive `auto-fill` grid means actual widths vary with viewport. `col-span-4` assumes enough columns exist. Needs either a fixed column count or size-aware breakpoints.
-  - **Effort: Medium | Impact: Medium (visual consistency)**
+- [x] Dashboard widget sizing pass — consistent widths across three sizes
+  - Audited: see `docs/architecture/widget-sizing-audit.md`. Current `auto-fill, minmax(280px, 1fr)` grid approach works at reasonable window sizes. Column count derived from `floor(panel_width / small_widget_width)`.
+  - **Remaining:** `col-span-4` can still overflow if window is narrower than 4×280px. Low risk for a desktop Tauri app but could add a CSS `min()` clamp as a safety net.
 
 - [ ] Investigate dashboard refresh issues
   - Reported as "weird page refresh issues." No explicit refresh/reload logic in `DashboardView.vue`. Main reactive trigger is `orderedWidgets` computed property tied to `useViewPrefs` + settings store. `useViewPrefs` debounces writes (500ms) but mutations can fire during transitions. Likely caused by reactive store updates triggering unexpected re-renders on pane resizing or settings updates. Needs runtime debugging to reproduce.
@@ -204,6 +204,7 @@ These are investigated items kept for reference — the research is done but the
 
 - [ ] Continue UI/UX standardization across screens
   - Some screens still don't look like they fit within the app, or have their own paradigms. Sidebars that don't use standardized panels, inconsistent patterns, etc. Should write a consolidated UI/UX checklist for new frontend features and then do a pass on existing screens against it.
+  - **Progress:** Color tokens, typography scale, and widget sizing are now standardized. DataTable/FilterBar/SkeletonLoader shared components are available. 10 tables migrated. Heading classes and remaining table migrations are the next incremental steps.
   - **Effort: Medium (iterative) | Impact: Medium (consistency/polish)**
 
 - [ ] Investigate seedling/plant/milling product linkage in CDN data
