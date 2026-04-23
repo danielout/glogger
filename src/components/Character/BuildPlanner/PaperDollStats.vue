@@ -8,7 +8,7 @@
           v-for="attr in statBonuses"
           :key="attr.label"
           class="text-xs">
-          <span :class="attr.value > 0 ? 'text-green-400' : 'text-red-400'">
+          <span :class="attr.value > 0 ? 'text-value-positive' : 'text-value-negative'">
             {{ attr.formattedValue }}
           </span>
           <span class="text-text-muted ml-1">{{ attr.label }}</span>
@@ -24,7 +24,7 @@
           v-for="attr in combatRefreshBonuses"
           :key="attr.label"
           class="text-xs">
-          <span :class="attr.value > 0 ? 'text-green-400' : 'text-red-400'">
+          <span :class="attr.value > 0 ? 'text-value-positive' : 'text-value-negative'">
             {{ attr.formattedValue }}
           </span>
           <span class="text-text-muted ml-1">{{ shortLabel(attr.label) }}</span>
@@ -42,7 +42,7 @@
           class="text-xs"
           :class="entry.hasBonus ? 'text-accent-gold font-medium' : 'text-text-dim'">
           {{ entry.count }}x {{ entry.type }}
-          <span v-if="entry.hasBonus" class="text-[10px]">(3pc)</span>
+          <span v-if="entry.hasBonus" class="text-[9px]">(3pc)</span>
         </div>
       </div>
     </div>

@@ -30,7 +30,7 @@
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-1.5">
                 <span class="font-medium text-text-primary">{{ mod.power_name }}</span>
-                <span v-if="mod.is_augment" class="text-[10px] font-semibold text-purple-400 uppercase">AUG</span>
+                <span v-if="mod.is_augment" class="text-[10px] font-semibold text-mod-augment uppercase">AUG</span>
               </div>
             </div>
           </div>

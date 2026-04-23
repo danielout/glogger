@@ -24,7 +24,7 @@
     <div v-if="availableSkills.length > 0" class="flex items-center gap-2 flex-wrap">
       <button
         :class="[
-          'text-[10px] px-2 py-0.5 rounded border cursor-pointer transition-colors',
+          'text-[0.65rem] px-2 py-0.5 rounded border cursor-pointer transition-colors',
           !selectedSkill
             ? 'bg-accent-gold/20 border-accent-gold/40 text-accent-gold'
             : 'bg-transparent border-border-light text-text-muted hover:text-text-primary',
@@ -36,7 +36,7 @@
         v-for="skill in availableSkills"
         :key="skill.name"
         :class="[
-          'text-[10px] px-2 py-0.5 rounded border cursor-pointer transition-colors',
+          'text-[0.65rem] px-2 py-0.5 rounded border cursor-pointer transition-colors',
           selectedSkill === skill.name
             ? 'bg-accent-gold/20 border-accent-gold/40 text-accent-gold'
             : 'bg-transparent border-border-light text-text-muted hover:text-text-primary',
@@ -95,17 +95,17 @@
           <!-- Status badge -->
           <span
             v-if="wo.is_active"
-            class="text-green-400 text-[10px] font-semibold shrink-0 w-14">
+            class="text-value-positive text-[0.6rem] font-semibold shrink-0 w-14">
             ACTIVE
           </span>
           <span
             v-else-if="wo.is_in_inventory"
-            class="text-blue-400 text-[10px] font-semibold shrink-0 w-14">
+            class="text-blue-400 text-[0.6rem] font-semibold shrink-0 w-14">
             SCROLL
           </span>
           <span
             v-else-if="wo.is_completed"
-            class="text-text-muted text-[10px] shrink-0 w-14">
+            class="text-text-muted text-[0.6rem] shrink-0 w-14">
             done
           </span>
           <span v-else class="w-14 shrink-0" />
@@ -114,7 +114,7 @@
           <div class="flex items-center gap-1.5 min-w-0 flex-1">
             <ItemInline v-if="wo.item_name" :reference="wo.item_name" />
             <span v-else class="text-text-dim">{{ wo.name }}</span>
-            <span class="text-text-primary shrink-0">×{{ wo.quantity }}</span>
+            <span class="text-text-primary font-mono shrink-0">×{{ wo.quantity }}</span>
           </div>
 
           <!-- Craft skill -->
@@ -122,14 +122,14 @@
             v-if="wo.craft_skill"
             :reference="wo.craft_skill"
             :show-icon="true"
-            class="shrink-0 text-[10px]" />
+            class="shrink-0 text-[0.65rem]" />
 
           <!-- Rewards -->
           <div class="flex items-center gap-2 shrink-0 ml-auto">
-            <span v-if="wo.industry_xp > 0" class="text-accent-gold text-[10px]">
+            <span v-if="wo.industry_xp > 0" class="text-accent-gold text-[0.65rem]">
               {{ wo.industry_xp.toLocaleString() }} XP
             </span>
-            <span v-if="wo.gold_reward > 0" class="text-yellow-400 text-[10px]">
+            <span v-if="wo.gold_reward > 0" class="text-yellow-400 text-[0.65rem]">
               {{ wo.gold_reward.toLocaleString() }}g
             </span>
           </div>
@@ -138,7 +138,7 @@
           <div class="shrink-0 w-5">
             <span
               v-if="!wo.recipe_id"
-              class="text-text-muted/50 text-[10px]"
+              class="text-text-muted/50 text-[0.6rem]"
               title="No matching recipe found">
               ?
             </span>

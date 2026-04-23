@@ -80,17 +80,17 @@
           <li
             v-for="(quest, idx) in filteredQuests"
             :key="quest.internal_name"
-            class="flex flex-col gap-1 px-2.5 py-2 cursor-pointer border-b border-surface-dark hover:bg-[#1e1e1e]"
+            class="flex flex-col gap-1 px-2.5 py-2 cursor-pointer border-b border-surface-dark hover:bg-surface-row-hover"
             :class="{
-              'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.internal_name === quest.internal_name,
+              'bg-surface-card border-l-2 border-l-accent-gold': selected?.internal_name === quest.internal_name,
               'bg-surface-elevated': selectedIndex === idx && selected?.internal_name !== quest.internal_name
             }"
             @click="selectQuest(quest)">
             <div class="flex flex-col gap-0.5">
-              <span class="text-text-primary/75 text-sm">{{ getDisplayName(quest) }}</span>
+              <span class="text-text-primary/75 text-[0.85rem]">{{ getDisplayName(quest) }}</span>
               <div class="flex gap-1.5 flex-wrap">
-                <span v-if="getLevel(quest)" class="text-xs px-1 py-0.5 rounded-sm bg-[#2a2a1a] text-text-secondary">Lv {{ getLevel(quest) }}</span>
-                <span v-if="getArea(quest)" class="text-xs px-1 py-0.5 rounded-sm bg-[#1a2a2a] text-[#6a9fb5]">{{ getArea(quest) }}</span>
+                <span v-if="getLevel(quest)" class="text-[0.7rem] px-1 py-0.5 rounded-sm bg-[#2a2a1a] text-text-secondary">Lv {{ getLevel(quest) }}</span>
+                <span v-if="getArea(quest)" class="text-[0.7rem] px-1 py-0.5 rounded-sm bg-[#1a2a2a] text-[#6a9fb5]">{{ getArea(quest) }}</span>
               </div>
             </div>
           </li>
@@ -113,7 +113,7 @@
             <div class="flex-1 min-w-0">
               <div class="text-accent-gold text-lg font-bold mb-1">{{ getDisplayName(selected) }}</div>
               <div class="text-xs text-text-dim">
-                <span class="text-text-secondary">{{ selected.internal_name }}</span>
+                <span class="text-text-secondary font-mono">{{ selected.internal_name }}</span>
                 <template v-if="getLevel(selected)">
                   · Level {{ getLevel(selected) }}
                 </template>
@@ -140,13 +140,13 @@
 
           <!-- Preface Text -->
           <div v-if="selected.raw?.PrefaceText" class="flex flex-col gap-2">
-            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Quest Giver Dialog</div>
-            <div class="text-sm text-text-secondary leading-relaxed px-3 py-2 bg-surface-base border-l-3 border-l-[#4a4a2a]">{{ selected.raw.PrefaceText }}</div>
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Quest Giver Dialog</div>
+            <div class="text-[0.85rem] text-text-secondary leading-relaxed px-3 py-2 bg-surface-base border-l-3 border-l-[#4a4a2a]">{{ selected.raw.PrefaceText }}</div>
           </div>
 
           <!-- Quest Info -->
           <div class="flex flex-col gap-2">
-            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Quest Info</div>
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Quest Info</div>
             <div class="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-2">
               <div v-if="selected.raw?.IsCancellable !== undefined" class="text-sm flex gap-2">
                 <span class="text-text-muted min-w-24">Cancellable:</span>
@@ -169,9 +169,9 @@
 
           <!-- Requirements -->
           <div v-if="selected.raw?.Requirements?.length" class="flex flex-col gap-2">
-            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Requirements</div>
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Requirements</div>
             <ul class="list-none m-0 p-0 flex flex-col gap-1">
-              <li v-for="(req, idx) in selected.raw.Requirements" :key="idx" class="text-xs text-[#e08060] pl-4 relative before:content-['◆'] before:absolute before:left-0 before:text-[#e08060] flex items-center gap-1 flex-wrap">
+              <li v-for="(req, idx) in selected.raw.Requirements" :key="idx" class="text-[0.82rem] text-[#e08060] pl-4 relative before:content-['◆'] before:absolute before:left-0 before:text-[#e08060] flex items-center gap-1 flex-wrap">
                 <template v-if="req.T === 'QuestCompleted' && req.Quest">
                   Quest: <QuestInline :reference="req.Quest" />
                 </template>
@@ -195,9 +195,9 @@
 
           <!-- Objectives -->
           <div v-if="selected.raw?.Objectives?.length" class="flex flex-col gap-2">
-            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Objectives</div>
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Objectives</div>
             <ul class="list-none m-0 p-0 flex flex-col gap-1">
-              <li v-for="(obj, idx) in selected.raw.Objectives" :key="idx" class="text-xs text-text-secondary flex gap-2 items-baseline">
+              <li v-for="(obj, idx) in selected.raw.Objectives" :key="idx" class="text-[0.82rem] text-text-secondary flex gap-2 items-baseline">
                 <span class="text-[#6a9fb5] font-bold min-w-20 text-xs">{{ getObjectiveTypeDisplay(obj.Type) }}</span>
                 <span class="flex-1">{{ obj.Description }}</span>
                 <span v-if="obj.Number" class="text-text-muted text-xs">({{ obj.Number }})</span>
@@ -207,14 +207,14 @@
 
           <!-- Rewards -->
           <div v-if="selected.raw?.Rewards?.length || selected.raw?.Rewards_Items?.length || selected.raw?.Reward_Favor" class="flex flex-col gap-2">
-            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Rewards</div>
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Rewards</div>
 
-            <div v-if="selected.raw?.Reward_Favor" class="text-sm text-[#c0a0e0] font-bold mb-1">
+            <div v-if="selected.raw?.Reward_Favor" class="text-[0.85rem] text-[#c0a0e0] font-bold mb-1">
               Favor: {{ selected.raw.Reward_Favor }}
             </div>
 
             <ul v-if="selected.raw?.Rewards?.length" class="list-none m-0 p-0 flex flex-col gap-1 mb-1">
-              <li v-for="(reward, idx) in selected.raw.Rewards" :key="idx" class="text-xs text-[#60e090] pl-4 relative before:content-['✦'] before:absolute before:left-0 before:text-[#60e090] flex items-center gap-1">
+              <li v-for="(reward, idx) in selected.raw.Rewards" :key="idx" class="text-[0.82rem] text-[#60e090] pl-4 relative before:content-['✦'] before:absolute before:left-0 before:text-[#60e090] flex items-center gap-1">
                 <template v-if="reward.T === 'SkillXp' && reward.Skill">
                   <SkillInline :reference="reward.Skill" />
                   <span>: {{ reward.Xp }} XP</span>
@@ -226,7 +226,7 @@
             </ul>
 
             <ul v-if="selected.raw?.Rewards_Items?.length" class="list-none m-0 p-0 flex flex-col gap-1">
-              <li v-for="(item, idx) in selected.raw.Rewards_Items" :key="idx" class="text-xs text-[#60e090] pl-4 relative before:content-['✦'] before:absolute before:left-0 before:text-[#60e090] flex items-center gap-1">
+              <li v-for="(item, idx) in selected.raw.Rewards_Items" :key="idx" class="text-[0.82rem] text-[#60e090] pl-4 relative before:content-['✦'] before:absolute before:left-0 before:text-[#60e090] flex items-center gap-1">
                 <ItemInline :reference="item.Item" />
                 <span v-if="item.StackSize > 1">x {{ item.StackSize }}</span>
               </li>
@@ -239,8 +239,8 @@
 
           <!-- Success Text -->
           <div v-if="selected.raw?.SuccessText" class="flex flex-col gap-2">
-            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Completion Dialog</div>
-            <div class="text-sm text-text-secondary leading-relaxed px-3 py-2 bg-surface-base border-l-3 border-l-[#4a4a2a]">{{ selected.raw.SuccessText }}</div>
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Completion Dialog</div>
+            <div class="text-[0.85rem] text-text-secondary leading-relaxed px-3 py-2 bg-surface-base border-l-3 border-l-[#4a4a2a]">{{ selected.raw.SuccessText }}</div>
           </div>
 
           <!-- Sources -->
@@ -248,9 +248,9 @@
 
           <!-- Keywords (if any) -->
           <div v-if="selected.raw?.Keywords?.length" class="flex flex-col gap-2">
-            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
             <div class="flex flex-wrap gap-1">
-              <span v-for="kw in selected.raw.Keywords" :key="kw" class="text-xs px-2 py-0.5 bg-[#1a1a2a] text-[#8888bb] rounded-sm">{{ kw }}</span>
+              <span v-for="kw in selected.raw.Keywords" :key="kw" class="text-[0.7rem] px-2 py-0.5 bg-[#1a1a2a] text-[#8888bb] rounded-sm">{{ kw }}</span>
             </div>
           </div>
         </template>

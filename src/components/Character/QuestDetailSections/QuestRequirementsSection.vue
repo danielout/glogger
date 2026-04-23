@@ -1,12 +1,12 @@
 <template>
   <div v-if="requirements.length" class="flex flex-col gap-1.5">
-    <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+    <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
       Requirements
     </div>
     <div
       v-for="(evReq, idx) in requirements"
       :key="idx"
-      class="flex items-baseline gap-2 text-xs">
+      class="flex items-baseline gap-2 text-[0.82rem]">
       <span
         class="w-4 text-center shrink-0 text-xs font-bold"
         :class="requirementStatusColor(evReq.status)">
@@ -18,7 +18,7 @@
         <SkillInline :reference="evReq.requirement.Skill" />
         <span class="text-text-muted text-xs">
           level
-          <span :class="evReq.status === 'met' ? 'text-green-400' : 'text-red-400'">
+          <span :class="evReq.status === 'met' ? 'text-value-positive' : 'text-value-negative'">
             {{ playerSkillLevel(evReq.requirement.Skill) }}
           </span>
           / {{ evReq.requirement.MinSkillLevel }}

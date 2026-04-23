@@ -48,14 +48,14 @@
           <li
             v-for="(npc, idx) in filteredNpcs"
             :key="npc.key"
-            class="flex flex-col gap-0.5 px-2 py-1.5 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
+            class="flex flex-col gap-0.5 px-2 py-1.5 cursor-pointer border-b border-surface-dark text-xs hover:bg-surface-row-hover"
             :class="{
-              'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.key === npc.key,
+              'bg-surface-card border-l-2 border-l-accent-gold': selected?.key === npc.key,
               'bg-surface-elevated': selectedIndex === idx && selected?.key !== npc.key,
             }"
             @click="selectNpc(npc)">
             <span class="text-text-primary/75 flex-1">{{ npc.name }}</span>
-            <span v-if="npc.area_friendly_name" class="text-text-dim text-xs">{{
+            <span v-if="npc.area_friendly_name" class="text-text-dim text-[0.72rem]">{{
               npc.area_friendly_name
             }}</span>
           </li>
@@ -96,7 +96,7 @@
           <div class="flex flex-col gap-4 px-4 pb-4">
             <!-- Vendor Inventory (items they sell with prices) -->
             <div v-if="vendorItems.length" class="flex flex-col gap-1.5">
-              <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Sells Items ({{ vendorItems.length }})</div>
+              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Sells Items ({{ vendorItems.length }})</div>
               <div class="max-h-80 overflow-y-auto border border-surface-dark">
                 <table class="w-full text-xs border-collapse">
                   <thead class="sticky top-0 bg-surface-base">
@@ -113,7 +113,7 @@
                       <td class="py-0.5 px-2">
                         <ItemInline :reference="String(item.item_id)" />
                       </td>
-                      <td class="py-0.5 px-2 text-right text-text-muted">
+                      <td class="py-0.5 px-2 text-right text-text-muted font-mono">
                         <template v-if="item.value">{{ Math.ceil(item.value * 1.5) }}c</template>
                         <span v-else class="text-text-dim">--</span>
                       </td>
@@ -125,8 +125,8 @@
 
             <!-- Raw JSON -->
             <div v-if="settingsStore.settings.showRawJsonInDataBrowser" class="flex flex-col gap-1.5">
-              <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
-              <pre class="bg-surface-dark border border-surface-card p-3 text-xs text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
+              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
+              <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
             </div>
           </div>
         </template>

@@ -11,8 +11,8 @@
   <!-- Raw string mode: parse and colorize inline numbers -->
   <div v-else class="text-xs text-text-secondary">
     <template v-for="(segment, i) in parsedSegments" :key="i">
-      <span v-if="segment.type === 'positive'" class="font-semibold text-green-400">{{ segment.text }}</span>
-      <span v-else-if="segment.type === 'negative'" class="font-semibold text-red-400">{{ segment.text }}</span>
+      <span v-if="segment.type === 'positive'" class="font-semibold text-value-positive">{{ segment.text }}</span>
+      <span v-else-if="segment.type === 'negative'" class="font-semibold text-value-negative">{{ segment.text }}</span>
       <span v-else>{{ segment.text }}</span>
     </template>
   </div>
@@ -39,8 +39,8 @@ interface Segment {
 
 const valueColor = computed(() => {
   if (props.numericValue == null) return 'text-text-secondary'
-  if (props.numericValue > 0) return 'text-green-400'
-  if (props.numericValue < 0) return 'text-red-400'
+  if (props.numericValue > 0) return 'text-value-positive'
+  if (props.numericValue < 0) return 'text-value-negative'
   return 'text-text-secondary'
 })
 

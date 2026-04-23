@@ -49,4 +49,33 @@
   --color-entity-area: #6a9fb5;
   --color-entity-enemy: #d9534f;
   --color-entity-recipe: #c8a05c;
+
+  /* Value semantics (gain/loss/neutral) */
+  --color-value-positive: #4ade80;
+  --color-value-negative: #f87171;
+  --color-value-neutral-warm: #c8b47e;
+  --color-value-gold: #d4af37;
+
+  /* Surface variants */
+  --color-surface-inset: #151515;
+  --color-surface-row-hover: #1e1e1e;
+  --color-border-subtle: #2a2a3e;
+
+  /* Status indicators */
+  --color-status-active: #22c55e;
+  --color-status-inactive: #ef4444;
+  --color-status-warning: #eab308;
+
+  /* Rarity colors */
+  --color-rarity-uncommon: #4ade80;
+  --color-rarity-rare: #60a5fa;
+  --color-rarity-exceptional: #c084fc;
+  --color-rarity-epic: #fb923c;
+  --color-rarity-legendary: #facc15;
+
+  /* Domain-specific */
+  --color-desire-love: #ff69b4;
+  --color-desire-like: #7ec8e3;
+  --color-desire-hate: #aa4444;
+  --color-mod-augment: #c084fc;
 }

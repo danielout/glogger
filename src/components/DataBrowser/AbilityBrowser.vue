@@ -62,12 +62,12 @@
           <li
             v-for="(family, idx) in filteredFamilies"
             :key="family.base_internal_name"
-            class="flex items-baseline gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
-            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.base_internal_name === family.base_internal_name, 'bg-surface-elevated': selectedIndex === idx && selected?.base_internal_name !== family.base_internal_name }"
+            class="flex items-baseline gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-surface-row-hover"
+            :class="{ 'bg-surface-card border-l-2 border-l-accent-gold': selected?.base_internal_name === family.base_internal_name, 'bg-surface-elevated': selectedIndex === idx && selected?.base_internal_name !== family.base_internal_name }"
             @click="selectFamily(family)">
-            <span class="text-text-muted text-xs min-w-14 shrink-0">[{{ levelRange(family) }}]</span>
+            <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[{{ levelRange(family) }}]</span>
             <span class="text-text-primary/75 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ family.base_name }}</span>
-            <span v-if="family.tier_ids.length > 1" class="text-text-dim text-[10px] shrink-0">{{ family.tier_ids.length }}T</span>
+            <span v-if="family.tier_ids.length > 1" class="text-text-dim text-[0.65rem] shrink-0">{{ family.tier_ids.length }}T</span>
           </li>
         </ul>
       </div>
@@ -91,13 +91,13 @@
                 :src="iconSrc"
                 class="w-12 h-12 [image-rendering:pixelated] border border-border-default"
                 alt="ability icon" />
-              <div v-else-if="iconLoading" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[10px] text-accent-gold animate-spin">
+              <div v-else-if="iconLoading" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[0.65rem] text-accent-gold animate-spin">
                 ⟳
               </div>
-              <div v-else-if="selected.icon_id" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[10px] text-text-dim">
+              <div v-else-if="selected.icon_id" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[0.65rem] text-text-dim">
                 {{ selected.icon_id }}
               </div>
-              <div v-else class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[10px] text-border-default">—</div>
+              <div v-else class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[0.65rem] text-border-default">—</div>
             </div>
 
             <div class="flex-1 min-w-0">
@@ -133,7 +133,7 @@
           <template v-else-if="resolvedTiers.length">
             <!-- Combat Details (shared across tiers) -->
             <div v-if="baseTierAbility && (baseTierAbility.target || sharedCooldown)" class="flex flex-col gap-1.5">
-              <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Combat Details</div>
+              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Combat Details</div>
               <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-1.5">
                 <div v-if="baseTierAbility.target" class="text-xs flex gap-2">
                   <span class="text-text-muted min-w-20">Target:</span>
@@ -145,7 +145,7 @@
                 </div>
                 <div v-if="baseTierAbility.animation" class="text-xs flex gap-2">
                   <span class="text-text-muted min-w-20">Animation:</span>
-                  <span class="text-text-secondary">{{ baseTierAbility.animation }}</span>
+                  <span class="text-text-secondary font-mono">{{ baseTierAbility.animation }}</span>
                 </div>
               </div>
             </div>
@@ -155,12 +155,12 @@
 
             <!-- Flags (from base tier) -->
             <div v-if="abilityFlags.length" class="flex flex-col gap-1.5">
-              <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Flags</div>
+              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Flags</div>
               <div class="flex flex-wrap gap-1">
                 <span
                   v-for="flag in abilityFlags"
                   :key="flag"
-                  class="text-xs px-1.5 py-0.5 bg-[#1a2a1a] border border-[#2a4a2a] text-[#8ab88a]">
+                  class="text-[0.72rem] px-1.5 py-0.5 bg-[#1a2a1a] border border-[#2a4a2a] text-[#8ab88a]">
                   {{ flag }}
                 </span>
               </div>
@@ -168,7 +168,7 @@
 
             <!-- Related Treasure Mods (for the base ability) -->
             <div v-if="relatedTsysLoading || relatedTsys.length" class="flex flex-col gap-1.5">
-              <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
                 Treasure Mods
                 <span v-if="relatedTsys.length" class="text-text-muted">({{ relatedTsys.length }})</span>
               </div>
@@ -180,18 +180,18 @@
                   class="bg-surface-dark border border-surface-card p-2 text-xs">
                   <div class="flex items-baseline gap-2 mb-0.5">
                     <span class="text-entity-item font-medium">{{ tsys.internal_name || tsys.key }}</span>
-                    <span v-if="tsys.skill" class="text-text-muted text-[10px]">{{ tsys.skill }}</span>
-                    <span class="text-text-dim text-[10px]">{{ tsys.tier_count }} tiers</span>
+                    <span v-if="tsys.skill" class="text-text-muted text-[0.65rem]">{{ tsys.skill }}</span>
+                    <span class="text-text-dim text-[0.65rem]">{{ tsys.tier_count }} tiers</span>
                   </div>
                   <div v-if="tsys.slots.length" class="flex gap-1 mb-0.5">
                     <span
                       v-for="slot in tsys.slots"
                       :key="slot"
-                      class="text-[10px] px-1 py-0 bg-[#1a1a2e] border border-[#2a2a4e] text-text-muted">
+                      class="text-[0.65rem] px-1 py-0 bg-surface-card border border-border-subtle text-text-muted">
                       {{ slot }}
                     </span>
                   </div>
-                  <div v-if="tsys.top_tier_effects.length" class="flex flex-col gap-0.5 text-text-secondary text-xs pl-1">
+                  <div v-if="tsys.top_tier_effects.length" class="flex flex-col gap-0.5 text-text-secondary text-[0.72rem] font-mono pl-1">
                     <span v-for="(eff, i) in tsys.top_tier_effects" :key="i">{{ eff }}</span>
                   </div>
                 </div>
@@ -200,17 +200,17 @@
 
             <!-- PvE/PvP Details (from highest tier) -->
             <div v-if="highestTier && (highestTier.pve || highestTier.pvp)" class="flex flex-col gap-1.5">
-              <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
                 PvE / PvP
                 <span class="text-text-muted">(Tier {{ resolvedTiers.length }})</span>
               </div>
               <div class="flex gap-4">
                 <div v-if="highestTier.pve" class="flex-1">
-                  <div class="text-[10px] text-text-muted mb-1">PvE</div>
+                  <div class="text-[0.65rem] text-text-muted mb-1">PvE</div>
                   <CombatStatsPanel :stats="highestTier.pve" />
                 </div>
                 <div v-if="highestTier.pvp" class="flex-1">
-                  <div class="text-[10px] text-text-muted mb-1">PvP</div>
+                  <div class="text-[0.65rem] text-text-muted mb-1">PvP</div>
                   <CombatStatsPanel :stats="highestTier.pvp" />
                 </div>
               </div>
@@ -218,12 +218,12 @@
 
             <!-- Keywords (from base tier) -->
             <div v-if="baseTierAbility && baseTierAbility.keywords.length" class="flex flex-col gap-1.5">
-              <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
+              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
               <div class="flex flex-wrap gap-1">
                 <span
                   v-for="kw in baseTierAbility.keywords"
                   :key="kw"
-                  class="text-xs px-1.5 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-entity-item"
+                  class="text-[0.72rem] px-1.5 py-0.5 bg-surface-card border border-border-subtle text-entity-item"
                   :class="{ 'bg-[#1e1a10]! border-[#3a3010]! text-[#887040]!': kw.startsWith('Lint_') }"
                   >{{ kw }}</span
                 >
@@ -232,11 +232,11 @@
 
             <!-- Raw JSON -->
             <div v-if="settingsStore.settings.showRawJsonInDataBrowser && jsonTier" class="flex flex-col gap-1.5">
-              <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+              <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
                 Raw JSON
                 <span class="text-text-muted">({{ jsonTier.name }})</span>
               </div>
-              <pre class="bg-surface-dark border border-surface-card p-3 text-xs text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(jsonTier, null, 2) }}</pre>
+              <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(jsonTier, null, 2) }}</pre>
             </div>
           </template>
         </template>

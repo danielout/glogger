@@ -20,17 +20,17 @@
             :key="word.id"
             class="flex items-center gap-2 py-0.5 group">
             <span
-              class="text-xs px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+              class="font-mono text-xs px-1.5 py-0.5 rounded cursor-pointer transition-colors"
               :class="wordAgeClass(word)"
               :title="'Click to copy — Discovered ' + formatWordAge(word)"
               @click="copyWord(word.word)">
               {{ word.word }}
             </span>
-            <span class="text-xs text-text-dim flex-1 truncate" :title="word.description ?? ''">
+            <span class="text-[11px] text-text-dim flex-1 truncate" :title="word.description ?? ''">
               {{ formatWordAge(word) }}
             </span>
             <button
-              class="text-text-dim hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0 cursor-pointer"
+              class="text-text-dim hover:text-value-negative opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0 cursor-pointer"
               title="Remove word"
               @click="removeWord(word.id)">
               &times;
@@ -50,7 +50,7 @@
     <!-- Copied toast -->
     <div
       v-if="copiedWord"
-      class="text-xs text-green-400 text-center shrink-0 transition-opacity">
+      class="text-xs text-value-positive text-center shrink-0 transition-opacity">
       Copied "{{ copiedWord }}" to clipboard
     </div>
 
@@ -67,7 +67,7 @@
           v-model="newWord"
           type="text"
           placeholder="Word (e.g. TOAEOACHROF)"
-          class="w-full px-2 py-1 rounded bg-surface-2 border border-border text-xs text-text-primary placeholder:text-text-dim focus:outline-none focus:border-accent-blue" />
+          class="w-full px-2 py-1 rounded bg-surface-2 border border-border text-xs text-text-primary placeholder:text-text-dim focus:outline-none focus:border-accent-blue font-mono" />
         <input
           v-model="newPowerName"
           type="text"
@@ -184,10 +184,10 @@ function wordAgeClass(word: WordOfPower): string {
   const ms = wordAgeMs(word)
   const hours = ms / 3_600_000
 
-  if (hours < 1) return 'bg-green-500/20 text-green-400'
+  if (hours < 1) return 'bg-green-500/20 text-value-positive'
   if (hours < 6) return 'bg-accent-gold/20 text-accent-gold'
   if (hours < 24) return 'bg-orange-500/20 text-orange-400'
-  return 'bg-red-500/20 text-red-400'
+  return 'bg-red-500/20 text-value-negative'
 }
 
 async function copyWord(word: string) {

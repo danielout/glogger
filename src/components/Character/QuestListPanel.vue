@@ -34,9 +34,9 @@
       <template v-for="group in groupedQuests" :key="group.label">
         <div
           v-if="group.label"
-          class="sticky top-0 z-10 bg-surface-base px-2 py-1 text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-elevated cursor-pointer flex items-center gap-1"
+          class="sticky top-0 z-10 bg-surface-base px-2 py-1 text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-elevated cursor-pointer flex items-center gap-1"
           @click="toggleGroup(group.label)">
-          <span class="text-[10px]">{{ collapsedGroups.has(group.label) ? '\u25B6' : '\u25BC' }}</span>
+          <span class="text-[0.6rem]">{{ collapsedGroups.has(group.label) ? '\u25B6' : '\u25BC' }}</span>
           {{ group.label }} ({{ group.quests.length }})
         </div>
 
@@ -44,9 +44,9 @@
           <div
             v-for="row in group.quests"
             :key="row.key"
-            class="flex items-center gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
+            class="flex items-center gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-surface-row-hover"
             :class="{
-              'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selectedQuestKey === row.key,
+              'bg-surface-card border-l-2 border-l-accent-gold': selectedQuestKey === row.key,
             }"
             @click="$emit('select', row.key)">
             <span class="flex-1 text-text-primary/75 truncate">{{ row.display_name }}</span>
@@ -54,18 +54,18 @@
             <!-- Level badge -->
             <span
               v-if="row.level"
-              class="text-[10px] px-1 py-0.5 rounded-sm bg-[#2a2a1a] text-text-secondary shrink-0">
+              class="text-[0.6rem] px-1 py-0.5 rounded-sm bg-[#2a2a1a] text-text-secondary shrink-0">
               Lv {{ row.level }}
             </span>
 
             <!-- Area -->
-            <span v-if="row.area" class="text-text-dim text-[10px] truncate max-w-20 shrink-0">
+            <span v-if="row.area" class="text-text-dim text-[0.6rem] truncate max-w-20 shrink-0">
               {{ row.area }}
             </span>
 
             <!-- Category badge -->
             <span
-              class="text-[10px] px-1.5 py-0.5 rounded border shrink-0 text-center"
+              class="text-[0.65rem] px-1.5 py-0.5 rounded border shrink-0 text-center"
               :class="categoryBadge(row.category)">
               {{ categoryLabel(row.category) }}
             </span>

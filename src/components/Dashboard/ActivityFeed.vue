@@ -15,7 +15,7 @@
         <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="dotColor" />
 
         <!-- Timestamp -->
-        <span class="text-text-dim shrink-0">{{ formatTs(entry.timestamp) }}</span>
+        <span class="text-text-dim font-mono shrink-0">{{ formatTs(entry.timestamp) }}</span>
 
         <!-- Label (item name, NPC name, etc.) -->
         <ItemInline v-if="showItemLinks" :reference="entry.label" />
@@ -23,7 +23,7 @@
         <span v-else class="text-text-primary truncate">{{ entry.label }}</span>
 
         <!-- Amount -->
-        <span class="ml-auto shrink-0" :class="amountClass(entry.amount)">
+        <span class="ml-auto shrink-0 font-mono" :class="amountClass(entry.amount)">
           {{ formatAmount(entry.amount) }}
         </span>
 
@@ -47,7 +47,7 @@
           </span>
         </span>
       </span>
-      <span :class="amountClass(total)">
+      <span class="font-mono" :class="amountClass(total)">
         {{ signedTotal ? formatSigned(total) : total.toLocaleString() }} {{ unit }}
       </span>
     </div>
@@ -108,8 +108,8 @@ function formatSigned(amount: number): string {
 
 function amountClass(amount: number): string {
   if (props.quantityPrefix) return 'text-text-secondary'
-  if (amount > 0) return 'text-green-400'
-  if (amount < 0) return 'text-red-400'
+  if (amount > 0) return 'text-value-positive'
+  if (amount < 0) return 'text-value-negative'
   return 'text-text-muted'
 }
 </script>

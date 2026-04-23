@@ -26,7 +26,7 @@
             <div class="flex items-center gap-2 min-w-0 flex-1">
               <span
                 class="w-2 h-2 rounded-full flex-shrink-0"
-                :class="rule.enabled ? 'bg-green-500' : 'bg-gray-600'"
+                :class="rule.enabled ? 'bg-status-active' : 'bg-gray-600'"
               ></span>
               <span
                 class="font-medium truncate"
@@ -50,7 +50,7 @@
             <span
               v-for="(cond, i) in rule.conditions"
               :key="i"
-              class="text-xs px-1.5 py-0.5 rounded bg-surface-dark border border-border-default"
+              class="text-[0.7rem] px-1.5 py-0.5 rounded bg-surface-dark border border-border-default"
               :class="conditionColor(cond.type)"
             >{{ conditionShortLabel(cond) }}</span>
           </div>

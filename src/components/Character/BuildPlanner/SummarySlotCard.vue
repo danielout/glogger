@@ -11,7 +11,7 @@
       <span class="text-[10px]" :class="fillColor">
         {{ modCount }}/{{ maxMods }}
       </span>
-      <span v-if="hasAug" class="text-[10px] text-purple-400">+aug</span>
+      <span v-if="hasAug" class="text-[10px] text-mod-augment">+aug</span>
       <span class="flex-1" />
       <CpProgressBar
         v-if="cpBudget > 0"
@@ -26,7 +26,7 @@
         v-for="mod in slotMods"
         :key="mod.id"
         class="flex items-center gap-1.5 text-[10px]">
-        <span v-if="mod.is_augment" class="text-purple-400 font-semibold shrink-0">AUG</span>
+        <span v-if="mod.is_augment" class="text-mod-augment font-semibold shrink-0">AUG</span>
         <span class="text-text-secondary truncate">{{ displayName(mod) }}</span>
       </div>
     </div>
@@ -63,7 +63,7 @@ const itemIconId = computed(() => store.resolvedSlotItems[props.slot.id]?.icon_i
 const cpBudget = computed(() => getSlotCraftingPoints(store.getSlotItem(props.slot.id)))
 
 const fillColor = computed(() => {
-  if (modCount.value >= maxMods.value) return 'text-green-400'
+  if (modCount.value >= maxMods.value) return 'text-value-positive'
   if (modCount.value > 0) return 'text-yellow-400'
   return 'text-text-dim'
 })

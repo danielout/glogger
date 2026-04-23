@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col gap-1.5">
-    <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+    <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
       Vendor Status
     </div>
 
@@ -8,7 +8,7 @@
       <!-- Gold display -->
       <div class="flex items-center gap-2 px-2 text-xs">
         <span class="text-text-muted">Gold:</span>
-        <span class="font-bold" :class="goldColorClass">
+        <span class="font-bold font-mono" :class="goldColorClass">
           {{ formatGold(vendorStatus.vendor_gold_available) }}
         </span>
         <span v-if="vendorStatus.vendor_gold_max != null" class="text-text-dim">
@@ -17,14 +17,14 @@
         <span v-else-if="currentCapGold != null" class="text-text-dim">
           / ~{{ currentCapGold.toLocaleString() }}
         </span>
-        <span class="text-text-dim text-[10px]">councils</span>
+        <span class="text-text-dim text-[0.6rem]">councils</span>
       </div>
 
       <!-- Timer -->
       <div v-if="resetTimeLabel" class="flex items-center gap-2 px-2 text-xs">
         <span class="text-text-muted">Resets in:</span>
         <span class="text-text-secondary">~{{ resetTimeLabel }}</span>
-        <span class="text-text-dim text-[10px] italic">(estimated)</span>
+        <span class="text-text-dim text-[0.55rem] italic">(estimated)</span>
       </div>
 
       <!-- Last sell -->
@@ -63,9 +63,9 @@ const goldColorClass = computed(() => {
   const max = v.vendor_gold_max ?? currentCapGold.value
   if (!max || max === 0) return 'text-text-secondary'
   const ratio = v.vendor_gold_available / max
-  if (ratio >= 0.7) return 'text-green-400'
+  if (ratio >= 0.7) return 'text-value-positive'
   if (ratio >= 0.3) return 'text-yellow-400'
-  return 'text-red-400'
+  return 'text-value-negative'
 })
 
 function formatGold(val: number | null | undefined): string {

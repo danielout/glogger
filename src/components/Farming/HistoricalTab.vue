@@ -1,27 +1,27 @@
 <template>
   <div class="flex flex-col gap-4">
     <div v-if="loading" class="text-text-dim italic text-sm">Loading sessions...</div>
-    <div v-else-if="error" class="text-[#c87e7e] text-sm">{{ error }}</div>
+    <div v-else-if="error" class="text-value-negative text-sm">{{ error }}</div>
     <EmptyState v-else-if="sessions.length === 0" variant="panel" primary="No saved farming sessions" secondary="Complete a farming session to see history here." />
 
     <template v-else>
       <!-- Aggregate stats -->
       <div class="flex gap-6 flex-wrap text-center">
         <div>
-          <div class="text-[10px] text-text-muted uppercase tracking-wide">Sessions</div>
+          <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Sessions</div>
           <div class="text-lg font-bold text-text-primary">{{ sessions.length }}</div>
         </div>
         <div>
-          <div class="text-[10px] text-text-muted uppercase tracking-wide">Total Time</div>
+          <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Total Time</div>
           <div class="text-lg font-bold text-text-primary">{{ formatDuration(totalElapsed) }}</div>
         </div>
         <div>
-          <div class="text-[10px] text-text-muted uppercase tracking-wide">Total XP</div>
-          <div class="text-lg font-bold text-[#7ec87e]">{{ totalXp.toLocaleString() }}</div>
+          <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Total XP</div>
+          <div class="text-lg font-bold text-value-positive">{{ totalXp.toLocaleString() }}</div>
         </div>
         <div v-if="totalGold > 0">
-          <div class="text-[10px] text-text-muted uppercase tracking-wide">Total Vendor Gold</div>
-          <div class="text-lg font-bold text-[#d4af37]">{{ totalGold.toLocaleString() }}g</div>
+          <div class="text-[0.65rem] text-text-muted uppercase tracking-wide">Total Vendor Gold</div>
+          <div class="text-lg font-bold text-value-gold">{{ totalGold.toLocaleString() }}g</div>
         </div>
       </div>
 
@@ -30,7 +30,7 @@
         <div
           v-for="session in sessions"
           :key="session.id"
-          class="bg-[#1a1a2e] border border-border-light rounded-lg overflow-hidden">
+          class="bg-surface-card border border-border-light rounded-lg overflow-hidden">
           <!-- Summary row -->
           <div
             class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-[#2a2a3e] transition-colors"
@@ -41,7 +41,7 @@
               <span class="text-xs text-text-muted">{{ formatDuration(session.elapsed_seconds) }}</span>
             </div>
             <div class="flex items-center gap-4 text-xs">
-              <span v-if="sessionTotalXp(session) > 0" class="text-[#7ec87e]">
+              <span v-if="sessionTotalXp(session) > 0" class="text-value-positive">
                 +{{ sessionTotalXp(session).toLocaleString() }} XP
               </span>
               <span v-if="sessionTotalXp(session) > 0" class="text-text-dim">
@@ -50,7 +50,7 @@
               <span v-if="session.items.length > 0" class="text-text-secondary">
                 {{ session.items.length }} item{{ session.items.length !== 1 ? 's' : '' }}
               </span>
-              <span v-if="session.vendor_gold > 0" class="text-[#d4af37]">
+              <span v-if="session.vendor_gold > 0" class="text-value-gold">
                 {{ session.vendor_gold.toLocaleString() }}g
               </span>
               <span class="text-text-dim">{{ expanded.has(session.id) ? '\u25B2' : '\u25BC' }}</span>
@@ -79,23 +79,23 @@
 
             <!-- Skills -->
             <div v-if="session.skills.length > 0" class="mb-3">
-              <div class="text-[10px] uppercase tracking-widest text-entity-item mb-1 font-bold">Skills</div>
+              <div class="text-[0.6rem] uppercase tracking-widest text-entity-item mb-1 font-bold">Skills</div>
               <div class="flex gap-2 flex-wrap">
                 <div
                   v-for="skill in session.skills"
                   :key="skill.skill_name"
                   class="flex items-center gap-2 px-3 py-1.5 rounded text-xs bg-[#1a2e1a] border border-[#3a5a3a]">
                   <SkillInline :reference="skill.skill_name" />
-                  <span class="text-[#7ec87e] font-bold">+{{ skill.xp_gained.toLocaleString() }}</span>
-                  <span class="text-text-dim text-[10px]">{{ skillXpPerHour(skill.xp_gained, session.elapsed_seconds).toLocaleString() }}/hr</span>
-                  <span v-if="skill.levels_gained > 0" class="text-[#c8b47e] font-bold">(+{{ skill.levels_gained }} lvl)</span>
+                  <span class="text-value-positive font-bold">+{{ skill.xp_gained.toLocaleString() }}</span>
+                  <span class="text-text-dim text-[0.6rem]">{{ skillXpPerHour(skill.xp_gained, session.elapsed_seconds).toLocaleString() }}/hr</span>
+                  <span v-if="skill.levels_gained > 0" class="text-value-neutral-warm font-bold">(+{{ skill.levels_gained }} lvl)</span>
                 </div>
               </div>
             </div>
 
             <!-- Items -->
             <div v-if="session.items.length > 0" class="mb-3">
-              <div class="text-[10px] uppercase tracking-widest text-text-dim mb-1 font-bold">Items</div>
+              <div class="text-[0.6rem] uppercase tracking-widest text-text-dim mb-1 font-bold">Items</div>
               <div class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-1">
                 <div
                   v-for="item in session.items"
@@ -105,12 +105,12 @@
                   <div class="flex items-center gap-2">
                     <span
                       :class="[
-                        'font-bold',
-                        item.net_quantity > 0 ? 'text-[#7ec87e]' : 'text-[#c87e7e]'
+                        'font-mono font-bold',
+                        item.net_quantity > 0 ? 'text-value-positive' : 'text-value-negative'
                       ]">
                       {{ item.net_quantity > 0 ? '+' : '' }}{{ item.net_quantity }}
                     </span>
-                    <span class="text-text-dim text-[10px]">{{ itemPerHour(item.net_quantity, session.elapsed_seconds) }}/hr</span>
+                    <span class="text-text-dim text-[0.6rem]">{{ itemPerHour(item.net_quantity, session.elapsed_seconds) }}/hr</span>
                   </div>
                 </div>
               </div>
@@ -118,7 +118,7 @@
 
             <!-- Favors -->
             <div v-if="session.favors.length > 0" class="mb-3">
-              <div class="text-[10px] uppercase tracking-widest text-text-dim mb-1 font-bold">Favor</div>
+              <div class="text-[0.6rem] uppercase tracking-widest text-text-dim mb-1 font-bold">Favor</div>
               <div class="flex gap-2 flex-wrap">
                 <div
                   v-for="fav in session.favors"
@@ -127,8 +127,8 @@
                   <NpcInline :reference="fav.npc_name" />
                   <span
                     :class="[
-                      'font-bold ml-1',
-                      fav.delta > 0 ? 'text-[#c8b47e]' : 'text-[#c87e7e]'
+                      'font-mono font-bold ml-1',
+                      fav.delta > 0 ? 'text-value-neutral-warm' : 'text-value-negative'
                     ]">
                     {{ fav.delta > 0 ? '+' : '' }}{{ fav.delta.toFixed(1) }}
                   </span>
@@ -140,7 +140,7 @@
             <div class="flex justify-end pt-2 border-t border-border-default">
               <button
                 @click.stop="deleteSession(session.id)"
-                class="px-3 py-1 text-xs bg-[#3a2a2a]! border border-[#5a3a3a]! rounded text-[#c87e7e]! cursor-pointer transition-all font-medium hover:bg-[#4a3a3a] hover:border-[#6a4a4a]">
+                class="px-3 py-1 text-xs bg-[#3a2a2a]! border border-[#5a3a3a]! rounded text-value-negative! cursor-pointer transition-all font-medium hover:bg-[#4a3a3a] hover:border-[#6a4a4a]">
                 Delete Session
               </button>
             </div>

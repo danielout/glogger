@@ -47,8 +47,8 @@ const barColor = computed(() => {
 })
 
 const textColor = computed(() => {
-  if (isOverBudget.value) return 'text-red-400'
-  if (isFull.value) return 'text-green-400'
+  if (isOverBudget.value) return 'text-value-negative'
+  if (isFull.value) return 'text-value-positive'
   return 'text-text-muted'
 })
 

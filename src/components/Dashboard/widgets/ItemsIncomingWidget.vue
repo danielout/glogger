@@ -1,7 +1,7 @@
 <template>
   <ActivityFeed
     :entries="store.itemsIncoming"
-    dot-color="bg-green-500"
+    dot-color="bg-status-active"
     empty-text="No items received."
     empty-hint="Loot, crafting output, and summoned items appear here."
     show-item-links

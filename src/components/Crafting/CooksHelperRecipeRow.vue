@@ -19,12 +19,12 @@
     <!-- Food category badge -->
     <span
       :class="[
-        'text-[10px] font-semibold shrink-0 px-1.5 py-0.5 rounded',
+        'text-[0.6rem] font-semibold shrink-0 px-1.5 py-0.5 rounded',
         entry.food.food_category === 'Meal'
           ? 'bg-orange-500/15 text-orange-400'
           : entry.food.food_category === 'Snack'
             ? 'bg-blue-500/15 text-blue-400'
-            : 'bg-green-500/15 text-green-400',
+            : 'bg-value-positive/15 text-value-positive',
       ]">
       {{ entry.food.food_category }}
     </span>
@@ -37,7 +37,7 @@
     <!-- Gourmand req -->
     <span
       v-if="entry.food.gourmand_req"
-      class="text-accent-gold/70 shrink-0 w-12 text-right text-[10px]">
+      class="text-accent-gold/70 shrink-0 w-12 text-right text-[0.65rem]">
       G{{ entry.food.gourmand_req }}
     </span>
     <span v-else class="shrink-0 w-12" />
@@ -48,8 +48,8 @@
         v-if="entry.recipe.skill"
         :reference="entry.recipe.skill"
         :show-icon="true"
-        class="text-[10px]" />
-      <span class="text-text-muted text-[10px]">
+        class="text-[0.65rem]" />
+      <span class="text-text-muted text-[0.65rem]">
         {{ entry.recipe.skill_level_req ?? '?' }}
       </span>
     </div>
@@ -57,7 +57,7 @@
     <!-- Owned count -->
     <span
       v-if="ownedCount > 0"
-      class="text-green-400/70 shrink-0 text-[10px] w-14 text-right"
+      class="text-value-positive/70 shrink-0 text-[0.65rem] w-14 text-right"
       title="Already in inventory/storage">
       have {{ ownedCount }}
     </span>
@@ -67,7 +67,7 @@
     <div class="shrink-0 w-5 text-center">
       <span
         v-if="materialStatus === 'ready'"
-        class="text-green-400"
+        class="text-value-positive"
         title="All materials available">
         &#x2714;
       </span>

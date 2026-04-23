@@ -1,11 +1,11 @@
 <template>
-  <div class="bg-[#1a1a2e] border border-border-default rounded-lg p-4">
-    <div class="text-[10px] text-text-muted uppercase tracking-wide mb-2">System Status</div>
+  <div class="bg-surface-card border border-border-default rounded-lg p-4">
+    <div class="text-[0.65rem] text-text-muted uppercase tracking-wide mb-2">System Status</div>
     <div class="flex flex-col gap-2">
       <div class="flex items-center gap-2">
         <span
           class="w-2 h-2 rounded-full"
-          :class="coordinator.isPlayerLogTailing ? 'bg-green-500' : 'bg-red-500'"
+          :class="coordinator.isPlayerLogTailing ? 'bg-status-active' : 'bg-status-inactive'"
         />
         <span class="text-sm text-text-primary">Player.log</span>
         <span class="text-xs text-text-dim ml-auto">{{ coordinator.isPlayerLogTailing ? 'Tailing' : 'Stopped' }}</span>
@@ -13,7 +13,7 @@
       <div class="flex items-center gap-2">
         <span
           class="w-2 h-2 rounded-full"
-          :class="coordinator.isChatLogTailing ? 'bg-green-500' : 'bg-red-500'"
+          :class="coordinator.isChatLogTailing ? 'bg-status-active' : 'bg-status-inactive'"
         />
         <span class="text-sm text-text-primary">Chat Log</span>
         <span class="text-xs text-text-dim ml-auto">{{ coordinator.isChatLogTailing ? 'Tailing' : 'Stopped' }}</span>

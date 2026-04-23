@@ -39,7 +39,7 @@
           <span
             v-for="slot in power.slots"
             :key="slot"
-            class="text-[10px] px-1.5 py-0.5 rounded border border-border-default bg-surface-dark text-text-secondary">
+            class="text-[9px] px-1.5 py-0.5 rounded border border-border-default bg-surface-dark text-text-secondary">
             {{ slot }}
           </span>
         </div>
@@ -59,7 +59,7 @@
       </button>
       <button
         v-if="!hasAugment && !isBeltSlot"
-        class="text-purple-400/70 hover:text-purple-400 text-[10px] cursor-pointer px-1 py-0.5 rounded hover:bg-purple-900/20 transition-colors"
+        class="text-mod-augment/70 hover:text-mod-augment text-[10px] cursor-pointer px-1 py-0.5 rounded hover:bg-purple-900/20 transition-colors"
         title="Add as augment (100 CP)"
         @click.stop="emitAddAugment">
         + Aug

@@ -45,13 +45,13 @@
           <li
             v-for="(book, idx) in filteredBooks"
             :key="book.id"
-            class="flex items-baseline gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
-            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === book.id, 'bg-surface-elevated': selectedIndex === idx && selected?.id !== book.id }"
+            class="flex items-baseline gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-surface-row-hover"
+            :class="{ 'bg-surface-card border-l-2 border-l-accent-gold': selected?.id === book.id, 'bg-surface-elevated': selectedIndex === idx && selected?.id !== book.id }"
             @click="selectBook(book)">
             <span class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-text-primary/75">
               {{ book.title || 'Untitled' }}
             </span>
-            <span class="text-[10px] text-text-dim shrink-0">{{ book.category }}</span>
+            <span class="text-[0.65rem] text-text-dim shrink-0">{{ book.category }}</span>
           </li>
         </ul>
       </div>
@@ -102,12 +102,12 @@
 
           <!-- Keywords -->
           <div v-if="selected.keywords.length" class="flex flex-col gap-1.5">
-            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
             <div class="flex flex-wrap gap-1">
               <span
                 v-for="kw in selected.keywords"
                 :key="kw"
-                class="text-xs px-1.5 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-entity-item">
+                class="text-[0.72rem] px-1.5 py-0.5 bg-surface-card border border-border-subtle text-entity-item">
                 {{ kw }}
               </span>
             </div>
@@ -115,8 +115,8 @@
 
           <!-- Raw JSON -->
           <div v-if="settingsStore.settings.showRawJsonInDataBrowser" class="flex flex-col gap-1.5">
-            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
-            <pre class="bg-surface-dark border border-surface-card p-3 text-xs text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
+            <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
           </div>
         </template>
     </div>

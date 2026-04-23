@@ -1,7 +1,7 @@
 <template>
   <ActivityFeed
     :entries="store.councilChanges"
-    dot-color="bg-yellow-500"
+    dot-color="bg-status-warning"
     empty-text="No council changes."
     empty-hint="Vendor sales, loot, and council transactions appear here."
     unit="councils"

@@ -20,10 +20,10 @@
             :key="item.item_id"
             class="flex items-center gap-2 py-1 px-2 rounded text-xs hover:bg-surface-elevated/50">
             <ItemInline :reference="item.item_name" />
-            <span v-if="item.stack_size > 1" class="text-text-muted shrink-0">
+            <span v-if="item.stack_size > 1" class="text-text-muted font-mono shrink-0">
               x{{ item.stack_size }}
             </span>
-            <span class="ml-auto text-green-400 text-xs shrink-0">safe to sell</span>
+            <span class="ml-auto text-value-positive text-xs shrink-0">safe to sell</span>
           </div>
         </div>
       </div>

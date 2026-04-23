@@ -59,8 +59,8 @@
             <td class="py-1.5 pr-2">
               <ItemInline :reference="m.name" />
             </td>
-            <td class="text-center py-1.5 px-2 text-text-dim">{{ m.level }}</td>
-            <td class="text-center py-1.5 px-2 text-text-dim">{{ m.growTime }}h</td>
+            <td class="text-center py-1.5 px-2 text-text-dim font-mono">{{ m.level }}</td>
+            <td class="text-center py-1.5 px-2 text-text-dim font-mono">{{ m.growTime }}h</td>
             <td class="py-1.5 px-2">
               <span class="text-accent-gold">{{ m.optimalSubstrate }}</span>
               <span class="text-text-dim"> / {{ m.adequateSubstrate }}</span>
@@ -70,7 +70,7 @@
                 v-for="p in m.robustPhases"
                 :key="p"
                 class="mr-1"
-                :class="phase?.name === p ? 'text-green-400' : 'text-text-dim'"
+                :class="phase?.name === p ? 'text-value-positive' : 'text-text-dim'"
                 :title="phaseLabel(p) + ' (robust)'">
                 {{ phaseEmoji(p) }}
               </span>
@@ -79,7 +79,7 @@
                 v-for="p in m.poorPhases"
                 :key="p"
                 class="mr-1"
-                :class="phase?.name === p ? 'text-red-400' : 'text-text-dim'"
+                :class="phase?.name === p ? 'text-value-negative' : 'text-text-dim'"
                 :title="phaseLabel(p) + ' (poor)'">
                 {{ phaseEmoji(p) }}
               </span>
@@ -94,8 +94,8 @@
     </div>
 
     <div class="text-xs text-text-dim flex items-center gap-1">
-      <span class="text-green-400">&#9679;</span> extra yield
-      <span class="text-red-400 ml-2">&#9679;</span> reduced yield
+      <span class="text-value-positive">&#9679;</span> extra yield
+      <span class="text-value-negative ml-2">&#9679;</span> reduced yield
       <span class="ml-2">Substrate: <span class="text-accent-gold">optimal</span> / adequate</span>
     </div>
   </div>

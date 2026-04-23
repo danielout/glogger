@@ -1,6 +1,6 @@
 <template>
   <div
-    class="bg-[#1a1a2e] border border-border-default rounded-lg p-3 cursor-pointer transition-all hover:border-accent-gold/40"
+    class="bg-surface-card border border-border-default rounded-lg p-3 cursor-pointer transition-all hover:border-accent-gold/40"
     :class="{ 'border-accent-gold/60': isSelected }"
     @click="$emit('select', skill.skill_name)">
     <div class="mb-1.5">
@@ -16,11 +16,11 @@
     </div>
 
     <!-- Session stats or idle -->
-    <div v-if="session" class="flex items-center justify-between text-[10px]">
+    <div v-if="session" class="flex items-center justify-between text-[0.65rem]">
       <span class="text-accent-gold">+{{ session.xpGained.toLocaleString() }} XP</span>
       <span class="text-text-muted">{{ xphr }}/hr</span>
     </div>
-    <div v-else class="text-[10px] text-text-dim italic">idle</div>
+    <div v-else class="text-[0.65rem] text-text-dim italic">idle</div>
   </div>
 </template>
 

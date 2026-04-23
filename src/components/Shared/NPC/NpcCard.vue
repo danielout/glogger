@@ -27,7 +27,7 @@
         </button>
         <span
           v-if="showFavor && favorTier"
-          class="text-[10px] px-1.5 py-0.5 rounded border shrink-0"
+          class="text-[0.65rem] px-1.5 py-0.5 rounded border shrink-0"
           :class="favorBadgeClasses(favorTier)"
         >
           {{ tierDisplayName(favorTier) }}
@@ -40,7 +40,7 @@
       <div class="flex items-center justify-between text-xs">
         <span class="text-text-secondary">Gifts</span>
         <div class="flex items-center gap-1.5">
-          <span :class="giftTracking.giftsThisWeek >= giftTracking.maxGifts ? 'text-green-400' : 'text-text-primary'">
+          <span :class="giftTracking.giftsThisWeek >= giftTracking.maxGifts ? 'text-value-positive' : 'text-text-primary'">
             {{ giftTracking.giftsThisWeek }} / {{ giftTracking.maxGifts }}
           </span>
           <slot name="gift-actions" />
@@ -53,7 +53,7 @@
           :key="i"
           class="w-2 h-2 rounded-full"
           :class="i <= giftTracking.giftsThisWeek
-            ? 'bg-green-500'
+            ? 'bg-status-active'
             : 'bg-surface-default border border-border-default'"
         />
       </div>
@@ -70,7 +70,7 @@
         </span>
       </span>
       <span v-else class="text-text-dim">unknown</span>
-      <span v-if="timerRemaining" class="text-text-dim text-[10px]">
+      <span v-if="timerRemaining" class="text-text-dim text-[0.6rem]">
         (resets in {{ timerRemaining }})
       </span>
     </div>
@@ -81,7 +81,7 @@
       <span class="text-text-secondary">Storage:</span>
       <span v-if="storageSlotsUsed != null && storageSlotsTotal != null" class="text-text-primary">
         {{ storageSlotsUsed }} / {{ storageSlotsTotal }}
-        <span class="text-text-dim text-[10px]">
+        <span class="text-text-dim text-[0.6rem]">
           ({{ Math.round((storageSlotsUsed / storageSlotsTotal) * 100) }}%)
         </span>
       </span>
@@ -90,16 +90,16 @@
 
     <!-- Preferences -->
     <div v-if="showPreferences && limitedPreferences.length" class="flex flex-col gap-0.5">
-      <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-0.5">
+      <div class="text-[0.6rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-0.5">
         Preferences
       </div>
       <div
         v-for="(pref, i) in limitedPreferences"
         :key="i"
-        class="flex items-center gap-1.5 px-1.5 py-0.5 text-xs bg-[#151515] rounded"
+        class="flex items-center gap-1.5 px-1.5 py-0.5 text-xs bg-surface-inset rounded"
       >
         <span
-          class="text-[10px] px-1 py-0.5 rounded border min-w-8 text-center shrink-0"
+          class="text-[0.6rem] px-1 py-0.5 rounded border min-w-8 text-center shrink-0"
           :class="desireBadgeClasses(pref.desire)"
         >
           {{ pref.desire }}
@@ -108,8 +108,8 @@
           {{ pref.name ?? pref.keywords.join(', ') }}
         </span>
         <span
-          class="text-[10px] shrink-0"
-          :class="pref.pref > 0 ? 'text-green-400' : 'text-red-400'"
+          class="text-[0.6rem] shrink-0 font-mono"
+          :class="pref.pref > 0 ? 'text-value-positive' : 'text-value-negative'"
         >
           {{ pref.pref > 0 ? '+' : '' }}{{ pref.pref }}
         </span>
@@ -138,9 +138,9 @@
         <div class="flex flex-col">
           <span class="text-text-secondary">
             Storage
-            <span class="text-text-dim text-[10px]">({{ tierDisplayName(storage.favor) }}+)</span>
+            <span class="text-text-dim text-[0.6rem]">({{ tierDisplayName(storage.favor) }}+)</span>
           </span>
-          <span v-if="storage.spaceIncreases.length" class="text-[10px] text-text-dim">
+          <span v-if="storage.spaceIncreases.length" class="text-[0.6rem] text-text-dim">
             +space at:
             <span v-for="(tier, j) in storage.spaceIncreases" :key="tier">
               <span :class="favorColor(tier)">{{ tierDisplayName(tier) }}</span><span v-if="j < storage.spaceIncreases.length - 1">, </span>
@@ -155,9 +155,9 @@
         <div class="flex flex-col">
           <span class="text-text-secondary">
             Vendor
-            <span class="text-text-dim text-[10px]">({{ tierDisplayName(store.favor) }}+)</span>
+            <span class="text-text-dim text-[0.6rem]">({{ tierDisplayName(store.favor) }}+)</span>
           </span>
-          <div v-if="store.capIncreases.length" class="flex flex-col text-[10px] text-text-dim">
+          <div v-if="store.capIncreases.length" class="flex flex-col text-[0.6rem] text-text-dim">
             <span v-for="cap in store.capIncreases" :key="cap.tier">
               <span :class="favorColor(cap.tier)">{{ tierDisplayName(cap.tier) }}</span>:
               <span class="text-accent-gold">{{ cap.maxGold.toLocaleString() }}</span>c

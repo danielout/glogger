@@ -19,7 +19,7 @@
           :class="kindColor(event.kind)" />
 
         <!-- Timestamp -->
-        <span class="text-text-dim shrink-0">{{ formatTs(event.timestamp) }}</span>
+        <span class="text-text-dim font-mono shrink-0">{{ formatTs(event.timestamp) }}</span>
 
         <!-- Item name -->
         <ItemInline :reference="event.item_name" />
@@ -41,9 +41,9 @@ const store = useGameStateStore()
 
 function kindColor(kind: InventoryEventKind): string {
   switch (kind) {
-    case 'added': return 'bg-green-500'
-    case 'removed': return 'bg-red-500'
-    case 'stack_changed': return 'bg-yellow-500'
+    case 'added': return 'bg-status-active'
+    case 'removed': return 'bg-status-inactive'
+    case 'stack_changed': return 'bg-status-warning'
   }
 }
 </script>

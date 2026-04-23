@@ -28,7 +28,7 @@
     <!-- Sort control -->
     <select
       v-model="sortMode"
-      class="px-2 py-0.5 bg-surface-base border border-border-default rounded text-[10px] text-text-muted cursor-pointer">
+      class="px-2 py-0.5 bg-surface-base border border-border-default rounded text-[0.65rem] text-text-muted cursor-pointer">
       <option value="recent">Recent</option>
       <option value="az">A-Z</option>
       <option value="za">Z-A</option>
@@ -43,7 +43,7 @@
       <template v-for="group in groupedProjects.groups" :key="group.name">
         <li
           class="px-3 py-1.5 cursor-pointer border-b border-surface-dark text-xs bg-surface-dark/40 sticky top-0 z-10 select-none hover:bg-surface-dark/60"
-          :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': store.activeGroupName === group.name }"
+          :class="{ 'bg-surface-card border-l-2 border-l-accent-gold': store.activeGroupName === group.name }"
           @click="store.selectGroup(group.name)">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1.5">
@@ -54,19 +54,19 @@
               </span>
               <span class="text-text-secondary font-semibold">{{ group.name }}</span>
             </div>
-            <span class="text-text-muted text-[10px]">{{ group.projects.length }}</span>
+            <span class="text-text-muted text-[0.6rem]">{{ group.projects.length }}</span>
           </div>
         </li>
         <template v-if="!collapsedGroups.has(group.name)">
           <li
             v-for="project in group.projects"
             :key="project.id"
-            class="px-3 pl-6 py-2 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
-            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': store.activeProject?.id === project.id }"
+            class="px-3 pl-6 py-2 cursor-pointer border-b border-surface-dark text-xs hover:bg-surface-row-hover"
+            :class="{ 'bg-surface-card border-l-2 border-l-accent-gold': store.activeProject?.id === project.id }"
             @click="store.loadProject(project.id)">
             <div class="flex items-center justify-between">
               <span class="text-text-primary/75 font-medium">{{ project.name }}</span>
-              <span class="text-text-muted text-[10px]">{{ project.entry_count }} recipes</span>
+              <span class="text-text-muted text-[0.65rem]">{{ project.entry_count }} recipes</span>
             </div>
           </li>
         </template>
@@ -76,12 +76,12 @@
       <li
         v-for="project in groupedProjects.ungrouped"
         :key="project.id"
-        class="px-3 py-2 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
-        :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': store.activeProject?.id === project.id }"
+        class="px-3 py-2 cursor-pointer border-b border-surface-dark text-xs hover:bg-surface-row-hover"
+        :class="{ 'bg-surface-card border-l-2 border-l-accent-gold': store.activeProject?.id === project.id }"
         @click="store.loadProject(project.id)">
         <div class="flex items-center justify-between">
           <span class="text-text-primary/75 font-medium">{{ project.name }}</span>
-          <span class="text-text-muted text-[10px]">{{ project.entry_count }} recipes</span>
+          <span class="text-text-muted text-[0.65rem]">{{ project.entry_count }} recipes</span>
         </div>
       </li>
     </ul>

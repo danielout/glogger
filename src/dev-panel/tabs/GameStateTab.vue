@@ -252,9 +252,9 @@ function stopAutoRefresh() {
 
 function eventKindColor(kind: InventoryEventKind): string {
   switch (kind) {
-    case 'added': return 'text-green-400';
-    case 'removed': return 'text-red-400';
-    case 'stack_changed': return 'text-yellow-400';
+    case 'added': return 'text-value-positive';
+    case 'removed': return 'text-value-negative';
+    case 'stack_changed': return 'text-value-neutral-warm';
     default: return 'text-text-secondary';
   }
 }

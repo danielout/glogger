@@ -35,10 +35,10 @@
           <span
             v-for="code in group.codes"
             :key="code"
-            class="text-xs px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+            class="font-mono text-xs px-1.5 py-0.5 rounded cursor-pointer transition-colors"
             :class="
               copiedCode === code
-                ? 'bg-green-500/20 text-green-400'
+                ? 'bg-green-500/20 text-value-positive'
                 : 'bg-surface-2 text-accent-gold hover:bg-surface-3'
             "
             title="Click to copy"
@@ -54,7 +54,7 @@
     </div>
 
     <div class="text-xs text-text-dim">
-      <span v-if="copiedCode" class="text-green-400">Copied {{ copiedCode }} to clipboard</span>
+      <span v-if="copiedCode" class="text-value-positive">Copied {{ copiedCode }} to clipboard</span>
       <span v-else
         >{{ totalCodes }} codes across {{ groupedResults.length }} destinations. Codes last verified
         March 2025.</span

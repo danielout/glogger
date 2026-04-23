@@ -1,17 +1,17 @@
 <template>
   <div class="flex items-center gap-3 text-xs text-text-muted">
     <!-- Slots configured -->
-    <span :class="slotsConfigured === totalSlots ? 'text-green-400' : ''">
+    <span :class="slotsConfigured === totalSlots ? 'text-value-positive' : ''">
       {{ slotsConfigured }}/{{ totalSlots }} slots
     </span>
 
     <!-- Mods assigned -->
-    <span :class="totalMods === totalModCapacity ? 'text-green-400' : ''">
+    <span :class="totalMods === totalModCapacity ? 'text-value-positive' : ''">
       {{ totalMods }}/{{ totalModCapacity }} mods
     </span>
 
     <!-- Ability bars -->
-    <span :class="barsConfigured === totalBars ? 'text-green-400' : ''">
+    <span :class="barsConfigured === totalBars ? 'text-value-positive' : ''">
       {{ barsConfigured }}/{{ totalBars }} bars
     </span>
   </div>

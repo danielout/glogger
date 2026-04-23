@@ -8,7 +8,7 @@
         </h4>
         <!-- Distribution info -->
         <div class="group relative">
-          <span class="text-[10px] text-text-dim cursor-help border-b border-dotted border-text-dim/40">
+          <span class="text-[9px] text-text-dim cursor-help border-b border-dotted border-text-dim/40">
             Slot Rules
           </span>
           <!-- Tooltip -->
@@ -79,7 +79,7 @@
 
     <!-- Augment slot (not available on belts) -->
     <div v-if="!isBelt" class="border-t border-border-default/50 pt-2">
-      <h4 class="text-[10px] font-semibold text-purple-400 uppercase tracking-wider mb-1.5">
+      <h4 class="text-[10px] font-semibold text-mod-augment uppercase tracking-wider mb-1.5">
         Augment ({{ AUGMENT_CP_COST }} CP)
       </h4>
       <ModSlotBar

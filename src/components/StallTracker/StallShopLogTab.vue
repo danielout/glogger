@@ -137,7 +137,7 @@
 
     <p
       v-if="error"
-      class="text-xs text-red-400 flex-shrink-0">
+      class="text-xs text-value-negative flex-shrink-0">
       {{ error }}
     </p>
   </div>
@@ -307,11 +307,11 @@ function formatGold(n: number | null): string {
 function actionBadgeClass(action: string): string {
   switch (action) {
     case 'bought':
-      return 'bg-green-500/15 text-green-400'
+      return 'bg-green-500/15 text-value-positive'
     case 'added':
       return 'bg-blue-500/15 text-blue-400'
     case 'removed':
-      return 'bg-red-500/15 text-red-400'
+      return 'bg-red-500/15 text-value-negative'
     case 'configured':
       return 'bg-amber-500/15 text-amber-400'
     case 'visible':

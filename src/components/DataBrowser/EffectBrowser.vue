@@ -37,12 +37,12 @@
           <li
             v-for="(effect, idx) in results"
             :key="effect.id"
-            class="flex items-baseline gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
-            :class="{ 'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.id === effect.id, 'bg-surface-elevated': selectedIndex === idx && selected?.id !== effect.id }"
+            class="flex items-baseline gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-surface-row-hover"
+            :class="{ 'bg-surface-card border-l-2 border-l-accent-gold': selected?.id === effect.id, 'bg-surface-elevated': selectedIndex === idx && selected?.id !== effect.id }"
             @click="selectEffect(effect)">
-            <span class="text-text-dim text-xs min-w-12 shrink-0">#{{ effect.id }}</span>
+            <span class="text-text-dim text-[0.72rem] min-w-12 shrink-0">#{{ effect.id }}</span>
             <span class="text-text-primary/75 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ effect.name || 'Unnamed' }}</span>
-            <span v-if="effect.display_mode" class="text-text-muted text-[10px] shrink-0">{{ effect.display_mode }}</span>
+            <span v-if="effect.display_mode" class="text-text-muted text-[0.65rem] shrink-0">{{ effect.display_mode }}</span>
           </li>
         </ul>
       </div>
@@ -66,26 +66,26 @@
                 :src="iconSrc"
                 class="w-12 h-12 [image-rendering:pixelated] border border-border-default"
                 alt="effect icon" />
-              <div v-else-if="iconLoading" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[10px] text-accent-gold animate-spin">
+              <div v-else-if="iconLoading" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[0.65rem] text-accent-gold animate-spin">
                 ⟳
               </div>
-              <div v-else-if="selected.icon_id" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[10px] text-text-dim">
+              <div v-else-if="selected.icon_id" class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[0.65rem] text-text-dim">
                 {{ selected.icon_id }}
               </div>
-              <div v-else class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[10px] text-border-default">—</div>
+              <div v-else class="w-12 h-12 bg-surface-base border border-surface-elevated flex items-center justify-center text-[0.65rem] text-border-default">—</div>
             </div>
 
             <div class="flex-1 min-w-0">
               <div class="text-accent-gold text-base font-bold mb-1">{{ selected.name || 'Unnamed Effect' }}</div>
               <div class="text-xs text-text-dim mb-1">
-                ID: <span class="text-text-secondary">{{ selected.id }}</span>
+                ID: <span class="text-text-secondary font-mono">{{ selected.id }}</span>
                 <template v-if="selected.display_mode">
                   · Mode:
-                  <span class="text-text-secondary">{{ selected.display_mode }}</span></template
+                  <span class="text-text-secondary font-mono">{{ selected.display_mode }}</span></template
                 >
                 <template v-if="selected.icon_id">
                   · Icon:
-                  <span class="text-text-secondary">{{ selected.icon_id }}</span></template
+                  <span class="text-text-secondary font-mono">{{ selected.icon_id }}</span></template
                 >
               </div>
               <div v-if="selected.desc" class="text-xs text-text-secondary italic">
@@ -104,7 +104,7 @@
 
           <!-- Duration & Stacking -->
           <div v-if="selected.duration || selected.stacking_type" class="flex flex-col gap-1.5">
-            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Details</div>
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Details</div>
             <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-1.5">
               <div v-if="selected.duration" class="text-xs flex gap-2">
                 <span class="text-text-muted min-w-20">Duration:</span>
@@ -120,19 +120,19 @@
               </div>
               <div v-if="selected.particle" class="text-xs flex gap-2">
                 <span class="text-text-muted min-w-20">Particle:</span>
-                <span class="text-text-secondary">{{ selected.particle }}</span>
+                <span class="text-text-secondary font-mono">{{ selected.particle }}</span>
               </div>
             </div>
           </div>
 
           <!-- Keywords -->
           <div v-if="selected.keywords.length" class="flex flex-col gap-1.5">
-            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
             <div class="flex flex-wrap gap-1">
               <span
                 v-for="kw in selected.keywords"
                 :key="kw"
-                class="text-xs px-1.5 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-entity-item">
+                class="text-[0.72rem] px-1.5 py-0.5 bg-surface-card border border-border-subtle text-entity-item">
                 {{ kw }}
               </span>
             </div>
@@ -140,12 +140,12 @@
 
           <!-- Ability Keywords -->
           <div v-if="selected.ability_keywords.length" class="flex flex-col gap-1.5">
-            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Ability Keywords</div>
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Ability Keywords</div>
             <div class="flex flex-wrap gap-1">
               <span
                 v-for="kw in selected.ability_keywords"
                 :key="kw"
-                class="text-xs px-1.5 py-0.5 bg-[#1a2a1a] border border-[#2a4a2a] text-[#8ab88a]">
+                class="text-[0.72rem] px-1.5 py-0.5 bg-[#1a2a1a] border border-[#2a4a2a] text-[#8ab88a]">
                 {{ kw }}
               </span>
             </div>
@@ -153,8 +153,8 @@
 
           <!-- Raw JSON -->
           <div v-if="settingsStore.settings.showRawJsonInDataBrowser" class="flex flex-col gap-1.5">
-            <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
-            <pre class="bg-surface-dark border border-surface-card p-3 text-xs text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
+            <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
           </div>
         </template>
     </div>

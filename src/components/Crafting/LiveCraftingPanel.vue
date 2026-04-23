@@ -5,7 +5,7 @@
       <div class="flex items-center gap-2">
         <span
           class="w-2 h-2 rounded-full"
-          :class="store.tracker.active ? 'bg-green-500 animate-pulse' : 'bg-text-muted'" />
+          :class="store.tracker.active ? 'bg-status-active animate-pulse' : 'bg-text-muted'" />
         <h4 class="text-text-secondary text-xs font-semibold uppercase tracking-wide m-0">
           Live Tracking
         </h4>
@@ -13,18 +13,18 @@
       <div class="flex gap-2">
         <button
           v-if="store.tracker.active"
-          class="text-text-muted text-[10px] cursor-pointer bg-transparent border border-border-light rounded px-2 py-0.5 hover:text-text-primary"
+          class="text-text-muted text-[0.65rem] cursor-pointer bg-transparent border border-border-light rounded px-2 py-0.5 hover:text-text-primary"
           @click="store.stopTracking()">
           Pause
         </button>
         <button
           v-else
-          class="text-accent-gold text-[10px] cursor-pointer bg-transparent border border-accent-gold/30 rounded px-2 py-0.5 hover:bg-accent-gold/10"
+          class="text-accent-gold text-[0.65rem] cursor-pointer bg-transparent border border-accent-gold/30 rounded px-2 py-0.5 hover:bg-accent-gold/10"
           @click="store.tracker.active = true">
           Resume
         </button>
         <button
-          class="text-accent-red/60 text-[10px] cursor-pointer bg-transparent border-none hover:text-accent-red"
+          class="text-accent-red/60 text-[0.65rem] cursor-pointer bg-transparent border-none hover:text-accent-red"
           @click="store.clearTracking()">
           Clear
         </button>
@@ -50,20 +50,20 @@
         </div>
 
         <!-- Count -->
-        <span class="text-text-primary text-[10px] shrink-0">
+        <span class="text-text-primary font-mono text-[0.65rem] shrink-0">
           {{ effectiveOutput(entry) }} / {{ entry.target_quantity }}
         </span>
 
         <!-- Manual +/- buttons -->
         <div class="flex items-center gap-0.5 shrink-0">
           <button
-            class="text-text-dim text-[10px] w-4 h-4 flex items-center justify-center rounded hover:bg-surface-dark hover:text-text-primary cursor-pointer bg-transparent border-none"
+            class="text-text-dim text-[0.6rem] w-4 h-4 flex items-center justify-center rounded hover:bg-surface-dark hover:text-text-primary cursor-pointer bg-transparent border-none"
             title="Subtract one craft"
             @click="store.adjustTrackedOutput(entry.recipe_id, -entry.output_per_craft)">
             -
           </button>
           <button
-            class="text-text-dim text-[10px] w-4 h-4 flex items-center justify-center rounded hover:bg-surface-dark hover:text-text-primary cursor-pointer bg-transparent border-none"
+            class="text-text-dim text-[0.6rem] w-4 h-4 flex items-center justify-center rounded hover:bg-surface-dark hover:text-text-primary cursor-pointer bg-transparent border-none"
             title="Add one craft"
             @click="store.adjustTrackedOutput(entry.recipe_id, entry.output_per_craft)">
             +
@@ -73,7 +73,7 @@
         <!-- Complete badge -->
         <span
           v-if="effectiveOutput(entry) >= entry.target_quantity"
-          class="text-green-400 text-[10px] font-semibold">
+          class="text-value-positive text-[0.6rem] font-semibold">
           DONE
         </span>
       </div>
@@ -81,11 +81,11 @@
 
     <!-- Recent detections log -->
     <div v-if="store.craftLog.length > 0" class="flex flex-col gap-0.5 max-h-24 overflow-y-auto">
-      <div class="text-text-muted text-[10px] uppercase tracking-wide">Recent</div>
+      <div class="text-text-muted text-[0.6rem] uppercase tracking-wide">Recent</div>
       <div
         v-for="(evt, idx) in store.craftLog.slice(0, 10)"
         :key="idx"
-        class="flex items-center gap-2 text-[10px] text-text-dim">
+        class="flex items-center gap-2 text-[0.65rem] text-text-dim">
         <span class="text-text-muted shrink-0">{{ formatTime(evt.timestamp) }}</span>
         <ItemInline :reference="evt.item_name" />
         <span v-if="evt.quantity > 0" class="text-accent-gold">+{{ evt.quantity }}</span>

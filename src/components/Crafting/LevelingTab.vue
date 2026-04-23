@@ -25,7 +25,7 @@
               class="input w-16 text-center text-xs" />
             <button
               v-if="state.snapshotLevel !== null && state.snapshotLevel !== state.currentLevel"
-              class="text-text-muted text-[10px] cursor-pointer bg-transparent border-none hover:text-accent-gold underline"
+              class="text-text-muted text-[0.6rem] cursor-pointer bg-transparent border-none hover:text-accent-gold underline"
               @click="state.currentLevel = state.snapshotLevel!">
               reset ({{ state.snapshotLevel }})
             </button>
@@ -46,7 +46,7 @@
               :title="state.planLevels.length > 0 ? 'Clear your plan to change starting XP' : 'XP already earned toward current level'" />
             <button
               v-if="gameStateXp !== null && state.startingXp !== gameStateXp && state.planLevels.length === 0"
-              class="text-text-muted text-[10px] cursor-pointer bg-transparent border-none hover:text-accent-gold underline whitespace-nowrap"
+              class="text-text-muted text-[0.6rem] cursor-pointer bg-transparent border-none hover:text-accent-gold underline whitespace-nowrap"
               @click="state.startingXp = gameStateXp!">
               use current ({{ gameStateXp!.toLocaleString() }})
             </button>
@@ -65,8 +65,8 @@
               step="1"
               class="input w-16 text-center text-xs"
               placeholder="0" />
-            <span class="text-text-muted text-[10px]">%</span>
-            <span class="text-accent-gold text-[10px] font-semibold ml-1">({{ effectiveMultiplier }}×)</span>
+            <span class="text-text-muted text-[0.65rem]">%</span>
+            <span class="text-accent-gold text-[0.65rem] font-semibold ml-1">({{ effectiveMultiplier }}×)</span>
           </div>
         </div>
 
@@ -108,20 +108,20 @@
           </label>
           <div class="flex items-center gap-3 ml-auto">
             <div class="flex items-center gap-1">
-              <label class="text-text-dim text-[10px]">+N:</label>
+              <label class="text-text-dim text-[0.65rem]">+N:</label>
               <input
                 v-model.number="addQuantity"
                 type="number"
                 min="1"
-                class="input w-14 text-center text-[10px]" />
+                class="input w-14 text-center text-[0.65rem]" />
             </div>
             <div class="flex items-center gap-1">
-              <label class="text-text-dim text-[10px]">Min lvl:</label>
+              <label class="text-text-dim text-[0.65rem]">Min lvl:</label>
               <input
                 v-model.number="minLevel"
                 type="number"
                 min="0"
-                class="input w-14 text-center text-[10px]" />
+                class="input w-14 text-center text-[0.65rem]" />
             </div>
           </div>
         </div>
@@ -138,11 +138,11 @@
             class="flex items-center gap-1.5 px-2 py-1 text-xs border-b border-surface-elevated hover:bg-surface-elevated/50 group"
             :class="recipeRowClass(r)">
             <!-- Level req -->
-            <span class="text-text-muted w-7 text-right shrink-0 text-[10px]">
+            <span class="text-text-muted font-mono w-7 text-right shrink-0 text-[0.65rem]">
               {{ r.recipe.skill_level_req ?? 0 }}
             </span>
             <!-- Cost -->
-            <span v-if="showCosts" class="text-text-muted w-14 text-right shrink-0 text-[10px]">
+            <span v-if="showCosts" class="text-text-muted font-mono w-14 text-right shrink-0 text-[0.65rem]">
               {{ r.cost !== null ? `${r.cost.toLocaleString()}g` : '—' }}
             </span>
             <!-- Separator -->
@@ -150,19 +150,19 @@
             <!-- Action buttons (left of name) -->
             <div class="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
-                class="text-[10px] px-1.5 py-0.5 rounded bg-accent-gold/10 text-accent-gold hover:bg-accent-gold/20 border-none cursor-pointer"
+                class="text-[0.6rem] px-1.5 py-0.5 rounded bg-accent-gold/10 text-accent-gold hover:bg-accent-gold/20 border-none cursor-pointer"
                 title="Add one craft to the plan"
                 @click="addOnce(r)">
                 +1
               </button>
               <button
-                class="text-[10px] px-1.5 py-0.5 rounded bg-blue-900/30 text-blue-400 hover:bg-blue-900/50 border-none cursor-pointer"
+                class="text-[0.6rem] px-1.5 py-0.5 rounded bg-blue-900/30 text-blue-400 hover:bg-blue-900/50 border-none cursor-pointer"
                 :title="`Add ${addQuantity || 1} to the plan`"
                 @click="addMultiple(r, addQuantity || 1)">
                 +N
               </button>
               <button
-                class="text-[10px] px-1.5 py-0.5 rounded bg-green-900/30 text-green-400 hover:bg-green-900/50 border-none cursor-pointer"
+                class="text-[0.6rem] px-1.5 py-0.5 rounded bg-green-900/30 text-value-positive hover:bg-green-900/50 border-none cursor-pointer"
                 title="Add enough crafts to reach next level"
                 @click="addToLevel(r)">
                 +Lvl
@@ -173,13 +173,13 @@
               <RecipeInline :reference="r.recipe.name" inherit-color />
             </span>
             <!-- XP info -->
-            <span v-if="showXp" class="text-text-muted text-[10px] shrink-0 ml-auto">
+            <span v-if="showXp" class="text-text-muted text-[0.6rem] shrink-0 ml-auto">
               {{ r.effectiveXp.toLocaleString() }}xp
             </span>
             <!-- First-time badge -->
             <span
               v-if="showXp && r.firstTimeXp > 0"
-              class="text-accent-gold text-[10px] shrink-0"
+              class="text-accent-gold text-[0.55rem] shrink-0"
               :title="`+${r.effectiveFirstTimeXp.toLocaleString()} first-time bonus XP`">
               +{{ r.effectiveFirstTimeXp.toLocaleString() }}
             </span>
@@ -207,20 +207,20 @@
               <span class="text-text-secondary text-xs font-semibold">
                 Lv {{ lvl.from_level + state.bonusLevels }} → {{ lvl.to_level + state.bonusLevels }}
               </span>
-              <span class="text-text-muted text-[10px]">
+              <span class="text-text-muted text-[0.65rem]">
                 {{ lvl.xp_accumulated.toLocaleString() }} / {{ lvl.xp_needed.toLocaleString() }} XP
               </span>
               <!-- Progress indicator -->
               <span
                 v-if="lvl.xp_accumulated >= lvl.xp_needed"
-                class="text-green-400 text-[10px] font-semibold">
+                class="text-value-positive text-[0.6rem] font-semibold">
                 DONE
               </span>
               <div class="flex-1 border-b border-border-default ml-2" />
               <!-- Clear level button (only for topmost incomplete level) -->
               <button
                 v-if="idx === 0 && lvl.xp_accumulated < lvl.xp_needed"
-                class="text-text-muted text-[10px] cursor-pointer bg-transparent border-none hover:text-accent-red"
+                class="text-text-muted text-[0.6rem] cursor-pointer bg-transparent border-none hover:text-accent-red"
                 title="Clear this level's entries"
                 @click="clearCurrentLevel">
                 clear
@@ -236,7 +236,7 @@
             </div>
 
             <!-- Entries -->
-            <div v-if="lvl.entries.length === 0" class="text-text-muted text-[10px] pl-2">
+            <div v-if="lvl.entries.length === 0" class="text-text-muted text-[0.65rem] pl-2">
               No recipes added yet.
             </div>
             <div
@@ -244,24 +244,24 @@
               :key="`${lvl.from_level}-${eIdx}`"
               class="flex items-center gap-2 px-2 py-1 text-xs bg-surface-base border border-surface-elevated rounded mb-1">
               <span class="text-text-primary truncate flex-1">{{ entry.recipe_name }}</span>
-              <span class="text-text-primary shrink-0 flex items-center gap-0.5">
+              <span class="text-text-primary font-mono shrink-0 flex items-center gap-0.5">
                 ×<input
                   :value="entry.craft_count"
                   type="number"
                   min="1"
-                  class="input w-12 text-center text-xs py-0 px-0.5"
+                  class="input w-12 text-center text-xs py-0 px-0.5 font-mono"
                   @change="updateEntryCount(idx, eIdx, Math.max(1, parseInt(($event.target as HTMLInputElement).value) || 1))" />
               </span>
-              <span class="text-accent-gold text-[10px] shrink-0">
+              <span class="text-accent-gold text-[0.65rem] shrink-0">
                 {{ entry.total_xp.toLocaleString() }} XP
               </span>
-              <span v-if="entry.estimated_cost > 0" class="text-text-muted text-[10px] shrink-0">
+              <span v-if="entry.estimated_cost > 0" class="text-text-muted text-[0.65rem] shrink-0">
                 {{ entry.estimated_cost.toLocaleString() }}g
               </span>
               <!-- Remove entry (only for current incomplete level) -->
               <button
                 v-if="idx === 0 && lvl.xp_accumulated < lvl.xp_needed"
-                class="text-text-muted text-[10px] cursor-pointer bg-transparent border-none hover:text-accent-red"
+                class="text-text-muted text-[0.6rem] cursor-pointer bg-transparent border-none hover:text-accent-red"
                 @click="removeEntry(idx, eIdx)">
                 ×
               </button>
@@ -270,7 +270,7 @@
 
           <!-- Plan totals + actions -->
           <div class="bg-surface-elevated rounded p-2 border border-border-light mt-2">
-            <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[10px]">
+            <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[0.65rem]">
               <div>
                 <span class="text-text-dim">Levels planned:</span>
                 <span class="text-text-primary font-semibold ml-1">
@@ -290,13 +290,13 @@
             </div>
             <div class="flex gap-2 mt-2">
               <button
-                class="btn-primary text-[10px] py-1 px-3"
+                class="btn-primary text-[0.65rem] py-1 px-3"
                 :disabled="creatingProject"
                 @click="onCreateProject">
                 {{ creatingProject ? 'Creating...' : 'Create Project' }}
               </button>
               <button
-                class="text-[10px] px-3 py-1 rounded bg-surface-base text-text-muted hover:text-accent-red border border-border-light cursor-pointer"
+                class="text-[0.65rem] px-3 py-1 rounded bg-surface-base text-text-muted hover:text-accent-red border border-border-light cursor-pointer"
                 @click="clearPlan">
                 Clear Plan
               </button>
@@ -309,16 +309,16 @@
       <div class="w-72 shrink-0 overflow-y-auto border border-surface-elevated rounded p-3 min-h-0 flex flex-col gap-2">
         <h4 class="text-text-secondary text-xs font-semibold uppercase tracking-wide m-0">Materials</h4>
 
-        <div v-if="state.planLevels.length === 0" class="text-text-muted text-[10px] text-center py-4">
+        <div v-if="state.planLevels.length === 0" class="text-text-muted text-[0.65rem] text-center py-4">
           Materials will appear here as you add recipes to your plan.
         </div>
 
-        <div v-else-if="materialsLoading" class="text-text-muted text-[10px] text-center py-4">
+        <div v-else-if="materialsLoading" class="text-text-muted text-[0.65rem] text-center py-4">
           Calculating materials...
         </div>
 
         <template v-else-if="aggregatedMaterials.length > 0">
-          <div class="text-text-muted text-[10px] mb-1">
+          <div class="text-text-muted text-[0.65rem] mb-1">
             {{ aggregatedMaterials.length }} items needed
           </div>
           <table class="w-full text-xs">
@@ -335,13 +335,13 @@
                 class="border-b border-surface-dark">
                 <td class="py-0.5">
                   <template v-if="mat.is_dynamic">
-                    <span class="text-accent-gold/60 text-[10px] mr-1">&#9670;</span>
-                    <span class="text-text-secondary text-[10px]">{{ mat.item_name }}</span>
+                    <span class="text-accent-gold/60 text-[0.65rem] mr-1">&#9670;</span>
+                    <span class="text-text-secondary text-[0.65rem]">{{ mat.item_name }}</span>
                   </template>
                   <ItemInline v-else-if="mat.item_id !== null" :reference="mat.item_name" />
-                  <span v-else class="text-text-muted text-[10px]">{{ mat.item_name }}</span>
+                  <span v-else class="text-text-muted text-[0.65rem]">{{ mat.item_name }}</span>
                 </td>
-                <td class="text-right py-0.5 text-text-primary text-[10px]">
+                <td class="text-right py-0.5 font-mono text-text-primary text-[0.65rem]">
                   {{ Math.ceil(mat.expected_quantity).toLocaleString() }}
                 </td>
               </tr>
@@ -658,8 +658,8 @@ function recipeRowClass(r: EnrichedRecipe): string {
     return "text-text-muted/50"; // grey
   }
   // Good XP range
-  if (!r.isKnown) return "text-red-400";
-  if (!r.isCrafted) return "text-green-400";
+  if (!r.isKnown) return "text-value-negative";
+  if (!r.isCrafted) return "text-value-positive";
   return "text-text-primary"; // white
 }
 

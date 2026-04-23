@@ -23,7 +23,7 @@
         <option value="name">Name</option>
       </select>
 
-      <label class="flex items-center gap-1 text-[10px] text-text-muted cursor-pointer">
+      <label class="flex items-center gap-1 text-[0.65rem] text-text-muted cursor-pointer">
         <input type="checkbox" v-model="hideNeutral" class="cursor-pointer" />
         Hide neutral
       </label>
@@ -36,7 +36,7 @@
       <template v-for="group in groupedNpcs" :key="group.label">
         <div
           v-if="group.label"
-          class="sticky top-0 z-10 bg-surface-base px-2 py-1 text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-elevated cursor-pointer flex items-center gap-1"
+          class="sticky top-0 z-10 bg-surface-base px-2 py-1 text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-elevated cursor-pointer flex items-center gap-1"
           @click="toggleGroup(group.label)">
           <span class="text-text-secondary text-xs">{{ collapsedGroups.has(group.label) ? '▶' : '▼' }}</span>
           {{ group.label }} ({{ group.npcs.length }})
@@ -46,15 +46,15 @@
           <div
             v-for="row in group.npcs"
             :key="row.npc_key"
-            class="flex items-center gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
+            class="flex items-center gap-2 px-2 py-1 cursor-pointer border-b border-surface-dark text-xs hover:bg-surface-row-hover"
             :class="{
-              'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selectedNpcKey === row.npc_key,
+              'bg-surface-card border-l-2 border-l-accent-gold': selectedNpcKey === row.npc_key,
             }"
             @click="$emit('select', row.npc_key)">
             <span class="flex-1 text-text-primary/75 truncate">{{ row.display_name }}</span>
 
             <!-- Area (small) -->
-            <span v-if="row.area_friendly_name" class="text-text-dim text-[10px] truncate max-w-20 shrink-0">
+            <span v-if="row.area_friendly_name" class="text-text-dim text-[0.6rem] truncate max-w-20 shrink-0">
               {{ row.area_friendly_name }}
             </span>
 
@@ -66,7 +66,7 @@
 
             <!-- Favor badge -->
             <span
-              class="text-[10px] px-1.5 py-0.5 rounded border shrink-0 min-w-16 text-center"
+              class="text-[0.65rem] px-1.5 py-0.5 rounded border shrink-0 min-w-16 text-center"
               :class="favorBadgeClasses(row.effective_tier)">
               {{ tierDisplayName(row.effective_tier) }}
             </span>

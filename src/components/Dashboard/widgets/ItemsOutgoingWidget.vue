@@ -1,7 +1,7 @@
 <template>
   <ActivityFeed
     :entries="store.itemsOutgoing"
-    dot-color="bg-red-500"
+    dot-color="bg-status-inactive"
     empty-text="No items lost."
     empty-hint="Sold, stored, and consumed items appear here."
     show-item-links

@@ -45,7 +45,7 @@
         </div>
         <button
           v-if="groupInput"
-          class="text-text-muted text-[10px] cursor-pointer bg-transparent border-none hover:text-accent-red"
+          class="text-text-muted text-[0.65rem] cursor-pointer bg-transparent border-none hover:text-accent-red"
           title="Remove from group"
           @click="clearGroup">
           &#10005;
@@ -84,9 +84,9 @@
         <li
           v-for="recipe in addRecipeResults"
           :key="recipe.id"
-          class="flex items-baseline gap-2 px-3 py-1.5 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
+          class="flex items-baseline gap-2 px-3 py-1.5 cursor-pointer border-b border-surface-dark text-xs hover:bg-surface-row-hover"
           @click="addRecipeToProject(recipe)">
-          <span class="text-text-muted text-xs min-w-12 shrink-0">
+          <span class="text-text-muted text-[0.72rem] min-w-12 shrink-0">
             [{{ recipe.skill ?? '?' }} {{ recipe.skill_level_req ?? 0 }}]
           </span>
           <span class="text-text-primary/75">{{ recipe.name }}</span>
@@ -104,13 +104,13 @@
           <h4 class="text-text-secondary text-xs font-semibold uppercase tracking-wide m-0">Recipe List</h4>
           <div class="flex gap-1">
             <button
-              class="text-text-muted text-[10px] cursor-pointer bg-transparent border-none hover:text-text-primary"
+              class="text-text-muted text-[0.65rem] cursor-pointer bg-transparent border-none hover:text-text-primary"
               @click="expandAll">
               Expand All
             </button>
-            <span class="text-text-muted/40 text-[10px]">|</span>
+            <span class="text-text-muted/40 text-[0.65rem]">|</span>
             <button
-              class="text-text-muted text-[10px] cursor-pointer bg-transparent border-none hover:text-text-primary"
+              class="text-text-muted text-[0.65rem] cursor-pointer bg-transparent border-none hover:text-text-primary"
               @click="collapseAll">
               Collapse All
             </button>
@@ -135,14 +135,14 @@
           <h4 class="text-text-secondary text-xs font-semibold uppercase tracking-wide m-0">Crafting Fee</h4>
           <div class="flex gap-1">
             <button
-              class="text-text-muted text-[10px] cursor-pointer bg-transparent border-none hover:text-accent-gold"
+              class="text-text-muted text-[0.65rem] cursor-pointer bg-transparent border-none hover:text-accent-gold"
               title="Save current fee config as default for new projects"
               @click="$emit('save-defaults')">
               Save as Default
             </button>
-            <span class="text-text-muted/40 text-[10px]">|</span>
+            <span class="text-text-muted/40 text-[0.65rem]">|</span>
             <button
-              class="text-text-muted text-[10px] cursor-pointer bg-transparent border-none hover:text-text-primary"
+              class="text-text-muted text-[0.65rem] cursor-pointer bg-transparent border-none hover:text-text-primary"
               title="Reset fee config to defaults"
               @click="$emit('reset-defaults')">
               Reset
@@ -152,19 +152,19 @@
 
         <!-- Per-craft fee -->
         <div class="flex items-center gap-2">
-          <label class="text-text-muted text-[10px] w-24 shrink-0">Per craft</label>
+          <label class="text-text-muted text-[0.65rem] w-24 shrink-0">Per craft</label>
           <input
             :value="feeConfig.per_craft_fee"
             type="number"
             min="0"
             class="input flex-1 text-xs"
             @change="onFeeFieldChange('per_craft_fee', $event)" />
-          <span class="text-text-dim text-[10px]">gold each</span>
+          <span class="text-text-dim text-[0.65rem]">gold each</span>
         </div>
 
         <!-- Material percentage -->
         <div class="flex items-center gap-2">
-          <label class="text-text-muted text-[10px] w-24 shrink-0">Material %</label>
+          <label class="text-text-muted text-[0.65rem] w-24 shrink-0">Material %</label>
           <input
             :value="feeConfig.material_pct"
             type="number"
@@ -172,10 +172,10 @@
             max="100"
             class="input w-16 text-xs"
             @change="onFeeFieldChange('material_pct', $event)" />
-          <span class="text-text-dim text-[10px]">% of</span>
+          <span class="text-text-dim text-[0.65rem]">% of</span>
           <select
             :value="feeConfig.material_pct_basis"
-            class="px-1.5 py-0.5 bg-surface-base border border-border-default rounded text-[10px] text-text-muted cursor-pointer"
+            class="px-1.5 py-0.5 bg-surface-base border border-border-default rounded text-[0.65rem] text-text-muted cursor-pointer"
             @change="onBasisChange($event)">
             <option value="total">total materials</option>
             <option value="yours">your materials</option>
@@ -185,14 +185,14 @@
 
         <!-- Flat fee -->
         <div class="flex items-center gap-2">
-          <label class="text-text-muted text-[10px] w-24 shrink-0">Flat fee</label>
+          <label class="text-text-muted text-[0.65rem] w-24 shrink-0">Flat fee</label>
           <input
             :value="feeConfig.flat_fee"
             type="number"
             min="0"
             class="input flex-1 text-xs"
             @change="onFeeFieldChange('flat_fee', $event)" />
-          <span class="text-text-dim text-[10px]">gold total</span>
+          <span class="text-text-dim text-[0.65rem]">gold total</span>
         </div>
       </div>
     </div>

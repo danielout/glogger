@@ -55,8 +55,8 @@ const sortedDiffs = computed(() => {
 })
 
 function changeColor(change: number): string {
-  if (change > 0) return 'text-green-400'
-  if (change < 0) return 'text-red-400'
+  if (change > 0) return 'text-value-positive'
+  if (change < 0) return 'text-value-negative'
   return 'text-text-muted'
 }
 

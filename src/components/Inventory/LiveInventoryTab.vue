@@ -17,7 +17,7 @@
         <span class="text-text-primary font-medium">{{ store.liveTotalStacks.toLocaleString() }}</span>
       </div>
       <div v-if="coordinator.isPlayerLogTailing" class="flex gap-1.5 items-center">
-        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+        <span class="w-2 h-2 rounded-full bg-status-active animate-pulse" />
         <span class="text-text-muted text-xs">Live</span>
       </div>
     </div>
@@ -68,13 +68,13 @@
               class="border-b border-border-default/30 hover:bg-surface-elevated/50 transition-colors"
               :class="{ 'border-l-2 border-l-accent-gold/60': item.is_new }"
             >
-              <td class="py-1 px-2 text-text-muted text-xs">
+              <td class="py-1 px-2 text-text-muted text-xs font-mono">
                 {{ item.slot_index >= 0 ? item.slot_index : '-' }}
               </td>
               <td class="py-1 px-2">
                 <ItemInline :reference="item.item_name" />
               </td>
-              <td class="py-1 px-2 text-right text-text-primary">
+              <td class="py-1 px-2 text-right font-mono text-text-primary">
                 {{ item.stack_size > 0 ? item.stack_size.toLocaleString() : '-' }}
               </td>
             </tr>
@@ -94,8 +94,8 @@
             <span
               class="font-medium"
               :class="{
-                'text-green-400': entry.kind === 'added',
-                'text-red-400': entry.kind === 'removed',
+                'text-value-positive': entry.kind === 'added',
+                'text-value-negative': entry.kind === 'removed',
                 'text-blue-400': entry.kind === 'stack_changed',
               }"
             >

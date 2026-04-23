@@ -9,7 +9,7 @@
       <!-- Header: group or project -->
       <div v-if="activeGroupName" class="flex flex-col gap-1">
         <h3 class="text-accent-gold text-base font-semibold m-0">{{ activeGroupName }}</h3>
-        <div class="text-text-muted text-[10px]">
+        <div class="text-text-muted text-[0.65rem]">
           Group summary &mdash; {{ groupProjectNames.length }} project{{ groupProjectNames.length !== 1 ? 's' : '' }}
         </div>
       </div>
@@ -17,7 +17,7 @@
       <!-- Recheck button (always visible when there's content) -->
       <div v-if="recipeEntries.length > 0 && hasContent" class="flex justify-end">
         <button
-          class="text-[10px] text-text-muted hover:text-text-primary cursor-pointer bg-transparent border border-border-light rounded px-1.5 py-0.5 shrink-0 transition-colors"
+          class="text-[0.65rem] text-text-muted hover:text-text-primary cursor-pointer bg-transparent border border-border-light rounded px-1.5 py-0.5 shrink-0 transition-colors"
           :disabled="resolving"
           @click="$emit('resolve')">
           {{ resolving ? 'Refreshing...' : 'Recheck Inventory' }}
@@ -28,7 +28,7 @@
       <AccordionSection v-if="recipeEntries.length > 0" :default-open="!hasContent">
         <template #title>Crafting</template>
         <template #badge>
-          <span class="text-text-muted text-[10px]">{{ recipeEntries.length }} recipe{{ recipeEntries.length !== 1 ? 's' : '' }}</span>
+          <span class="text-text-muted text-[0.65rem]">{{ recipeEntries.length }} recipe{{ recipeEntries.length !== 1 ? 's' : '' }}</span>
         </template>
         <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs">
           <div
@@ -39,13 +39,13 @@
             <template v-if="entry.target_stock !== null">
               <span
                 v-if="getStockTarget(entry.id)"
-                class="text-[10px]"
-                :class="getStockTarget(entry.id)!.effectiveQty <= 0 ? 'text-green-400' : 'text-accent-gold'">
+                class="text-[0.65rem]"
+                :class="getStockTarget(entry.id)!.effectiveQty <= 0 ? 'text-value-positive' : 'text-accent-gold'">
                 {{ getStockTarget(entry.id)!.effectiveQty <= 0 ? 'met' : `×${getStockTarget(entry.id)!.effectiveQty}` }}
               </span>
-              <span v-else class="text-[10px] text-accent-gold">target {{ entry.target_stock }}</span>
+              <span v-else class="font-mono text-[0.65rem] text-accent-gold">target {{ entry.target_stock }}</span>
             </template>
-            <span v-else class="text-text-primary/70">&times;{{ entry.quantity }}</span>
+            <span v-else class="font-mono text-text-primary/70">&times;{{ entry.quantity }}</span>
           </div>
         </div>
       </AccordionSection>
@@ -65,19 +65,19 @@
             <template #title>Intermediates</template>
             <template #badge>
               <div class="flex items-center gap-2">
-                <span class="text-text-muted text-[10px]">
+                <span class="text-text-muted text-[0.65rem]">
                   {{ expandedItemIds.size }} crafting, {{ craftableButNotExpanded.length }} buying
                 </span>
                 <template v-if="!activeGroupName">
                   <button
                     v-if="craftableButNotExpanded.length > 0"
-                    class="text-[10px] text-text-muted hover:text-accent-gold cursor-pointer bg-transparent border border-border-light hover:border-accent-gold/30 rounded px-1 py-0 transition-colors"
+                    class="text-[0.6rem] text-text-muted hover:text-accent-gold cursor-pointer bg-transparent border border-border-light hover:border-accent-gold/30 rounded px-1 py-0 transition-colors"
                     @click.stop="emit('set-all-intermediates', craftableItems.map(i => i.item_id), true)">
                     craft all
                   </button>
                   <button
                     v-if="expandedItemIds.size > 0"
-                    class="text-[10px] text-text-muted hover:text-accent-gold cursor-pointer bg-transparent border border-border-light hover:border-accent-gold/30 rounded px-1 py-0 transition-colors"
+                    class="text-[0.6rem] text-text-muted hover:text-accent-gold cursor-pointer bg-transparent border border-border-light hover:border-accent-gold/30 rounded px-1 py-0 transition-colors"
                     @click.stop="emit('set-all-intermediates', craftableItems.map(i => i.item_id), false)">
                     buy all
                   </button>
@@ -93,19 +93,19 @@
                   ? 'bg-accent-gold/5 border border-accent-gold/20'
                   : 'bg-surface-dark/30 border border-surface-elevated/50'">
                 <ItemInline :reference="item.item_name" />
-                <div class="flex flex-col text-[10px] text-text-muted leading-tight">
+                <div class="flex flex-col text-[0.65rem] text-text-muted leading-tight">
                   <span>need {{ item.quantity }}</span>
                   <template v-if="item.have > 0">
                     <span v-if="item.toCraft > 0">
-                      have <span class="text-green-400">{{ item.have }}</span>
+                      have <span class="text-value-positive">{{ item.have }}</span>
                       → {{ item.isExpanded ? 'craft' : 'buy' }} <span class="text-text-primary">{{ item.toCraft }}</span>
                     </span>
-                    <span v-else class="text-green-400">have {{ item.have }} ✓</span>
+                    <span v-else class="text-value-positive">have {{ item.have }} ✓</span>
                   </template>
                 </div>
                 <button
                   v-if="!activeGroupName"
-                  class="ml-auto text-[10px] cursor-pointer bg-transparent border rounded px-1.5 py-0.5 transition-colors shrink-0"
+                  class="ml-auto text-[0.65rem] cursor-pointer bg-transparent border rounded px-1.5 py-0.5 transition-colors shrink-0"
                   :class="item.isExpanded
                     ? 'text-accent-gold border-accent-gold/40 bg-accent-gold/10 hover:bg-transparent hover:text-text-muted'
                     : 'text-text-muted border-border-light hover:text-accent-gold hover:border-accent-gold/30'"
@@ -120,9 +120,9 @@
           <AccordionSection v-if="materialNeeds.length > 0">
             <template #title>Raw Materials</template>
             <template #badge>
-              <div class="flex gap-3 text-[10px] text-text-muted">
+              <div class="flex gap-3 text-[0.65rem] text-text-muted">
                 <span>{{ materialNeeds.length }}</span>
-                <span><span class="text-green-400">{{ coveredCount }}</span> ok</span>
+                <span><span class="text-value-positive">{{ coveredCount }}</span> ok</span>
                 <span v-if="partialCount > 0"><span class="text-yellow-400">{{ partialCount }}</span> partial</span>
                 <span v-if="missingCount > 0"><span class="text-accent-red">{{ missingCount }}</span> missing</span>
                 <span v-if="checkingAvailability" class="inline-flex items-center gap-1 text-accent-gold/60">
@@ -143,7 +143,7 @@
           <AccordionSection v-else-if="materials.size > 0">
             <template #title>Raw Materials</template>
             <template #badge>
-              <div class="flex items-center gap-2 text-text-muted text-[10px]">
+              <div class="flex items-center gap-2 text-text-muted text-[0.65rem]">
                 <span>{{ materials.size }} items</span>
                 <span v-if="checkingAvailability" class="inline-flex items-center gap-1 text-accent-gold/60">
                   <LoadingSpinner size="xs" />
@@ -167,13 +167,13 @@
                   :class="{ 'bg-accent-green/5': pricingMode && (customerProvides[mat.key] ?? 0) > 0 }">
                   <td class="py-1">
                     <template v-if="mat.is_dynamic">
-                      <span class="text-accent-gold/60 text-[10px] mr-1">&#9670;</span>
+                      <span class="text-accent-gold/60 text-[0.65rem] mr-1">&#9670;</span>
                       <span class="text-text-secondary">{{ mat.item_name }}</span>
                     </template>
                     <ItemInline v-else-if="mat.item_id !== null" :reference="mat.item_name" />
                     <span v-else class="text-text-muted italic">{{ mat.item_name }}</span>
                   </td>
-                  <td class="text-right py-1 text-text-primary whitespace-nowrap">
+                  <td class="text-right py-1 text-text-primary font-mono whitespace-nowrap">
                     {{ mat.expected_quantity }}
                     <span
                       v-if="mat.chance_to_consume < 1"
@@ -203,7 +203,7 @@
           <AccordionSection v-if="materialNeeds.length > 0 && hasShortfalls">
             <template #title>Shopping / Gathering</template>
             <template #badge>
-              <span v-if="vendorCost > 0" class="text-text-muted text-[10px]">
+              <span v-if="vendorCost > 0" class="text-text-muted text-[0.65rem]">
                 ~<span class="text-accent-red font-semibold">{{ vendorCost.toLocaleString() }}g</span>
               </span>
             </template>
@@ -214,7 +214,7 @@
           <AccordionSection v-if="materialNeeds.length > 0 && hasPickupItems">
             <template #title>Pickup List</template>
             <template #badge>
-              <span class="text-text-muted text-[10px]">{{ pickupAreaCount }} area{{ pickupAreaCount !== 1 ? 's' : '' }}</span>
+              <span class="text-text-muted text-[0.65rem]">{{ pickupAreaCount }} area{{ pickupAreaCount !== 1 ? 's' : '' }}</span>
             </template>
             <PickupList :needs="materialNeeds" :bare="true" />
           </AccordionSection>
@@ -222,7 +222,7 @@
           <!-- "All covered" state when nothing to shop or pick up -->
           <div
             v-if="materialNeeds.length > 0 && !hasShortfalls && !hasPickupItems"
-            class="border border-surface-elevated rounded px-3 py-4 text-center text-xs text-green-400">
+            class="border border-surface-elevated rounded px-3 py-4 text-center text-xs text-value-positive">
             All materials in inventory — ready to craft!
           </div>
         </div>
@@ -283,7 +283,7 @@
           <span class="text-accent-gold text-lg font-bold">{{ formatGold(pricingCalculation.chargeCustomer) }}</span>
         </div>
 
-        <div v-if="pricingCalculation.hasUnknownPrices" class="text-text-dim text-[10px] italic">
+        <div v-if="pricingCalculation.hasUnknownPrices" class="text-text-dim text-[0.65rem] italic">
           * Some material prices are unknown — total may be incomplete.
         </div>
       </div>

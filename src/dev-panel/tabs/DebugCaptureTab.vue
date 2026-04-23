@@ -130,10 +130,10 @@
     <section v-if="lastResult" class="border border-border-default rounded p-4">
       <h4 class="text-text-secondary text-sm mb-3 mt-0">Last Capture</h4>
       <div class="text-xs space-y-1">
-        <div v-if="lastResult.success" class="text-green-400">
+        <div v-if="lastResult.success" class="text-value-positive">
           Saved {{ lastResult.lineCount?.toLocaleString() }} lines to: {{ lastResult.path }}
         </div>
-        <div v-else class="text-red-400">
+        <div v-else class="text-value-negative">
           {{ lastResult.error }}
         </div>
       </div>

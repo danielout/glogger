@@ -12,12 +12,12 @@
           :key="death.id"
           class="flex items-center justify-between gap-2 py-0.5">
           <div class="flex items-center gap-1.5 min-w-0">
-            <span class="text-red-400 text-xs shrink-0">&#x2620;</span>
+            <span class="text-value-negative text-xs shrink-0">&#x2620;</span>
             <span class="text-text-primary truncate">
               <EnemyInline :reference="death.killer_name" />
             </span>
           </div>
-          <span class="text-text-dim text-xs whitespace-nowrap shrink-0">
+          <span class="text-text-dim text-xs font-mono whitespace-nowrap shrink-0">
             {{ formatTs(death.died_at) }}
           </span>
         </div>
@@ -28,8 +28,8 @@
     <div v-if="rezStore.lastRezzedBy">
       <h3 class="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">Last Rezzed By</h3>
       <div class="flex items-center justify-between gap-2 py-0.5">
-        <span class="text-green-400">{{ rezStore.lastRezzedBy.caster_name }}</span>
-        <span class="text-text-dim text-xs whitespace-nowrap">
+        <span class="text-value-positive">{{ rezStore.lastRezzedBy.caster_name }}</span>
+        <span class="text-text-dim text-xs font-mono whitespace-nowrap">
           {{ formatTs(rezStore.lastRezzedBy.occurred_at) }}
         </span>
       </div>

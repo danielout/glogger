@@ -7,11 +7,11 @@
         v-model="sessionName"
         type="text"
         placeholder="Session name (optional)"
-        class="px-3 py-2 text-sm bg-[#1a1a2e] border border-border-light rounded text-text-primary placeholder-text-dim outline-none focus:border-entity-item"
+        class="px-3 py-2 text-sm bg-surface-card border border-border-light rounded text-text-primary placeholder-text-dim outline-none focus:border-entity-item"
       />
       <button
         @click="store.startSession(sessionName || undefined)"
-        class="px-4! py-2! text-sm! bg-[#2a3a2a]! border border-[#4a5a4a]! text-[#8ec88e]! rounded cursor-pointer transition-all font-medium hover:bg-[#3a4a3a] hover:border-[#5a7a5a] hover:text-[#aedaae]">
+        class="px-4! py-2! text-sm! bg-[#2a3a2a]! border border-[#4a5a4a]! text-value-positive! rounded cursor-pointer transition-all font-medium hover:bg-[#3a4a3a] hover:border-[#5a7a5a] hover:text-value-positive">
         Start Session
       </button>
     </div>
@@ -20,13 +20,13 @@
   <!-- Active session -->
   <template v-else-if="s">
     <!-- Session header bar -->
-    <div class="bg-[#1a1a2e] border border-border-light rounded-lg p-3">
+    <div class="bg-surface-card border border-border-light rounded-lg p-3">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
           <span
             :class="[
               'inline-block w-2 h-2 rounded-full',
-              s.endTime ? 'bg-text-dim' : s.isPaused ? 'bg-[#c8b47e] animate-pulse' : 'bg-[#7ec87e] animate-pulse'
+              s.endTime ? 'bg-text-dim' : s.isPaused ? 'bg-value-neutral-warm animate-pulse' : 'bg-value-positive animate-pulse'
             ]" />
           <input
             :value="s.name"
@@ -34,12 +34,12 @@
             class="text-base font-bold text-entity-item bg-transparent border-none outline-none w-64 hover:bg-[#2a2a3e] focus:bg-[#2a2a3e] rounded px-1 -mx-1"
           />
           <span v-if="s.endTime" class="text-xs text-text-dim uppercase tracking-wide">(Ended)</span>
-          <span v-if="s.isPaused" class="text-xs text-[#c8b47e] font-bold uppercase tracking-wide">(Paused)</span>
+          <span v-if="s.isPaused" class="text-xs text-value-neutral-warm font-bold uppercase tracking-wide">(Paused)</span>
         </div>
 
         <div class="flex items-center gap-3">
           <!-- Live timer -->
-          <span class="text-lg font-bold text-text-primary">{{ store.elapsed }}</span>
+          <span class="text-lg font-mono font-bold text-text-primary">{{ store.elapsed }}</span>
 
           <button
             v-if="!s.endTime"
@@ -47,7 +47,7 @@
             :class="[
               'px-3 py-1.5 text-xs border rounded cursor-pointer transition-all font-medium',
               s.isPaused
-                ? 'bg-[#3a4a2a]! border-[#5a7a3a]! text-[#8ec88e]!'
+                ? 'bg-[#3a4a2a]! border-[#5a7a3a]! text-value-positive!'
                 : 'bg-[#2a2a3e] border-border-light text-text-secondary hover:bg-[#3a3a4e] hover:text-text-primary'
             ]">
             {{ s.isPaused ? "Resume" : "Pause" }}
@@ -55,7 +55,7 @@
           <button
             v-if="!s.endTime"
             @click="store.endSession"
-            class="px-3 py-1.5 text-xs bg-[#3a2a2a]! border border-[#5a3a3a]! rounded text-[#c87e7e]! cursor-pointer transition-all font-medium hover:bg-[#4a3a3a] hover:border-[#6a4a4a]">
+            class="px-3 py-1.5 text-xs bg-[#3a2a2a]! border border-[#5a3a3a]! rounded text-value-negative! cursor-pointer transition-all font-medium hover:bg-[#4a3a3a] hover:border-[#6a4a4a]">
             End Session
           </button>
           <button
@@ -84,26 +84,26 @@
       <!-- Quick stats -->
       <div class="flex gap-6 mt-2 flex-wrap">
         <div class="text-center">
-          <span class="text-[10px] text-text-muted uppercase tracking-wide">Total XP</span>
+          <span class="text-[0.6rem] text-text-muted uppercase tracking-wide">Total XP</span>
           <span class="text-sm font-bold text-text-primary ml-1">{{ store.totalXpGained.toLocaleString() }}</span>
         </div>
         <div class="text-center">
-          <span class="text-[10px] text-text-muted uppercase tracking-wide">Items +</span>
-          <span class="text-sm font-bold text-[#7ec87e] ml-1">{{ store.totalItemsGained }}</span>
+          <span class="text-[0.6rem] text-text-muted uppercase tracking-wide">Items +</span>
+          <span class="text-sm font-bold text-value-positive ml-1">{{ store.totalItemsGained }}</span>
         </div>
         <div v-if="store.totalItemsLost > 0" class="text-center">
-          <span class="text-[10px] text-text-muted uppercase tracking-wide">Items -</span>
-          <span class="text-sm font-bold text-[#c87e7e] ml-1">{{ store.totalItemsLost }}</span>
+          <span class="text-[0.6rem] text-text-muted uppercase tracking-wide">Items -</span>
+          <span class="text-sm font-bold text-value-negative ml-1">{{ store.totalItemsLost }}</span>
         </div>
         <div v-if="store.totalFavorGained !== 0" class="text-center">
-          <span class="text-[10px] text-text-muted uppercase tracking-wide">Favor</span>
-          <span :class="['text-sm font-bold ml-1', store.totalFavorGained > 0 ? 'text-[#c8b47e]' : 'text-[#c87e7e]']">
+          <span class="text-[0.6rem] text-text-muted uppercase tracking-wide">Favor</span>
+          <span :class="['text-sm font-bold ml-1', store.totalFavorGained > 0 ? 'text-value-neutral-warm' : 'text-value-negative']">
             {{ store.totalFavorGained > 0 ? '+' : '' }}{{ store.totalFavorGained.toFixed(0) }}
           </span>
         </div>
         <div v-if="s.vendorGold > 0" class="text-center">
-          <span class="text-[10px] text-text-muted uppercase tracking-wide">Gold</span>
-          <span class="text-sm font-bold text-[#d4af37] ml-1">{{ s.vendorGold.toLocaleString() }}g</span>
+          <span class="text-[0.6rem] text-text-muted uppercase tracking-wide">Gold</span>
+          <span class="text-sm font-bold text-value-gold ml-1">{{ s.vendorGold.toLocaleString() }}g</span>
         </div>
       </div>
     </div>
@@ -112,7 +112,7 @@
     <div class="grid grid-cols-[240px_1fr_280px] gap-3 flex-1 min-h-0">
       <!-- LEFT: Skills Panel -->
       <div class="bg-surface-dark border border-border-default rounded-lg p-3 overflow-y-auto">
-        <div class="text-[10px] uppercase tracking-widest text-entity-item mb-2 font-bold">Skills</div>
+        <div class="text-[0.65rem] uppercase tracking-widest text-entity-item mb-2 font-bold">Skills</div>
         <EmptyState v-if="store.skillSummary.length === 0" variant="compact" primary="No skill gains yet" />
         <div class="flex flex-col gap-1">
           <div
@@ -127,13 +127,13 @@
             <div class="relative flex items-center justify-between px-2 py-1.5 z-10">
               <div class="flex items-center gap-1.5 min-w-0">
                 <SkillInline :reference="skill.name" :show-icon="true" class="text-xs" />
-                <span v-if="skill.levelsGained > 0" class="text-[10px] text-[#c8b47e] font-bold">
+                <span v-if="skill.levelsGained > 0" class="text-[0.6rem] text-value-neutral-warm font-bold">
                   +{{ skill.levelsGained }}lvl
                 </span>
               </div>
               <div class="flex flex-col items-end shrink-0">
-                <span class="text-xs font-bold text-[#7ec87e]">+{{ skill.gained.toLocaleString() }}</span>
-                <span class="text-[10px] text-text-dim">{{ skill.perHour.toLocaleString() }}/hr</span>
+                <span class="text-xs font-bold text-value-positive">+{{ skill.gained.toLocaleString() }}</span>
+                <span class="text-[0.55rem] text-text-dim">{{ skill.perHour.toLocaleString() }}/hr</span>
               </div>
             </div>
           </div>
@@ -141,7 +141,7 @@
 
         <!-- Favor section -->
         <template v-if="store.favorSummary.length > 0">
-          <div class="text-[10px] uppercase tracking-widest text-text-dim mt-3 mb-2 font-bold">Favor</div>
+          <div class="text-[0.65rem] uppercase tracking-widest text-text-dim mt-3 mb-2 font-bold">Favor</div>
           <div class="flex flex-col gap-1">
             <div
               v-for="fav in store.favorSummary"
@@ -150,8 +150,8 @@
               <NpcInline :reference="fav.name" />
               <span
                 :class="[
-                  'font-bold',
-                  fav.delta > 0 ? 'text-[#c8b47e]' : 'text-[#c87e7e]'
+                  'font-mono font-bold',
+                  fav.delta > 0 ? 'text-value-neutral-warm' : 'text-value-negative'
                 ]">
                 {{ fav.delta > 0 ? '+' : '' }}{{ fav.delta.toFixed(1) }}
               </span>
@@ -163,11 +163,11 @@
       <!-- CENTER: Items Panel -->
       <div class="bg-surface-dark border border-border-default rounded-lg p-3 overflow-y-auto">
         <div class="flex items-center justify-between mb-2">
-          <div class="text-[10px] uppercase tracking-widest text-text-dim font-bold">Items</div>
+          <div class="text-[0.65rem] uppercase tracking-widest text-text-dim font-bold">Items</div>
           <button
             v-if="hasIgnoredItems"
             @click="showIgnored = !showIgnored"
-            class="text-[10px] text-text-dim hover:text-text-secondary cursor-pointer transition-colors">
+            class="text-[0.6rem] text-text-dim hover:text-text-secondary cursor-pointer transition-colors">
             {{ showIgnored ? 'Hide' : 'Show' }} ignored ({{ ignoredCount }})
           </button>
         </div>
@@ -186,19 +186,19 @@
             <div class="flex items-center gap-2">
               <span
                 :class="[
-                  'font-bold',
-                  item.netQuantity > 0 ? 'text-[#7ec87e]' : 'text-[#c87e7e]'
+                  'font-mono font-bold',
+                  item.netQuantity > 0 ? 'text-value-positive' : 'text-value-negative'
                 ]">
                 {{ item.netQuantity > 0 ? '+' : '' }}{{ item.netQuantity }}
               </span>
-              <span class="text-text-dim text-[10px]">{{ item.perHour }}/hr</span>
+              <span class="text-text-dim text-[0.6rem]">{{ item.perHour }}/hr</span>
               <button
                 @click="store.toggleIgnoreItem(item.name)"
                 :class="[
-                  'opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] px-1 rounded',
+                  'opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[0.65rem] px-1 rounded',
                   item.isIgnored
-                    ? 'text-[#8ec88e] hover:text-[#aedaae]'
-                    : 'text-text-dim hover:text-[#c87e7e]'
+                    ? 'text-value-positive hover:text-value-positive'
+                    : 'text-text-dim hover:text-value-negative'
                 ]"
                 :title="item.isIgnored ? 'Show this item' : 'Hide this item'">
                 {{ item.isIgnored ? '👁' : '✕' }}

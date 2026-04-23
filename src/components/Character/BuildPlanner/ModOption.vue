@@ -44,12 +44,12 @@
     <template v-if="props.augmentOnly">
       <button
         v-if="!hasAugment && !isAssignedAsAugment && !isAssigned"
-        class="text-purple-400/70 hover:text-purple-400 text-xs shrink-0 mt-0.5 cursor-pointer"
+        class="text-mod-augment/70 hover:text-mod-augment text-xs shrink-0 mt-0.5 cursor-pointer"
         title="Add as augment"
         @click.stop="emitAdd(true)">
         +A
       </button>
-      <span v-else-if="isAssignedAsAugment" class="text-[10px] text-purple-400/50 shrink-0 mt-0.5">
+      <span v-else-if="isAssignedAsAugment" class="text-[10px] text-mod-augment/50 shrink-0 mt-0.5">
         augment
       </span>
       <span v-else-if="isAssigned" class="text-[10px] text-text-dim shrink-0 mt-0.5">

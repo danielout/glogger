@@ -6,7 +6,7 @@
       <span
         class="text-xs font-semibold px-1.5 py-0.5 rounded"
         :class="totalModCount >= store.maxModsPerSlot
-          ? 'bg-green-900/30 text-green-400'
+          ? 'bg-green-900/30 text-value-positive'
           : totalModCount > 0
             ? 'bg-yellow-900/30 text-yellow-400'
             : 'bg-surface-hover text-text-muted'">
@@ -14,7 +14,7 @@
       </span>
       <span
         v-if="store.slotHasAugment[store.selectedSlot!]"
-        class="text-xs font-semibold px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-400">
+        class="text-xs font-semibold px-1.5 py-0.5 rounded bg-purple-900/30 text-mod-augment">
         +1 augment
       </span>
     </div>
@@ -92,7 +92,7 @@
                 <div
                   v-for="(effect, i) in itemEffects"
                   :key="i"
-                  class="text-accent-green text-xs leading-snug">
+                  class="text-accent-green text-[11px] leading-snug">
                   {{ effect }}
                 </div>
               </div>

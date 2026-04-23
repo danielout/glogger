@@ -74,7 +74,7 @@
                 </span>
               </div>
             </td>
-            <td class="py-1 px-2 text-right text-text-primary tabular-nums">{{ item.stack_size }}</td>
+            <td class="py-1 px-2 text-right text-text-primary">{{ item.stack_size }}</td>
             <td class="py-1 px-2 text-text-secondary text-xs">{{ formatVault(getLocation(item)) }}</td>
             <td class="py-1 px-2">
               <span v-if="item.rarity" :class="rarityClass(item.rarity)" class="text-xs font-medium">
@@ -82,8 +82,8 @@
               </span>
             </td>
             <td class="py-1 px-2 text-text-secondary text-xs">{{ item.slot ?? '' }}</td>
-            <td class="py-1 px-2 text-right text-text-secondary tabular-nums">{{ item.level ?? '' }}</td>
-            <td class="py-1 px-2 text-right text-accent-gold tabular-nums">
+            <td class="py-1 px-2 text-right text-text-secondary">{{ item.level ?? '' }}</td>
+            <td class="py-1 px-2 text-right text-accent-gold">
               <template v-if="item.value">
                 {{ formatNumber(item.value * item.stack_size) }}
               </template>
@@ -236,11 +236,11 @@ function formatVault(vault: string): string {
 
 function rarityClass(rarity: string): string {
   switch (rarity) {
-    case 'Uncommon': return 'text-green-400'
-    case 'Rare': return 'text-blue-400'
-    case 'Exceptional': return 'text-purple-400'
-    case 'Epic': return 'text-orange-400'
-    case 'Legendary': return 'text-yellow-400'
+    case 'Uncommon': return 'text-rarity-uncommon'
+    case 'Rare': return 'text-rarity-rare'
+    case 'Exceptional': return 'text-rarity-exceptional'
+    case 'Epic': return 'text-rarity-epic'
+    case 'Legendary': return 'text-rarity-legendary'
     default: return 'text-text-secondary'
   }
 }

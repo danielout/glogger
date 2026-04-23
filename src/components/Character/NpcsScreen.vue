@@ -17,7 +17,7 @@
         </div>
         <div>
           <span class="text-text-muted">Above Neutral:</span>
-          <span class="text-green-400 font-bold ml-1">{{ aboveNeutral }}</span>
+          <span class="text-value-positive font-bold ml-1">{{ aboveNeutral }}</span>
         </div>
       </div>
     </div>

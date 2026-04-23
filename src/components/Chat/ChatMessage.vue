@@ -62,14 +62,14 @@ const channelClass = computed(() => {
   const channel = props.message.channel?.toLowerCase()
 
   const channelColors: Record<string, string> = {
-    'global': 'text-yellow-400',
-    'trade': 'text-green-400',
-    'help': 'text-blue-400',
-    'guild': 'text-purple-400',
-    'nearby': 'text-orange-400',
-    'status': 'text-cyan-400',
-    'combat': 'text-red-400',
-    'lfg': 'text-pink-400',
+    'global': 'text-channel-global',
+    'trade': 'text-channel-trade',
+    'help': 'text-channel-help',
+    'guild': 'text-channel-guild',
+    'nearby': 'text-channel-nearby',
+    'status': 'text-channel-status',
+    'combat': 'text-channel-combat',
+    'lfg': 'text-channel-lfg',
   }
 
   return channelColors[channel || ''] || 'text-gray-400'

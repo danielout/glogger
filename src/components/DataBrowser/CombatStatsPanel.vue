@@ -25,12 +25,12 @@
     <!-- Attribute modifier arrays -->
     <template v-for="(label, key) in attributeLabels" :key="key">
       <div v-if="getAttrArray(key).length" class="flex flex-col gap-0.5 mt-0.5">
-        <span class="text-text-dim text-[10px]">{{ label }}:</span>
+        <span class="text-text-dim text-[0.65rem]">{{ label }}:</span>
         <div class="flex flex-wrap gap-1 pl-2">
           <span
             v-for="attr in getAttrArray(key)"
             :key="attr"
-            class="text-[10px] px-1 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-text-secondary">
+            class="text-[0.65rem] px-1 py-0.5 bg-surface-card border border-border-subtle text-text-secondary font-mono">
             {{ attr }}
           </span>
         </div>
@@ -39,8 +39,8 @@
 
     <!-- Extra fields -->
     <div v-if="hasExtra" class="mt-1 border-t border-surface-card pt-1">
-      <span class="text-text-dim text-[10px]">Other:</span>
-      <pre class="text-[10px] text-text-muted mt-0.5 m-0 whitespace-pre-wrap">{{ JSON.stringify(stats.extra, null, 2) }}</pre>
+      <span class="text-text-dim text-[0.65rem]">Other:</span>
+      <pre class="text-[0.65rem] text-text-muted mt-0.5 m-0 whitespace-pre-wrap">{{ JSON.stringify(stats.extra, null, 2) }}</pre>
     </div>
   </div>
 </template>

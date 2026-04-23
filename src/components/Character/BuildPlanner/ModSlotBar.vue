@@ -16,7 +16,7 @@
       <div class="flex items-center gap-1.5">
         <span
           v-if="mod.is_augment"
-          class="text-[10px] font-semibold text-purple-400 uppercase">
+          class="text-[10px] font-semibold text-mod-augment uppercase">
           AUG
         </span>
         <span class="font-medium text-text-primary truncate">{{ resolvedDisplayName }}</span>

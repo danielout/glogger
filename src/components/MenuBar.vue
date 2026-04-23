@@ -16,12 +16,12 @@
             <div class="flex items-center gap-1.5">
               <span
                 class="w-2 h-2 rounded-full"
-                :class="isPlayerLogTailing ? 'bg-green-500' : 'bg-red-500'"
+                :class="isPlayerLogTailing ? 'bg-status-active' : 'bg-status-inactive'"
                 :title="isPlayerLogTailing ? 'Player.log: tailing' : 'Player.log: not tailing'"
               />
               <span
                 class="w-2 h-2 rounded-full"
-                :class="isChatLogTailing ? 'bg-green-500' : 'bg-red-500'"
+                :class="isChatLogTailing ? 'bg-status-active' : 'bg-status-inactive'"
                 :title="isChatLogTailing ? 'Chat log: tailing' : 'Chat log: not tailing'"
               />
             </div>
@@ -30,7 +30,7 @@
         </div>
         <div class="border-l border-border-default h-8" />
         <button
-          class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer text-sm rounded transition-all hover:bg-surface-elevated hover:text-text-primary"
+          class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer font-mono text-sm rounded transition-all hover:bg-surface-elevated hover:text-text-primary"
           :class="{ 'bg-surface-elevated! text-accent-gold!': dataBrowserStore.isOpen }"
           @click="dataBrowserStore.toggle()"
           title="Data Browser (Ctrl+D)">
@@ -43,7 +43,7 @@
         <button
           v-for="item in navItems"
           :key="item.view"
-          class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer text-sm rounded transition-all hover:bg-surface-elevated hover:text-text-primary"
+          class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer font-mono text-sm rounded transition-all hover:bg-surface-elevated hover:text-text-primary"
           :class="{ 'bg-surface-elevated! text-accent-gold!': currentView === item.view }"
           @click="emit('navigate', item.view)">
           {{ item.label }}
@@ -53,12 +53,12 @@
       <!-- Right: Search, Settings, Help -->
       <div class="flex items-center justify-end gap-1">
         <button
-          class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer text-sm rounded transition-all leading-none hover:bg-surface-elevated hover:text-text-primary flex items-center gap-1.5"
+          class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer text-sm rounded transition-all leading-none hover:bg-surface-elevated hover:text-text-primary font-mono flex items-center gap-1.5"
           :class="{ 'bg-surface-elevated! text-accent-gold!': currentView === 'search' }"
           @click="emit('navigate', 'search')"
           title="Search (Ctrl+F for quick search)">
           Search
-          <kbd class="text-[10px] text-text-muted bg-surface-elevated border border-border-default rounded px-1 py-0.5 leading-none">Ctrl+F</kbd>
+          <kbd class="text-[0.55rem] text-text-muted bg-surface-elevated border border-border-default rounded px-1 py-0.5 leading-none">Ctrl+F</kbd>
         </button>
         <button
           class="px-3 py-1.5 bg-transparent border-none text-text-secondary cursor-pointer text-xl rounded transition-all leading-none hover:bg-surface-elevated hover:text-text-primary"
@@ -90,7 +90,7 @@
         <button
           v-for="tab in currentTabs"
           :key="tab.id"
-          class="px-3 py-1 bg-transparent border-none text-text-secondary cursor-pointer text-xs rounded transition-all hover:bg-surface-elevated hover:text-text-primary"
+          class="px-3 py-1 bg-transparent border-none text-text-secondary cursor-pointer font-mono text-xs rounded transition-all hover:bg-surface-elevated hover:text-text-primary"
           :class="{ 'text-accent-gold! bg-surface-elevated!': activeSubTabs[currentView] === tab.id }"
           @click="selectSubTab(tab.id)">
           {{ tab.label }}
