@@ -1305,39 +1305,40 @@ impl PlayerEventParser {
             info.item_type_id = Some(item_type_id);
         }
 
-        // If we had no prior stack observation, this is normally establishing a
-        // baseline (e.g., session-start inventory load). We can't compute the
-        // real delta because we don't know the pre-existing stack size.
+        // If we had no prior stack observation, this is establishing a baseline
+        // (e.g., session-start inventory load after the AddItem burst).
         //
-        // HOWEVER: if a matching chat [Status] gain exists in the buffer at
-        // this moment, the "baseline" is actually a real gain happening on top
-        // of a login-loaded stack. The chat's authoritative quantity tells us
-        // exactly how many items were gained, even though we don't know the
-        // previous absolute stack. Emit the event with the chat quantity as
-        // the delta so the gain isn't silently lost.
+        // If a matching chat [Status] gain exists, this is actually a real gain
+        // on top of a login-loaded stack — emit with the chat quantity as delta.
+        //
+        // Otherwise, emit with delta=0 so the DB gets the correct absolute
+        // stack size (the prior AddItem only wrote stack_size=1). The zero delta
+        // ensures no transaction is recorded — this is purely a DB correction.
         if !had_prior {
             let item_name = self
                 .instance_registry
                 .get(&instance_id)
                 .map(|info| info.item_name.clone());
             let update_secs = timestamp_to_secs(&ts);
-            if let Some(ref name) = item_name {
-                if let Some(chat_qty) = self.consume_chat_gain_for_add_item(name, update_secs) {
-                    let provenance = self.compute_provenance();
-                    return Some(PlayerEvent::ItemStackChanged {
-                        timestamp: ts,
-                        instance_id,
-                        item_name,
-                        item_type_id,
-                        old_stack_size: new_stack_size.saturating_sub(chat_qty),
-                        new_stack_size,
-                        delta: chat_qty as i32,
-                        from_server,
-                        provenance,
-                    });
-                }
-            }
-            return None;
+            let (effective_delta, effective_provenance) =
+                if let Some(chat_qty) = item_name.as_ref().and_then(|name| {
+                    self.consume_chat_gain_for_add_item(name, update_secs)
+                }) {
+                    (chat_qty as i32, self.compute_provenance())
+                } else {
+                    (0, ItemProvenance::NotApplicable)
+                };
+            return Some(PlayerEvent::ItemStackChanged {
+                timestamp: ts,
+                instance_id,
+                item_name,
+                item_type_id,
+                old_stack_size: new_stack_size.saturating_sub(effective_delta.max(0) as u32),
+                new_stack_size,
+                delta: effective_delta,
+                from_server,
+                provenance: effective_provenance,
+            });
         }
 
         let item_name = self
@@ -3226,20 +3227,31 @@ mod tests {
     }
 
     #[test]
-    fn test_instance_registry_baseline_no_event() {
+    fn test_instance_registry_baseline_emits_correction() {
         let mut parser = PlayerEventParser::new();
         // Existing item loaded at session start (is_new=False)
         parser.process_line(
             r#"[16:00:00] LocalPlayer: ProcessAddItem(MetalSlab2(136937342), 5, False)"#,
         );
 
-        // First UpdateItemCode establishes baseline — no event emitted
+        // First UpdateItemCode establishes baseline — emits delta=0 so the DB
+        // gets the correct absolute stack size (AddItem only wrote stack_size=1).
         let events = parser.process_line(
             r#"[16:00:01] LocalPlayer: ProcessUpdateItemCode(136937342, 65536, True)"#,
         );
-        assert!(events.is_empty(), "First UpdateItemCode for existing item should not emit an event");
+        assert_eq!(events.len(), 1, "First UpdateItemCode should emit a baseline correction");
+        match &events[0] {
+            PlayerEvent::ItemStackChanged { item_name, old_stack_size, new_stack_size, delta, provenance, .. } => {
+                assert_eq!(item_name.as_deref(), Some("MetalSlab2"));
+                assert_eq!(*new_stack_size, 2); // (65536 >> 16) + 1
+                assert_eq!(*old_stack_size, 2); // no prior → old = new - 0
+                assert_eq!(*delta, 0); // baseline, not a gain
+                assert_eq!(*provenance, ItemProvenance::NotApplicable);
+            }
+            _ => panic!("Expected ItemStackChanged"),
+        }
 
-        // Subsequent UpdateItemCode DOES emit a change event
+        // Subsequent UpdateItemCode DOES emit a real change event
         let events = parser.process_line(
             r#"[16:00:02] LocalPlayer: ProcessUpdateItemCode(136937342, 196608, True)"#,
         );
