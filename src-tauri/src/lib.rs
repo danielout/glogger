@@ -115,9 +115,16 @@ use cdn_commands::{
     find_recipe_items_in_inventory,
     cdn_diff_summary,
     cdn_diff_file,
+    // Enemy (AI) queries
+    get_all_enemies,
+    search_enemies,
+    get_enemy,
+    // Gardening chain
+    get_gardening_product_chain,
     GameDataState,
 };
 use db::brewing_commands::{
+    add_brewing_discovery_manual,
     get_brewing_discoveries,
     import_brewing_discoveries_csv,
     delete_brewing_discovery,
@@ -177,18 +184,20 @@ use db::game_state_commands::{
     get_player_milking_leaderboard,
     get_teleportation_binds,
     set_mushroom_circles,
+    get_garden_almanac,
 };
 use db::gourmand_commands::{
     export_text_file, get_all_foods, get_gourmand_eaten_foods, import_cooks_helper_file,
-    import_gourmand_report, import_latest_gourmand_report,
+    import_gourmand_report, import_latest_gourmand_report, toggle_food_eaten_status,
 };
 use db::inventory_commands::{
     get_inventory_snapshots, get_inventory_summary, get_snapshot_items, import_inventory_report,
 };
 use db::timer_commands::{delete_user_timer, get_user_timers, save_user_timer};
 use db::market_commands::{
-    delete_market_value, export_market_values, get_market_value, get_market_values,
-    import_market_values, set_market_value,
+    bulk_delete_market_values, bulk_update_market_values, delete_market_value,
+    export_market_values, get_market_value, get_market_values, import_market_values,
+    set_market_value,
 };
 use db::player_commands::{
     add_market_price, add_sale, get_market_prices_for_item, get_recent_events, get_recent_sales,
@@ -515,6 +524,7 @@ pub fn run() {
             get_brewing_recipes,
             get_brewing_ingredients,
             get_brewing_discoveries,
+            add_brewing_discovery_manual,
             scan_snapshot_for_brewing_discoveries,
             scan_all_snapshots_for_brewing,
             import_brewing_discoveries_csv,
@@ -526,6 +536,12 @@ pub fn run() {
             get_all_npcs,
             search_npcs,
             get_npcs_in_area,
+            // Enemy (AI) queries
+            get_all_enemies,
+            search_enemies,
+            get_enemy,
+            // Gardening chain
+            get_gardening_product_chain,
             // Effect queries
             search_effects,
             get_effect,
@@ -665,6 +681,7 @@ pub fn run() {
             import_gourmand_report,
             import_cooks_helper_file,
             get_gourmand_eaten_foods,
+            toggle_food_eaten_status,
             export_text_file,
             import_latest_gourmand_report,
             // Farming calculator
@@ -740,6 +757,8 @@ pub fn run() {
             delete_market_value,
             export_market_values,
             import_market_values,
+            bulk_update_market_values,
+            bulk_delete_market_values,
             get_aggregate_inventory,
             get_aggregate_wealth,
             get_aggregate_skills,
@@ -765,6 +784,8 @@ pub fn run() {
             // Teleportation binds
             get_teleportation_binds,
             set_mushroom_circles,
+            // Garden almanac
+            get_garden_almanac,
             // Trip routing
             plan_trip,
             // External content

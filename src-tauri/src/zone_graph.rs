@@ -249,11 +249,13 @@ impl ZoneGraph {
     }
 
     /// All overworld zone IDs.
+    #[allow(dead_code)]
     pub fn overworld_zones(&self) -> &[&'static str] {
         &self.zones
     }
 
     /// Number of overworld zones.
+    #[allow(dead_code)]
     pub fn zone_count(&self) -> usize {
         self.zones.len()
     }
@@ -295,6 +297,7 @@ impl ZoneGraph {
     }
 
     /// Neighbors of a zone (overworld only). Resolves sub-zones.
+    #[allow(dead_code)]
     pub fn neighbors(&self, zone: &str) -> Option<Vec<&'static str>> {
         let resolved = self.resolve_overworld(zone)?;
         let i = *self.zone_index.get(resolved)?;
