@@ -146,9 +146,8 @@ These items are investigated but can't be resolved without new runtime captures 
 - [x] Standardize skeletons and loading states
   - Done: SkeletonLoader and DataTableSkeleton adopted across 24 screens (dashboard, crafting, character, data browser, surveying, farming, stall tracker, market, help). Button label toggles and brief inline states intentionally kept as-is.
 
-- [ ] Document standards around persistence, data access, naming
-  - Write up conventions so development stays consistent.
-  - **Effort: Medium | Impact: Medium (maintainability)**
+- [x] Document standards around persistence, data access, naming
+  - Done: See `docs/architecture/standards-persistence-naming.md`. Covers naming conventions, persistence decision table, store patterns, Tauri command patterns, migration patterns, type organization.
 
 - [x] Timer widget
   - Done: Countdown timers with add/pause/resume/restart/remove. Flexible duration input, preset quick-start buttons (Mushroom Barrel, Brewing, Cheesemaking, Composting). Configurable presets. Persisted via localStorage with absolute timestamps. Expired timers pulse red.
@@ -189,22 +188,19 @@ These items are investigated but can't be resolved without new runtime captures 
   - Currently single-item add/edit only. Import/export exists for JSON data migration but no in-app bulk operations. Could add multi-select with batch price update, percentage adjustments, or category-based pricing. Would need DB schema additions for pricing tiers/rules.
   - **Effort: Medium-High | Impact: Medium (power-user workflow)**
 
-- [ ] Better UX for adding market prices
-  - Current add flow could be streamlined. Related to market prices layout and bulk price setting items above.
-  - **Effort: Medium | Impact: Medium (usability)**
+- [x] Better UX for adding market prices
+  - Done: Autocomplete item search with ItemInline previews, auto-focus price, Enter/Escape shortcuts, batch entry with success feedback, duplicate detection with update option.
 
 - [ ] Continue UI/UX standardization across screens
   - Some screens still don't look like they fit within the app, or have their own paradigms. Sidebars that don't use standardized panels, inconsistent patterns, etc. Should write a consolidated UI/UX checklist for new frontend features and then do a pass on existing screens against it.
   - **Progress:** Color tokens, typography scale, and widget sizing are now standardized. DataTable/FilterBar/SkeletonLoader shared components are available. 10 tables migrated. Heading classes and remaining table migrations are the next incremental steps.
   - **Effort: Medium (iterative) | Impact: Medium (consistency/polish)**
 
-- [ ] Investigate seedling/plant/milling product linkage in CDN data
-  - **Partial investigation:** CDN items have `bestow_recipes: Vec<Value>` field that links items → recipes (e.g. `"recipe_1234"`). Architecture supports building the full product chain (seedling → plant → milling product) but no code currently traverses these links. Would need to query `bestow_recipes` relationships and build a chain-walking query.
-  - **Effort: Low-Medium (data exists, needs traversal code) | Impact: Low-Medium (data browser completeness)**
+- [x] Investigate seedling/plant/milling product linkage in CDN data
+  - **Done.** Seedlings are identified by `Seedling=XX` keyword. The seedling→plant link is implicit via naming convention (strip "Seedling"/"Leafling"/"Seeds" suffix from InternalName to find the plant item). Plant→product links use the existing `recipes_using_item` index. Implemented `get_gardening_product_chain` Tauri command that walks the full chain, displayed in the Item Browser detail view as a "Gardening Chain" section with inline item/recipe links.
 
-- [ ] Garden almanac widget
-  - Saves almanac data when you check it in-game. The almanac shows daily bonus (item + zone for guaranteed double-yield), rotating at midnight EST. `ProcessBook` parser event already exists and emits `BookOpened { title, content, book_type }`, but only `PlayerShopLog` is handled in the coordinator. **Blocker resolved:** capture analysis confirms book_type is `"GardeningAlmanac"` with parseable HTML content including current events (crop + zone + time remaining) and upcoming events. See `docs/architecture/capture-analysis-results.md` and sample data in `docs/samples/devtolsCaptures/gardening-almanac-01.json`. Next: add coordinator handler, new SQLite table, frontend widget using `ItemInline`/`AreaInline`.
-  - **Effort: Medium**
+- [x] Garden almanac widget
+  - Done: Parses GardeningAlmanac book content, extracts current/upcoming crop bonus events. Dashboard widget with ItemInline/AreaInline display, countdown timer, upcoming events list. New garden_almanac table.
 
 - [ ] General-purpose timer system (mushroom barrels, brewing, cheesemaking, fletching, boss respawns)
   - All these skills share a real-time waiting pattern with no log events for the timer portion. Mushroom barrel timers, brewing cask aging (1–3h), cheesemaking aging (1–9h), and fletching drying (1–30m, daylight+sunny only) would all need manual-entry timers. Could share a single reusable timer system. Also subsumes boss/chest respawn timers (from Kaeus's tools). Talk to buppis for brewing specifics. **Partial update:** `ProcessUpdateDescription` does fire for timed crafting items while the player is nearby (e.g. "Rising Simple Sourdough" with proofing countdown and increasing scale value). This provides live progress for items in proximity but won't help with offline/away timers. See `docs/architecture/capture-analysis-results.md`. **Parser confirmed:** `parse_update_description` exists in `player_event_parser.rs` emitting `EntityDescriptionUpdated` events, but the coordinator has no handler for it yet. **DB approach:** `user_timers` table with label, duration, area grouping, `last_triggered_at`. Frontend-driven countdowns with backend persistence (the current milking timer pattern).
