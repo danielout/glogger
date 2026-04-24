@@ -109,7 +109,9 @@ pub fn parse_chat_line(line: &str) -> Option<ChatMessage> {
             let potential_sender = &remaining[..colon_pos];
 
             // System messages in channels don't have senders
-            if potential_sender.starts_with('-')
+            // Status channel is always system messages (never player chat)
+            if channel == "Status"
+                || potential_sender.starts_with('-')
                 || potential_sender.starts_with("You ")
                 || potential_sender.contains('#')
             {
