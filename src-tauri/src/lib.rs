@@ -181,7 +181,7 @@ use db::game_state_commands::{
 };
 use db::gourmand_commands::{
     export_text_file, get_all_foods, get_gourmand_eaten_foods, import_cooks_helper_file,
-    import_gourmand_report, import_latest_gourmand_report,
+    import_gourmand_report, import_latest_gourmand_report, toggle_food_eaten_status,
 };
 use db::inventory_commands::{
     get_inventory_snapshots, get_inventory_summary, get_snapshot_items, import_inventory_report,
@@ -559,6 +559,7 @@ pub fn run() {
             get_gourmand_eaten_foods,
             export_text_file,
             import_latest_gourmand_report,
+            toggle_food_eaten_status,
             // Farming calculator
             save_farming_session,
             get_farming_sessions,
