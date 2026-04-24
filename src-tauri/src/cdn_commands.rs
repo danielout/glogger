@@ -399,11 +399,15 @@ pub async fn get_items_by_keyword(
 ) -> Result<Vec<ItemInfo>, String> {
     let data = state.read().await;
     let mut results: Vec<ItemInfo> = data
-        .items
-        .values()
-        .filter(|item| item.keywords.contains(&keyword))
-        .cloned()
-        .collect();
+        .item_keyword_index
+        .get(&keyword)
+        .map(|ids| {
+            ids.iter()
+                .filter_map(|id| data.items.get(id))
+                .cloned()
+                .collect()
+        })
+        .unwrap_or_default();
     results.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(results)
 }
