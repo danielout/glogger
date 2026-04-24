@@ -26,7 +26,7 @@
             <div class="flex items-center gap-2 min-w-0 flex-1">
               <span
                 class="w-2 h-2 rounded-full flex-shrink-0"
-                :class="rule.enabled ? 'bg-status-active' : 'bg-gray-600'"
+                :class="rule.enabled ? 'bg-green-500' : 'bg-gray-600'"
               ></span>
               <span
                 class="font-medium truncate"
@@ -77,7 +77,7 @@
     <div class="flex-1 flex flex-col overflow-hidden">
       <!-- Rule Editor mode -->
       <div v-if="editing" class="flex-1 overflow-y-auto p-6">
-        <h2 class="mt-0 mb-4 text-text-primary text-xl font-medium">
+        <h2 class="screen-title mt-0 mb-4">
           {{ editingId === null ? 'New Watch Rule' : 'Edit Watch Rule' }}
         </h2>
 
@@ -195,7 +195,7 @@
       <!-- Message view mode -->
       <template v-else>
         <div class="px-6 py-4 border-b border-border-default flex justify-between items-center bg-surface-base">
-          <h2 class="m-0 text-text-primary text-xl font-medium">
+          <h2 class="screen-title m-0">
             {{ selectedRule ? selectedRule.name : 'Select a Watch Rule' }}
           </h2>
           <button

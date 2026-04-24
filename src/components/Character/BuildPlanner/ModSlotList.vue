@@ -3,7 +3,7 @@
     <!-- Regular mod slots -->
     <div v-if="maxMods > 0">
       <div class="flex items-center gap-2 mb-1.5">
-        <h4 class="text-[10px] font-semibold text-text-muted uppercase tracking-wider">
+        <h4 class="micro-label">
           Mod Slots ({{ assignedRegularMods.length }}/{{ maxMods }})
         </h4>
         <!-- Distribution info -->
@@ -79,7 +79,7 @@
 
     <!-- Augment slot (not available on belts) -->
     <div v-if="!isBelt" class="border-t border-border-default/50 pt-2">
-      <h4 class="text-[10px] font-semibold text-mod-augment uppercase tracking-wider mb-1.5">
+      <h4 class="text-[10px] font-semibold text-purple-400 uppercase tracking-wider mb-1.5">
         Augment ({{ AUGMENT_CP_COST }} CP)
       </h4>
       <ModSlotBar

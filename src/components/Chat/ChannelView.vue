@@ -15,13 +15,13 @@
           @click="selectChannel(channel.name)"
         >
           <span class="font-medium">{{ channel.name }}</span>
-          <span class="text-sm text-text-muted">{{ channel.count }}</span>
+          <span class="text-sm text-text-muted font-mono">{{ channel.count }}</span>
         </button>
       </div>
     </div>
     <div class="flex-1 flex flex-col overflow-hidden">
       <div class="px-6 py-4 border-b border-border-default flex justify-between items-center bg-surface-base">
-        <h2 class="m-0 text-text-primary text-xl font-medium">{{ selectedChannel || 'Select a Channel' }}</h2>
+        <h2 class="screen-title m-0">{{ selectedChannel || 'Select a Channel' }}</h2>
         <div class="flex gap-2 items-center">
           <input
             v-if="selectedChannel"

@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col gap-3 min-h-0 h-full">
     <div class="flex items-center justify-between">
-      <h3 class="text-sm font-semibold text-text-secondary uppercase tracking-wider">
+      <h3 class="section-heading">
         Character Report Stats
       </h3>
       <span v-if="lastUpdated" class="text-xs text-text-dim font-mono">
@@ -9,7 +9,7 @@
       </span>
     </div>
 
-    <DataTableSkeleton v-if="loading" :columns="2" :rows="6" :show-header="false" />
+    <div v-if="loading" class="text-xs text-text-muted italic">Loading...</div>
 
     <div v-else-if="stats.length === 0" class="text-xs text-text-dim italic">
       No report stats yet. Open your behavior report or age report in-game to populate.
@@ -53,7 +53,6 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { formatDateTimeFull as formatTimestamp } from '../../composables/useTimestamp'
-import DataTableSkeleton from '../Shared/DataTableSkeleton.vue'
 
 interface ReportStat {
   category: string

@@ -19,7 +19,7 @@
 
     <div v-else class="flex-1 overflow-y-auto space-y-3">
       <div v-for="group in groupedResults" :key="group.slotId">
-        <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">
+        <h4 class="panel-label mb-1">
           {{ group.slotLabel }} ({{ group.mods.length }})
         </h4>
         <div class="space-y-1">
@@ -30,7 +30,7 @@
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-1.5">
                 <span class="font-medium text-text-primary">{{ mod.power_name }}</span>
-                <span v-if="mod.is_augment" class="text-[10px] font-semibold text-mod-augment uppercase">AUG</span>
+                <span v-if="mod.is_augment" class="text-[10px] font-semibold text-purple-400 uppercase">AUG</span>
               </div>
             </div>
           </div>

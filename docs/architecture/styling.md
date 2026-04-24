@@ -140,6 +140,16 @@ Defined in [`components.css`](../../src/assets/css/components.css). Use these fo
 </div>
 ```
 
+### Headings
+```html
+<h2 class="screen-title">Screen Name</h2>           <!-- text-xl, screen/tab titles -->
+<h3 class="section-heading">Section</h3>             <!-- text-sm, major section dividers -->
+<h4 class="panel-label">Panel</h4>                   <!-- text-xs, sub-section labels -->
+<h5 class="micro-label">Dense Label</h5>             <!-- text-[10px], build planner micro headings -->
+```
+
+All four are uppercase, semibold, with wide tracking (except `.screen-title` which is medium weight, normal case). Add margin/padding alongside the class as needed (e.g., `class="section-heading mb-2"`).
+
 ## Conventions
 
 ### No `<style>` blocks

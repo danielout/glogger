@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col gap-2 min-h-0 h-full">
     <div class="flex items-center justify-between shrink-0">
-      <h3 class="text-sm font-semibold text-text-secondary uppercase tracking-wider">
+      <h3 class="section-heading">
         Computed Stats
       </h3>
       <button
@@ -12,7 +12,7 @@
       </button>
     </div>
 
-    <DataTableSkeleton v-if="loading" :columns="2" :rows="6" :show-header="false" />
+    <div v-if="loading" class="text-xs text-text-muted italic">Computing stats...</div>
 
     <div v-else-if="!stats" class="text-xs text-text-dim italic">
       No game state data yet. Skills, recipes, or report data will appear here.
@@ -131,7 +131,6 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { useSettingsStore } from '../../stores/settingsStore'
-import DataTableSkeleton from '../Shared/DataTableSkeleton.vue'
 
 interface SkillCraftingBreakdown {
   skill_name: string

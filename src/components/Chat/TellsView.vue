@@ -15,7 +15,7 @@
           @click="selectConversation(conv.name)"
         >
           <span class="font-medium">{{ conv.name }}</span>
-          <span class="text-sm text-text-muted">{{ conv.count }}</span>
+          <span class="text-sm text-text-muted font-mono">{{ conv.count }}</span>
         </button>
         <div v-if="conversations.length === 0" class="py-8 px-4 text-center text-text-muted">
           <p class="my-1">No conversations yet</p>
@@ -25,7 +25,7 @@
     </div>
     <div class="flex-1 flex flex-col overflow-hidden">
       <div v-if="selectedConversation" class="px-6 py-4 border-b border-border-default flex justify-between items-center bg-surface-base">
-        <h2 class="m-0 text-text-primary text-xl font-medium">{{ selectedConversation }}</h2>
+        <h2 class="screen-title m-0">{{ selectedConversation }}</h2>
         <div class="flex gap-2">
           <button
             @click="refresh"

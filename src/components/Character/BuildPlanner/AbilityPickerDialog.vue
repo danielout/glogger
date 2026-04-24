@@ -63,8 +63,8 @@
           </div>
 
           <!-- Ability list -->
-          <div v-if="loading" class="flex-1 py-4 px-4">
-            <SkeletonLoader variant="text" :lines="6" />
+          <div v-if="loading" class="flex-1 flex items-center justify-center text-xs text-text-muted py-8">
+            Loading abilities...
           </div>
 
           <div v-else-if="!currentSkill && bar !== 'sidebar'" class="flex-1 flex items-center justify-center text-xs text-text-muted py-8">
@@ -75,7 +75,7 @@
             <!-- Main skill families -->
             <template v-if="filteredSkillFamilies.length > 0">
               <div v-if="bar === 'sidebar'" class="sticky top-0 bg-surface-base py-1 z-10">
-                <h5 class="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+                <h5 class="micro-label">
                   {{ currentSkill ?? 'Sidebar' }} ({{ filteredSkillFamilies.length }})
                 </h5>
               </div>
@@ -100,7 +100,7 @@
             <!-- Sidebar-only skills -->
             <template v-if="bar === 'sidebar' && filteredSidebarFamilies.length > 0">
               <div class="sticky top-0 bg-surface-base py-1 z-10 mt-2">
-                <h5 class="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+                <h5 class="micro-label">
                   Sidebar Skills ({{ filteredSidebarFamilies.length }})
                 </h5>
               </div>
@@ -132,7 +132,6 @@ import { useCharacterStore } from '../../../stores/characterStore'
 import { useSettingsStore } from '../../../stores/settingsStore'
 import type { AbilityInfo, AbilityFamily } from '../../../types/gameData'
 import AbilityFamilyOption from './AbilityFamilyOption.vue'
-import SkeletonLoader from '../../Shared/SkeletonLoader.vue'
 
 interface FamilyEntry {
   family: AbilityFamily

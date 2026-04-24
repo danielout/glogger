@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col h-full">
     <div class="px-6 py-4 border-b border-border-default flex justify-between items-center bg-surface-base">
-      <h2 class="m-0 text-text-primary text-xl font-medium">All Messages</h2>
+      <h2 class="screen-title m-0">All Messages</h2>
       <div class="flex gap-2 items-center">
         <input
           type="text"

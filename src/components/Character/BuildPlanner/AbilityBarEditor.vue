@@ -13,7 +13,7 @@
     <div class="flex-1 flex gap-3 min-h-0">
       <!-- Assigned abilities -->
       <div class="w-72 shrink-0 flex flex-col gap-1.5 min-h-0 overflow-y-auto">
-        <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wider">Ability Bar</h4>
+        <h4 class="panel-label">Ability Bar</h4>
         <div v-if="barAbilities.length === 0" class="text-xs text-text-dim py-2">
           No abilities assigned yet. Browse and add from the right.
         </div>
@@ -39,7 +39,7 @@
       <!-- Available abilities browser -->
       <div class="flex-1 flex flex-col gap-2 min-h-0">
         <div class="flex items-center gap-2">
-          <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wider">Available Abilities</h4>
+          <h4 class="panel-label">Available Abilities</h4>
           <input
             v-model="abilityFilter"
             type="text"
@@ -47,8 +47,8 @@
             class="bg-surface-elevated border border-border-default rounded px-2 py-0.5 text-xs text-text-primary flex-1 max-w-60" />
         </div>
 
-        <div v-if="loading" class="py-4 px-2">
-          <SkeletonLoader variant="text" :lines="5" />
+        <div v-if="loading" class="text-xs text-text-muted py-4 text-center">
+          Loading abilities...
         </div>
 
         <div v-else class="flex-1 overflow-y-auto flex flex-col gap-1">
@@ -72,7 +72,7 @@
           <!-- Sidebar abilities from other skills -->
           <template v-if="store.activeBar === 'sidebar' && sidebarFamilyEntries.length > 0">
             <div class="sticky top-0 bg-surface-base py-1 z-10">
-              <h5 class="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+              <h5 class="micro-label">
                 Sidebar Skills ({{ filteredSidebarFamilies.length }})
               </h5>
             </div>
@@ -99,7 +99,6 @@ import { useSettingsStore } from '../../../stores/settingsStore'
 import type { AbilityInfo, AbilityFamily } from '../../../types/gameData'
 import AbilityInline from '../../Shared/Ability/AbilityInline.vue'
 import AbilityFamilyOption from './AbilityFamilyOption.vue'
-import SkeletonLoader from '../../Shared/SkeletonLoader.vue'
 
 interface FamilyEntry {
   family: AbilityFamily

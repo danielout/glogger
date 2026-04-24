@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col gap-1.5 h-full min-h-0">
     <div class="flex items-center gap-2">
-      <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wider">Base Item</h4>
+      <h4 class="panel-label">Base Item</h4>
     </div>
 
     <!-- Currently selected item (hidden in preview mode, dialog handles it) -->
@@ -88,8 +88,8 @@
 
     <!-- Results list -->
     <div class="flex-1 overflow-y-auto border border-border-default rounded" :class="previewMode ? '' : 'max-h-80'">
-      <div v-if="loading" class="px-2 py-3">
-        <SkeletonLoader variant="text" :lines="5" />
+      <div v-if="loading" class="px-2 py-3 text-xs text-text-muted text-center">
+        Loading items...
       </div>
       <div v-else-if="results.length === 0" class="px-2 py-3 text-xs text-text-dim text-center">
         No items found{{ query ? ` for "${query}"` : '' }}
@@ -140,7 +140,6 @@ import type { ItemInfo } from '../../../types/gameData'
 import ItemInline from '../../Shared/Item/ItemInline.vue'
 import GameIcon from '../../Shared/GameIcon.vue'
 import StyledSelect from '../../Shared/StyledSelect.vue'
-import SkeletonLoader from '../../Shared/SkeletonLoader.vue'
 
 const props = withDefaults(defineProps<{
   /** If true, clicking an item previews it instead of selecting immediately */

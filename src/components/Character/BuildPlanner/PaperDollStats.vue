@@ -2,13 +2,13 @@
   <div class="flex flex-col gap-3 px-2 py-1 text-center">
     <!-- Stat Bonuses (Health, Armor, Power only) -->
     <div v-if="statBonuses.length > 0">
-      <h4 class="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-1">Stat Bonuses</h4>
+      <h4 class="micro-label mb-1">Stat Bonuses</h4>
       <div class="space-y-0.5">
         <div
           v-for="attr in statBonuses"
           :key="attr.label"
           class="text-xs">
-          <span :class="attr.value > 0 ? 'text-value-positive' : 'text-value-negative'">
+          <span :class="attr.value > 0 ? 'text-green-400' : 'text-red-400'">
             {{ attr.formattedValue }}
           </span>
           <span class="text-text-muted ml-1">{{ attr.label }}</span>
@@ -18,13 +18,13 @@
 
     <!-- Combat Refresh -->
     <div v-if="combatRefreshBonuses.length > 0">
-      <h4 class="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-1">Combat Refresh</h4>
+      <h4 class="micro-label mb-1">Combat Refresh</h4>
       <div class="space-y-0.5">
         <div
           v-for="attr in combatRefreshBonuses"
           :key="attr.label"
           class="text-xs">
-          <span :class="attr.value > 0 ? 'text-value-positive' : 'text-value-negative'">
+          <span :class="attr.value > 0 ? 'text-green-400' : 'text-red-400'">
             {{ attr.formattedValue }}
           </span>
           <span class="text-text-muted ml-1">{{ shortLabel(attr.label) }}</span>
@@ -34,7 +34,7 @@
 
     <!-- Armor Set Bonus -->
     <div v-if="armorSetEntries.length > 0">
-      <h4 class="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-1">Set Bonus</h4>
+      <h4 class="micro-label mb-1">Set Bonus</h4>
       <div class="space-y-0.5">
         <div
           v-for="entry in armorSetEntries"

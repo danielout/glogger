@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col h-full">
     <div class="px-6 py-4 border-b border-border-default flex justify-between items-center bg-surface-base">
-      <h2 class="m-0 text-text-primary text-xl font-medium">System Messages</h2>
+      <h2 class="screen-title m-0">System Messages</h2>
       <div class="flex gap-2">
         <button @click="refresh" :disabled="loading" class="w-9 h-9 p-0 bg-surface-elevated border border-border-light rounded text-text-primary text-xl cursor-pointer transition-all flex items-center justify-center hover:bg-border-default hover:border-border-hover disabled:opacity-50 disabled:cursor-not-allowed" title="Refresh">⟳</button>
       </div>

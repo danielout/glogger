@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col gap-2 min-h-0 h-full">
     <div class="flex items-center justify-between shrink-0">
-      <h3 class="text-sm font-semibold text-text-secondary uppercase tracking-wider">Player Attributes</h3>
+      <h3 class="section-heading">Player Attributes</h3>
       <div class="flex items-center gap-2">
         <input
           v-model="filter"
@@ -12,7 +12,7 @@
       </div>
     </div>
 
-    <DataTableSkeleton v-if="loading" :columns="4" :rows="6" />
+    <div v-if="loading" class="text-xs text-text-muted italic">Loading...</div>
 
     <div v-else-if="attributes.length === 0" class="text-xs text-text-dim italic">
       No attribute data yet. Attributes populate when you enter a zone in-game.
@@ -53,7 +53,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { useSettingsStore } from '../../stores/settingsStore'
-import DataTableSkeleton from '../Shared/DataTableSkeleton.vue'
 
 interface AttributeExtreme {
   attribute_name: string

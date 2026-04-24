@@ -1,4 +1,21 @@
 @layer components {
+  /* Heading hierarchy */
+  .screen-title {
+    @apply text-xl font-medium text-text-primary;
+  }
+
+  .section-heading {
+    @apply text-sm font-semibold text-text-secondary uppercase tracking-wider;
+  }
+
+  .panel-label {
+    @apply text-xs font-semibold text-text-muted uppercase tracking-wider;
+  }
+
+  .micro-label {
+    @apply text-[10px] font-semibold text-text-muted uppercase tracking-wider;
+  }
+
   .btn {
     @apply px-3 py-1.5 rounded text-sm font-medium transition-colors cursor-pointer font-mono;
   }
