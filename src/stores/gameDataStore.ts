@@ -21,6 +21,7 @@ import type {
   NpcFavorEntry,
   TsysAbilityXref,
   AbilityTsysXref,
+  GardeningProductChain,
 } from "../types/gameData";
 import { extractNpcKeyFromFavorPath } from "../utils/questDisplay";
 
@@ -325,6 +326,12 @@ export const useGameDataStore = defineStore("gameData", () => {
     return invoke<RecipeInfo[]>("get_recipes_for_skill", { skill });
   }
 
+  // ── Gardening product chain ────────────────────────────────────────────────
+
+  async function getGardeningProductChain(itemId: number): Promise<GardeningProductChain | null> {
+    return invoke<GardeningProductChain | null>("get_gardening_product_chain", { itemId });
+  }
+
   // ── Quest queries ──────────────────────────────────────────────────────────
 
   async function getAllQuests(): Promise<QuestInfo[]> {
@@ -530,6 +537,7 @@ export const useGameDataStore = defineStore("gameData", () => {
     getRecipesUsingItem,
     searchRecipes,
     getRecipesForSkill,
+    getGardeningProductChain,
     getAllQuests,
     searchQuests,
     getAllNpcs,

@@ -3575,3 +3575,182 @@ pub async fn get_enemy(
     Ok(data.ai.get(&key).map(|info| info.to_summary(&key)))
 }
 
+// ── Gardening product chain ─────────────────────────────────────────────────
+
+/// A compact item summary for gardening chain display.
+#[derive(serde::Serialize, Clone)]
+pub struct GardeningChainItem {
+    pub id: u32,
+    pub name: String,
+    pub icon_id: Option<u32>,
+    pub role: String, // "seedling", "plant", or "product"
+}
+
+/// A recipe in the gardening chain that connects a plant to its products.
+#[derive(serde::Serialize, Clone)]
+pub struct GardeningChainRecipe {
+    pub id: u32,
+    pub name: String,
+    pub skill: Option<String>,
+    pub skill_level_req: Option<f32>,
+}
+
+/// The full gardening product chain for a seedling or plant item.
+#[derive(serde::Serialize, Clone)]
+pub struct GardeningProductChain {
+    /// The seedling item (if found or if the input was a seedling)
+    pub seedling: Option<GardeningChainItem>,
+    /// The plant/vegetable item produced by planting the seedling
+    pub plant: Option<GardeningChainItem>,
+    /// Recipes that use the plant as an ingredient, and their products
+    pub products: Vec<GardeningChainProduct>,
+    /// The gardening level required to plant (from seedling skill_reqs)
+    pub gardening_level: Option<u32>,
+}
+
+/// A single product produced from a plant via a recipe.
+#[derive(serde::Serialize, Clone)]
+pub struct GardeningChainProduct {
+    pub recipe: GardeningChainRecipe,
+    pub items: Vec<GardeningChainItem>,
+}
+
+/// Suffixes that indicate an item is a seedling/seed variant.
+const SEEDLING_SUFFIXES: &[&str] = &["Seedling", "Leafling", "Seeds"];
+
+/// Strip known seedling suffixes from an internal name to get the base plant name.
+fn strip_seedling_suffix(internal_name: &str) -> Option<&str> {
+    for suffix in SEEDLING_SUFFIXES {
+        if internal_name.ends_with(suffix) && internal_name.len() > suffix.len() {
+            return Some(&internal_name[..internal_name.len() - suffix.len()]);
+        }
+    }
+    None
+}
+
+/// Check if an item is a seedling (has Seedling=XX keyword).
+fn is_seedling(item: &ItemInfo) -> bool {
+    item.keywords.iter().any(|kw| kw.starts_with("Seedling="))
+}
+
+/// Find the plant item that a seedling produces, by matching internal names.
+fn find_plant_for_seedling<'a>(data: &'a GameData, seedling: &ItemInfo) -> Option<&'a ItemInfo> {
+    let internal = seedling.internal_name.as_deref()?;
+    let base = strip_seedling_suffix(internal)?;
+
+    // Look up by internal name
+    if let Some(item) = data.resolve_item(base) {
+        return Some(item);
+    }
+
+    None
+}
+
+/// Find the seedling that produces a given plant item.
+fn find_seedling_for_plant<'a>(data: &'a GameData, plant: &ItemInfo) -> Option<&'a ItemInfo> {
+    let plant_internal = plant.internal_name.as_deref()?;
+
+    for suffix in SEEDLING_SUFFIXES {
+        let candidate = format!("{}{}", plant_internal, suffix);
+        if let Some(item) = data.resolve_item(&candidate) {
+            if is_seedling(item) {
+                return Some(item);
+            }
+        }
+    }
+
+    None
+}
+
+fn item_to_chain_item(item: &ItemInfo, role: &str) -> GardeningChainItem {
+    GardeningChainItem {
+        id: item.id,
+        name: item.name.clone(),
+        icon_id: item.icon_id,
+        role: role.to_string(),
+    }
+}
+
+/// Get the full gardening product chain for a seedling or plant item.
+///
+/// If given a seedling, walks: seedling → plant → recipes using plant → products.
+/// If given a plant (vegetable), walks: find seedling → plant → recipes → products.
+/// Returns None if the item isn't part of a gardening chain.
+#[tauri::command]
+pub async fn get_gardening_product_chain(
+    item_id: u32,
+    state: State<'_, GameDataState>,
+) -> Result<Option<GardeningProductChain>, String> {
+    let data = state.read().await;
+
+    let item = match data.items.get(&item_id) {
+        Some(i) => i,
+        None => return Ok(None),
+    };
+
+    let (seedling_item, plant_item) = if is_seedling(item) {
+        // Input is a seedling — find its plant
+        let plant = find_plant_for_seedling(&data, item);
+        (Some(item), plant)
+    } else {
+        // Input might be a plant — try to find its seedling
+        let seedling = find_seedling_for_plant(&data, item);
+        if seedling.is_some() {
+            (seedling, Some(item))
+        } else {
+            // Not a gardening item
+            return Ok(None);
+        }
+    };
+
+    // Extract gardening level from seedling's skill_reqs
+    let gardening_level = seedling_item.and_then(|s| {
+        s.skill_reqs.as_ref().and_then(|reqs: &Value| {
+            reqs.get("Gardening").and_then(|v: &Value| v.as_u64()).map(|v| v as u32)
+        })
+    });
+
+    // Build product list from recipes that use the plant item
+    let mut products = Vec::new();
+    if let Some(plant) = plant_item {
+        if let Some(recipe_ids) = data.recipes_using_item.get(&plant.id) {
+            for recipe_id in recipe_ids {
+                if let Some(recipe) = data.recipes.get(recipe_id) {
+                    let product_items: Vec<GardeningChainItem> = recipe
+                        .result_item_ids
+                        .iter()
+                        .filter_map(|rid| data.items.get(rid))
+                        .map(|i| item_to_chain_item(i, "product"))
+                        .collect();
+
+                    if !product_items.is_empty() {
+                        products.push(GardeningChainProduct {
+                            recipe: GardeningChainRecipe {
+                                id: recipe.id,
+                                name: recipe.name.clone(),
+                                skill: recipe.skill.clone(),
+                                skill_level_req: recipe.skill_level_req,
+                            },
+                            items: product_items,
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    // Sort products by skill level requirement
+    products.sort_by(|a, b| {
+        let a_lvl = a.recipe.skill_level_req.unwrap_or(0.0);
+        let b_lvl = b.recipe.skill_level_req.unwrap_or(0.0);
+        a_lvl.partial_cmp(&b_lvl).unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    Ok(Some(GardeningProductChain {
+        seedling: seedling_item.map(|s| item_to_chain_item(s, "seedling")),
+        plant: plant_item.map(|p| item_to_chain_item(p, "plant")),
+        products,
+        gardening_level,
+    }))
+}
+

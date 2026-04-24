@@ -265,6 +265,45 @@
             </div>
           </div>
 
+          <!-- Gardening Product Chain -->
+          <div v-if="gardeningChain" class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+              Gardening Chain
+              <span v-if="gardeningChain.gardening_level" class="text-text-muted normal-case tracking-normal ml-1">(Gardening Lv {{ gardeningChain.gardening_level }})</span>
+            </div>
+            <div class="flex flex-col gap-1.5 px-2">
+              <!-- Chain visualization: Seedling → Plant → Products -->
+              <div class="flex items-center gap-1.5 flex-wrap text-xs">
+                <template v-if="gardeningChain.seedling">
+                  <ItemInline :reference="gardeningChain.seedling.name" />
+                  <span class="text-text-dim">→</span>
+                </template>
+                <template v-if="gardeningChain.plant">
+                  <ItemInline :reference="gardeningChain.plant.name" />
+                </template>
+              </div>
+              <!-- Products from recipes using the plant -->
+              <div v-if="gardeningChain.products.length" class="flex flex-col gap-1 mt-1">
+                <div class="text-[0.6rem] uppercase tracking-widest text-text-dim">Used in {{ gardeningChain.products.length }} recipe{{ gardeningChain.products.length !== 1 ? 's' : '' }}</div>
+                <div
+                  v-for="product in gardeningChain.products"
+                  :key="product.recipe.id"
+                  class="flex gap-2 items-center text-xs px-2 py-0.5 bg-surface-inset border-l-2 border-l-[#2a6a2a]">
+                  <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ product.recipe.skill_level_req || 0 }}]</span>
+                  <RecipeInline :reference="product.recipe.name" />
+                  <span class="text-text-dim mx-0.5">→</span>
+                  <span class="flex items-center gap-1 flex-wrap">
+                    <ItemInline v-for="item in product.items" :key="item.id" :reference="item.name" />
+                  </span>
+                  <span v-if="product.recipe.skill" class="text-text-dim text-[0.65rem] ml-auto">{{ product.recipe.skill }}</span>
+                </div>
+              </div>
+              <div v-else-if="gardeningChain.plant" class="text-xs text-text-dim italic">
+                No recipes found using this plant
+              </div>
+            </div>
+          </div>
+
           <!-- Uses -->
           <div v-if="selected.num_uses" class="flex flex-col gap-1.5">
             <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Usage</div>
@@ -399,12 +438,13 @@ import { useKeyboard } from "../../composables/useKeyboard";
 import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import { useEntityNavigation } from "../../composables/useEntityNavigation";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
-import type { ItemInfo, RecipeInfo, EntitySources, NpcFavorEntry } from "../../types/gameData";
+import type { ItemInfo, RecipeInfo, EntitySources, NpcFavorEntry, GardeningProductChain } from "../../types/gameData";
 import SourcesPanel from "../Shared/SourcesPanel.vue";
 import RecipeInline from "../Shared/Recipe/RecipeInline.vue";
 import QuestInline from "../Shared/Quest/QuestInline.vue";
 import SkillInline from "../Shared/Skill/SkillInline.vue";
 import NpcInline from "../Shared/NPC/NpcInline.vue";
+import ItemInline from "../Shared/Item/ItemInline.vue";
 
 const props = defineProps<{
   navTarget?: EntityNavigationTarget | null;
@@ -432,6 +472,7 @@ const recipesProducing = ref<RecipeInfo[]>([]);
 const recipesUsing = ref<RecipeInfo[]>([]);
 const npcsWantingItem = ref<NpcFavorEntry[]>([]);
 const keywordRecipes = ref<RecipeInfo[]>([]);
+const gardeningChain = ref<GardeningProductChain | null>(null);
 const listRef = ref<HTMLElement | null>(null);
 
 // Advanced filters
@@ -558,6 +599,12 @@ async function selectItem(item: ItemInfo) {
   recipesUsing.value = [];
   npcsWantingItem.value = [];
   keywordRecipes.value = [];
+  gardeningChain.value = null;
+
+  // Load gardening product chain
+  store.getGardeningProductChain(item.id)
+    .then(chain => { gardeningChain.value = chain; })
+    .catch(e => { console.warn("Gardening chain fetch failed:", e); });
 
   // Load sources
   sourcesLoading.value = true;
@@ -622,6 +669,7 @@ function clearSelection() {
   recipesUsing.value = [];
   npcsWantingItem.value = [];
   keywordRecipes.value = [];
+  gardeningChain.value = null;
 }
 
 // Navigate to a specific item when navTarget changes

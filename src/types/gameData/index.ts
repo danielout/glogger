@@ -48,6 +48,33 @@ export interface AbilityTsysXref {
   internal_name: string | null
 }
 
+// Gardening product chain types
+export interface GardeningChainItem {
+  id: number
+  name: string
+  icon_id: number | null
+  role: string // "seedling" | "plant" | "product"
+}
+
+export interface GardeningChainRecipe {
+  id: number
+  name: string
+  skill: string | null
+  skill_level_req: number | null
+}
+
+export interface GardeningChainProduct {
+  recipe: GardeningChainRecipe
+  items: GardeningChainItem[]
+}
+
+export interface GardeningProductChain {
+  seedling: GardeningChainItem | null
+  plant: GardeningChainItem | null
+  products: GardeningChainProduct[]
+  gardening_level: number | null
+}
+
 // CacheStatus lives here since it's not really a game data type
 export interface CacheStatus {
   cached_version: number | null
