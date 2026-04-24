@@ -13,7 +13,9 @@ import { useSurveyTrackerStore } from "./surveyTrackerStore";
 import { useFarmingStore } from "./farmingStore";
 import { useDeathStore } from "./deathStore";
 import { useResuscitateStore } from "./resuscitateStore";
+import { useWatchwordAlertStore } from "./watchwordAlertStore";
 import type { PlayerEvent } from "../types/playerEvents";
+import type { WatchRuleTriggered } from "../types/database";
 
 export type StartupPhase =
   | "splash"
@@ -232,6 +234,7 @@ export const useStartupStore = defineStore("startup", () => {
     const farmingStore = useFarmingStore();
     const deathStore = useDeathStore();
     const resuscitateStore = useResuscitateStore();
+    const watchwordAlertStore = useWatchwordAlertStore();
 
     // ── Task 1: Wait for game data (CDN) ────────────────────────────────
     // The Rust backend is already loading this in a background task spawned
@@ -303,6 +306,9 @@ export const useStartupStore = defineStore("startup", () => {
       });
       await listen("character-resuscitated", (event: any) => {
         resuscitateStore.handleResuscitateEvent(event.payload);
+      });
+      await listen<WatchRuleTriggered>("watch-rule-triggered", (event) => {
+        watchwordAlertStore.handleWatchRuleTriggered(event.payload);
       });
 
       // Start log watchers if enabled
