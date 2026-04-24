@@ -24,7 +24,7 @@
 
     <!-- Fixed Ingredients -->
     <div v-if="recipe.fixed_ingredients.length > 0">
-      <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
+      <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
         Fixed Ingredients
       </div>
       <div class="flex flex-col gap-1">
@@ -32,9 +32,9 @@
           v-for="(ing, i) in recipe.fixed_ingredients"
           :key="i"
           class="flex items-center gap-2 text-xs">
-          <span class="text-text-muted w-6 text-right shrink-0">{{ ing.stack_size }}x</span>
+          <span class="font-mono text-text-muted w-6 text-right shrink-0">{{ ing.stack_size }}x</span>
           <ItemInline :reference="String(ing.item_id)" />
-          <span v-if="getOwnedCount(ing.item_id) > 0" class="text-xs text-accent-green">
+          <span v-if="getOwnedCount(ing.item_id) > 0" class="text-xs text-accent-green font-mono">
             (×{{ getOwnedCount(ing.item_id) }})
           </span>
           <span v-if="ing.chance_to_consume != null && ing.chance_to_consume < 1"
@@ -47,14 +47,14 @@
 
     <!-- Variable Ingredient Slots -->
     <div v-if="recipe.variable_slots.length > 0">
-      <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
+      <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
         Variable Ingredient Slots
         <span class="normal-case tracking-normal text-text-dim ml-1">({{ recipe.variable_slots.length }} slots determine the effect)</span>
       </div>
       <div class="flex flex-col gap-3">
         <div v-for="(slot, i) in recipe.variable_slots" :key="i" class="bg-surface-base border border-surface-elevated rounded px-3 py-2">
           <div class="flex items-center gap-2 mb-1.5">
-            <span class="text-xs text-accent-gold bg-accent-gold/10 rounded px-1.5 py-0.5">
+            <span class="text-xs font-mono text-accent-gold bg-accent-gold/10 rounded px-1.5 py-0.5">
               {{ slot.keyword }}
             </span>
             <span class="text-text-muted text-xs">{{ slot.stack_size }}x needed</span>
@@ -65,7 +65,7 @@
               :key="itemId"
               class="text-xs inline-flex items-center gap-0.5">
               <ItemInline :reference="String(itemId)" />
-              <span v-if="getOwnedCount(itemId) > 0" class="text-xs text-accent-green">
+              <span v-if="getOwnedCount(itemId) > 0" class="text-xs text-accent-green font-mono">
                 (×{{ getOwnedCount(itemId) }})
               </span>
             </span>
@@ -79,7 +79,7 @@
 
     <!-- Effect Pool Info -->
     <div v-if="recipe.brew_item_effect">
-      <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
+      <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
         Possible Effect Categories
         <span class="normal-case tracking-normal text-text-dim ml-1">(your brew will get one of these)</span>
       </div>
@@ -116,7 +116,7 @@
 
     <!-- Discoveries -->
     <div v-if="discoveries.length > 0">
-      <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
+      <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
         Your Discoveries
         <span class="normal-case tracking-normal text-text-dim ml-1">({{ discoveries.length }} found)</span>
       </div>
@@ -148,7 +148,7 @@
               <template v-if="ingId !== null">
                 <div class="inline-flex items-center gap-0.5">
                   <ItemInline :reference="String(ingId)" />
-                  <span v-if="getOwnedCount(ingId) > 0" class="text-xs text-accent-green">
+                  <span v-if="getOwnedCount(ingId) > 0" class="text-xs text-accent-green font-mono">
                     ×{{ getOwnedCount(ingId) }}
                   </span>
                 </div>
@@ -200,12 +200,77 @@
     <!-- No discoveries yet prompt -->
     <div v-else-if="recipe.variable_slots.length > 0"
       class="text-xs text-text-dim italic bg-surface-base border border-surface-elevated rounded px-3 py-2">
-      No discoveries for this recipe yet. Click "Scan Snapshots" to extract brewing data from your inventory exports.
+      No discoveries for this recipe yet. Use the form below, scan snapshots, or import a CSV.
+    </div>
+
+    <!-- Add Discovery form -->
+    <div v-if="recipe.variable_slots.length > 0 && characterName">
+      <div class="flex items-center gap-2 mb-1.5">
+        <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 flex-1">
+          Add Discovery
+        </div>
+        <button
+          v-if="!showAddForm"
+          class="text-xs px-2 py-0.5 rounded border border-border-light text-text-muted hover:text-accent-gold hover:border-accent-gold/40 cursor-pointer transition-colors bg-transparent"
+          @click="showAddForm = true">
+          + Add
+        </button>
+      </div>
+
+      <div v-if="showAddForm" class="bg-surface-base border border-surface-elevated rounded px-3 py-2.5 flex flex-col gap-2.5">
+        <!-- Ingredient selectors — one per variable slot -->
+        <div v-for="(slot, si) in recipe.variable_slots" :key="si" class="flex flex-col gap-1">
+          <label class="text-[0.65rem] uppercase tracking-wider text-text-dim">
+            Slot {{ si + 1 }}
+            <span class="normal-case tracking-normal text-text-dim ml-1">({{ slot.keyword }})</span>
+          </label>
+          <select
+            v-model="addFormSlots[si]"
+            class="bg-surface-elevated border border-border-default rounded px-2 py-1 text-xs text-text-primary w-full">
+            <option :value="null">-- Select ingredient --</option>
+            <option
+              v-for="itemId in slot.valid_item_ids"
+              :key="itemId"
+              :value="itemId">
+              {{ ingredientById.get(itemId)?.name ?? `Item #${itemId}` }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Optional effect label -->
+        <div class="flex flex-col gap-1">
+          <label class="text-[0.65rem] uppercase tracking-wider text-text-dim">
+            Effect Label
+            <span class="normal-case tracking-normal text-text-dim ml-1">(optional — e.g. "Partier's" or paste the tooltip text)</span>
+          </label>
+          <input
+            v-model="addFormEffectLabel"
+            type="text"
+            placeholder="e.g. Orcs gain +38 Max Power"
+            class="input text-xs w-full" />
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-2">
+          <button
+            class="text-xs px-2.5 py-1 rounded border border-accent-gold/40 text-accent-gold hover:bg-accent-gold/10 cursor-pointer transition-colors bg-transparent disabled:opacity-40 disabled:cursor-not-allowed"
+            :disabled="!addFormValid || addFormSaving"
+            @click="submitAddForm">
+            {{ addFormSaving ? 'Saving...' : 'Save Discovery' }}
+          </button>
+          <button
+            class="text-xs px-2 py-1 rounded border border-border-light text-text-muted hover:text-text-secondary cursor-pointer transition-colors bg-transparent"
+            @click="resetAddForm">
+            Cancel
+          </button>
+          <span v-if="addFormError" class="text-xs text-accent-red ml-2">{{ addFormError }}</span>
+        </div>
+      </div>
     </div>
 
     <!-- Try Next suggestions -->
     <div v-if="suggestions.length > 0">
-      <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
+      <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 mb-1.5">
         Try Next
         <span class="normal-case tracking-normal text-text-dim ml-1">(untried combos you have ingredients for)</span>
       </div>
@@ -226,7 +291,7 @@
           </span>
           <span
             v-else
-            class="text-xs text-text-dim shrink-0 w-12">
+            class="text-xs text-text-dim font-mono shrink-0 w-12">
             {{ sug.ownedCount }}/{{ sug.totalCount }}
           </span>
           <div class="flex flex-wrap gap-x-2 gap-y-0.5">
@@ -253,13 +318,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import { confirm } from "@tauri-apps/plugin-dialog";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 import type { BrewingRecipe, BrewingIngredient, BrewingDiscovery } from "../../types/gameData/brewing";
 import { CATEGORY_LABELS, getPoolLabel, getPoolDescription } from "../../types/gameData/brewing";
 import { useBreweryStore } from "../../stores/breweryStore";
 import { useGameStateStore } from "../../stores/gameStateStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 
 const props = defineProps<{
   recipe: BrewingRecipe;
@@ -269,9 +335,68 @@ const props = defineProps<{
 
 const store = useBreweryStore();
 const gameState = useGameStateStore();
+const settingsStore = useSettingsStore();
+
+const characterName = computed(() => settingsStore.settings.activeCharacterName);
 
 // Session-stable random seed for shuffling suggestions
 const sessionSeed = Math.random();
+
+// ── Add Discovery form state ────────────────────────────────────────────────
+
+const showAddForm = ref(false);
+const addFormSlots = ref<(number | null)[]>([]);
+const addFormEffectLabel = ref("");
+const addFormSaving = ref(false);
+const addFormError = ref("");
+
+// Reset slot selections when recipe changes
+watch(
+  () => props.recipe.recipe_id,
+  () => {
+    resetAddForm();
+  }
+);
+
+const addFormValid = computed(() => {
+  // Every variable slot must have a selected ingredient
+  return props.recipe.variable_slots.every((_, i) => addFormSlots.value[i] != null);
+});
+
+function resetAddForm() {
+  showAddForm.value = false;
+  addFormSlots.value = props.recipe.variable_slots.map(() => null);
+  addFormEffectLabel.value = "";
+  addFormSaving.value = false;
+  addFormError.value = "";
+}
+
+async function submitAddForm() {
+  if (!addFormValid.value || !characterName.value) return;
+  addFormSaving.value = true;
+  addFormError.value = "";
+
+  const ingredientIds = addFormSlots.value.filter((id): id is number => id != null);
+  const effectLabel = addFormEffectLabel.value.trim() || undefined;
+
+  const result = await store.addManualDiscovery(
+    characterName.value,
+    props.recipe.recipe_id,
+    ingredientIds,
+    effectLabel
+  );
+
+  addFormSaving.value = false;
+
+  if (result) {
+    // Reset form but keep it open for rapid entry
+    addFormSlots.value = props.recipe.variable_slots.map(() => null);
+    addFormEffectLabel.value = "";
+    addFormError.value = "";
+  } else {
+    addFormError.value = store.error ?? "Failed to save discovery";
+  }
+}
 
 const categoryLabel = computed(() => CATEGORY_LABELS[props.recipe.category]);
 

@@ -126,6 +126,63 @@ pub fn delete_brewing_discovery(
     Ok(())
 }
 
+// ── Add a discovery manually ────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn add_brewing_discovery_manual(
+    character: String,
+    recipe_id: u32,
+    ingredient_ids: Vec<u32>,
+    effect_label: Option<String>,
+    db: State<'_, DbPool>,
+) -> Result<BrewingDiscovery, String> {
+    let conn = db.get().map_err(|e| format!("DB error: {e}"))?;
+
+    let mut sorted_ids = ingredient_ids;
+    sorted_ids.sort();
+    let ing_ids_json = serde_json::to_string(&sorted_ids).unwrap_or_default();
+
+    let timestamp = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
+
+    // Use "manual" as the power for manually entered discoveries without known effect data
+    let power = "manual".to_string();
+    let power_tier: i64 = 0;
+
+    conn.execute(
+        "INSERT INTO brewing_discoveries (
+            character, recipe_id, ingredient_ids, power, power_tier,
+            effect_label, race_restriction, item_name, first_seen_at, last_seen_at
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, NULL, NULL, ?7, ?7)
+         ON CONFLICT(character, recipe_id, ingredient_ids) DO UPDATE SET
+            last_seen_at = ?7,
+            effect_label = COALESCE(?6, effect_label)",
+        params![
+            character,
+            recipe_id,
+            ing_ids_json,
+            power,
+            power_tier,
+            effect_label,
+            timestamp,
+        ],
+    )
+    .map_err(|e| format!("Insert error: {e}"))?;
+
+    // Fetch the inserted/updated row
+    let disc = conn
+        .query_row(
+            "SELECT id, character, recipe_id, ingredient_ids, power, power_tier,
+                    effect_label, race_restriction, item_name, first_seen_at, last_seen_at
+             FROM brewing_discoveries
+             WHERE character = ?1 AND recipe_id = ?2 AND ingredient_ids = ?3",
+            params![character, recipe_id, ing_ids_json],
+            map_discovery_row,
+        )
+        .map_err(|e| format!("Fetch error: {e}"))?;
+
+    Ok(disc)
+}
+
 // ── Scan a snapshot's raw JSON for brewing discoveries ──────────────────────
 
 #[tauri::command]

@@ -335,6 +335,34 @@ export const useBreweryStore = defineStore("brewery", () => {
     }
   }
 
+  async function addManualDiscovery(
+    character: string,
+    recipeId: number,
+    ingredientIds: number[],
+    effectLabel?: string
+  ): Promise<BrewingDiscovery | null> {
+    try {
+      const disc = await invoke<BrewingDiscovery>("add_brewing_discovery_manual", {
+        character,
+        recipeId,
+        ingredientIds,
+        effectLabel: effectLabel || null,
+      });
+      // Add to local state (or replace if it already existed via ON CONFLICT)
+      const idx = discoveries.value.findIndex((d) => d.id === disc.id);
+      if (idx >= 0) {
+        discoveries.value[idx] = disc;
+      } else {
+        discoveries.value.unshift(disc);
+      }
+      return disc;
+    } catch (e) {
+      console.error("Failed to add manual discovery:", e);
+      error.value = `Add failed: ${e}`;
+      return null;
+    }
+  }
+
   async function deleteDiscovery(discoveryId: number) {
     try {
       await invoke("delete_brewing_discovery", { discoveryId });
@@ -420,6 +448,7 @@ export const useBreweryStore = defineStore("brewery", () => {
     loadDiscoveries,
     scanAllSnapshots,
     importCsv,
+    addManualDiscovery,
     selectRecipe,
     clearSelection,
     deleteDiscovery,
