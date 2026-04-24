@@ -27,11 +27,11 @@ These are investigated items kept for reference — the research is done but the
 
 - [ ] Bug: rez counter not working
   - Should be counting but isn't. The full pipeline (parser → coordinator → DB → store → widget) looks correctly wired. **Most likely cause:** serde enum case mismatch. `ChatResuscitateEvent` uses `#[serde(tag = "kind")]` but has no `rename_all` directive — if Tauri or middleware applies snake_case serialization, the variant serializes as `"resuscitated"` instead of `"Resuscitated"`, causing the frontend `payload.kind === 'Resuscitated'` check to silently fail. DB persistence works independently (inserts directly), so the bug is likely live-event-only. Fix is probably 1 line: add `#[serde(rename_all = "PascalCase")]` or lowercase the frontend check.
+    - if this doesn't work then i'll just need to get a new capture with our hot new capture text. maybe i should do that anyway before we try this one, just to ensure we get the solve.
   - **Effort: Low | Impact: Low**
 
-- [ ] Crafting projects: loading skeleton/shimmer states for material tables
-  - When `resolvingAll` is true, show skeleton rows instead of empty space. From archived projects-performance plan (top 3 perf fixes already landed).
-  - **Effort: Low | Impact: Medium (UX polish)**
+- [x] Crafting projects: loading skeleton/shimmer states for material tables
+  - Done: ProjectMaterialsPanel now shows SkeletonLoader + DataTableSkeleton sections while resolving instead of spinner text.
 
 - [ ] Crafting projects: accordion recipe summary + split raw/intermediate materials
   - Recipe list at top takes too much space on large projects — should be collapsible. Materials should split into "Raw Materials" (things to gather/buy) and "Intermediates" (things to craft), shown in dependency order.
@@ -41,17 +41,15 @@ These are investigated items kept for reference — the research is done but the
   - Cache resolved ingredient trees keyed by `recipe_id + quantity + expandedItemIds hash`. Avoids re-resolving unchanged entries during bulk operations. Better than DB persistence at this stage.
   - **Effort: Medium | Impact: Medium (performance)**
 
-- [ ] Crafting projects: pre-build `item_keyword_index` for dynamic ingredients
-  - `getItemsByKeyword` (used for "Any Bone" etc.) currently does O(n) scan. Pre-built `HashMap<String, Vec<u32>>` at CDN load time would make it O(1).
-  - **Effort: Low | Impact: Low-Medium (performance for keyword-heavy recipes)**
+- [x] Crafting projects: pre-build `item_keyword_index` for dynamic ingredients
+  - Done: `item_keyword_index: HashMap<String, Vec<u32>>` built at CDN load time, cached to disk. `get_items_by_keyword` now O(1).
 
 - [ ] Manual recipe adding to brewery
   - Let users manually add recipes/discoveries to the brewery journal instead of requiring JSON import.
   - **Effort: Low-Medium | Impact: Medium (accessibility)**
 
-- [ ] Stack size in item tooltips
-  - Show stack size information in item tooltips.
-  - **Effort: Low | Impact: Low (polish)**
+- [x] Stack size in item tooltips
+  - Already implemented. Fixed to hide "Max Stack: 1" for non-stackable items.
 
 - [ ] "Home zone" setting for route planner
   - User-set per character. Option to start routes from home zone instead of current location.
@@ -137,9 +135,8 @@ These are investigated items kept for reference — the research is done but the
   - Investigate whether supporting user-selectable color themes makes sense. Low priority but high delight.
   - **Effort: Medium (investigation + implementation) | Impact: Low (personalization/delight)**
 
-- [ ] Area tooltips with useful information
-  - Add informative tooltips when hovering area references.
-  - **Effort: Medium | Impact: Medium (discoverability)**
+- [x] Area tooltips with useful information
+  - Done: AreaTooltip.vue shows area name, short name, and notable NPCs (up to 8, via NPC cross-reference). AreaInline updated with EntityTooltipWrapper for hover/click/pin. CDN area data is sparse (no descriptions/level ranges), but NPC enrichment adds useful info.
 
 - [ ] Evaluate ingestion pipeline / coordinator architecture
   - **Partial investigation (see `docs/architecture/pipeline-structure.md`):** Coordinator is a manual dispatch hub (~2K lines). No formal event bus — each new feature adds match arms. No history/audit tables for most domains (only `item_transactions` is append-only). No shared schema contract for Tauri event payloads. Current design works at this scale but these are real gaps to watch as features grow.
