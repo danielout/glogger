@@ -88,13 +88,11 @@ These items are investigated but can't be resolved without new runtime captures 
   - **Investigation complete:** Three core problems: (1) `ProcessAddItem` always records stack_size=1 as defensive default; `correct_stack_from_chat()` patches this via status messages but timing is fragile during replay. (2) No detection of "login reload" full-state dumps vs. incremental changes — items are UPSERTed individually, never cleared on login during catch-up. (3) During catch-up replay (`live_mode=false`), inventory is not cleared on character login, so items from earlier replayed sessions pollute later ones. Fix requires: detecting login-phase full-state dumps, intelligently clearing transient state, coordinating stack-correction timing with chat log replay order.
   - **Effort: Medium-High (underestimated at Medium — touches replay sequencing, state isolation, transaction ordering) | Impact: Medium (data accuracy)**
 
-- [ ] Changelog formatting improvement
-  - Current in-app changelog rendering is poor. Needs better formatting/styling.
-  - **Effort: Medium | Impact: Medium (polish)**
+- [x] Changelog formatting improvement
+  - Done: Structured parsing with AccordionSection per release, color-coded category badges, proper typography. Removed style block.
 
-- [ ] Help popup redesign
-  - Current help popup is ugly. Could be made much prettier.
-  - **Effort: Medium | Impact: Medium (polish)**
+- [x] Help popup redesign
+  - Done: Frosted glass backdrop, side nav with icons, styled 3D keycap badges for shortcuts, card-based sections, gold accents throughout.
 
 - [x] Color standards write-up and enforcement
   - Audit completed: see `docs/architecture/color-standards.md`. 19 semantic tokens added to theme.css. ~250 hardcoded hex values migrated to tokens. ChatMessage channel colors fixed. Component classes updated.
@@ -108,17 +106,15 @@ These items are investigated but can't be resolved without new runtime captures 
   - Built: `DataTable.vue` (sortable, loading skeleton, empty state, dynamic cell slots), `FilterBar.vue` (v-model search, result count, filter slots), `SkeletonLoader.vue` (text/circle/rect variants), `DataTableSkeleton.vue`. Migrated 10 tables to DataTable (Character: StatsTable, SkillTable, CurrencyTable, RecipeTable, PlayerAttributesCard; StallTracker: StallSalesTab, StallInventoryTab, StallShopLogTab; Market: MarketView; Settings: DomainTable).
   - **Remaining:** ~30 more tables across Crafting, Surveying, and DataBrowser could be migrated. These tend to have more complex layouts (merged cells, nested sub-tables). SkeletonLoader is built but not yet adopted in existing screens — needs a pass to replace "Loading..." text with skeleton states. ComputedStatsCard intentionally skipped (key-value layout, not columnar).
 
-- [ ] Better screen persistence across the app
-  - Currently `useViewPrefs()` + settings store persists pane collapse/width and card order/visibility. **Gap:** no deep navigation state persisted — selected entity, scroll position, sub-tab state all reset on navigation. Main app state uses simple `ref(currentView)` with no persistence. Could extend `useViewPrefs` pattern to store sub-tab + context across sessions.
-  - **Effort: Medium | Impact: Medium (UX)**
+- [x] Better screen persistence across the app
+  - Done: `currentView` in App.vue persisted via `useViewPrefs` (app restarts remember which screen was open). MenuBar sub-tab selections persisted across navigation and restarts. Inner sub-tabs persisted for: Economics Farming, Economics Survey, Stall Tracker, Data Browser sidebar. Remaining gap: scroll position and selected entities still reset on navigation (would require significant complexity for marginal benefit).
 
 - [ ] Item provenance downstream features
   - Now that provenance is in the transaction ledger (item-provenance plan phases 1-5 complete), new analytics become possible: mining node yield stats per node type, vendor purchase history with total spend, kill loot breakdown by mob type, crafting yield analysis per recipe, "unknown source" diagnostic reports for discovering new signal patterns.
   - **Effort: Medium per feature | Impact: Medium-High (analytics depth)**
 
-- [ ] Hoplology (equipment study) tracker
-  - Track "carefully studied" messages from Player.log, record studied items per character, show completion % by equipment category with CDN data, 5-minute study cooldown timer. Small parser addition + simple CRUD table.
-  - **Effort: Medium | Impact: Medium**
+- [x] Hoplology (equipment study) tracker
+  - Done: Chat parser for "carefully study" messages, hoplology_studies table, dashboard widget with study count, 5-min cooldown timer, and searchable studied items list.
 
 - [ ] Boss kill loot timers
   - Currently only player *deaths* are tracked (via `ChatCombatEvent::PlayerDeath` with killer detection). No reverse tracking exists (player kills boss). Would need to extend `chat_combat_parser` or `player_event_parser` for enemy kill events with boss identification. Loot timer logic would layer on top.
