@@ -47,16 +47,14 @@ These items are investigated but can't be resolved without new runtime captures 
 - [x] Crafting projects: accordion recipe summary + split raw/intermediate materials
   - Done: Recipe list wrapped in AccordionSection (auto-collapsed >5 recipes). MaterialSummary splits into Intermediates (craftable) and Raw Materials. New MaterialTable component extracts shared table rendering.
 
-- [ ] Crafting projects: in-memory ingredient tree cache
-  - Cache resolved ingredient trees keyed by `recipe_id + quantity + expandedItemIds hash`. Avoids re-resolving unchanged entries during bulk operations. Better than DB persistence at this stage.
-  - **Effort: Medium | Impact: Medium (performance)**
+- [x] Crafting projects: in-memory ingredient tree cache
+  - Done: Map cache in craftingStore keyed by `recipeId:quantity:sortedExpandItemIds`. Caches top-level resolves only (not recursive sub-calls or bulk with mutable stock).
 
 - [x] Crafting projects: pre-build `item_keyword_index` for dynamic ingredients
   - Done: `item_keyword_index: HashMap<String, Vec<u32>>` built at CDN load time, cached to disk. `get_items_by_keyword` now O(1).
 
-- [ ] Manual recipe adding to brewery
-  - Let users manually add recipes/discoveries to the brewery journal instead of requiring JSON import.
-  - **Effort: Low-Medium | Impact: Medium (accessibility)**
+- [x] Manual recipe adding to brewery
+  - Done: Collapsible form in recipe detail panel with per-slot ingredient dropdowns and optional effect label. Uses existing brewing_discoveries table. Batch entry supported.
 
 - [x] Stack size in item tooltips
   - Already implemented. Fixed to hide "Max Stack: 1" for non-stackable items.
@@ -129,9 +127,8 @@ These items are investigated but can't be resolved without new runtime captures 
 - [x] Enemy database in data browser
   - Done: EnemyBrowser with search, strategy filter, detail panel (combat properties, abilities). Backend AiSummary struct + 3 new Tauri commands. Registered in sidebar and overlay.
 
-- [ ] Storage view: "show totals" mode
-  - Items stored in multiple locations should optionally collapse into a single row with total quantity. Accordion to expand and see per-location breakdown.
-  - **Effort: Medium | Impact: Medium (usability)**
+- [x] Storage view: "show totals" mode
+  - Done: Toggle collapses items across locations into total rows with expandable per-location breakdown. Search filters both modes. Preference persisted via useViewPrefs.
 
 - [ ] Color theme support
   - Investigate whether supporting user-selectable color themes makes sense. Low priority but high delight.
@@ -152,9 +149,8 @@ These items are investigated but can't be resolved without new runtime captures 
   - Write up conventions so development stays consistent.
   - **Effort: Medium | Impact: Medium (maintainability)**
 
-- [ ] Timer widget
-  - General-purpose timer widget for the dashboard. Related to the general-purpose timer system in Larger Efforts.
-  - **Effort: Medium | Impact: Medium**
+- [x] Timer widget
+  - Done: Countdown timers with add/pause/resume/restart/remove. Flexible duration input, preset quick-start buttons (Mushroom Barrel, Brewing, Cheesemaking, Composting). Configurable presets. Persisted via localStorage with absolute timestamps. Expired timers pulse red.
 
 - [ ] Show work order completion state in tooltips for all characters
   - Work order tooltips should show completion/cooldown state across all tracked characters.
