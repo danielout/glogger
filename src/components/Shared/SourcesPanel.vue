@@ -1,11 +1,11 @@
 <template>
   <div v-if="loading" class="flex flex-col gap-1.5">
-    <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Sources</div>
-    <div class="text-xs text-accent-gold animate-pulse px-2 py-1">Loading sources…</div>
+    <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Sources</div>
+    <SkeletonLoader variant="text" :lines="2" />
   </div>
 
   <div v-else-if="sources && hasSources" class="flex flex-col gap-1.5">
-    <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Sources</div>
+    <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Sources</div>
     <div class="flex flex-col gap-1">
       <!-- CDN source entries -->
       <div
@@ -39,7 +39,7 @@
   </div>
 
   <div v-else-if="sources && !hasSources" class="flex flex-col gap-1.5">
-    <div class="text-[10px] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Sources</div>
+    <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Sources</div>
     <div class="text-xs text-text-dim italic px-2 py-1">No known sources</div>
   </div>
 </template>
@@ -50,6 +50,7 @@ import type { EntitySources } from "../../types/gameData";
 import ItemInline from "./Item/ItemInline.vue";
 import QuestInline from "./Quest/QuestInline.vue";
 import SourceEntryRow from "./SourceEntryRow.vue";
+import SkeletonLoader from "./SkeletonLoader.vue";
 
 const props = defineProps<{
   sources: EntitySources | null

@@ -16,7 +16,7 @@
         </span>
         <span v-if="stockTarget" class="text-text-muted text-[0.65rem]">
           <template v-if="stockTarget.effectiveQty <= 0">
-            <span class="text-value-positive">met</span>
+            <span class="text-green-400">met</span>
           </template>
           <template v-else>
             have {{ stockTarget.currentStock }}, craft {{ stockTarget.effectiveQty }}
@@ -66,7 +66,9 @@
 
     <!-- Expanded ingredient list -->
     <div v-if="expanded && recipe" class="border-t border-surface-dark/50 bg-surface-dark/20 px-2 py-1">
-      <div v-if="loading" class="text-text-dim italic py-2 px-2">Loading ingredients...</div>
+      <div v-if="loading" class="py-2 px-2">
+        <SkeletonLoader variant="text" :lines="3" />
+      </div>
       <template v-else>
         <IngredientRow
           v-for="(ing, i) in resolvedIngredients"
@@ -90,6 +92,7 @@ import type { CraftingProjectEntry, ResolvedIngredient } from "../../types/craft
 import type { RecipeInfo } from "../../types/gameData/recipes";
 import RecipeInline from "../Shared/Recipe/RecipeInline.vue";
 import IngredientRow from "./IngredientRow.vue";
+import SkeletonLoader from "../Shared/SkeletonLoader.vue";
 
 const props = defineProps<{
   entry: CraftingProjectEntry

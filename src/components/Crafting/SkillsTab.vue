@@ -12,7 +12,7 @@
           </select>
         </div>
 
-        <div v-if="loading" class="text-text-dim text-xs italic px-1">Loading...</div>
+        <SkeletonLoader v-if="loading" variant="text" :lines="6" />
 
         <button
           v-for="entry in sortedSkills"
@@ -106,7 +106,7 @@
               </div>
               <div class="text-text-muted">
                 <span class="text-text-dim">estimated total profit </span>
-                <span class="font-bold font-mono" :class="profitLoss >= 0 ? 'text-value-positive' : 'text-value-negative'">
+                <span class="font-bold font-mono" :class="profitLoss >= 0 ? 'text-green-400' : 'text-red-400'">
                   {{ profitLoss >= 0 ? '+' : '' }}{{ formatCompact(Math.abs(profitLoss)) }}
                 </span>
               </div>
@@ -223,6 +223,7 @@ import type { SkillCraftingStats } from "../../types/crafting";
 import type { RecipeInfo } from "../../types/gameData/recipes";
 import EmptyState from "../Shared/EmptyState.vue";
 import PaneLayout from "../Shared/PaneLayout.vue";
+import SkeletonLoader from "../Shared/SkeletonLoader.vue";
 import SkillInline from "../Shared/Skill/SkillInline.vue";
 import RecipeInline from "../Shared/Recipe/RecipeInline.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";

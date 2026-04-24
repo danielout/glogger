@@ -1,8 +1,8 @@
 <template>
   <div class="flex flex-col gap-4">
     <!-- Loading -->
-    <div v-if="loading" class="text-sm text-text-muted py-8 text-center">
-      Loading PG news...
+    <div v-if="loading" class="py-4 space-y-4">
+      <SkeletonLoader v-for="i in 3" :key="i" variant="rect" height="h-24" />
     </div>
 
     <!-- Error -->
@@ -35,6 +35,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import SkeletonLoader from '../Shared/SkeletonLoader.vue'
 
 interface NewsEntry {
   title: string

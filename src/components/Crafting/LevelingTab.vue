@@ -128,7 +128,9 @@
 
         <!-- Recipe list -->
         <div class="flex-1 overflow-y-auto border border-surface-elevated rounded">
-          <div v-if="loading" class="p-4 text-text-muted text-xs text-center">Loading recipes...</div>
+          <div v-if="loading" class="p-4">
+            <SkeletonLoader variant="text" :lines="8" />
+          </div>
           <div v-else-if="filteredRecipes.length === 0" class="p-4 text-text-muted text-xs text-center">
             No matching recipes found.
           </div>
@@ -162,7 +164,7 @@
                 +N
               </button>
               <button
-                class="text-[0.6rem] px-1.5 py-0.5 rounded bg-green-900/30 text-value-positive hover:bg-green-900/50 border-none cursor-pointer"
+                class="text-[0.6rem] px-1.5 py-0.5 rounded bg-green-900/30 text-green-400 hover:bg-green-900/50 border-none cursor-pointer"
                 title="Add enough crafts to reach next level"
                 @click="addToLevel(r)">
                 +Lvl
@@ -213,7 +215,7 @@
               <!-- Progress indicator -->
               <span
                 v-if="lvl.xp_accumulated >= lvl.xp_needed"
-                class="text-value-positive text-[0.6rem] font-semibold">
+                class="text-green-400 text-[0.6rem] font-semibold">
                 DONE
               </span>
               <div class="flex-1 border-b border-border-default ml-2" />
@@ -363,6 +365,7 @@ import { useGameStateStore } from "../../stores/gameStateStore";
 import type { RecipeInfo } from "../../types/gameData/recipes";
 import type { FlattenedMaterial } from "../../types/crafting";
 import EmptyState from "../Shared/EmptyState.vue";
+import SkeletonLoader from "../Shared/SkeletonLoader.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 import RecipeInline from "../Shared/Recipe/RecipeInline.vue";
 
@@ -658,8 +661,8 @@ function recipeRowClass(r: EnrichedRecipe): string {
     return "text-text-muted/50"; // grey
   }
   // Good XP range
-  if (!r.isKnown) return "text-value-negative";
-  if (!r.isCrafted) return "text-value-positive";
+  if (!r.isKnown) return "text-red-400";
+  if (!r.isCrafted) return "text-green-400";
   return "text-text-primary"; // white
 }
 

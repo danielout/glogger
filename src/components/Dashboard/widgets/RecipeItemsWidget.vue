@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col gap-3 text-sm">
-    <div v-if="loading" class="text-xs text-text-dim italic">Loading recipe items...</div>
+    <SkeletonLoader v-if="loading" variant="text" :lines="4" />
 
     <EmptyState
       v-else-if="recipeItems.length === 0"
@@ -23,7 +23,7 @@
             <span v-if="item.stack_size > 1" class="text-text-muted font-mono shrink-0">
               x{{ item.stack_size }}
             </span>
-            <span class="ml-auto text-value-positive text-xs shrink-0">safe to sell</span>
+            <span class="ml-auto text-green-400 text-xs shrink-0">safe to sell</span>
           </div>
         </div>
       </div>
@@ -81,6 +81,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { useSettingsStore } from '../../../stores/settingsStore'
 import { useGameStateStore } from '../../../stores/gameStateStore'
 import EmptyState from '../../Shared/EmptyState.vue'
+import SkeletonLoader from '../../Shared/SkeletonLoader.vue'
 import ItemInline from '../../Shared/Item/ItemInline.vue'
 
 interface UnmetRequirement {

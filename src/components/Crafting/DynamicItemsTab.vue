@@ -4,7 +4,7 @@
     :left-pane="{ title: 'Item Slots', defaultWidth: 240, minWidth: 180, maxWidth: 400 }">
     <template #left>
       <div class="flex flex-col gap-1 px-2 pb-2">
-        <div v-if="loading" class="text-text-dim text-xs italic px-1">Loading...</div>
+        <SkeletonLoader v-if="loading" variant="text" :lines="6" />
 
         <button
           v-for="kw in keywords"
@@ -15,7 +15,7 @@
             : 'bg-transparent text-text-secondary hover:bg-surface-base border border-transparent'"
           @click="selectKeyword(kw.keyword)">
           <span class="truncate">{{ kw.description }}</span>
-          <span class="text-text-muted shrink-0 ml-2 text-[10px]">
+          <span class="text-text-muted font-mono shrink-0 ml-2 text-[0.65rem]">
             {{ getEnabledCount(kw.keyword) }}/{{ getItemCount(kw.keyword) }}
           </span>
         </button>
@@ -47,8 +47,8 @@
             <h3 class="text-text-primary text-base font-semibold m-0">
               {{ selectedDescription }}
             </h3>
-            <div class="text-text-muted text-[10px] mt-0.5">
-              Keyword: <span class="text-text-dim">{{ selectedKeyword }}</span>
+            <div class="text-text-muted text-[0.65rem] mt-0.5">
+              Keyword: <span class="font-mono text-text-dim">{{ selectedKeyword }}</span>
               — {{ enabledItems.length }} of {{ currentItems.length }} items enabled
             </div>
           </div>
@@ -88,7 +88,7 @@
                   ? 'bg-accent-gold/20 border-accent-gold/50 text-accent-gold'
                   : 'bg-surface-dark border-border-light text-transparent hover:border-text-muted'"
                 @click="toggleItem(item.id)">
-                <span v-if="isEnabled(item.id)" class="text-[10px] leading-none">✓</span>
+                <span v-if="isEnabled(item.id)" class="text-[0.6rem] leading-none">✓</span>
               </button>
               <ItemInline :reference="String(item.id)" />
             </div>
@@ -105,6 +105,7 @@ import { useGameDataStore } from "../../stores/gameDataStore";
 import { useCraftingStore } from "../../stores/craftingStore";
 import type { ItemInfo } from "../../types/gameData/items";
 import PaneLayout from "../Shared/PaneLayout.vue";
+import SkeletonLoader from "../Shared/SkeletonLoader.vue";
 import EmptyState from "../Shared/EmptyState.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 

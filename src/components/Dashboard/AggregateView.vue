@@ -9,7 +9,12 @@
       </button>
     </div>
 
-    <div v-if="aggregateStore.loading" class="text-text-muted py-8 text-center">Loading aggregate data...</div>
+    <div v-if="aggregateStore.loading" class="space-y-4">
+      <div class="grid grid-cols-3 gap-4">
+        <SkeletonLoader v-for="i in 3" :key="i" variant="rect" height="h-16" />
+      </div>
+      <SkeletonLoader variant="rect" height="h-32" />
+    </div>
 
     <template v-else-if="aggregateStore.wealth">
       <!-- Wealth Summary -->
@@ -152,6 +157,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAggregateStore, type AggregateSkillSummary } from '../../stores/aggregateStore'
 import EmptyState from '../Shared/EmptyState.vue'
+import SkeletonLoader from '../Shared/SkeletonLoader.vue'
 
 const aggregateStore = useAggregateStore()
 

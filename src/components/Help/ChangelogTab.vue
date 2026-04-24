@@ -41,8 +41,8 @@
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="text-sm text-text-muted py-8 text-center">
-      Loading release notes...
+    <div v-if="loading" class="py-4 space-y-4">
+      <SkeletonLoader v-for="i in 3" :key="i" variant="rect" height="h-24" />
     </div>
 
     <!-- Error -->
@@ -82,6 +82,7 @@
 import { ref, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useUpdateStore } from '../../stores/updateStore'
+import SkeletonLoader from '../Shared/SkeletonLoader.vue'
 
 const updateStore = useUpdateStore()
 

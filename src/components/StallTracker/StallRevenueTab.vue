@@ -115,7 +115,7 @@
     <div
       v-else
       class="flex-1 min-h-0 flex items-center justify-center text-text-secondary text-sm">
-      <span v-if="loading">Loading revenue…</span>
+      <SkeletonLoader v-if="loading" variant="text" :lines="3" width="w-48" />
       <span v-else-if="error">{{ error }}</span>
       <span v-else>No revenue data for the current filters.</span>
     </div>
@@ -130,6 +130,7 @@ import SearchableSelect from '../Shared/SearchableSelect.vue'
 import DatePicker from '../Shared/DatePicker.vue'
 import ItemInline from '../Shared/Item/ItemInline.vue'
 import type { Granularity, RevenueResult, StallRevenueParams } from '../../types/stallTracker'
+import SkeletonLoader from '../Shared/SkeletonLoader.vue'
 
 const store = useStallTrackerStore()
 

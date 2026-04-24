@@ -34,7 +34,7 @@
           <button
             v-for="file in sortedSummary"
             :key="file.file_name"
-            class="w-full text-left bg-transparent border-none px-3 py-2 cursor-pointer text-xs transition-colors hover:bg-surface-elevated border-b border-border-default"
+            class="w-full text-left bg-transparent border-none px-3 py-2 cursor-pointer text-xs font-mono transition-colors hover:bg-surface-elevated border-b border-border-default"
             :class="{
               'bg-surface-elevated! text-text-primary': selectedFile === file.file_name,
               'text-text-secondary': selectedFile !== file.file_name,
@@ -68,7 +68,7 @@
 
       <template v-else>
         <div class="p-4">
-          <h3 class="text-sm text-text-primary mb-1">{{ selectedEntry.key }}</h3>
+          <h3 class="text-sm font-mono text-text-primary mb-1">{{ selectedEntry.key }}</h3>
           <div v-if="selectedEntry.label" class="text-xs text-text-muted mb-4">{{ selectedEntry.label }}</div>
 
           <!-- Added entry: show all fields -->
@@ -94,16 +94,16 @@
               :key="change.field"
               class="mb-4 border border-border-default rounded overflow-hidden"
             >
-              <div class="px-3 py-1.5 bg-surface-elevated text-xs text-text-primary border-b border-border-default">
+              <div class="px-3 py-1.5 bg-surface-elevated text-xs font-mono text-text-primary border-b border-border-default">
                 {{ change.field }}
               </div>
               <div class="grid grid-cols-2 divide-x divide-border-default">
                 <div class="p-3">
-                  <div class="text-[10px] text-text-dim mb-1.5 uppercase tracking-wider">Old</div>
+                  <div class="text-[0.6rem] text-text-dim mb-1.5 uppercase tracking-wider">Old</div>
                   <JsonBlock :value="change.old_value" compact />
                 </div>
                 <div class="p-3">
-                  <div class="text-[10px] text-text-dim mb-1.5 uppercase tracking-wider">New</div>
+                  <div class="text-[0.6rem] text-text-dim mb-1.5 uppercase tracking-wider">New</div>
                   <JsonBlock :value="change.new_value" compact />
                 </div>
               </div>
@@ -121,9 +121,8 @@
         </template>
 
         <template v-else-if="fileLoading">
-          <div class="flex items-center gap-2 p-3 text-xs text-accent-gold">
-            <span class="animate-spin">&#x27F3;</span>
-            Loading...
+          <div class="p-3">
+            <SkeletonLoader variant="text" :lines="4" />
           </div>
         </template>
 
@@ -137,7 +136,7 @@
             <button
               v-for="section in diffSections"
               :key="section.id"
-              class="px-2 py-1 bg-transparent border-none text-xs rounded cursor-pointer transition-colors hover:bg-surface-elevated"
+              class="px-2 py-1 bg-transparent border-none text-xs font-mono rounded cursor-pointer transition-colors hover:bg-surface-elevated"
               :class="{
                 'text-accent-gold! bg-surface-elevated!': activeSection === section.id,
                 'text-text-secondary': activeSection !== section.id,
@@ -165,7 +164,7 @@
               }"
               @click="selectedEntry = entry"
             >
-              <div class="text-text-primary">{{ entry.label || entry.key }}</div>
+              <div class="font-mono text-text-primary">{{ entry.label || entry.key }}</div>
               <div v-if="entry.label" class="text-text-dim mt-0.5">{{ entry.key }}</div>
               <div v-if="activeSection === 'changed' && entry.field_changes.length" class="text-text-dim mt-0.5">
                 {{ entry.field_changes.length }} field{{ entry.field_changes.length === 1 ? '' : 's' }}
@@ -184,6 +183,7 @@ import { invoke } from "@tauri-apps/api/core";
 import PaneLayout from "../Shared/PaneLayout.vue";
 import EmptyState from "../Shared/EmptyState.vue";
 import JsonBlock from "./JsonBlock.vue";
+import SkeletonLoader from "../Shared/SkeletonLoader.vue";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

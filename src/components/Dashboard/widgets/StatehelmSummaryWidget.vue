@@ -1,6 +1,10 @@
 <template>
   <div class="flex flex-col gap-3">
-    <div v-if="loading" class="text-text-dim text-sm italic">Loading gift data...</div>
+    <div v-if="loading" class="flex flex-col gap-3">
+      <SkeletonLoader variant="rect" height="h-4" width="w-2/3" />
+      <SkeletonLoader variant="rect" height="h-1.5" />
+      <SkeletonLoader variant="text" :lines="3" />
+    </div>
 
     <template v-else>
       <!-- Progress header -->
@@ -33,7 +37,7 @@
           :key="status.npc.key"
           class="flex items-center justify-between gap-2 text-sm">
           <NpcInline :reference="status.npc.key" :npc="status.npc" />
-          <span class="text-xs shrink-0 tracking-wide">
+          <span class="text-xs font-mono shrink-0 tracking-wide">
             <span
               v-for="i in status.maxGifts"
               :key="i"
@@ -57,6 +61,7 @@
 import { computed, onMounted } from 'vue'
 import { useStatehelmTracker } from '../../../composables/useStatehelmTracker'
 import NpcInline from '../../Shared/NPC/NpcInline.vue'
+import SkeletonLoader from '../../Shared/SkeletonLoader.vue'
 
 const {
   npcStatuses,

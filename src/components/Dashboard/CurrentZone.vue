@@ -10,7 +10,7 @@
       </div>
 
       <!-- NPCs in this area -->
-      <div v-if="loading" class="text-text-dim text-xs italic">Loading NPCs…</div>
+      <SkeletonLoader v-if="loading" variant="text" :lines="4" />
       <div v-else-if="areaNpcs.length === 0" class="text-text-dim text-xs italic">No friendly NPCs in this area.</div>
       <div v-else class="flex flex-col gap-1.5">
         <div
@@ -39,6 +39,7 @@ import { favorBadgeClasses, tierDisplayName } from '../../composables/useFavorTi
 import AreaInline from '../Shared/Area/AreaInline.vue'
 import NpcInline from '../Shared/NPC/NpcInline.vue'
 import type { NpcInfo } from '../../types/gameData'
+import SkeletonLoader from '../Shared/SkeletonLoader.vue'
 
 const gameState = useGameStateStore()
 const gameData = useGameDataStore()

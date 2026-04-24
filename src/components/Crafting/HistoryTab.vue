@@ -10,7 +10,10 @@
       </button>
     </div>
 
-    <div v-if="loading" class="text-text-dim text-xs italic">Loading crafting data...</div>
+    <div v-if="loading" class="space-y-3">
+      <SkeletonLoader variant="rect" height="h-10" />
+      <DataTableSkeleton :columns="5" :rows="6" />
+    </div>
 
     <EmptyState v-else-if="!hasData" variant="panel" primary="No crafting data available" secondary="Import a character report to see crafting history and stats." />
 
@@ -59,7 +62,7 @@
               <td class="text-right py-1 text-text-muted">
                 {{ recipe.skill_level_req ?? '—' }}
               </td>
-              <td class="text-right py-1 text-text-primary font-semibold">
+              <td class="text-right py-1 text-text-primary font-mono font-semibold">
                 {{ recipe.completions.toLocaleString() }}
               </td>
             </tr>
@@ -103,6 +106,8 @@ import { ref, computed, onMounted } from "vue";
 import { useCraftingStore } from "../../stores/craftingStore";
 import type { CraftingHistoryRecipe, SkillCraftingStats } from "../../types/crafting";
 import EmptyState from "../Shared/EmptyState.vue";
+import SkeletonLoader from "../Shared/SkeletonLoader.vue";
+import DataTableSkeleton from "../Shared/DataTableSkeleton.vue";
 import SkillCraftingProgress from "./SkillCraftingProgress.vue";
 import RecipeInline from "../Shared/Recipe/RecipeInline.vue";
 import SkillInline from "../Shared/Skill/SkillInline.vue";

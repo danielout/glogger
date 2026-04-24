@@ -20,7 +20,9 @@
       class="input w-full text-xs mb-2"
       placeholder="Filter items..." />
 
-    <div v-if="loading" class="text-text-dim text-xs italic py-2">Loading...</div>
+    <div v-if="loading" class="py-2">
+      <SkeletonLoader variant="text" :lines="3" />
+    </div>
 
     <div v-else-if="filteredItems.length === 0" class="text-text-dim text-xs italic py-2">
       No matching items found
@@ -33,7 +35,7 @@
         class="flex items-center gap-2 py-1 border-b border-surface-dark/50 text-xs">
         <ItemInline :reference="item.name" />
       </li>
-      <li v-if="filteredItems.length > 50" class="text-text-dim text-[10px] italic py-1">
+      <li v-if="filteredItems.length > 50" class="text-text-dim text-[0.65rem] italic py-1">
         ...and {{ filteredItems.length - 50 }} more
       </li>
     </ul>
@@ -45,6 +47,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import type { ItemInfo } from "../../types/gameData/items";
 import ItemInline from "../Shared/Item/ItemInline.vue";
+import SkeletonLoader from "../Shared/SkeletonLoader.vue";
 
 const props = defineProps<{
   itemKeys: string[]

@@ -63,8 +63,8 @@
           </div>
 
           <!-- Ability list -->
-          <div v-if="loading" class="flex-1 flex items-center justify-center text-xs text-text-muted py-8">
-            Loading abilities...
+          <div v-if="loading" class="flex-1 py-4 px-4">
+            <SkeletonLoader variant="text" :lines="6" />
           </div>
 
           <div v-else-if="!currentSkill && bar !== 'sidebar'" class="flex-1 flex items-center justify-center text-xs text-text-muted py-8">
@@ -132,6 +132,7 @@ import { useCharacterStore } from '../../../stores/characterStore'
 import { useSettingsStore } from '../../../stores/settingsStore'
 import type { AbilityInfo, AbilityFamily } from '../../../types/gameData'
 import AbilityFamilyOption from './AbilityFamilyOption.vue'
+import SkeletonLoader from '../../Shared/SkeletonLoader.vue'
 
 interface FamilyEntry {
   family: AbilityFamily

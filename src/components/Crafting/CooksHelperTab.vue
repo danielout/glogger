@@ -44,8 +44,8 @@
     </div>
 
     <!-- Loading -->
-    <div v-if="store.loading" class="flex-1 flex items-center justify-center text-text-muted text-xs">
-      Loading...
+    <div v-if="store.loading" class="flex-1 px-4 py-4">
+      <DataTableSkeleton :columns="4" :rows="8" />
     </div>
 
     <!-- Main content -->
@@ -57,7 +57,7 @@
           v-for="option in skillOptions"
           :key="option.value"
           :class="[
-            'text-[10px] px-2 py-0.5 rounded border cursor-pointer transition-colors',
+            'text-[0.65rem] px-2 py-0.5 rounded border cursor-pointer transition-colors',
             store.filterSkill === option.value
               ? 'bg-accent-gold/20 border-accent-gold/40 text-accent-gold'
               : 'bg-transparent border-border-light text-text-muted hover:text-text-primary',
@@ -173,6 +173,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useCooksHelperStore } from '../../stores/cooksHelperStore'
 import { useCraftingStore } from '../../stores/craftingStore'
 import EmptyState from '../Shared/EmptyState.vue'
+import DataTableSkeleton from '../Shared/DataTableSkeleton.vue'
 import CooksHelperRecipeRow from './CooksHelperRecipeRow.vue'
 
 const store = useCooksHelperStore()

@@ -12,7 +12,7 @@
       </button>
     </div>
 
-    <div v-if="loading" class="text-xs text-text-muted italic">Computing stats...</div>
+    <DataTableSkeleton v-if="loading" :columns="2" :rows="6" :show-header="false" />
 
     <div v-else-if="!stats" class="text-xs text-text-dim italic">
       No game state data yet. Skills, recipes, or report data will appear here.
@@ -27,23 +27,23 @@
           </tr>
           <tr class="border-b border-border-default/30 hover:bg-surface-elevated/50">
             <td class="py-0.5 px-2 text-text-primary">Total Level</td>
-            <td class="py-0.5 px-2 text-right text-accent-gold tabular-nums">{{ stats.total_level.toLocaleString() }}</td>
+            <td class="py-0.5 px-2 text-right text-accent-gold font-mono">{{ stats.total_level.toLocaleString() }}</td>
           </tr>
           <tr class="border-b border-border-default/30 hover:bg-surface-elevated/50">
             <td class="py-0.5 px-2 text-text-primary">Base Levels</td>
-            <td class="py-0.5 px-2 text-right text-accent-gold tabular-nums">{{ stats.total_base_level.toLocaleString() }}</td>
+            <td class="py-0.5 px-2 text-right text-accent-gold font-mono">{{ stats.total_base_level.toLocaleString() }}</td>
           </tr>
           <tr class="border-b border-border-default/30 hover:bg-surface-elevated/50">
             <td class="py-0.5 px-2 text-text-primary">Bonus Levels</td>
-            <td class="py-0.5 px-2 text-right text-accent-gold tabular-nums">{{ stats.total_bonus_levels.toLocaleString() }}</td>
+            <td class="py-0.5 px-2 text-right text-accent-gold font-mono">{{ stats.total_bonus_levels.toLocaleString() }}</td>
           </tr>
           <tr class="border-b border-border-default/30 hover:bg-surface-elevated/50">
             <td class="py-0.5 px-2 text-text-primary">Skills Known</td>
-            <td class="py-0.5 px-2 text-right text-accent-gold tabular-nums">{{ stats.skill_count.toLocaleString() }}</td>
+            <td class="py-0.5 px-2 text-right text-accent-gold font-mono">{{ stats.skill_count.toLocaleString() }}</td>
           </tr>
           <tr class="border-b border-border-default/30 hover:bg-surface-elevated/50">
             <td class="py-0.5 px-2 text-text-primary">Total XP Earned</td>
-            <td class="py-0.5 px-2 text-right text-accent-gold tabular-nums">{{ stats.total_xp_earned.toLocaleString() }}</td>
+            <td class="py-0.5 px-2 text-right text-accent-gold font-mono">{{ stats.total_xp_earned.toLocaleString() }}</td>
           </tr>
 
           <!-- Rate Stats (only if time_played available) -->
@@ -53,19 +53,19 @@
             </tr>
             <tr class="border-b border-border-default/30 hover:bg-surface-elevated/50">
               <td class="py-0.5 px-2 text-text-primary">Time Played</td>
-              <td class="py-0.5 px-2 text-right text-accent-gold tabular-nums">{{ formatHoursPlayed(stats.hours_played) }}</td>
+              <td class="py-0.5 px-2 text-right text-accent-gold font-mono">{{ formatHoursPlayed(stats.hours_played) }}</td>
             </tr>
             <tr class="border-b border-border-default/30 hover:bg-surface-elevated/50">
               <td class="py-0.5 px-2 text-text-primary">XP / Hour</td>
-              <td class="py-0.5 px-2 text-right text-accent-gold tabular-nums">{{ formatRate(stats.xp_per_hour) }}</td>
+              <td class="py-0.5 px-2 text-right text-accent-gold font-mono">{{ formatRate(stats.xp_per_hour) }}</td>
             </tr>
             <tr v-if="stats.kills_per_hour != null" class="border-b border-border-default/30 hover:bg-surface-elevated/50">
               <td class="py-0.5 px-2 text-text-primary">Kills / Hour</td>
-              <td class="py-0.5 px-2 text-right text-accent-gold tabular-nums">{{ formatRate(stats.kills_per_hour) }}</td>
+              <td class="py-0.5 px-2 text-right text-accent-gold font-mono">{{ formatRate(stats.kills_per_hour) }}</td>
             </tr>
             <tr v-if="stats.deaths_per_hour != null" class="border-b border-border-default/30 hover:bg-surface-elevated/50">
               <td class="py-0.5 px-2 text-text-primary">Deaths / Hour</td>
-              <td class="py-0.5 px-2 text-right text-accent-gold tabular-nums">{{ formatRate(stats.deaths_per_hour) }}</td>
+              <td class="py-0.5 px-2 text-right text-accent-gold font-mono">{{ formatRate(stats.deaths_per_hour) }}</td>
             </tr>
           </template>
           <template v-else>
@@ -80,27 +80,27 @@
           </tr>
           <tr class="border-b border-border-default/30 hover:bg-surface-elevated/50">
             <td class="py-0.5 px-2 text-text-primary">Items Crafted</td>
-            <td class="py-0.5 px-2 text-right text-accent-gold tabular-nums">{{ stats.items_crafted.toLocaleString() }}</td>
+            <td class="py-0.5 px-2 text-right text-accent-gold font-mono">{{ stats.items_crafted.toLocaleString() }}</td>
           </tr>
           <tr class="border-b border-border-default/30 hover:bg-surface-elevated/50">
             <td class="py-0.5 px-2 text-text-primary">Items Distilled</td>
-            <td class="py-0.5 px-2 text-right text-accent-gold tabular-nums">{{ stats.items_distilled.toLocaleString() }}</td>
+            <td class="py-0.5 px-2 text-right text-accent-gold font-mono">{{ stats.items_distilled.toLocaleString() }}</td>
           </tr>
           <tr class="border-b border-border-default/30 hover:bg-surface-elevated/50">
             <td class="py-0.5 px-2 text-text-primary">Items Deconstructed</td>
-            <td class="py-0.5 px-2 text-right text-accent-gold tabular-nums">{{ stats.items_deconstructed.toLocaleString() }}</td>
+            <td class="py-0.5 px-2 text-right text-accent-gold font-mono">{{ stats.items_deconstructed.toLocaleString() }}</td>
           </tr>
           <tr class="border-b border-border-default/30 hover:bg-surface-elevated/50">
             <td class="py-0.5 px-2 text-text-primary">Times Teleported</td>
-            <td class="py-0.5 px-2 text-right text-accent-gold tabular-nums">{{ stats.times_teleported.toLocaleString() }}</td>
+            <td class="py-0.5 px-2 text-right text-accent-gold font-mono">{{ stats.times_teleported.toLocaleString() }}</td>
           </tr>
           <tr class="border-b border-border-default/30 hover:bg-surface-elevated/50">
             <td class="py-0.5 px-2 text-text-primary">Items Dyed</td>
-            <td class="py-0.5 px-2 text-right text-accent-gold tabular-nums">{{ stats.items_dyed.toLocaleString() }}</td>
+            <td class="py-0.5 px-2 text-right text-accent-gold font-mono">{{ stats.items_dyed.toLocaleString() }}</td>
           </tr>
           <tr class="border-b border-border-default/30 hover:bg-surface-elevated/50">
             <td class="py-0.5 px-2 text-text-primary">Time Watching Bars Fill</td>
-            <td class="py-0.5 px-2 text-right text-accent-gold tabular-nums">{{ formatDuration(stats.total_crafting_seconds) }}</td>
+            <td class="py-0.5 px-2 text-right text-accent-gold font-mono">{{ formatDuration(stats.total_crafting_seconds) }}</td>
           </tr>
 
           <!-- Per-skill Crafting Breakdown -->
@@ -113,7 +113,7 @@
               :key="entry.skill_name"
               class="border-b border-border-default/30 hover:bg-surface-elevated/50">
               <td class="py-0.5 px-2 text-text-primary">{{ entry.skill_name }}</td>
-              <td class="py-0.5 px-2 text-right text-accent-gold tabular-nums">
+              <td class="py-0.5 px-2 text-right text-accent-gold font-mono">
                 {{ entry.total_crafted.toLocaleString() }}
                 <span v-if="entry.crafting_seconds > 0" class="text-text-dim text-xs ml-1">({{ formatDuration(entry.crafting_seconds) }})</span>
               </td>
@@ -131,6 +131,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { useSettingsStore } from '../../stores/settingsStore'
+import DataTableSkeleton from '../Shared/DataTableSkeleton.vue'
 
 interface SkillCraftingBreakdown {
   skill_name: string

@@ -47,8 +47,8 @@
             class="bg-surface-elevated border border-border-default rounded px-2 py-0.5 text-xs text-text-primary flex-1 max-w-60" />
         </div>
 
-        <div v-if="loading" class="text-xs text-text-muted py-4 text-center">
-          Loading abilities...
+        <div v-if="loading" class="py-4 px-2">
+          <SkeletonLoader variant="text" :lines="5" />
         </div>
 
         <div v-else class="flex-1 overflow-y-auto flex flex-col gap-1">
@@ -99,6 +99,7 @@ import { useSettingsStore } from '../../../stores/settingsStore'
 import type { AbilityInfo, AbilityFamily } from '../../../types/gameData'
 import AbilityInline from '../../Shared/Ability/AbilityInline.vue'
 import AbilityFamilyOption from './AbilityFamilyOption.vue'
+import SkeletonLoader from '../../Shared/SkeletonLoader.vue'
 
 interface FamilyEntry {
   family: AbilityFamily

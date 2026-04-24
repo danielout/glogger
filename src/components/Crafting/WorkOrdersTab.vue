@@ -48,8 +48,8 @@
 
     <!-- Content -->
     <div class="flex-1 overflow-y-auto">
-      <div v-if="loading" class="flex items-center justify-center h-full text-text-muted text-xs">
-        Loading work orders...
+      <div v-if="loading" class="px-2 py-4">
+        <SkeletonLoader variant="text" :lines="6" />
       </div>
 
       <EmptyState v-else-if="workOrders.length === 0" variant="panel" primary="No work orders found" secondary="Import a character snapshot first." />
@@ -95,7 +95,7 @@
           <!-- Status badge -->
           <span
             v-if="wo.is_active"
-            class="text-value-positive text-[0.6rem] font-semibold shrink-0 w-14">
+            class="text-green-400 text-[0.6rem] font-semibold shrink-0 w-14">
             ACTIVE
           </span>
           <span
@@ -169,6 +169,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useCraftingStore } from "../../stores/craftingStore";
 import type { EnrichedWorkOrder } from "../../types/crafting";
 import EmptyState from "../Shared/EmptyState.vue";
+import SkeletonLoader from "../Shared/SkeletonLoader.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 import SkillInline from "../Shared/Skill/SkillInline.vue";
 
