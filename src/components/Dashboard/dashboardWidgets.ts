@@ -21,9 +21,9 @@ import MushroomFarmingWidget from "./widgets/MushroomFarmingWidget.vue";
 import StatTrackerWidget from "./widgets/StatTrackerWidget.vue";
 import StatTrackerConfig from "./widgets/StatTrackerConfig.vue";
 import WordsOfPowerWidget from "./widgets/WordsOfPowerWidget.vue";
+import TimerWidget from "./widgets/TimerWidget.vue";
 import TripPlannerWidget from "./widgets/TripPlannerWidget.vue";
 import TripPlannerWidgetConfig from "./widgets/TripPlannerWidgetConfig.vue";
-import GardenAlmanacWidget from "./widgets/GardenAlmanacWidget.vue";
 
 export type WidgetSize = "small" | "medium" | "large";
 
@@ -171,17 +171,17 @@ export const DASHBOARD_WIDGETS: DashboardWidget[] = [
     defaultSize: "medium",
   },
   {
+    id: "timers",
+    name: "Timers",
+    component: TimerWidget,
+    defaultSize: "small",
+  },
+  {
     id: "trip-planner",
     name: "Trip Planner",
     component: TripPlannerWidget,
     configComponent: TripPlannerWidgetConfig,
     defaultSize: "medium",
-  },
-  {
-    id: "garden-almanac",
-    name: "Garden Almanac",
-    component: GardenAlmanacWidget,
-    defaultSize: "small",
   },
 ];
 

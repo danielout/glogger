@@ -223,33 +223,10 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
     }
 
     if current_version < 40 {
-        migration_v40_garden_almanac(conn)?;
+        migration_v40_user_timers(conn)?;
         super::record_migration(conn, 40)?;
     }
 
-    Ok(())
-}
-
-/// Migration V40: Garden almanac — stores parsed gardening bonus events
-/// from the in-game Gardening Almanac book.
-fn migration_v40_garden_almanac(conn: &Connection) -> Result<()> {
-    conn.execute_batch(
-        "CREATE TABLE garden_almanac (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            character_name TEXT NOT NULL,
-            server_name TEXT NOT NULL,
-            crop_name TEXT NOT NULL,
-            zone_name TEXT NOT NULL,
-            event_start TEXT,
-            event_end TEXT,
-            is_current INTEGER NOT NULL DEFAULT 0,
-            captured_at TEXT NOT NULL
-        );
-        CREATE INDEX idx_garden_almanac_char_server
-            ON garden_almanac(character_name, server_name);
-        CREATE INDEX idx_garden_almanac_end
-            ON garden_almanac(event_end);"
-    )?;
     Ok(())
 }
 
@@ -2124,6 +2101,26 @@ fn migration_v38_self_milking(conn: &Connection) -> Result<()> {
 
 /// Migration V39: Teleportation bind locations parsed from SkillReport books.
 /// Stores primary/secondary bind pad locations and mushroom circle attunements.
+/// Migration V40: User timers — general-purpose countdown timers persisted per character.
+/// Supports both manual timers (user-created) and auto-detected timers from game events.
+fn migration_v40_user_timers(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE user_timers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            label TEXT NOT NULL,
+            duration_seconds INTEGER NOT NULL,
+            started_at TEXT NOT NULL,
+            paused_at TEXT,
+            area_key TEXT,
+            source TEXT NOT NULL DEFAULT 'manual'
+        );
+        CREATE INDEX idx_user_timers_char_server ON user_timers(character_name, server_name);",
+    )?;
+    Ok(())
+}
+
 fn migration_v39_teleportation_binds(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS game_state_teleportation (

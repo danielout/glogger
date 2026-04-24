@@ -15,7 +15,6 @@ pub mod farming_commands;
 pub mod resuscitate_commands;
 pub mod game_state_commands;
 pub mod gourmand_commands;
-pub mod hoplology_commands;
 pub mod inventory_commands;
 pub mod market_commands;
 pub mod migrations;
@@ -29,6 +28,7 @@ pub mod stall_tracker_commands;
 // legacy survey screen was removed; allow dead_code until that work lands.
 #[allow(dead_code)]
 pub mod survey_commands;
+pub mod timer_commands;
 pub mod words_of_power_commands;
 
 pub type DbPool = r2d2::Pool<SqliteConnectionManager>;

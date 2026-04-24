@@ -170,7 +170,7 @@ use db::game_state_commands::{
     get_game_state_effects, get_game_state_equipment, get_game_state_favor,
     get_game_state_inventory, get_game_state_recipes, get_game_state_skills,
     get_character_report_stats, get_game_state_books, get_game_state_storage,
-    get_game_state_vendor, get_game_state_world, get_garden_almanac, get_gift_log, get_milking_timers,
+    get_game_state_vendor, get_game_state_world, get_gift_log, get_milking_timers,
     add_manual_gift, remove_last_gift, get_tracked_skills, set_tracked_skills,
     get_computed_stats,
     get_attribute_extremes,
@@ -185,10 +185,10 @@ use db::gourmand_commands::{
 use db::inventory_commands::{
     get_inventory_snapshots, get_inventory_summary, get_snapshot_items, import_inventory_report,
 };
+use db::timer_commands::{delete_user_timer, get_user_timers, save_user_timer};
 use db::market_commands::{
-    bulk_delete_market_values, bulk_update_market_values, delete_market_value,
-    export_market_values, get_market_value, get_market_values, import_market_values,
-    set_market_value,
+    delete_market_value, export_market_values, get_market_value, get_market_values,
+    import_market_values, set_market_value,
 };
 use db::player_commands::{
     add_market_price, add_sale, get_market_prices_for_item, get_recent_events, get_recent_sales,
@@ -618,7 +618,6 @@ pub fn run() {
             get_game_state_storage,
             get_game_state_vendor,
             get_game_state_books,
-            get_garden_almanac,
             get_milking_timers,
             get_character_report_stats,
             get_computed_stats,
@@ -632,8 +631,6 @@ pub fn run() {
             delete_market_value,
             export_market_values,
             import_market_values,
-            bulk_update_market_values,
-            bulk_delete_market_values,
             get_aggregate_inventory,
             get_aggregate_wealth,
             get_aggregate_skills,
@@ -652,6 +649,10 @@ pub fn run() {
             db::words_of_power_commands::get_words_of_power,
             db::words_of_power_commands::add_word_of_power,
             db::words_of_power_commands::delete_word_of_power,
+            // User timers
+            get_user_timers,
+            save_user_timer,
+            delete_user_timer,
             // Teleportation binds
             get_teleportation_binds,
             set_mushroom_circles,
