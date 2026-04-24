@@ -31,6 +31,7 @@ Core structure, patterns, and standards used across the app.
 - [ux-composables.md](architecture/ux-composables.md) — UX composables: useKeyboard (nav/hotkeys), useToast (notifications), useViewPrefs (persistent screen preferences).
 - [toast-system.md](architecture/toast-system.md) — Toast notification system: store, composable, container component, types, and usage guidelines.
 - [time.md](architecture/time.md) — Time & timestamp standards: UTC storage, timezone offset detection, display modes, formatting API, and rules.
+- [time-handling-audit.md](architecture/time-handling-audit.md) — Time handling audit: codebase-wide consistency check against time standards, findings and recommendations.
 - [pipeline-structure.md](architecture/pipeline-structure.md) — Data pipeline architecture: CDN ingestion, player data flow, 4-bucket game state scoping, coordinator design.
 - [capture-analysis-results.md](architecture/capture-analysis-results.md) — Devtools capture analysis: observed log events, parseable data formats, and feature opportunities identified from live gameplay captures.
 - [widget-sizing-audit.md](architecture/widget-sizing-audit.md) — Dashboard widget sizing audit: per-widget height inventory, grid system analysis, inconsistencies, and proposed standards.

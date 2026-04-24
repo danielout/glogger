@@ -188,6 +188,7 @@ import SearchableSelect from '../Shared/SearchableSelect.vue'
 import NumberInput from '../Shared/NumberInput.vue'
 import AreaInline from '../Shared/Area/AreaInline.vue'
 import { formatGold } from '../../composables/useRecipeCost'
+import { formatDuration } from '../../composables/useTimestamp'
 import type { ItemSourceAnalysis } from '../../stores/surveyTrackerStore'
 import SkeletonLoader from '../Shared/SkeletonLoader.vue'
 
@@ -327,12 +328,7 @@ function profitPerHourClass(r: CalculatedResult, idx: number): string {
 
 function formatTime(seconds: number): string {
   if (seconds <= 0) return 'N/A'
-  const hrs = Math.floor(seconds / 3600)
-  const mins = Math.floor((seconds % 3600) / 60)
-  const secs = Math.round(seconds % 60)
-  if (hrs > 0) return `${hrs}h ${mins}m`
-  if (mins > 0) return `${mins}m ${secs}s`
-  return `${secs}s`
+  return formatDuration(Math.round(seconds))
 }
 
 // Expose a reload so the parent can refresh after a session completes.
