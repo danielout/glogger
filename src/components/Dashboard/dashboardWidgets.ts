@@ -23,6 +23,8 @@ import StatTrackerConfig from "./widgets/StatTrackerConfig.vue";
 import WordsOfPowerWidget from "./widgets/WordsOfPowerWidget.vue";
 import TripPlannerWidget from "./widgets/TripPlannerWidget.vue";
 import TripPlannerWidgetConfig from "./widgets/TripPlannerWidgetConfig.vue";
+import RecurrentTimerWidget from "./widgets/RecurrentTimerWidget.vue";
+import RecurrentTimerConfig from "./widgets/RecurrentTimerConfig.vue";
 // HoplologyWidget disabled — needs book/report parsing to backfill existing studies before it's useful
 // import HoplologyWidget from "./widgets/HoplologyWidget.vue";
 
@@ -177,6 +179,13 @@ export const DASHBOARD_WIDGETS: DashboardWidget[] = [
     component: TripPlannerWidget,
     configComponent: TripPlannerWidgetConfig,
     defaultSize: "medium",
+  },
+  {
+    id: "recurrent-timer",
+    name: "Recurring Events",
+    component: RecurrentTimerWidget,
+    configComponent: RecurrentTimerConfig,
+    defaultSize: "small",
   },
   // Hoplology widget disabled — needs book/report parsing to backfill existing studies
   // {
