@@ -1,37 +1,63 @@
 <template>
-  <div class="max-w-4xl h-full overflow-y-auto">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-accent-gold text-2xl m-0">Market Values</h2>
+  <div class="flex flex-col gap-4 h-full min-h-0">
+    <!-- Header -->
+    <div class="flex items-center justify-between shrink-0">
+      <div>
+        <h2 class="text-accent-gold text-xl font-semibold m-0">Market Values</h2>
+        <p class="text-text-dim text-xs mt-1 mb-0">
+          Player-to-player market values for item tooltips and wealth calculations.
+          <span v-if="settingsStore.settings.marketPriceMode === 'universal'" class="text-text-secondary">
+            Prices shared across all servers.
+          </span>
+          <span v-else class="text-text-secondary">
+            Prices for {{ settingsStore.settings.activeServerName ?? 'current server' }}.
+          </span>
+        </p>
+      </div>
       <div class="flex items-center gap-2">
         <select
           :value="settingsStore.settings.marketPriceMode"
-          class="input text-sm"
+          class="input text-xs"
           @change="updateMode(($event.target as HTMLSelectElement).value)">
           <option value="universal">Universal prices</option>
           <option value="per_server">Per-server prices</option>
         </select>
-        <button class="btn btn-secondary text-sm" @click="doExport">Export</button>
-        <button class="btn btn-secondary text-sm" @click="showImport = true">Import</button>
+        <button class="btn btn-secondary text-xs" @click="doExport">Export</button>
+        <button class="btn btn-secondary text-xs" @click="showImport = true">Import</button>
       </div>
     </div>
 
-    <p class="text-text-muted text-sm mb-4">
-      Set player-to-player market values for items. These appear in item tooltips and are used for wealth calculations.
-      <span v-if="settingsStore.settings.marketPriceMode === 'universal'" class="text-text-secondary">
-        Prices are shared across all servers.
-      </span>
-      <span v-else class="text-text-secondary">
-        Prices are specific to {{ settingsStore.settings.activeServerName ?? 'current server' }}.
-      </span>
-    </p>
+    <!-- Summary stats -->
+    <div v-if="marketStore.values.length > 0" class="grid grid-cols-4 gap-3 shrink-0">
+      <div class="bg-surface-elevated border border-border-default rounded px-3 py-2">
+        <div class="text-[10px] uppercase tracking-wider text-text-secondary">Items Tracked</div>
+        <div class="text-base text-text-primary font-semibold tabular-nums">{{ marketStore.values.length }}</div>
+      </div>
+      <div class="bg-surface-elevated border border-border-default rounded px-3 py-2">
+        <div class="text-[10px] uppercase tracking-wider text-text-secondary">Total Market Value</div>
+        <div class="text-base text-accent-gold font-semibold tabular-nums">{{ totalMarketValue.toLocaleString() }}g</div>
+      </div>
+      <div class="bg-surface-elevated border border-border-default rounded px-3 py-2">
+        <div class="text-[10px] uppercase tracking-wider text-text-secondary">Avg Price</div>
+        <div class="text-base text-text-primary font-semibold tabular-nums">{{ avgPrice.toLocaleString() }}g</div>
+      </div>
+      <div class="bg-surface-elevated border border-border-default rounded px-3 py-2">
+        <div class="text-[10px] uppercase tracking-wider text-text-secondary">Highest Priced</div>
+        <div class="text-base text-text-primary font-semibold tabular-nums truncate" :title="highestPricedItem?.item_name">
+          {{ highestPricedItem ? `${highestPricedItem.market_value.toLocaleString()}g` : '--' }}
+        </div>
+        <div v-if="highestPricedItem" class="text-[10px] text-text-dim truncate">{{ highestPricedItem.item_name }}</div>
+      </div>
+    </div>
 
-    <!-- Item Valuation Mode -->
-    <div class="card p-3 mb-4">
-      <div class="flex items-center gap-3">
-        <label class="text-text-muted text-sm whitespace-nowrap">Item valuation for calculations:</label>
+    <!-- Settings accordion -->
+    <AccordionSection :default-open="false" class="shrink-0">
+      <template #title>Valuation Settings</template>
+      <div class="flex items-center gap-3 mt-2">
+        <label class="text-text-muted text-xs whitespace-nowrap">Item valuation for calculations:</label>
         <select
           :value="settingsStore.settings.itemValuationMode"
-          class="input text-sm flex-1"
+          class="input text-xs flex-1"
           @change="updateValuationMode(($event.target as HTMLSelectElement).value)">
           <option value="highest_market_vendor">Highest of market or vendor value</option>
           <option value="highest_market_buy_used">Highest of market or buy-used value (2x vendor)</option>
@@ -48,28 +74,18 @@
           Uses the higher of the two values for wealth calculations. Both are always shown in tooltips.
         </template>
       </p>
-    </div>
+    </AccordionSection>
 
-    <!-- Search + Add -->
-    <div class="flex gap-2 mb-4">
-      <input
-        v-model="search"
-        placeholder="Search items..."
-        class="input flex-1" />
-      <button class="btn btn-primary text-sm" @click="openAddForm" v-if="!showAddForm">
-        + Add Value
-      </button>
-    </div>
-
-    <!-- Add form -->
-    <div v-if="showAddForm" class="card p-4 mb-4">
-      <div class="flex gap-2 items-end">
+    <!-- Add item accordion -->
+    <AccordionSection :default-open="false" class="shrink-0">
+      <template #title>Add Market Value</template>
+      <div class="flex gap-2 items-end mt-2">
         <div class="flex-1 relative">
           <label class="text-text-muted text-xs block mb-1">Item</label>
           <input
             ref="itemSearchInput"
             v-model="addQuery"
-            class="input w-full"
+            class="input w-full text-sm"
             placeholder="Search for an item..."
             autocomplete="off"
             @input="onItemSearch"
@@ -93,94 +109,132 @@
         </div>
         <div class="w-32">
           <label class="text-text-muted text-xs block mb-1">Price (councils)</label>
-          <input v-model.number="addPrice" type="number" min="0" class="input w-full" placeholder="0" />
+          <input v-model.number="addPrice" type="number" min="0" class="input w-full text-sm" placeholder="0" />
         </div>
         <div class="w-40">
           <label class="text-text-muted text-xs block mb-1">Notes (optional)</label>
-          <input v-model="addNotes" class="input w-full" placeholder="" />
+          <input v-model="addNotes" class="input w-full text-sm" placeholder="" />
         </div>
         <button
-          class="btn btn-primary text-sm"
+          class="btn btn-primary text-xs"
           :disabled="!addName.trim() || !addId || addPrice == null"
           @click="addValue">
           Save
         </button>
-        <button class="btn btn-secondary text-sm" @click="cancelAdd">Cancel</button>
+        <button class="btn btn-secondary text-xs" @click="cancelAdd">Clear</button>
       </div>
+    </AccordionSection>
+
+    <!-- Search / filter bar -->
+    <div class="flex items-center gap-3 shrink-0">
+      <input
+        v-model="search"
+        placeholder="Filter market values..."
+        class="input flex-1 text-sm" />
+      <span v-if="search && filteredValues.length !== marketStore.values.length" class="text-text-muted text-xs whitespace-nowrap">
+        {{ filteredValues.length }} of {{ marketStore.values.length }}
+      </span>
     </div>
 
     <!-- Market values table -->
-    <DataTableSkeleton v-if="marketStore.loading" :columns="4" :rows="8" />
+    <div class="flex-1 min-h-0 overflow-auto border border-border-default rounded">
+      <!-- Loading skeleton -->
+      <div v-if="marketStore.loading" class="p-4">
+        <div v-for="i in 8" :key="i" class="flex gap-4 py-2 border-b border-border-default/50">
+          <div class="h-3 rounded animate-pulse bg-surface-elevated w-1/3" />
+          <div class="h-3 rounded animate-pulse bg-surface-elevated w-16 ml-auto" />
+          <div class="h-3 rounded animate-pulse bg-surface-elevated w-24" />
+          <div class="h-3 rounded animate-pulse bg-surface-elevated w-20" />
+        </div>
+      </div>
 
-    <EmptyState
-      v-else-if="filteredValues.length === 0"
-      variant="panel"
-      :primary="search ? 'No matching market values' : 'No market values set'"
-      :secondary="search ? undefined : 'Use item tooltips or the Add button to set prices.'" />
+      <EmptyState
+        v-else-if="filteredValues.length === 0"
+        variant="panel"
+        :primary="search ? 'No matching market values' : 'No market values set'"
+        :secondary="search ? undefined : 'Use item tooltips or the Add section above to set prices.'" />
 
-    <table v-else class="w-full text-sm">
-      <thead>
-        <tr class="text-text-muted text-xs text-left border-b border-border-default">
-          <th class="py-2 pr-4 font-normal cursor-pointer hover:text-text-primary" @click="toggleSort('item_name')">
-            Item {{ sortIcon('item_name') }}
-          </th>
-          <th class="py-2 pr-4 font-normal text-right cursor-pointer hover:text-text-primary" @click="toggleSort('market_value')">
-            Price {{ sortIcon('market_value') }}
-          </th>
-          <th class="py-2 pr-4 font-normal">Notes</th>
-          <th class="py-2 pr-4 font-normal cursor-pointer hover:text-text-primary" @click="toggleSort('updated_at')">
-            Updated {{ sortIcon('updated_at') }}
-          </th>
-          <th class="py-2 w-16"></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="val in filteredValues"
-          :key="val.item_type_id"
-          class="border-b border-border-default/50 hover:bg-surface-elevated/30">
-          <td class="py-2 pr-4 text-text-primary">
-            {{ val.item_name }}
-            <span class="text-text-muted text-xs ml-1">#{{ val.item_type_id }}</span>
-          </td>
-          <td class="py-2 pr-4 text-right text-accent-gold">
-            <span v-if="editingId !== val.item_type_id">{{ val.market_value.toLocaleString() }}g</span>
-            <input
-              v-else
-              v-model.number="editPrice"
-              type="number"
-              min="0"
-              class="w-24 bg-surface-dark border border-border-default rounded px-1 py-0.5 text-sm text-text-primary text-right"
-              @keydown.enter="saveEdit(val)"
-              @keydown.escape="editingId = null" />
-          </td>
-          <td class="py-2 pr-4 text-text-muted text-xs">{{ val.notes ?? '' }}</td>
-          <td class="py-2 pr-4 text-text-muted text-xs">{{ formatDate(val.updated_at) }}</td>
-          <td class="py-2 text-right">
-            <button
-              v-if="editingId !== val.item_type_id"
-              class="text-text-muted hover:text-text-primary bg-transparent border-none cursor-pointer text-xs mr-1"
-              @click="startEdit(val)">
-              Edit
-            </button>
-            <button
-              v-if="editingId === val.item_type_id"
-              class="text-accent-green hover:text-green-400 bg-transparent border-none cursor-pointer text-xs mr-1"
-              @click="saveEdit(val)">
-              Save
-            </button>
-            <button
-              class="text-text-muted hover:text-red-400 bg-transparent border-none cursor-pointer text-xs"
-              @click="deleteValue(val.item_type_id)">
-              Del
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div v-if="filteredValues.length > 0" class="text-text-muted text-xs mt-2">
-      {{ filteredValues.length }} of {{ marketStore.values.length }} values shown
+      <table v-else class="w-full border-collapse text-xs">
+        <thead class="sticky top-0 z-10 bg-surface-base border-b border-border-default">
+          <tr>
+            <th
+              class="text-[10px] uppercase tracking-wider text-text-muted font-semibold text-left px-2 py-1 cursor-pointer hover:text-text-primary select-none"
+              @click="toggleSort('item_name')">
+              Item
+              <span v-if="sortField === 'item_name'" class="ml-0.5">{{ sortAsc ? '\u25B2' : '\u25BC' }}</span>
+            </th>
+            <th
+              class="text-[10px] uppercase tracking-wider text-text-muted font-semibold text-right px-2 py-1 cursor-pointer hover:text-text-primary select-none w-30"
+              @click="toggleSort('market_value')">
+              Price
+              <span v-if="sortField === 'market_value'" class="ml-0.5">{{ sortAsc ? '\u25B2' : '\u25BC' }}</span>
+            </th>
+            <th class="text-[10px] uppercase tracking-wider text-text-muted font-semibold text-left px-2 py-1">
+              Notes
+            </th>
+            <th
+              class="text-[10px] uppercase tracking-wider text-text-muted font-semibold text-left px-2 py-1 cursor-pointer hover:text-text-primary select-none w-30"
+              @click="toggleSort('updated_at')">
+              Updated
+              <span v-if="sortField === 'updated_at'" class="ml-0.5">{{ sortAsc ? '\u25B2' : '\u25BC' }}</span>
+            </th>
+            <th class="w-25 px-2 py-1"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="val in filteredValues"
+            :key="val.item_type_id"
+            class="border-b border-border-default/50 hover:bg-surface-row-hover">
+            <td class="px-2 py-1 text-text-primary">
+              <ItemInline :reference="val.item_name" />
+            </td>
+            <td class="px-2 py-1 text-right tabular-nums">
+              <span v-if="editingId !== val.item_type_id" class="text-accent-gold">
+                {{ val.market_value.toLocaleString() }}g
+              </span>
+              <input
+                v-else
+                v-model.number="editPrice"
+                type="number"
+                min="0"
+                class="w-24 bg-surface-dark border border-border-default rounded px-1.5 py-0.5 text-xs text-text-primary text-right tabular-nums"
+                @keydown.enter="saveEdit(val)"
+                @keydown.escape="editingId = null" />
+            </td>
+            <td class="px-2 py-1 text-text-dim">{{ val.notes ?? '' }}</td>
+            <td class="px-2 py-1 text-text-dim">{{ formatDate(val.updated_at) }}</td>
+            <td class="px-2 py-1 text-right">
+              <div class="flex items-center justify-end gap-1">
+                <button
+                  v-if="editingId !== val.item_type_id"
+                  class="text-text-muted hover:text-text-primary bg-transparent border-none cursor-pointer text-xs px-1.5 py-0.5 rounded hover:bg-surface-elevated"
+                  @click="startEdit(val)">
+                  Edit
+                </button>
+                <button
+                  v-if="editingId === val.item_type_id"
+                  class="text-accent-green hover:text-green-400 bg-transparent border-none cursor-pointer text-xs px-1.5 py-0.5 rounded hover:bg-surface-elevated"
+                  @click="saveEdit(val)">
+                  Save
+                </button>
+                <button
+                  v-if="editingId === val.item_type_id"
+                  class="text-text-muted hover:text-text-primary bg-transparent border-none cursor-pointer text-xs px-1.5 py-0.5 rounded hover:bg-surface-elevated"
+                  @click="editingId = null">
+                  Cancel
+                </button>
+                <button
+                  v-if="editingId !== val.item_type_id"
+                  class="text-text-muted hover:text-red-400 bg-transparent border-none cursor-pointer text-xs px-1.5 py-0.5 rounded hover:bg-surface-elevated"
+                  @click="deleteValue(val.item_type_id)">
+                  Del
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Import dialog -->
@@ -217,7 +271,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useToast } from '../../composables/useToast'
 import { formatRelative } from '../../composables/useTimestamp'
 import { useMarketStore, type MarketValue, type ImportMarketValuesResult } from '../../stores/marketStore'
@@ -225,7 +279,8 @@ import { useSettingsStore } from '../../stores/settingsStore'
 import { useGameDataStore } from '../../stores/gameDataStore'
 import type { ItemInfo } from '../../types/gameData'
 import EmptyState from '../Shared/EmptyState.vue'
-import DataTableSkeleton from '../Shared/DataTableSkeleton.vue'
+import AccordionSection from '../Shared/AccordionSection.vue'
+import ItemInline from '../Shared/Item/ItemInline.vue'
 
 const toast = useToast()
 const marketStore = useMarketStore()
@@ -237,7 +292,6 @@ const sortField = ref<'item_name' | 'market_value' | 'updated_at'>('item_name')
 const sortAsc = ref(true)
 
 // Add form
-const showAddForm = ref(false)
 const addName = ref('')
 const addId = ref<number | null>(null)
 const addPrice = ref<number | null>(null)
@@ -257,6 +311,21 @@ const showImport = ref(false)
 const importJson = ref('')
 const importStrategy = ref('newest')
 const importResult = ref<ImportMarketValuesResult | null>(null)
+
+// Summary stats
+const totalMarketValue = computed(() =>
+  marketStore.values.reduce((sum, v) => sum + v.market_value, 0)
+)
+
+const avgPrice = computed(() => {
+  if (marketStore.values.length === 0) return 0
+  return Math.round(totalMarketValue.value / marketStore.values.length)
+})
+
+const highestPricedItem = computed(() => {
+  if (marketStore.values.length === 0) return null
+  return marketStore.values.reduce((max, v) => v.market_value > max.market_value ? v : max, marketStore.values[0])
+})
 
 const filteredValues = computed(() => {
   let vals = [...marketStore.values]
@@ -294,23 +363,12 @@ function toggleSort(field: 'item_name' | 'market_value' | 'updated_at') {
   }
 }
 
-function sortIcon(field: string): string {
-  if (sortField.value !== field) return ''
-  return sortAsc.value ? '\u25B2' : '\u25BC'
-}
-
 function formatDate(dateStr: string): string {
   if (!dateStr) return ''
   return formatRelative(dateStr)
 }
 
-function openAddForm() {
-  showAddForm.value = true
-  nextTick(() => itemSearchInput.value?.focus())
-}
-
 function onItemSearch() {
-  // Clear selection when user edits the query
   addId.value = null
   addName.value = ''
   itemDropdownIndex.value = 0
@@ -343,7 +401,6 @@ function selectSuggestion(item: ItemInfo | undefined) {
 }
 
 function cancelAdd() {
-  showAddForm.value = false
   addQuery.value = ''
   addName.value = ''
   addId.value = null
@@ -356,7 +413,6 @@ async function addValue() {
   if (!addName.value.trim() || !addId.value || addPrice.value == null) return
   await marketStore.setValue(addId.value, addName.value.trim(), addPrice.value, addNotes.value || undefined)
   cancelAdd()
-  showAddForm.value = false  // cancelAdd already does this, but explicit for clarity
 }
 
 function startEdit(val: MarketValue) {
