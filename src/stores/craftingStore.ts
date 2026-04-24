@@ -69,6 +69,31 @@ export const useCraftingStore = defineStore("crafting", () => {
     return recipes;
   }
 
+  // ── Ingredient tree cache ──────────────────────────────────────────────────
+  // Caches resolved ingredient trees keyed by recipe_id + quantity + expanded
+  // item IDs hash. Avoids re-resolving unchanged entries during bulk operations.
+  // Only used when intermediateStock is not provided (stock is mutable and
+  // consumed during resolution, making it unsuitable for caching).
+
+  const ingredientTreeCache = new Map<string, ResolvedRecipe>();
+
+  function buildIngredientCacheKey(
+    recipeId: number,
+    quantity: number,
+    expandItemIds?: Set<number>,
+  ): string {
+    const expandKey = expandItemIds
+      ? Array.from(expandItemIds).sort((a, b) => a - b).join(",")
+      : "";
+    return `${recipeId}:${quantity}:${expandKey}`;
+  }
+
+  /** Clear all in-memory caches (call on CDN reload or when data changes). */
+  function clearCaches() {
+    recipesForItemCache.clear();
+    ingredientTreeCache.clear();
+  }
+
   // ── Recipe filtering helpers ────────────────────────────────────────────────
 
   const MAX_ENCHANTED_RE = /\(Max-Enchanted\)/i;
@@ -212,6 +237,17 @@ export const useCraftingStore = defineStore("crafting", () => {
     expandItemIds?: Set<number>,
     intermediateStock?: Map<number, number>,
   ): Promise<ResolvedRecipe> {
+    // Check ingredient tree cache for top-level calls without mutable stock.
+    // Recursive (internal) calls have a non-empty visited set and shouldn't
+    // consult the cache — their context depends on the parent resolution.
+    const isCacheable = visited.size === 0 && !intermediateStock;
+    let cacheKey: string | null = null;
+    if (isCacheable) {
+      cacheKey = buildIngredientCacheKey(recipe.id, desiredQuantity, expandItemIds);
+      const cached = ingredientTreeCache.get(cacheKey);
+      if (cached) return cached;
+    }
+
     // Calculate how many crafts are needed
     const outputPerCraft = recipe.result_items[0]?.stack_size ?? 1;
     const primaryChance = (recipe.result_items[0]?.percent_chance ?? 100) / 100;
@@ -322,7 +358,7 @@ export const useCraftingStore = defineStore("crafting", () => {
       }
     }
 
-    return {
+    const result: ResolvedRecipe = {
       recipe_id: recipe.id,
       recipe_name: recipe.name,
       craft_count: craftCount,
@@ -335,6 +371,13 @@ export const useCraftingStore = defineStore("crafting", () => {
       ingredients,
       estimated_cost: Math.round(estimatedCost),
     };
+
+    // Store in cache for future identical requests
+    if (cacheKey) {
+      ingredientTreeCache.set(cacheKey, result);
+    }
+
+    return result;
   }
 
   /**
@@ -1327,6 +1370,7 @@ export const useCraftingStore = defineStore("crafting", () => {
     resolveRecipeIngredients,
     flattenIngredients,
     collectIntermediates,
+    clearCaches,
     // Material availability
     checkMaterialAvailability,
     exportMaterialList,
