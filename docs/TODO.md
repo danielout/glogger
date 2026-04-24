@@ -159,9 +159,8 @@ These items are investigated but can't be resolved without new runtime captures 
 - [x] Recurrent event timer widget
   - Done: Calendar-based recurring event timers with countdowns. Supports daily, weekly, biweekly (with anchor date), and monthly recurrence patterns. Events auto-advance to next occurrence after passing. Sorted by soonest next occurrence, imminent events (<1h) highlighted. Persisted via useViewPrefs. Config popover for managing events.
 
-- [ ] Audit time handling across the app
-  - Suspicious that time handling isn't fully standardized. Need to dig in and verify consistency (timezones, UTC vs local, formatting).
-  - **Effort: Medium (investigation) | Impact: Medium (correctness)**
+- [x] Audit time handling across the app
+  - Done: See `docs/architecture/time-handling-audit.md`. Backend is clean (consistent UTC). Frontend useTimestamp composable well-adopted. Fixed one manual duration formatting violation. Documented handful of low-severity toLocaleDateString bypasses.
 
 - [x] Dashboard widget sizing pass — consistent heights
   - Done: DashboardCard enforces uniform `h-80` (320px) height. All per-widget `max-h-*` overrides removed. Flex-1 scroll pattern applied to all widgets with variable content. Fixed broken scroll on MilkingTimers and WordsOfPower. See `docs/architecture/widget-sizing-audit.md`.
@@ -184,9 +183,8 @@ These items are investigated but can't be resolved without new runtime captures 
 - [x] Market Prices screen needs better layout
   - Done: Summary stat cards, add form and valuation settings in AccordionSections, full-width search, bordered table container, ItemInline for names, inline edit with Cancel button.
 
-- [ ] Bulk price setting for market values
-  - Currently single-item add/edit only. Import/export exists for JSON data migration but no in-app bulk operations. Could add multi-select with batch price update, percentage adjustments, or category-based pricing. Would need DB schema additions for pricing tiers/rules.
-  - **Effort: Medium-High | Impact: Medium (power-user workflow)**
+- [x] Bulk price setting for market values
+  - Done: Multi-select checkboxes, bulk action bar with Set Price, Adjust Prices (%), and Delete Selected. Backend bulk_update/bulk_delete commands. Confirmation for destructive ops.
 
 - [x] Better UX for adding market prices
   - Done: Autocomplete item search with ItemInline previews, auto-focus price, Enter/Escape shortcuts, batch entry with success feedback, duplicate detection with update option.
@@ -202,9 +200,8 @@ These items are investigated but can't be resolved without new runtime captures 
 - [x] Garden almanac widget
   - Done: Parses GardeningAlmanac book content, extracts current/upcoming crop bonus events. Dashboard widget with ItemInline/AreaInline display, countdown timer, upcoming events list. New garden_almanac table.
 
-- [ ] General-purpose timer system (mushroom barrels, brewing, cheesemaking, fletching, boss respawns)
-  - All these skills share a real-time waiting pattern with no log events for the timer portion. Mushroom barrel timers, brewing cask aging (1–3h), cheesemaking aging (1–9h), and fletching drying (1–30m, daylight+sunny only) would all need manual-entry timers. Could share a single reusable timer system. Also subsumes boss/chest respawn timers (from Kaeus's tools). Talk to buppis for brewing specifics. **Partial update:** `ProcessUpdateDescription` does fire for timed crafting items while the player is nearby (e.g. "Rising Simple Sourdough" with proofing countdown and increasing scale value). This provides live progress for items in proximity but won't help with offline/away timers. See `docs/architecture/capture-analysis-results.md`. **Parser confirmed:** `parse_update_description` exists in `player_event_parser.rs` emitting `EntityDescriptionUpdated` events, but the coordinator has no handler for it yet. **DB approach:** `user_timers` table with label, duration, area grouping, `last_triggered_at`. Frontend-driven countdowns with backend persistence (the current milking timer pattern).
-  - **Effort: Medium-High**
+- [x] General-purpose timer system (mushroom barrels, brewing, cheesemaking, fletching, boss respawns)
+  - Done: Backend `user_timers` table with save/get/delete commands. Timer store upgraded to SQLite persistence with localStorage write-through cache. Timers scoped per character/server. Auto-detection from EntityDescriptionUpdated deferred (doesn't reliably provide total duration for offline timers).
 
 
 ---
