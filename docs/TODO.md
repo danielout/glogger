@@ -231,10 +231,12 @@ These items are investigated but can't be resolved without new runtime captures 
 
 - [ ] Write 'how to use' docs for each screen
   - Even brief docs for each screen would help users understand features. Could be in-app help or docs folder.
+  - Need t4o have some standard place in the panel layout for a button or something, perhaps. that explains how to use it. maybe top right of the panel view? we will need a way to turn it off/off (not all panel layout consumers will want it) and then how to define what it contains.
   - **Effort: Large (breadth) | Impact: Medium (onboarding/discoverability)**
 
 - [ ] Reevaluate test suite
   - Think about what tests make sense, what isn't giving value, and how to harden against future failures.
+  - need to figure out if we can build some sample data or something mthat makes sense for tests.
   - **Effort: Large | Impact: Medium (reliability/confidence)**
 
 - [ ] Analyze what should move from frontend to Rust
@@ -251,11 +253,8 @@ These items are investigated but can't be resolved without new runtime captures 
   - **Effort: Large | Impact: Medium (niche but high engagement)**
 
 - [ ] Interactive zone maps — see `docs/plans/interactive-maps.md`
+  - kaeus is working on this i believe.
   - **Effort: Large (mostly frontend) | Impact: High**
-
-- [ ] CraftingCorner / community marketplace
-  - Community platform for player crafting services (artisan listings, order tracking). Architecturally very different from glogger's local-first model — would need external service integration (Firebase or custom backend). Consider keeping as external link initially. Originally from Kaeus's GorgonCraftingTools.
-  - **Effort: Very Large | Impact: Medium (community feature)**
 
 - [ ] Consolidate storage helper
   - Uses the route planner and storage vault data to find items stored in multiple locations, then creates a pickup/dropoff route to consolidate them.
@@ -283,6 +282,7 @@ These items are investigated but can't be resolved without new runtime captures 
 
 - [ ] Macros or process interaction
   - Can we target the game process and send commands? Can we screen-read the process? Major research question with significant technical and policy implications.
+  - We know from existing discussions that things like mouse/keyboard macros are okay. 
   - **Effort: Large (research) | Impact: Unknown (depends on feasibility)**
 
 - [ ] Track total owned quantity changes over time
