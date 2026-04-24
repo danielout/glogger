@@ -1,20 +1,52 @@
 <template>
   <div class="flex flex-col gap-4 h-full">
-    <!-- Header with search and summary -->
+    <!-- Header with search, toggle, and summary -->
     <div class="flex items-center gap-4 shrink-0">
       <input
         v-model="searchQuery"
         type="text"
-        placeholder="Search vaults by name, area, or stored items..."
+        :placeholder="showTotals ? 'Search items...' : 'Search vaults by name, area, or stored items...'"
         class="flex-1 px-3 py-1.5 bg-bg-tertiary border border-border-primary rounded text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary"
       />
+      <button
+        class="px-2.5 py-1 text-xs cursor-pointer rounded border transition-colors whitespace-nowrap"
+        :class="showTotals
+          ? 'bg-accent-gold/20 text-accent-gold border-accent-gold/40'
+          : 'bg-bg-tertiary text-text-secondary border-border-primary hover:text-text-primary hover:bg-bg-secondary'"
+        @click="toggleShowTotals"
+      >
+        Show Totals
+      </button>
       <div class="text-xs text-text-secondary whitespace-nowrap">
         {{ totalStoredItems }} items across {{ vaultsWithItems }} vaults
       </div>
     </div>
 
-    <!-- Area cards grid -->
-    <div class="flex-1 min-h-0 overflow-y-auto pr-1">
+    <!-- Totals view -->
+    <div v-if="showTotals" class="flex-1 min-h-0 overflow-y-auto pr-1">
+      <EmptyState
+        v-if="filteredTotalsRows.length === 0 && searchQuery"
+        primary="No matching items"
+        :secondary="`No items matching '${searchQuery}'`"
+      />
+      <EmptyState
+        v-else-if="filteredTotalsRows.length === 0"
+        primary="No stored items"
+        secondary="No items found in any vault"
+      />
+      <div v-else class="flex flex-col gap-1">
+        <VaultTotalsRow
+          v-for="row in filteredTotalsRows"
+          :key="row.itemName"
+          :item-name="row.itemName"
+          :total-quantity="row.totalQuantity"
+          :locations="row.locations"
+        />
+      </div>
+    </div>
+
+    <!-- Per-location view (existing) -->
+    <div v-else class="flex-1 min-h-0 overflow-y-auto pr-1">
       <EmptyState
         v-if="gameState.storageVaults.length === 0"
         primary="No vault data loaded"
@@ -72,10 +104,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { useGameStateStore } from "../../stores/gameStateStore";
+import { useViewPrefs } from "../../composables/useViewPrefs";
 import type { StorageVaultDetail, GameStateStorageItem } from "../../types/gameState";
+import type { TotalsLocation } from "./VaultTotalsRow.vue";
 import EmptyState from "../Shared/EmptyState.vue";
 import VaultAreaCard from "./VaultAreaCard.vue";
 import VaultRow from "./VaultRow.vue";
+import VaultTotalsRow from "./VaultTotalsRow.vue";
 
 export interface VaultEntry {
   detail: StorageVaultDetail;
@@ -94,9 +129,24 @@ interface AreaGroup {
   totalMaxPossible: number | null;
 }
 
+interface TotalsRow {
+  itemName: string;
+  totalQuantity: number;
+  locations: TotalsLocation[];
+}
+
 const gameState = useGameStateStore();
 const searchQuery = ref("");
 const selectedArea = ref<string | null>(null);
+
+// Persisted preference for show-totals toggle
+const { prefs: vaultPrefs, update: updateVaultPrefs } = useViewPrefs("vaultDatabase", {
+  showTotals: false,
+});
+const showTotals = computed(() => vaultPrefs.value.showTotals);
+function toggleShowTotals() {
+  updateVaultPrefs({ showTotals: !showTotals.value });
+}
 
 onMounted(() => {
   gameState.loadStorageVaults();
@@ -215,4 +265,58 @@ const totalStoredItems = computed(() =>
 const vaultsWithItems = computed(() =>
   Object.keys(gameState.storageByVault).length
 );
+
+// ── Totals mode ──────────────────────────────────────────────────────────────
+
+/** Get a display name for a vault key */
+function vaultDisplayName(vaultKey: string): string {
+  const detail = gameState.storageVaultsByKey[vaultKey];
+  if (detail?.npc_friendly_name) return detail.npc_friendly_name;
+  if (detail?.area_name) return `${detail.area_name} - ${vaultKey}`;
+  return vaultKey;
+}
+
+/** All items grouped by item name with per-location breakdown */
+const totalsRows = computed<TotalsRow[]>(() => {
+  const itemMap = new Map<string, Map<string, number>>();
+
+  for (const item of gameState.storage) {
+    if (!itemMap.has(item.item_name)) {
+      itemMap.set(item.item_name, new Map());
+    }
+    const vaultMap = itemMap.get(item.item_name)!;
+    vaultMap.set(item.vault_key, (vaultMap.get(item.vault_key) ?? 0) + item.stack_size);
+  }
+
+  const rows: TotalsRow[] = [];
+  for (const [itemName, vaultMap] of itemMap) {
+    let totalQuantity = 0;
+    const locations: TotalsLocation[] = [];
+    for (const [vaultKey, quantity] of vaultMap) {
+      totalQuantity += quantity;
+      locations.push({
+        vaultKey,
+        displayName: vaultDisplayName(vaultKey),
+        quantity,
+      });
+    }
+    // Sort locations alphabetically by display name
+    locations.sort((a, b) => a.displayName.localeCompare(b.displayName));
+    rows.push({ itemName, totalQuantity, locations });
+  }
+
+  // Sort by item name
+  rows.sort((a, b) => a.itemName.localeCompare(b.itemName));
+  return rows;
+});
+
+/** Filtered totals rows by search query */
+const filteredTotalsRows = computed<TotalsRow[]>(() => {
+  if (!searchQuery.value.trim()) return totalsRows.value;
+  const q = searchQuery.value.toLowerCase();
+  return totalsRows.value.filter(row =>
+    row.itemName.toLowerCase().includes(q) ||
+    row.locations.some(loc => loc.displayName.toLowerCase().includes(q))
+  );
+});
 </script>
