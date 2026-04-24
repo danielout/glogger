@@ -79,7 +79,7 @@
       </span>
     </div>
     <div v-if="store.selectedInventorySnapshot" class="flex items-center gap-3 flex-wrap">
-      <div class="flex items-center gap-1.5">
+      <div v-if="groupMode !== 'totals'" class="flex items-center gap-1.5">
         <span class="text-xs text-text-muted">View:</span>
         <div class="flex border border-border-default rounded overflow-hidden">
           <button
@@ -102,10 +102,11 @@
           <option value="none">No Grouping</option>
           <option value="storage">By Storage Location</option>
           <option value="zone">By Zone</option>
+          <option value="totals">Show Totals</option>
         </select>
       </div>
 
-      <div v-if="viewMode !== 'detail'" class="flex items-center gap-1.5">
+      <div v-if="viewMode !== 'detail' && groupMode !== 'totals'" class="flex items-center gap-1.5">
         <span class="text-xs text-text-muted">Sort:</span>
         <select
           v-model="sortMode"
@@ -146,7 +147,44 @@
         <component :is="viewComponent" :items="sortItems(filteredItems)" />
       </template>
 
-      <!-- Grouped -->
+      <!-- Totals mode: consolidated by item name -->
+      <template v-else-if="groupMode === 'totals'">
+        <table class="w-full border-collapse text-xs">
+          <thead class="sticky top-0 z-10 bg-surface-base border-b border-border-default">
+            <tr>
+              <th class="text-[10px] uppercase tracking-wider text-text-muted font-semibold px-3 py-1.5 text-left cursor-pointer" @click="toggleTotalSort('name')">
+                Item {{ totalSort === 'name' ? (totalSortAsc ? '\u25B2' : '\u25BC') : '' }}
+              </th>
+              <th class="text-[10px] uppercase tracking-wider text-text-muted font-semibold px-3 py-1.5 text-right tabular-nums cursor-pointer" @click="toggleTotalSort('qty')">
+                Total Qty {{ totalSort === 'qty' ? (totalSortAsc ? '\u25B2' : '\u25BC') : '' }}
+              </th>
+              <th class="text-[10px] uppercase tracking-wider text-text-muted font-semibold px-3 py-1.5 text-right">Locations</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template v-for="row in sortedTotals" :key="row.name">
+              <tr
+                class="border-b border-border-default/50 hover:bg-surface-row-hover cursor-pointer"
+                @click="toggleTotalRow(row.name)">
+                <td class="px-3 py-2">
+                  <ItemInline :reference="row.name" />
+                </td>
+                <td class="px-3 py-2 text-right tabular-nums font-medium text-text-primary">{{ row.total.toLocaleString() }}</td>
+                <td class="px-3 py-2 text-right text-text-muted">{{ row.locations.length }} {{ row.locations.length === 1 ? 'location' : 'locations' }}</td>
+              </tr>
+              <template v-if="expandedTotals.has(row.name)">
+                <tr v-for="loc in row.locations" :key="`${row.name}-${loc.vault}`" class="bg-surface-inset/30">
+                  <td class="px-3 py-1 pl-8 text-text-muted">{{ formatVault(loc.vault) }}</td>
+                  <td class="px-3 py-1 text-right tabular-nums text-text-secondary">{{ loc.qty.toLocaleString() }}</td>
+                  <td></td>
+                </tr>
+              </template>
+            </template>
+          </tbody>
+        </table>
+      </template>
+
+      <!-- Grouped by location/zone -->
       <template v-else>
         <div v-for="group in groupedItems" :key="group.label" class="mb-2">
           <button
@@ -169,9 +207,11 @@ import { ref, reactive, computed, onMounted, watch, type Component } from 'vue'
 import { useCharacterStore } from '../../stores/characterStore'
 import { useGameDataStore } from '../../stores/gameDataStore'
 import { useGameStateStore } from '../../stores/gameStateStore'
+import { useViewPrefs } from '../../composables/useViewPrefs'
 import { formatDateTimeFull } from '../../composables/useTimestamp'
 import type { SnapshotItem } from '../../types/database'
 import EmptyState from '../Shared/EmptyState.vue'
+import ItemInline from '../Shared/Item/ItemInline.vue'
 import InventoryTable from './InventoryTable.vue'
 import InventorySmallGrid from './InventorySmallGrid.vue'
 import InventoryLargeGrid from './InventoryLargeGrid.vue'
@@ -182,13 +222,31 @@ const gameStore = useGameDataStore()
 const gameState = useGameStateStore()
 
 type ViewMode = 'small-grid' | 'large-grid' | 'panel' | 'detail'
-type GroupMode = 'none' | 'storage' | 'zone'
+type GroupMode = 'none' | 'storage' | 'zone' | 'totals'
 type SortMode = 'slot' | 'alpha' | 'count' | 'value'
 
-const viewMode = ref<ViewMode>('detail')
-const groupMode = ref<GroupMode>('storage')
-const sortMode = ref<SortMode>('slot')
-const searchQuery = ref('')
+// Persist view settings across navigation
+const { prefs, update: updatePrefs } = useViewPrefs<Record<string, unknown>>('inventoryView', {
+  viewMode: 'detail' as string,
+  groupMode: 'storage' as string,
+  sortMode: 'slot' as string,
+  searchQuery: '' as string,
+})
+
+const viewMode = ref<ViewMode>((prefs.value.viewMode as ViewMode) || 'detail')
+const groupMode = ref<GroupMode>((prefs.value.groupMode as GroupMode) || 'storage')
+const sortMode = ref<SortMode>((prefs.value.sortMode as SortMode) || 'slot')
+const searchQuery = ref((prefs.value.searchQuery as string) || '')
+
+// Persist changes back
+watch([viewMode, groupMode, sortMode, searchQuery], () => {
+  updatePrefs({
+    viewMode: viewMode.value,
+    groupMode: groupMode.value,
+    sortMode: sortMode.value,
+    searchQuery: searchQuery.value,
+  })
+})
 
 const viewModes = [
   { value: 'small-grid' as ViewMode, label: 'Small Icons' },
@@ -389,6 +447,52 @@ const groupedItems = computed<ItemGroup[]>(() => {
 // Re-init collapse state when groups change (snapshot or group mode change)
 watch(groupedItems, (groups) => {
   if (groups.length > 0) initCollapseState(groups)
+})
+
+// ── Totals mode ─────────────────────────────────────────────────────────────
+
+interface TotalRow {
+  name: string
+  total: number
+  locations: { vault: string; qty: number }[]
+}
+
+const expandedTotals = reactive(new Set<string>())
+const totalSort = ref<'name' | 'qty'>('name')
+const totalSortAsc = ref(true)
+
+function toggleTotalRow(name: string) {
+  if (expandedTotals.has(name)) expandedTotals.delete(name)
+  else expandedTotals.add(name)
+}
+
+function toggleTotalSort(col: 'name' | 'qty') {
+  if (totalSort.value === col) totalSortAsc.value = !totalSortAsc.value
+  else { totalSort.value = col; totalSortAsc.value = col === 'name' }
+}
+
+const itemTotals = computed<TotalRow[]>(() => {
+  const map = new Map<string, { total: number; locs: Map<string, number> }>()
+  for (const item of filteredItems.value) {
+    const vault = getLocation(item)
+    let entry = map.get(item.item_name)
+    if (!entry) { entry = { total: 0, locs: new Map() }; map.set(item.item_name, entry) }
+    entry.total += item.stack_size
+    entry.locs.set(vault, (entry.locs.get(vault) || 0) + item.stack_size)
+  }
+  return [...map.entries()].map(([name, data]) => ({
+    name,
+    total: data.total,
+    locations: [...data.locs.entries()].map(([vault, qty]) => ({ vault, qty })).sort((a, b) => a.vault.localeCompare(b.vault)),
+  }))
+})
+
+const sortedTotals = computed(() => {
+  const rows = [...itemTotals.value]
+  const dir = totalSortAsc.value ? 1 : -1
+  if (totalSort.value === 'name') rows.sort((a, b) => dir * a.name.localeCompare(b.name))
+  else rows.sort((a, b) => dir * (a.total - b.total))
+  return rows
 })
 
 // ── Snapshot management ─────────────────────────────────────────────────────
