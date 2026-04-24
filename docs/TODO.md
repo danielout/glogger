@@ -18,17 +18,28 @@ These are investigated items kept for reference — the research is done but the
 
 ---
 
-## Quick Wins (Small Effort, Noticeable Value)
+## Blocked: Additional Log Examples Needed
+
+These items are investigated but can't be resolved without new runtime captures or log samples.
 
 - [ ] Bug: instant-snack foods missing from gourmand report
   - They used to show up and now they're gone. Static analysis of the code path (CDN parsing, DB query, store filtering, UI display) shows everything is wired correctly. Most likely cause: `parse_food_desc()` in `cdn_persistence.rs` silently skips items where parsing fails — items with unparseable `FoodDesc` are logged but never inserted into the `foods` table. Could also be a whitespace/encoding issue in CDN data (e.g. non-breaking space causing the split to miss). Needs runtime debugging — query the `foods` table directly to see if instant-snack rows exist at all.
     - the gourmand completeness bars in the left panel show "0/0" for instant-snacks, so seems like we aren't loading them at all. i bet a couple debug lines can root cause this pretty quickly. seems like it all probably works still _if_ we solve why we aren't finding any in the CDN.
-  - **Effort: Low | Impact: Medium (data correctness — entire food category invisible)**
+  - **Blocked on:** Runtime debugging session — need to query the `foods` table and check CDN parse output.
 
 - [ ] Bug: rez counter not working
-  - **Serde hypothesis disproven** — exhaustive static analysis confirms the full pipeline (parser → coordinator → DB → event emit → frontend listener → store → widget) is correctly wired. Serde serialization of `ChatResuscitateEvent` produces `"Resuscitated"` (PascalCase), matching the frontend check. Parser tests pass (9/9). Debug logging added to coordinator and frontend store to diagnose at runtime.
-  - **Most likely actual cause:** Player's in-game chat configuration doesn't include `[Action Emotes]` channel in any chat tab, so those messages never appear in Chat.log and no rez events are ever parsed. Needs a runtime capture with Action Emotes enabled to confirm.
-  - **Effort: Low (once confirmed) | Impact: Low**
+  - **Serde hypothesis disproven** — exhaustive static analysis confirms the full pipeline is correctly wired. Parser tests pass (9/9). Debug logging added to coordinator and frontend store.
+  - **Most likely actual cause:** Player's in-game chat configuration doesn't include `[Action Emotes]` channel in any chat tab, so those messages never appear in Chat.log.
+  - **Blocked on:** Runtime capture with Action Emotes enabled to confirm.
+
+- [ ] Investigate detecting recipe learning without character.json import
+  - **Investigation complete:** `ProcessUpdateRecipe(recipeId, completionCount)` and `ProcessLoadRecipes()` events already exist in `player_event_parser.rs`. `RecipeUpdated` events fire during gameplay when recipes are updated. Log events ARE generated — this feature is implementable without character.json dependency. Remaining work: wire coordinator handler to persist recipe state changes, update cook's helper to consume live events.
+    - STILL UNKNOWN: does this fire when a recipe is first learned, even if completion count is zero? need to capture a log for this.
+  - **Blocked on:** Log capture of a recipe being learned for the first time.
+
+---
+
+## Quick Wins (Small Effort, Noticeable Value)
 
 - [x] Crafting projects: loading skeleton/shimmer states for material tables
   - Done: ProjectMaterialsPanel now shows SkeletonLoader + DataTableSkeleton sections while resolving instead of spinner text.
@@ -56,11 +67,6 @@ These are investigated items kept for reference — the research is done but the
 
 - [x] Configurable critical resources widget
   - Done: Config panel with item search/add/remove, persisted via useViewPrefs. Defaults to original 6 items.
-
-- [ ] Investigate detecting recipe learning without character.json import
-  - **Investigation complete:** `ProcessUpdateRecipe(recipeId, completionCount)` and `ProcessLoadRecipes()` events already exist in `player_event_parser.rs`. `RecipeUpdated` events fire during gameplay when recipes are updated. Log events ARE generated — this feature is implementable without character.json dependency. Remaining work: wire coordinator handler to persist recipe state changes, update cook's helper to consume live events.
-    - STILL UNKNOWN: does this fire when a recipe is first learned, even if completion count is zero? need to capture a log for this.
-  - **Effort: Low-Medium (wiring only) | Impact: Medium-High (reduces manual import dependency)**
 
 ---
 
