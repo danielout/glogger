@@ -125,6 +125,14 @@ Structured events parsed from `[Status]` channel messages. The parser is **state
 | `TreasureDistance` | `The treasure is N meters from here.` | `meters` |
 | `AnatomyResult` | `You bury the corpse.` / `You botch the autopsy!` | `success` (bool) |
 | `Summoned` | `Summoned X xN` | `item_name`, `quantity` |
+| `ItemStudied` | `You carefully study the X.` | `item_name` |
+| `ReportSaved` | `Saved report to <path>` | `file_path` |
+
+### Stream: `"report-saved"`
+
+**Source:** Chat Status channel via `chat_status_parser.rs` → coordinator
+
+Emitted when the game writes a character or inventory report to disk (triggered by `/exportcharacter` or `/outputitems`). The coordinator re-emits this as a dedicated `"report-saved"` event (payload: file path string) so the frontend can trigger an immediate report import instead of waiting for the next polling cycle.
 
 ### Stream: `"game-state-updated"`
 

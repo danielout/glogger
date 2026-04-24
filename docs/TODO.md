@@ -34,8 +34,12 @@ These items are investigated but can't be resolved without new runtime captures 
 
 - [ ] Investigate detecting recipe learning without character.json import
   - **Investigation complete:** `ProcessUpdateRecipe(recipeId, completionCount)` and `ProcessLoadRecipes()` events already exist in `player_event_parser.rs`. `RecipeUpdated` events fire during gameplay when recipes are updated. Log events ARE generated — this feature is implementable without character.json dependency. Remaining work: wire coordinator handler to persist recipe state changes, update cook's helper to consume live events.
+  - [ ] RELATED Bug: cook's helper not updating after buying new recipes
+  - **Root cause identified:** Cook's helper loads recipes from CDN `items` data via `get_all_foods()`, but new recipes are only detected via character.json re-import or Books SkillReport file re-import. No live event integration exists. Fix: hook into `RecipeUpdated` parser events (which already fire — see recipe detection item above) to refresh the foods table incrementally.
     - STILL UNKNOWN: does this fire when a recipe is first learned, even if completion count is zero? need to capture a log for this.
   - **Blocked on:** Log capture of a recipe being learned for the first time.
+
+  - **Effort: Low-Medium (depends on recipe detection wiring) | Impact: Medium**
 
 - [ ] Hoplology (equipment study) tracker — backfill from book/report
   - Chat parser, DB table, coordinator handler, and dashboard widget are all built and wired. Widget is disabled in `dashboardWidgets.ts` because without backfill it always shows 0 studied items.
@@ -76,13 +80,8 @@ These items are investigated but can't be resolved without new runtime captures 
 - [x] Manual food eaten/not eaten marking for gourmand
   - Done: Click-to-toggle eaten status with v40 migration. Visual distinction: green=imported, blue=manual, red=uneaten. Manual marks preserved during report imports.
 
-- [ ] Bug: incorrect survey session start/end times
-  - **Root causes identified:** (1) Auto-started sessions set `started_at` to the triggering event timestamp, not actual activity start. (2) `recompute_session_bounds_and_end()` only corrects bounds when a session closes — live/open sessions show uncorrected timestamps. (3) During initial log replay, if a manual session is started during catch-up phase, `started_at` uses wall-clock time instead of log date. Fix path: proactively update bounds for open sessions (not just at close), and use `base_date_override` for timestamps during catch-up mode.
-  - **Effort: Medium (investigation done, fix touches replay/live mode distinction) | Impact: Medium (data accuracy)**
-
-- [ ] Bug: cook's helper not updating after buying new recipes
-  - **Root cause identified:** Cook's helper loads recipes from CDN `items` data via `get_all_foods()`, but new recipes are only detected via character.json re-import or Books SkillReport file re-import. No live event integration exists. Fix: hook into `RecipeUpdated` parser events (which already fire — see recipe detection item above) to refresh the foods table incrementally.
-  - **Effort: Low-Medium (depends on recipe detection wiring) | Impact: Medium**
+- [x] Bug: incorrect survey session start/end times
+  - Done: Added incremental `tighten_started_at()` that updates open session bounds on every craft/use/loot event. Fixes auto-start trigger timestamps, live session bounds, and catch-up mode correction.
 
 - [ ] Bug: occasional inventory item miscounts
   - **Root causes identified:** (1) Chat-to-player event correlation uses a ±2 second window — mismatches fall back to stack_size=1. (2) Parser's 1-line lookahead buffer for deletions (`pending_deletes`) can fail if log lines reorder. (3) During catch-up replay, stack count corrections from chat may arrive before/after Player.log events depending on replay ordering. (4) Login doesn't treat inventory as a full state dump, so items from earlier sessions can pollute later ones. The widget itself warns "item tracking is not great right now." Fix requires reconciliation logic and smarter replay-mode handling.
@@ -158,9 +157,8 @@ These items are investigated but can't be resolved without new runtime captures 
   - Work order tooltips should show completion/cooldown state across all tracked characters.
   - **Effort: Medium | Impact: Medium (multi-character awareness)**
 
-- [ ] Recurrent event timer widget
-  - User-configurable recurring timers (e.g., "every other Wednesday @ 10") with countdowns. Distinct from the general-purpose timer system — this is calendar-based recurrence.
-  - **Effort: Medium | Impact: Medium (scheduling)**
+- [x] Recurrent event timer widget
+  - Done: Calendar-based recurring event timers with countdowns. Supports daily, weekly, biweekly (with anchor date), and monthly recurrence patterns. Events auto-advance to next occurrence after passing. Sorted by soonest next occurrence, imminent events (<1h) highlighted. Persisted via useViewPrefs. Config popover for managing events.
 
 - [ ] Audit time handling across the app
   - Suspicious that time handling isn't fully standardized. Need to dig in and verify consistency (timezones, UTC vs local, formatting).
@@ -178,16 +176,14 @@ These items are investigated but can't be resolved without new runtime captures 
   - Reported as "weird page refresh issues." No explicit refresh/reload logic in `DashboardView.vue`. Main reactive trigger is `orderedWidgets` computed property tied to `useViewPrefs` + settings store. `useViewPrefs` debounces writes (500ms) but mutations can fire during transitions. Likely caused by reactive store updates triggering unexpected re-renders on pane resizing or settings updates. Needs runtime debugging to reproduce.
   - **Effort: Low-Medium (once reproduced) | Impact: Unknown**
 
-- [ ] Switch report detection from folder polling to chat log events
-  - Currently the Reports folder is polled on a timer (`characterStore.ts` `startReportWatching()`, configurable 5–300s interval). The chat log already announces when exports happen. Switching to chat-log-triggered detection would be more responsive and eliminate unnecessary polling. Needs a new handler in the chat status parser for export messages.
-  - **Effort: Medium | Impact: Small-Medium (efficiency/responsiveness)**
+- [x] Switch report detection from folder polling to chat log events
+  - Done: Parses "Saved report to <path>" from chat Status channel. Immediate import trigger via "report-saved" event. Polling kept as fallback at 60s (was 10s).
 
 - [x] Actually implement audio alerts for watchwords
   - Done: watchwordAlertStore plays two-tone ascending beep via Web Audio API when rules trigger with sound enabled. Also shows toast notifications. Listener registered at app startup in startupStore.
 
-- [ ] Market Prices screen needs better layout
-  - Currently a simple card-based vertical layout inside EconomicsView's PaneLayout. Table columns are fixed (Item | Price | Notes | Updated | Actions). Could benefit from a two-pane layout, better spacing, and visual hierarchy. Filtering already exists. No pricing history, charts, or comparative features.
-  - **Effort: Medium | Impact: Medium (usability)**
+- [x] Market Prices screen needs better layout
+  - Done: Summary stat cards, add form and valuation settings in AccordionSections, full-width search, bordered table container, ItemInline for names, inline edit with Cancel button.
 
 - [ ] Bulk price setting for market values
   - Currently single-item add/edit only. Import/export exists for JSON data migration but no in-app bulk operations. Could add multi-select with batch price update, percentage adjustments, or category-based pricing. Would need DB schema additions for pricing tiers/rules.
