@@ -1025,6 +1025,18 @@ impl DataIngestCoordinator {
                                     }
                                 }
                             }
+                            ChatStatusEvent::ReportSaved { file_path, .. } => {
+                                eprintln!(
+                                    "[coordinator] Report saved detected: {}",
+                                    file_path
+                                );
+                                // Emit a dedicated event so the frontend can
+                                // trigger an immediate report import instead of
+                                // waiting for the next polling cycle.
+                                self.app_handle
+                                    .emit("report-saved", file_path.clone())
+                                    .ok();
+                            }
                             _ => {}
                         }
 

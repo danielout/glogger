@@ -53,6 +53,13 @@ pub enum ChatStatusEvent {
         timestamp: String,
         item_name: String,
     },
+
+    /// "Saved report to C:/.../Reports/Character_Foo.json"
+    /// Fired when the player runs /exportcharacter or /outputitems.
+    ReportSaved {
+        timestamp: String,
+        file_path: String,
+    },
 }
 
 /// Try to parse a Status channel ChatMessage into a structured event.
@@ -76,6 +83,7 @@ pub fn parse_status_message(msg: &ChatMessage) -> Option<ChatStatusEvent> {
         .or_else(|| try_councils_changed(text, &ts))
         .or_else(|| try_summoned(text, &ts))
         .or_else(|| try_item_studied(text, &ts))
+        .or_else(|| try_report_saved(text, &ts))
 }
 
 /// "X added to inventory." or "X xN added to inventory."
@@ -244,6 +252,23 @@ fn try_item_studied(text: &str, ts: &str) -> Option<ChatStatusEvent> {
     Some(ChatStatusEvent::ItemStudied {
         timestamp: ts.to_string(),
         item_name: item_name.to_string(),
+    })
+}
+
+/// "Saved report to C:/.../Reports/Character_Foo.json"
+fn try_report_saved(text: &str, ts: &str) -> Option<ChatStatusEvent> {
+    let prefix = "Saved report to ";
+    if !text.starts_with(prefix) {
+        return None;
+    }
+    let file_path = &text[prefix.len()..];
+    if file_path.is_empty() {
+        return None;
+    }
+
+    Some(ChatStatusEvent::ReportSaved {
+        timestamp: ts.to_string(),
+        file_path: file_path.to_string(),
     })
 }
 
@@ -464,6 +489,35 @@ mod tests {
         } else {
             panic!("Expected ItemStudied, got {:?}", event);
         }
+    }
+
+    #[test]
+    fn test_report_saved_character() {
+        let msg = status_msg("Saved report to C:/Users/danie/AppData/LocalLow/Elder Game/Project Gorgon/Reports/Character_Zenith_Dreva.json");
+        let event = parse_status_message(&msg).unwrap();
+        if let ChatStatusEvent::ReportSaved { file_path, .. } = event {
+            assert_eq!(file_path, "C:/Users/danie/AppData/LocalLow/Elder Game/Project Gorgon/Reports/Character_Zenith_Dreva.json");
+        } else {
+            panic!("Expected ReportSaved, got {:?}", event);
+        }
+    }
+
+    #[test]
+    fn test_report_saved_inventory() {
+        let msg = status_msg("Saved report to C:/Users/danie/AppData/LocalLow/Elder Game/Project Gorgon/Reports/Zenith_Dreva_items_2026-04-20-01-53-45Z.json");
+        let event = parse_status_message(&msg).unwrap();
+        if let ChatStatusEvent::ReportSaved { file_path, .. } = event {
+            assert!(file_path.contains("items_"));
+        } else {
+            panic!("Expected ReportSaved, got {:?}", event);
+        }
+    }
+
+    #[test]
+    fn test_book_saved_not_report() {
+        // "Saved book to ..." should NOT match ReportSaved
+        let msg = status_msg("Saved book to C:/Users/danie/AppData/LocalLow/Elder Game/Project Gorgon/Books/HelpScreen_260419_185352.txt");
+        assert!(parse_status_message(&msg).is_none());
     }
 
     #[test]

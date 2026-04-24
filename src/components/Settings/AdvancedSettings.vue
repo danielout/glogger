@@ -81,7 +81,9 @@
           <span>Auto-ingest new character reports</span>
         </label>
         <p class="mt-2 text-text-muted text-xs leading-relaxed">
-          Watches the Reports folder for new character exports and automatically imports them.
+          Automatically imports new character exports. Reports are detected instantly via chat log
+          when the game announces a save. Polling acts as a fallback for exports that happened
+          while the app was closed.
         </p>
       </div>
 
@@ -95,7 +97,7 @@
           max="300"
           class="bg-surface-elevated border border-border-default rounded px-3 py-1.5 text-sm text-text-primary w-24" />
         <p class="mt-1 text-text-muted text-xs">
-          How often to check for new reports (5–300 seconds).
+          Fallback polling interval (5–300 seconds). Chat detection handles instant imports while playing.
         </p>
       </div>
     </div>
