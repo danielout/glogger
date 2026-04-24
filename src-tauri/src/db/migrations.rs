@@ -223,10 +223,33 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
     }
 
     if current_version < 40 {
-        migration_v40_hoplology_studies(conn)?;
+        migration_v40_garden_almanac(conn)?;
         super::record_migration(conn, 40)?;
     }
 
+    Ok(())
+}
+
+/// Migration V40: Garden almanac — stores parsed gardening bonus events
+/// from the in-game Gardening Almanac book.
+fn migration_v40_garden_almanac(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE garden_almanac (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            crop_name TEXT NOT NULL,
+            zone_name TEXT NOT NULL,
+            event_start TEXT,
+            event_end TEXT,
+            is_current INTEGER NOT NULL DEFAULT 0,
+            captured_at TEXT NOT NULL
+        );
+        CREATE INDEX idx_garden_almanac_char_server
+            ON garden_almanac(character_name, server_name);
+        CREATE INDEX idx_garden_almanac_end
+            ON garden_almanac(event_end);"
+    )?;
     Ok(())
 }
 
@@ -2095,24 +2118,6 @@ fn migration_v38_self_milking(conn: &Connection) -> Result<()> {
          ALTER TABLE player_milking_log_new RENAME TO player_milking_log;
          CREATE INDEX idx_player_milking_char ON player_milking_log(character_name, server_name);
          CREATE INDEX idx_player_milking_other ON player_milking_log(character_name, server_name, other_player, direction);",
-    )?;
-    Ok(())
-}
-
-/// Migration V40: Hoplology (equipment study) tracker.
-/// Records each "You carefully study the X." event per character.
-fn migration_v40_hoplology_studies(conn: &Connection) -> Result<()> {
-    conn.execute_batch(
-        "CREATE TABLE hoplology_studies (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            character_name TEXT NOT NULL,
-            server_name TEXT NOT NULL,
-            item_name TEXT NOT NULL,
-            studied_at TEXT NOT NULL,
-            source TEXT NOT NULL DEFAULT 'auto',
-            UNIQUE(character_name, server_name, item_name)
-        );
-        CREATE INDEX idx_hoplology_char_server ON hoplology_studies(character_name, server_name);"
     )?;
     Ok(())
 }

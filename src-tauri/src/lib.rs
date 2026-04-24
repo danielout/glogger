@@ -170,7 +170,7 @@ use db::game_state_commands::{
     get_game_state_effects, get_game_state_equipment, get_game_state_favor,
     get_game_state_inventory, get_game_state_recipes, get_game_state_skills,
     get_character_report_stats, get_game_state_books, get_game_state_storage,
-    get_game_state_vendor, get_game_state_world, get_gift_log, get_milking_timers,
+    get_game_state_vendor, get_game_state_world, get_garden_almanac, get_gift_log, get_milking_timers,
     add_manual_gift, remove_last_gift, get_tracked_skills, set_tracked_skills,
     get_computed_stats,
     get_attribute_extremes,
@@ -178,7 +178,6 @@ use db::game_state_commands::{
     get_teleportation_binds,
     set_mushroom_circles,
 };
-use db::hoplology_commands::{get_hoplology_studies, get_hoplology_stats};
 use db::gourmand_commands::{
     export_text_file, get_all_foods, get_gourmand_eaten_foods, import_cooks_helper_file,
     import_gourmand_report, import_latest_gourmand_report,
@@ -618,6 +617,7 @@ pub fn run() {
             get_game_state_storage,
             get_game_state_vendor,
             get_game_state_books,
+            get_garden_almanac,
             get_milking_timers,
             get_character_report_stats,
             get_computed_stats,
@@ -645,9 +645,6 @@ pub fn run() {
             db::stall_tracker_commands::import_shop_log_file,
             db::stall_tracker_commands::export_shop_log_files,
             db::stall_tracker_commands::seed_stall_events_dev,
-            // Hoplology (equipment study)
-            get_hoplology_studies,
-            get_hoplology_stats,
             // Words of Power
             db::words_of_power_commands::get_words_of_power,
             db::words_of_power_commands::add_word_of_power,

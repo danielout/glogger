@@ -752,6 +752,11 @@ impl DataIngestCoordinator {
                             if book_type == "PlayerAge" || book_type == "HelpScreen" {
                                 self.ingest_report_stats(book_type, content);
                             }
+
+                            // Parse gardening almanac events
+                            if book_type == "GardeningAlmanac" {
+                                self.ingest_garden_almanac(timestamp, content);
+                            }
                         }
 
                         // Detect word of power discovery books
@@ -988,54 +993,6 @@ impl DataIngestCoordinator {
                                         .ok();
                                     }
                                 }
-                            }
-                            ChatStatusEvent::ItemStudied {
-                                item_name, timestamp, ..
-                            } => {
-                                if let Ok(conn) = self.db_pool.get() {
-                                    if let (Some(character), Some(server)) = (
-                                        self.game_state.get_active_character(),
-                                        self.game_state.get_active_server(),
-                                    ) {
-                                        match crate::db::hoplology_commands::insert_hoplology_study(
-                                            &conn,
-                                            &character,
-                                            &server,
-                                            item_name,
-                                            timestamp,
-                                        ) {
-                                            Ok(Some(_id)) => {
-                                                eprintln!(
-                                                    "[coordinator] Hoplology study recorded: {}",
-                                                    item_name
-                                                );
-                                                self.app_handle
-                                                    .emit("game-state-updated", vec!["hoplology"])
-                                                    .ok();
-                                            }
-                                            Ok(None) => {
-                                                // Already studied, no-op
-                                            }
-                                            Err(e) => {
-                                                eprintln!(
-                                                    "[coordinator] Failed to save hoplology study: {e}"
-                                                );
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            ChatStatusEvent::ReportSaved { file_path, .. } => {
-                                eprintln!(
-                                    "[coordinator] Report saved detected: {}",
-                                    file_path
-                                );
-                                // Emit a dedicated event so the frontend can
-                                // trigger an immediate report import instead of
-                                // waiting for the next polling cycle.
-                                self.app_handle
-                                    .emit("report-saved", file_path.clone())
-                                    .ok();
                             }
                             _ => {}
                         }
@@ -1482,6 +1439,65 @@ impl DataIngestCoordinator {
         .ok();
         self.app_handle
             .emit("game-state-updated", vec!["books"])
+            .ok();
+    }
+
+    /// Parse the Gardening Almanac HTML content and persist structured events
+    /// to the `garden_almanac` table. Replaces all previous entries for this
+    /// character+server on each read so the table always reflects the latest
+    /// almanac snapshot.
+    fn ingest_garden_almanac(&self, timestamp: &str, content: &str) {
+        let (character, server) = match self.active_character_server() {
+            Some(cs) => cs,
+            None => return,
+        };
+
+        let conn = match self.db_pool.get() {
+            Ok(c) => c,
+            Err(_) => return,
+        };
+
+        let _ = timestamp; // timestamp not needed; we use wall-clock time
+        let captured_at = chrono::Utc::now().to_rfc3339();
+
+        // Parse the almanac HTML content into events.
+        // Format: <h2>CropName Season in ZoneName</h2> ... <i>Ends/Starts in ...</i>
+        let events = parse_almanac_content(content, &captured_at);
+        if events.is_empty() {
+            return;
+        }
+
+        // Replace all previous entries for this character+server
+        conn.execute(
+            "DELETE FROM garden_almanac WHERE character_name = ?1 AND server_name = ?2",
+            rusqlite::params![character, server],
+        )
+        .ok();
+
+        for event in &events {
+            conn.execute(
+                "INSERT INTO garden_almanac (character_name, server_name, crop_name, zone_name, event_start, event_end, is_current, captured_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                rusqlite::params![
+                    character,
+                    server,
+                    event.crop_name,
+                    event.zone_name,
+                    event.event_start,
+                    event.event_end,
+                    event.is_current as i32,
+                    event.captured_at,
+                ],
+            )
+            .ok();
+        }
+
+        startup_log!(
+            "[coordinator] Ingested {} garden almanac events",
+            events.len()
+        );
+        self.app_handle
+            .emit("game-state-updated", vec!["garden_almanac"])
             .ok();
     }
 
@@ -2159,4 +2175,147 @@ pub fn debug_capture_status(
 // ============================================================
 // Helpers
 // ============================================================
+
+/// A parsed almanac event (current or upcoming gardening bonus).
+struct AlmanacEvent {
+    crop_name: String,
+    zone_name: String,
+    event_start: Option<String>,
+    event_end: Option<String>,
+    is_current: bool,
+    captured_at: String,
+}
+
+/// Parse gardening almanac HTML content into structured events.
+///
+/// The almanac content has this structure:
+/// ```text
+/// <h1>Current Gardening Events:</h1>
+/// <indent=20><h2>CropName Season in ZoneName</h2></indent>
+/// <indent=20>Description...</indent>
+/// <indent=20><i>Ends in X hours Y minutes</i></indent>
+///
+/// <h1>Upcoming Gardening Events:</h1>
+/// <indent=20><h2>CropName Season in ZoneName</h2></indent>
+/// <indent=20>Description...</indent>
+/// <indent=20><i>Starts in X hours Y minutes</i></indent>
+/// ```
+fn parse_almanac_content(content: &str, captured_at: &str) -> Vec<AlmanacEvent> {
+    let mut events = Vec::new();
+    let mut in_current_section = false;
+
+    // Track the last parsed crop+zone so we can attach timing info
+    let mut pending_crop: Option<String> = None;
+    let mut pending_zone: Option<String> = None;
+
+    let captured_dt = chrono::DateTime::parse_from_rfc3339(captured_at)
+        .map(|d| d.with_timezone(&chrono::Utc))
+        .unwrap_or_else(|_| chrono::Utc::now());
+
+    for line in content.split("\\n").chain(content.split('\n')) {
+        let line = line.trim();
+
+        if line.contains("Current Gardening Events") {
+            in_current_section = true;
+            continue;
+        }
+        if line.contains("Upcoming Gardening Events") {
+            in_current_section = false;
+            continue;
+        }
+
+        // Parse <h2>CropName Season in ZoneName</h2>
+        if let Some(h2_content) = extract_tag_content(line, "h2") {
+            if let Some((crop, zone)) = parse_season_heading(&h2_content) {
+                pending_crop = Some(crop);
+                pending_zone = Some(zone);
+            }
+            continue;
+        }
+
+        // Parse <i>Ends in X hours Y minutes</i> or <i>Starts in X hours Y minutes</i>
+        if let Some(i_content) = extract_tag_content(line, "i") {
+            if let (Some(crop), Some(zone)) = (pending_crop.take(), pending_zone.take()) {
+                let duration = parse_duration_text(&i_content);
+                let is_current = in_current_section;
+
+                let (event_start, event_end) = if i_content.starts_with("Ends in") {
+                    // Current event: started before now, ends in `duration`
+                    let end = duration.map(|d| (captured_dt + d).to_rfc3339());
+                    (None, end)
+                } else if i_content.starts_with("Starts in") {
+                    // Upcoming event: starts in `duration`
+                    let start = duration.map(|d| (captured_dt + d).to_rfc3339());
+                    (start, None)
+                } else {
+                    (None, None)
+                };
+
+                events.push(AlmanacEvent {
+                    crop_name: crop,
+                    zone_name: zone,
+                    event_start,
+                    event_end,
+                    is_current,
+                    captured_at: captured_at.to_string(),
+                });
+            }
+        }
+    }
+
+    events
+}
+
+/// Extract text content from a simple HTML tag like `<h2>text</h2>`.
+/// Also handles tags embedded in `<indent=N>` wrappers.
+fn extract_tag_content(line: &str, tag: &str) -> Option<String> {
+    let open = format!("<{}>", tag);
+    let close = format!("</{}>", tag);
+    let start = line.find(&open)? + open.len();
+    let end = line[start..].find(&close)?;
+    Some(line[start..start + end].to_string())
+}
+
+/// Parse "CropName Season in ZoneName" into (crop_name, zone_name).
+fn parse_season_heading(heading: &str) -> Option<(String, String)> {
+    let idx = heading.find(" Season in ")?;
+    let crop = heading[..idx].trim().to_string();
+    let zone = heading[idx + " Season in ".len()..].trim().to_string();
+    if crop.is_empty() || zone.is_empty() {
+        return None;
+    }
+    Some((crop, zone))
+}
+
+/// Parse duration text like "12 hours 43 minutes", "1 day 12 hours",
+/// "5 hours", "30 minutes" into a chrono::Duration.
+fn parse_duration_text(text: &str) -> Option<chrono::Duration> {
+    let mut total_seconds: i64 = 0;
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let mut i = 0;
+    // Skip leading "Ends in" or "Starts in"
+    if words.len() >= 2 && (words[0] == "Ends" || words[0] == "Starts") && words[1] == "in" {
+        i = 2;
+    }
+    while i + 1 < words.len() {
+        if let Ok(num) = words[i].parse::<i64>() {
+            let unit = words[i + 1].to_lowercase();
+            if unit.starts_with("day") {
+                total_seconds += num * 86400;
+            } else if unit.starts_with("hour") {
+                total_seconds += num * 3600;
+            } else if unit.starts_with("minute") {
+                total_seconds += num * 60;
+            }
+            i += 2;
+        } else {
+            i += 1;
+        }
+    }
+    if total_seconds > 0 {
+        Some(chrono::Duration::seconds(total_seconds))
+    } else {
+        None
+    }
+}
 

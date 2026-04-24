@@ -23,10 +23,7 @@ import StatTrackerConfig from "./widgets/StatTrackerConfig.vue";
 import WordsOfPowerWidget from "./widgets/WordsOfPowerWidget.vue";
 import TripPlannerWidget from "./widgets/TripPlannerWidget.vue";
 import TripPlannerWidgetConfig from "./widgets/TripPlannerWidgetConfig.vue";
-import RecurrentTimerWidget from "./widgets/RecurrentTimerWidget.vue";
-import RecurrentTimerConfig from "./widgets/RecurrentTimerConfig.vue";
-// HoplologyWidget disabled — needs book/report parsing to backfill existing studies before it's useful
-// import HoplologyWidget from "./widgets/HoplologyWidget.vue";
+import GardenAlmanacWidget from "./widgets/GardenAlmanacWidget.vue";
 
 export type WidgetSize = "small" | "medium" | "large";
 
@@ -181,19 +178,11 @@ export const DASHBOARD_WIDGETS: DashboardWidget[] = [
     defaultSize: "medium",
   },
   {
-    id: "recurrent-timer",
-    name: "Recurring Events",
-    component: RecurrentTimerWidget,
-    configComponent: RecurrentTimerConfig,
+    id: "garden-almanac",
+    name: "Garden Almanac",
+    component: GardenAlmanacWidget,
     defaultSize: "small",
   },
-  // Hoplology widget disabled — needs book/report parsing to backfill existing studies
-  // {
-  //   id: "hoplology",
-  //   name: "Hoplology",
-  //   component: HoplologyWidget,
-  //   defaultSize: "medium",
-  // },
 ];
 
 /** Default card order — used when no user preferences exist */

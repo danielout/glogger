@@ -923,6 +923,51 @@ pub fn get_player_milking_leaderboard(
         .map_err(|e| format!("Row error: {e}"))
 }
 
+// ── Garden Almanac ─────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize)]
+pub struct GardenAlmanacEntry {
+    pub crop_name: String,
+    pub zone_name: String,
+    pub event_start: Option<String>,
+    pub event_end: Option<String>,
+    pub is_current: bool,
+    pub captured_at: String,
+}
+
+#[tauri::command]
+pub fn get_garden_almanac(
+    db: State<'_, DbPool>,
+    character_name: String,
+    server_name: String,
+) -> Result<Vec<GardenAlmanacEntry>, String> {
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT crop_name, zone_name, event_start, event_end, is_current, captured_at
+             FROM garden_almanac
+             WHERE character_name = ?1 AND server_name = ?2
+             ORDER BY is_current DESC, event_start ASC",
+        )
+        .map_err(|e| format!("Query error: {e}"))?;
+
+    let rows = stmt
+        .query_map(rusqlite::params![character_name, server_name], |row| {
+            Ok(GardenAlmanacEntry {
+                crop_name: row.get(0)?,
+                zone_name: row.get(1)?,
+                event_start: row.get(2)?,
+                event_end: row.get(3)?,
+                is_current: row.get::<_, i32>(4)? != 0,
+                captured_at: row.get(5)?,
+            })
+        })
+        .map_err(|e| format!("Query error: {e}"))?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Row error: {e}"))
+}
+
 // ── Computed Stats ──────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize)]
