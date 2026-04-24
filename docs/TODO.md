@@ -41,6 +41,10 @@ These items are investigated but can't be resolved without new runtime captures 
 
   - **Effort: Low-Medium (depends on recipe detection wiring) | Impact: Medium**
 
+- [ ] Gardening helper — see `docs/plans/gardening-helper.md`
+  - Parser events exist (`EntityDescriptionUpdated`), plan written. But some garden mechanics (fertilizer counts, watering, growth timers) need additional in-game captures before implementation.
+  - **Blocked on:** Additional garden captures to document fertilizer/watering/growth mechanics fully.
+
 - [ ] Hoplology (equipment study) tracker — backfill from book/report
   - Chat parser, DB table, coordinator handler, and dashboard widget are all built and wired. Widget is disabled in `dashboardWidgets.ts` because without backfill it always shows 0 studied items.
   - **Blocked on:** Capture of the hoplology skill report book content (opened via ProcessBook in-game). Need the book_type and HTML content format to build the parser. CDN references `HoplologyBook` NPC source.
@@ -267,9 +271,9 @@ These items are investigated but can't be resolved without new runtime captures 
   - Need to look up all the challenges and see which ones we can track. Some are easy (1200 armor) and some are harder (have 4x 10-second premonition buffs). Could also track letters of authority as alternate path. **No existing code found** — no parser events, coordinator handlers, or database tables. Requires research into all challenge types + log event identification + new persistence layer.
   - **Effort: Large (research + implementation) | Impact: Medium (niche but useful)**
 
-- [ ] Gardening helper
-  - Should be able to detect seeds, fertilizer, water in inventory. Could also track what nearby plants need. **Research resolved:** `ProcessUpdateDescription` fires for every nearby garden plot with full state (Thirsty/Hungry/Growing/Ripe + crop name + action needed). **Parser confirmed:** `parse_update_description` in `player_event_parser.rs` emits `EntityDescriptionUpdated` events with full garden state. **Missing:** coordinator handler for `EntityDescriptionUpdated`, database persistence for plant states, frontend dashboard with inventory integration. Combined with inventory data, this enables a real-time gardening dashboard. See `docs/architecture/capture-analysis-results.md` for the full state machine and sample data.
-  - **Effort: Medium-Large (implementation only, research done) | Impact: High**
+- [ ] Gardening helper — see `docs/plans/gardening-helper.md`
+  - **Moved to Blocked section.** Some garden features (fertilizer types, watering mechanics, growth timers) need additional in-game captures to document properly before implementation.
+  - **Effort: Medium-Large | Impact: High**
 
 - [ ] Macros or process interaction
   - Can we target the game process and send commands? Can we screen-read the process? Major research question with significant technical and policy implications.
