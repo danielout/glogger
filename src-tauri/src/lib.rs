@@ -118,7 +118,6 @@ use cdn_commands::{
     GameDataState,
 };
 use db::brewing_commands::{
-    add_brewing_discovery_manual,
     get_brewing_discoveries,
     import_brewing_discoveries_csv,
     delete_brewing_discovery,
@@ -179,9 +178,10 @@ use db::game_state_commands::{
     get_teleportation_binds,
     set_mushroom_circles,
 };
+use db::hoplology_commands::{get_hoplology_studies, get_hoplology_stats};
 use db::gourmand_commands::{
     export_text_file, get_all_foods, get_gourmand_eaten_foods, import_cooks_helper_file,
-    import_gourmand_report, import_latest_gourmand_report, toggle_food_eaten_status,
+    import_gourmand_report, import_latest_gourmand_report,
 };
 use db::inventory_commands::{
     get_inventory_snapshots, get_inventory_summary, get_snapshot_items, import_inventory_report,
@@ -410,7 +410,6 @@ pub fn run() {
             scan_all_snapshots_for_brewing,
             import_brewing_discoveries_csv,
             delete_brewing_discovery,
-            add_brewing_discovery_manual,
             // Quest queries
             get_all_quests,
             search_quests,
@@ -559,7 +558,6 @@ pub fn run() {
             get_gourmand_eaten_foods,
             export_text_file,
             import_latest_gourmand_report,
-            toggle_food_eaten_status,
             // Farming calculator
             save_farming_session,
             get_farming_sessions,
@@ -647,6 +645,9 @@ pub fn run() {
             db::stall_tracker_commands::import_shop_log_file,
             db::stall_tracker_commands::export_shop_log_files,
             db::stall_tracker_commands::seed_stall_events_dev,
+            // Hoplology (equipment study)
+            get_hoplology_studies,
+            get_hoplology_stats,
             // Words of Power
             db::words_of_power_commands::get_words_of_power,
             db::words_of_power_commands::add_word_of_power,

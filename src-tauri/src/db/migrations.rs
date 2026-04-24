@@ -223,7 +223,7 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
     }
 
     if current_version < 40 {
-        migration_v40_gourmand_manual_marking(conn)?;
+        migration_v40_hoplology_studies(conn)?;
         super::record_migration(conn, 40)?;
     }
 
@@ -2099,6 +2099,24 @@ fn migration_v38_self_milking(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+/// Migration V40: Hoplology (equipment study) tracker.
+/// Records each "You carefully study the X." event per character.
+fn migration_v40_hoplology_studies(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE hoplology_studies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            item_name TEXT NOT NULL,
+            studied_at TEXT NOT NULL,
+            source TEXT NOT NULL DEFAULT 'auto',
+            UNIQUE(character_name, server_name, item_name)
+        );
+        CREATE INDEX idx_hoplology_char_server ON hoplology_studies(character_name, server_name);"
+    )?;
+    Ok(())
+}
+
 /// Migration V39: Teleportation bind locations parsed from SkillReport books.
 /// Stores primary/secondary bind pad locations and mushroom circle attunements.
 fn migration_v39_teleportation_binds(conn: &Connection) -> Result<()> {
@@ -2113,15 +2131,6 @@ fn migration_v39_teleportation_binds(conn: &Connection) -> Result<()> {
             last_updated TEXT NOT NULL,
             PRIMARY KEY (character_name, server_name)
         );"
-    )?;
-    Ok(())
-}
-
-/// Migration V40: Add manually_marked column to gourmand_eaten_foods.
-/// Allows users to manually mark foods as eaten when auto-import isn't available.
-fn migration_v40_gourmand_manual_marking(conn: &Connection) -> Result<()> {
-    conn.execute_batch(
-        "ALTER TABLE gourmand_eaten_foods ADD COLUMN manually_marked INTEGER NOT NULL DEFAULT 0;"
     )?;
     Ok(())
 }

@@ -989,6 +989,42 @@ impl DataIngestCoordinator {
                                     }
                                 }
                             }
+                            ChatStatusEvent::ItemStudied {
+                                item_name, timestamp, ..
+                            } => {
+                                if let Ok(conn) = self.db_pool.get() {
+                                    if let (Some(character), Some(server)) = (
+                                        self.game_state.get_active_character(),
+                                        self.game_state.get_active_server(),
+                                    ) {
+                                        match crate::db::hoplology_commands::insert_hoplology_study(
+                                            &conn,
+                                            &character,
+                                            &server,
+                                            item_name,
+                                            timestamp,
+                                        ) {
+                                            Ok(Some(_id)) => {
+                                                eprintln!(
+                                                    "[coordinator] Hoplology study recorded: {}",
+                                                    item_name
+                                                );
+                                                self.app_handle
+                                                    .emit("game-state-updated", vec!["hoplology"])
+                                                    .ok();
+                                            }
+                                            Ok(None) => {
+                                                // Already studied, no-op
+                                            }
+                                            Err(e) => {
+                                                eprintln!(
+                                                    "[coordinator] Failed to save hoplology study: {e}"
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                             _ => {}
                         }
 
@@ -1042,15 +1078,12 @@ impl DataIngestCoordinator {
 
                     // Check Action Emotes channel for resuscitate events
                     if let Some(rez_event) = parse_resuscitate_message(&msg) {
-                        eprintln!("[resuscitate] Parsed rez event: {:?}", rez_event);
                         if let Err(e) = self.persist_resuscitate_event(&rez_event) {
                             eprintln!("Failed to persist resuscitate event: {}", e);
                         }
-                        if let Err(e) = self.app_handle.emit("character-resuscitated", &rez_event) {
-                            eprintln!("[resuscitate] Failed to emit event: {}", e);
-                        } else {
-                            eprintln!("[resuscitate] Emitted character-resuscitated event");
-                        }
+                        self.app_handle
+                            .emit("character-resuscitated", &rez_event)
+                            .ok();
                     }
 
                     messages.push(msg);

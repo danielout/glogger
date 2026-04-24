@@ -47,6 +47,12 @@ pub enum ChatStatusEvent {
         item_name: String,
         quantity: u32,
     },
+
+    /// "You carefully study the Moldy Ancient Shoes."
+    ItemStudied {
+        timestamp: String,
+        item_name: String,
+    },
 }
 
 /// Try to parse a Status channel ChatMessage into a structured event.
@@ -69,6 +75,7 @@ pub fn parse_status_message(msg: &ChatMessage) -> Option<ChatStatusEvent> {
         .or_else(|| try_coins_looted(text, &ts))
         .or_else(|| try_councils_changed(text, &ts))
         .or_else(|| try_summoned(text, &ts))
+        .or_else(|| try_item_studied(text, &ts))
 }
 
 /// "X added to inventory." or "X xN added to inventory."
@@ -218,6 +225,25 @@ fn try_summoned(text: &str, ts: &str) -> Option<ChatStatusEvent> {
         timestamp: ts.to_string(),
         item_name: item_name.to_string(),
         quantity,
+    })
+}
+
+/// "You carefully study the Moldy Ancient Shoes."
+/// Hoplology equipment study — fires when a player studies a piece of equipment.
+/// The 5-minute cooldown between studies is tracked on the frontend.
+fn try_item_studied(text: &str, ts: &str) -> Option<ChatStatusEvent> {
+    let prefix = "You carefully study the ";
+    if !text.starts_with(prefix) || !text.ends_with('.') {
+        return None;
+    }
+    let item_name = &text[prefix.len()..text.len() - 1];
+    if item_name.is_empty() {
+        return None;
+    }
+
+    Some(ChatStatusEvent::ItemStudied {
+        timestamp: ts.to_string(),
+        item_name: item_name.to_string(),
     })
 }
 
@@ -415,6 +441,28 @@ mod tests {
             assert_eq!(amount, 42);
         } else {
             panic!("Expected CoinsLooted, got {:?}", event);
+        }
+    }
+
+    #[test]
+    fn test_item_studied() {
+        let msg = status_msg("You carefully study the Moldy Ancient Shoes.");
+        let event = parse_status_message(&msg).unwrap();
+        if let ChatStatusEvent::ItemStudied { item_name, .. } = event {
+            assert_eq!(item_name, "Moldy Ancient Shoes");
+        } else {
+            panic!("Expected ItemStudied, got {:?}", event);
+        }
+    }
+
+    #[test]
+    fn test_item_studied_long_name() {
+        let msg = status_msg("You carefully study the Exceptional Werewolf Sword.");
+        let event = parse_status_message(&msg).unwrap();
+        if let ChatStatusEvent::ItemStudied { item_name, .. } = event {
+            assert_eq!(item_name, "Exceptional Werewolf Sword");
+        } else {
+            panic!("Expected ItemStudied, got {:?}", event);
         }
     }
 

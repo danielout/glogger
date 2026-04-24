@@ -15,6 +15,7 @@ pub mod farming_commands;
 pub mod resuscitate_commands;
 pub mod game_state_commands;
 pub mod gourmand_commands;
+pub mod hoplology_commands;
 pub mod inventory_commands;
 pub mod market_commands;
 pub mod migrations;

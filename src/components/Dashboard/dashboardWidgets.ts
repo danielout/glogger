@@ -23,8 +23,7 @@ import StatTrackerConfig from "./widgets/StatTrackerConfig.vue";
 import WordsOfPowerWidget from "./widgets/WordsOfPowerWidget.vue";
 import TripPlannerWidget from "./widgets/TripPlannerWidget.vue";
 import TripPlannerWidgetConfig from "./widgets/TripPlannerWidgetConfig.vue";
-import TimerWidget from "./widgets/TimerWidget.vue";
-import TimerWidgetConfig from "./widgets/TimerWidgetConfig.vue";
+import HoplologyWidget from "./widgets/HoplologyWidget.vue";
 
 export type WidgetSize = "small" | "medium" | "large";
 
@@ -179,11 +178,10 @@ export const DASHBOARD_WIDGETS: DashboardWidget[] = [
     defaultSize: "medium",
   },
   {
-    id: "timers",
-    name: "Timers",
-    component: TimerWidget,
-    configComponent: TimerWidgetConfig,
-    defaultSize: "small",
+    id: "hoplology",
+    name: "Hoplology",
+    component: HoplologyWidget,
+    defaultSize: "medium",
   },
 ];
 
