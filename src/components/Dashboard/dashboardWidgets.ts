@@ -9,6 +9,7 @@ import ItemsOutgoingWidget from "./widgets/ItemsOutgoingWidget.vue";
 import CouncilsWidget from "./widgets/CouncilsWidget.vue";
 import FavorChangesWidget from "./widgets/FavorChangesWidget.vue";
 import CriticalResourcesWidget from "./widgets/CriticalResourcesWidget.vue";
+import CriticalResourcesConfig from "./widgets/CriticalResourcesConfig.vue";
 import StatehelmSummaryWidget from "./widgets/StatehelmSummaryWidget.vue";
 import WatchwordDetectionsWidget from "./widgets/WatchwordDetectionsWidget.vue";
 import DeathTrackerWidget from "./widgets/DeathTrackerWidget.vue";
@@ -106,6 +107,7 @@ export const DASHBOARD_WIDGETS: DashboardWidget[] = [
     id: "critical-resources",
     name: "Critical Resources",
     component: CriticalResourcesWidget,
+    configComponent: CriticalResourcesConfig,
     defaultSize: "small",
   },
   {
