@@ -9,7 +9,6 @@ import ItemsOutgoingWidget from "./widgets/ItemsOutgoingWidget.vue";
 import CouncilsWidget from "./widgets/CouncilsWidget.vue";
 import FavorChangesWidget from "./widgets/FavorChangesWidget.vue";
 import CriticalResourcesWidget from "./widgets/CriticalResourcesWidget.vue";
-import CriticalResourcesConfig from "./widgets/CriticalResourcesConfig.vue";
 import StatehelmSummaryWidget from "./widgets/StatehelmSummaryWidget.vue";
 import WatchwordDetectionsWidget from "./widgets/WatchwordDetectionsWidget.vue";
 import DeathTrackerWidget from "./widgets/DeathTrackerWidget.vue";
@@ -24,6 +23,8 @@ import StatTrackerConfig from "./widgets/StatTrackerConfig.vue";
 import WordsOfPowerWidget from "./widgets/WordsOfPowerWidget.vue";
 import TripPlannerWidget from "./widgets/TripPlannerWidget.vue";
 import TripPlannerWidgetConfig from "./widgets/TripPlannerWidgetConfig.vue";
+import TimerWidget from "./widgets/TimerWidget.vue";
+import TimerWidgetConfig from "./widgets/TimerWidgetConfig.vue";
 
 export type WidgetSize = "small" | "medium" | "large";
 
@@ -107,7 +108,6 @@ export const DASHBOARD_WIDGETS: DashboardWidget[] = [
     id: "critical-resources",
     name: "Critical Resources",
     component: CriticalResourcesWidget,
-    configComponent: CriticalResourcesConfig,
     defaultSize: "small",
   },
   {
@@ -177,6 +177,13 @@ export const DASHBOARD_WIDGETS: DashboardWidget[] = [
     component: TripPlannerWidget,
     configComponent: TripPlannerWidgetConfig,
     defaultSize: "medium",
+  },
+  {
+    id: "timers",
+    name: "Timers",
+    component: TimerWidget,
+    configComponent: TimerWidgetConfig,
+    defaultSize: "small",
   },
 ];
 
