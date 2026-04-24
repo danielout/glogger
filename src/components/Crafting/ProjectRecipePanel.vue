@@ -84,7 +84,7 @@
         <li
           v-for="recipe in addRecipeResults"
           :key="recipe.id"
-          class="flex items-baseline gap-2 px-3 py-1.5 cursor-pointer border-b border-surface-dark text-xs hover:bg-surface-row-hover"
+          class="flex items-baseline gap-2 px-3 py-1.5 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
           @click="addRecipeToProject(recipe)">
           <span class="text-text-muted text-[0.72rem] min-w-12 shrink-0">
             [{{ recipe.skill ?? '?' }} {{ recipe.skill_level_req ?? 0 }}]
@@ -99,35 +99,38 @@
       </div>
 
       <!-- Recipe entries -->
-      <div v-else class="flex flex-col gap-1">
-        <div class="flex items-center justify-between">
-          <h4 class="text-text-secondary text-xs font-semibold uppercase tracking-wide m-0">Recipe List</h4>
-          <div class="flex gap-1">
+      <AccordionSection v-if="activeProject.entries.length > 0" :default-open="activeProject.entries.length <= 5">
+        <template #title>Recipe List</template>
+        <template #badge>
+          <div class="flex items-center gap-2">
+            <span class="text-text-muted text-[0.65rem]">{{ activeProject.entries.length }} recipe{{ activeProject.entries.length !== 1 ? 's' : '' }}</span>
             <button
               class="text-text-muted text-[0.65rem] cursor-pointer bg-transparent border-none hover:text-text-primary"
-              @click="expandAll">
+              @click.stop="expandAll">
               Expand All
             </button>
             <span class="text-text-muted/40 text-[0.65rem]">|</span>
             <button
               class="text-text-muted text-[0.65rem] cursor-pointer bg-transparent border-none hover:text-text-primary"
-              @click="collapseAll">
+              @click.stop="collapseAll">
               Collapse All
             </button>
           </div>
+        </template>
+        <div class="flex flex-col gap-1">
+          <ProjectEntryCard
+            v-for="entry in activeProject.entries"
+            :key="entry.id"
+            ref="entryCards"
+            :entry="entry"
+            :intermediate-expansions="intermediateExpansions"
+            :stock-target="stockTargets.get(entry.id)"
+            @update-qty="(entryId, qty) => $emit('update-qty', entryId, qty)"
+            @remove="(entryId) => $emit('remove', entryId)"
+            @toggle-intermediate="(entryId, itemId) => $emit('toggle-intermediate', entryId, itemId)"
+            @update-target-stock="(entryId, ts) => $emit('update-target-stock', entryId, ts)" />
         </div>
-        <ProjectEntryCard
-          v-for="entry in activeProject.entries"
-          :key="entry.id"
-          ref="entryCards"
-          :entry="entry"
-          :intermediate-expansions="intermediateExpansions"
-          :stock-target="stockTargets.get(entry.id)"
-          @update-qty="(entryId, qty) => $emit('update-qty', entryId, qty)"
-          @remove="(entryId) => $emit('remove', entryId)"
-          @toggle-intermediate="(entryId, itemId) => $emit('toggle-intermediate', entryId, itemId)"
-          @update-target-stock="(entryId, ts) => $emit('update-target-stock', entryId, ts)" />
-      </div>
+      </AccordionSection>
 
       <!-- Fee Configuration (pricing mode only) -->
       <div v-if="pricingMode" class="flex flex-col gap-2 border-t border-surface-elevated pt-3">
@@ -206,6 +209,7 @@ import { useCraftingStore } from "../../stores/craftingStore";
 import type { CraftingProject, FeeConfig, MaterialPctBasis } from "../../types/crafting";
 import type { RecipeInfo } from "../../types/gameData/recipes";
 import EmptyState from "../Shared/EmptyState.vue";
+import AccordionSection from "../Shared/AccordionSection.vue";
 import ProjectEntryCard from "./ProjectEntryCard.vue";
 
 const props = defineProps<{
