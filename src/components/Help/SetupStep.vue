@@ -1,9 +1,9 @@
 <template>
-  <div class="flex gap-3 px-3 py-3 bg-surface-base rounded border border-border-default">
-    <span class="shrink-0 w-6 h-6 rounded-full bg-surface-dark border border-border-default flex items-center justify-center text-accent-gold text-xs font-bold">
+  <div class="flex gap-4 px-4 py-3.5 bg-surface-base/60 rounded-lg border border-border-default hover:border-border-light transition-colors">
+    <span class="shrink-0 w-7 h-7 rounded-full bg-accent-gold/15 border border-accent-gold/30 flex items-center justify-center text-accent-gold text-xs font-bold">
       {{ number }}
     </span>
-    <div class="flex flex-col gap-0.5">
+    <div class="flex flex-col gap-1">
       <span class="text-sm text-text-primary font-medium">{{ title }}</span>
       <span class="text-xs text-text-muted leading-relaxed"><slot /></span>
     </div>

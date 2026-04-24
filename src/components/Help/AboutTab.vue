@@ -1,52 +1,59 @@
 <template>
-  <div class="max-w-lg">
+  <div class="max-w-lg flex flex-col gap-5">
     <!-- Hero -->
-    <div class="settings-section flex flex-col items-center text-center py-10">
+    <div class="card flex flex-col items-center text-center py-8 px-6">
       <img
         src="/glogger.png"
         alt="glogger"
-        class="size-24 rounded-2xl mb-4 ring-2 ring-border-default" />
-      <h2 class="m-0 text-accent-gold text-2xl tracking-wide">{{ appName }}</h2>
-      <p class="m-0 mt-1 text-text-muted text-sm">
-        By Zenith of Dreva
+        class="size-20 rounded-2xl mb-4 ring-2 ring-accent-gold/30 shadow-lg" />
+      <h2 class="m-0 text-accent-gold text-2xl tracking-wide font-semibold">{{ appName }}</h2>
+      <p class="m-0 mt-2 text-text-secondary text-sm">
+        By <span class="text-text-primary font-medium">Zenith</span> of Dreva
       </p>
-      <p class="m-0 mt-1 text-text-muted text-sm">
+      <p class="m-0 mt-0.5 text-text-dim text-xs">
         (Also known as Daniel Auchenpaugh)
       </p>
 
-      <p class="m-0 mt-1 text-text-muted text-sm">
+      <span class="inline-block mt-3 px-3 py-1 rounded-full bg-surface-dark border border-border-default text-text-muted text-xs font-mono">
         v{{ appVersion }}
-      </p>
+      </span>
+
       <p class="m-0 mt-4 text-text-secondary text-sm leading-relaxed max-w-sm">
         Built to help alievate some spreadsheet tracking, make some data more
         accessable.
       </p>
-      <p class="m-0 mt-1.5 text-text-muted text-xs">
+      <p class="m-0 mt-2 text-text-dim text-xs">
         Some portions copyright 2026 Elder Game, LLC.
       </p>
 
       <button
         @click="openLink('https://buymeacoffee.com/danielout')"
-        class="btn btn-primary mt-5">
+        class="btn btn-primary mt-5 px-5 py-2">
         Buy Me a Coffee
       </button>
     </div>
 
     <!-- Special Thanks -->
-    <div class="settings-section">
-      <h3>Special Thanks</h3>
-      <div class="flex flex-col gap-3">
-        <div v-for="person in thanks" :key="person.name" class="flex gap-3">
-          <span class="text-accent-gold text-sm shrink-0 mt-px">&#9830;</span>
+    <div class="card p-5">
+      <h3 class="text-text-primary mt-0 mb-4 text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+        <span class="text-accent-gold">&#9830;</span>
+        Special Thanks
+      </h3>
+      <div class="flex flex-col gap-1">
+        <div
+          v-for="person in thanks"
+          :key="person.name"
+          class="flex gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-base/50 transition-colors">
+          <div class="shrink-0 mt-0.5 w-1.5 h-1.5 rounded-full bg-accent-gold/60" />
           <div>
             <span class="text-text-primary text-sm font-medium">{{
               person.name
             }}</span>
-            <span v-if="person.location" class="text-text-muted text-xs ml-1.5"
-              >({{ person.location }})</span
+            <span v-if="person.location" class="text-text-dim text-xs ml-1.5"
+              >{{ person.location }}</span
             >
             <p
-              class="m-0 mt-0.5 text-text-secondary text-xs leading-relaxed"
+              class="m-0 mt-0.5 text-text-muted text-xs leading-relaxed"
               v-html="person.reason"
               @click="handleReasonClick"></p>
           </div>
@@ -55,21 +62,24 @@
     </div>
 
     <!-- Built With -->
-    <div class="settings-section">
-      <h3>Built With</h3>
+    <div class="card p-5">
+      <h3 class="text-text-primary mt-0 mb-4 text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+        <span class="text-accent-gold">&#9881;</span>
+        Built With
+      </h3>
       <div class="flex flex-wrap gap-2">
         <span
           v-for="tech in techStack"
           :key="tech"
-          class="px-3 py-1 rounded-full bg-surface-dark border border-border-default text-text-secondary text-xs">
+          class="px-3 py-1.5 rounded-lg bg-surface-dark border border-border-default text-text-secondary text-xs font-medium">
           {{ tech }}
         </span>
       </div>
-      <p>
+      <p class="text-sm text-text-muted mt-4 mb-0">
         Project: Gorgon app developer? You might find
         <a
           href="https://github.com/danielout/GorgonLogViewer"
-          class="text-accent-gold"
+          class="text-accent-gold hover:text-text-primary transition-colors"
           >Gorgon Log Viewer</a
         >
         to be a handy tool!

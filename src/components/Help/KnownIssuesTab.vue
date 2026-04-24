@@ -1,18 +1,17 @@
 <template>
-  <div class="flex flex-col gap-8">
+  <div class="flex flex-col gap-6">
     <!-- Header -->
-    <div>
-      <p class="text-sm text-text-muted mt-1">
-        Glogger is currently in
-        <span class="text-accent-gold font-medium">beta</span>. Below are known
-        issues and limitations we're aware of.
-      </p>
-    </div>
+    <p class="text-sm text-text-muted m-0">
+      Glogger is currently in
+      <span class="text-accent-gold font-medium">beta</span>. Below are known
+      issues and limitations we're aware of.
+    </p>
 
     <!-- Known Issues -->
-    <section>
+    <section class="card p-5">
       <h2
-        class="text-sm font-bold text-text-secondary uppercase tracking-wider m-0 mb-3">
+        class="text-sm font-bold text-text-primary uppercase tracking-wider m-0 mb-4 flex items-center gap-2">
+        <span class="text-accent-red">!</span>
         Known Issues
       </h2>
       <div class="flex flex-col gap-2">
@@ -24,9 +23,10 @@
     </section>
 
     <!-- Limitations -->
-    <section>
+    <section class="card p-5">
       <h2
-        class="text-sm font-bold text-text-secondary uppercase tracking-wider m-0 mb-3">
+        class="text-sm font-bold text-text-primary uppercase tracking-wider m-0 mb-4 flex items-center gap-2">
+        <span class="text-accent-warning">~</span>
         Known Limitations
       </h2>
       <div class="flex flex-col gap-2">
@@ -38,17 +38,18 @@
     </section>
 
     <!-- Tips -->
-    <section>
+    <section class="card p-5">
       <h2
-        class="text-sm font-bold text-text-secondary uppercase tracking-wider m-0 mb-3">
+        class="text-sm font-bold text-text-primary uppercase tracking-wider m-0 mb-4 flex items-center gap-2">
+        <span class="text-accent-gold">&#9733;</span>
         Tips
       </h2>
       <div class="flex flex-col gap-2">
         <div
           v-for="tip in tips"
           :key="tip"
-          class="flex gap-2 text-sm text-text-secondary px-3 py-2 bg-surface-base rounded border border-border-default">
-          <span class="text-accent-gold shrink-0">*</span>
+          class="flex gap-3 text-sm text-text-muted px-3 py-2.5 rounded-lg hover:bg-surface-base/50 transition-colors">
+          <span class="text-accent-gold/60 shrink-0 mt-0.5">&#8226;</span>
           <span>{{ tip }}</span>
         </div>
       </div>
@@ -60,7 +61,7 @@
       discord. Or post an issue
       <a
         href="https://github.com/danielout/glogger-release/issues"
-        class="text-accent-gold"
+        class="text-accent-gold hover:text-text-primary transition-colors"
         >on GitHub</a
       >.
     </div>
