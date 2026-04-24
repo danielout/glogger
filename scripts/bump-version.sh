@@ -17,6 +17,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TAURI_CONF="$ROOT/src-tauri/tauri.conf.json"
 TAURI_RELEASE_CONF="$ROOT/src-tauri/tauri.release.conf.json"
+TAURI_EXPERIMENTAL_CONF="$ROOT/src-tauri/tauri.experimental.conf.json"
 PACKAGE_JSON="$ROOT/package.json"
 CARGO_TOML="$ROOT/src-tauri/Cargo.toml"
 
@@ -75,6 +76,9 @@ sed -i "s/\"title\": \"glogger v$CURRENT DEV\"/\"title\": \"glogger v$NEW_VERSIO
 # 3. Update tauri.release.conf.json — release window title
 sed -i "s/\"title\": \"glogger beta v$CURRENT\"/\"title\": \"glogger beta v$NEW_VERSION\"/" "$TAURI_RELEASE_CONF"
 
+# 3b. Update tauri.experimental.conf.json — experimental window title
+sed -i "s/\"title\": \"glogger v$CURRENT EXPERIMENTAL\"/\"title\": \"glogger v$NEW_VERSION EXPERIMENTAL\"/" "$TAURI_EXPERIMENTAL_CONF"
+
 # 4. Update package.json
 sed -i "s/\"version\": \"[0-9]*\.[0-9]*\.[0-9]*\"/\"version\": \"$NEW_VERSION\"/" "$PACKAGE_JSON"
 
@@ -91,6 +95,7 @@ echo ""
 echo "Version bumped to $NEW_VERSION in:"
 echo "  - src-tauri/tauri.conf.json"
 echo "  - src-tauri/tauri.release.conf.json"
+echo "  - src-tauri/tauri.experimental.conf.json"
 echo "  - package.json"
 echo "  - src-tauri/Cargo.toml"
 echo ""

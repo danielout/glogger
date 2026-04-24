@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:build": "tauri build --config src-tauri/tauri.release.conf.json",
+    "tauri:build:experimental": "tauri build --config src-tauri/tauri.experimental.conf.json",
     "version:bump": "bash scripts/bump-version.sh",
     "changelog": "bash scripts/generate-changelog.sh",
     "survey-test": "cd src-tauri && cargo test --lib survey::replay_tests::accuracy_report -- --ignored --nocapture"

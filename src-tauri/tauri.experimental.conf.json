@@ -1,0 +1,15 @@
+{
+  "identifier": "glogger.Experimental",
+  "app": {
+    "windows": [
+      {
+        "title": "glogger v0.7.11 EXPERIMENTAL"
+      }
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": []
+    }
+  }
+}

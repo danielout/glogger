@@ -23,6 +23,7 @@ Core structure, patterns, and standards used across the app.
 - [shared-components.md](architecture/shared-components.md) — Reusable entity inline/tooltip components (ItemInline, NpcInline, etc.) and color tokens.
 - [implementation-checklist.md](architecture/implementation-checklist.md) — Step-by-step checklists for common dev tasks (new parsers, DB tables, CDN fields, commands).
 - [standards-persistence-naming.md](architecture/standards-persistence-naming.md) — Naming conventions, data persistence patterns, store/command/migration/type standards.
+- [build-channels.md](architecture/build-channels.md) — Build channels (Dev, Release, Experimental): identifiers, data dirs, CI workflows, and data seeding behavior.
 - [startup-sequence.md](architecture/startup-sequence.md) — Full startup sequence: backend init, frontend phases, game data loading, and readiness audit.
 - [styling.md](architecture/styling.md) — CSS architecture using Tailwind v4, theme tokens, and component classes.
 - [color-standards.md](architecture/color-standards.md) — Color usage audit: current state, inconsistencies, proposed semantic token palette, migration plan.
@@ -163,7 +164,7 @@ Utility scripts in `scripts/`.
 
 - `analyze_capture.py` — Analyze a debug capture JSON file: ProcessXxx type inventory, noise classification, combat summary, chat extraction, state snapshot diff. Run `python scripts/analyze_capture.py --help` for options.
 - `extract_cdn_schemas.py` — Extract field schemas from CDN JSON files.
-- `bump-version.sh` — Bump app version across Cargo.toml, tauri.conf.json, and package.json.
+- `bump-version.sh` — Bump app version across Cargo.toml, tauri.conf.json, tauri.experimental.conf.json, and package.json.
 - `minimize-player-log.sh` — Strip noise lines from a raw Player.log for smaller test fixtures.
 
 ## Samples

@@ -1,0 +1,250 @@
+name: Experimental
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version bump type or explicit version (patch, minor, major, or x.y.z)"
+        required: true
+        default: "patch"
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  EXPERIMENTAL_REPO: ${{ github.repository_owner }}/glogger-experimental
+
+jobs:
+  # ── Step 0: validate the project builds and tests pass ──
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Frontend type-check and build
+        run: npm run build
+
+      - name: Rust check and tests
+        working-directory: src-tauri
+        run: |
+          cargo check
+          cargo test
+
+  # ── Step 1: bump version, push tag ──
+  prepare:
+    needs: validate
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Bump version
+        id: version
+        shell: bash
+        run: |
+          chmod +x scripts/bump-version.sh
+          scripts/bump-version.sh "${{ github.event.inputs.version }}"
+          NEW_VERSION=$(sed -n 's/.*"version"\s*:\s*"\([0-9]*\.[0-9]*\.[0-9]*\)".*/\1/p' src-tauri/tauri.conf.json | head -1)
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$NEW_VERSION-exp" >> "$GITHUB_OUTPUT"
+
+      - name: Commit version bump and tag
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "experimental: v${{ steps.version.outputs.version }}"
+          git tag "v${{ steps.version.outputs.version }}-exp"
+          git push origin main --tags
+
+  # ── Step 2: build on all platforms ──
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            label: windows
+            args: ""
+          - platform: macos-latest
+            label: macos
+            args: "--target aarch64-apple-darwin"
+          - platform: ubuntu-latest
+            label: linux
+            args: ""
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout (at experimental tag)
+        uses: actions/checkout@v5
+        with:
+          ref: v${{ needs.prepare.outputs.version }}-exp
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build with tauri-action (experimental config)
+        id: tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tauriScript: npx tauri
+          args: ${{ matrix.args }} --config src-tauri/tauri.experimental.conf.json
+          updaterJsonPreferNsis: true
+
+      - name: Collect artifacts
+        shell: bash
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          mkdir -p release-artifacts
+
+          BUNDLE_DIR=$(find src-tauri/target -path "*/release/bundle" -type d 2>/dev/null | head -1)
+          if [ -z "$BUNDLE_DIR" ]; then
+            echo "ERROR: Could not find bundle directory"
+            find src-tauri/target -name "bundle" -type d
+            exit 1
+          fi
+          echo "Found bundle directory: $BUNDLE_DIR"
+          find "$BUNDLE_DIR" -type f 2>/dev/null | head -30 || true
+
+          # Windows: NSIS installer
+          for f in "$BUNDLE_DIR"/nsis/*.exe; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-exp-windows-setup.exe"
+          done
+
+          # macOS: DMG
+          for f in "$BUNDLE_DIR"/dmg/*.dmg; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-exp-macos.dmg"
+          done
+
+          # Linux: deb + AppImage
+          for f in "$BUNDLE_DIR"/deb/*.deb; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-exp-linux.deb"
+          done
+          for f in "$BUNDLE_DIR"/appimage/*.AppImage; do
+            [ -f "$f" ] && cp "$f" "release-artifacts/glogger-${VERSION}-exp-linux.AppImage"
+          done
+
+          echo "Collected artifacts:"
+          ls -la release-artifacts/
+
+      - name: Upload platform artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: artifacts-${{ matrix.label }}
+          path: release-artifacts/*
+
+  # ── Step 3: create release on glogger-experimental ──
+  publish:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all platform artifacts
+        uses: actions/download-artifact@v7
+        with:
+          pattern: artifacts-*
+          path: all-artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la all-artifacts/
+
+      - name: Create release and upload artifacts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          TAG="v${VERSION}-exp"
+          BASE_URL="https://github.com/$EXPERIMENTAL_REPO/releases/download/$TAG"
+
+          DOWNLOADS="## Downloads\n\n| Platform | Installer |\n|----------|-----------|"
+          for file in all-artifacts/*; do
+            [ -f "$file" ] || continue
+            NAME="$(basename "$file")"
+            case "$NAME" in
+              *-windows-setup.exe) DOWNLOADS="$DOWNLOADS\n| **Windows** | [$NAME]($BASE_URL/$NAME) |" ;;
+              *-macos.dmg)         DOWNLOADS="$DOWNLOADS\n| **macOS** | [$NAME]($BASE_URL/$NAME) |" ;;
+              *-linux.deb)         DOWNLOADS="$DOWNLOADS\n| **Linux** (Debian/Ubuntu) | [$NAME]($BASE_URL/$NAME) |" ;;
+              *-linux.AppImage)    DOWNLOADS="$DOWNLOADS\n| **Linux** (AppImage) | [$NAME]($BASE_URL/$NAME) |" ;;
+              *) ;;
+            esac
+          done
+
+          {
+            echo -e "$DOWNLOADS"
+            echo ""
+            echo "---"
+            echo ""
+            echo "**Experimental build** — for testing only. This build copies your release database on first run so you can validate with real data. Your release install is not affected."
+          } > RELEASE_NOTES.md
+
+          gh release create "$TAG" \
+            --repo "$EXPERIMENTAL_REPO" \
+            --title "Experimental $TAG" \
+            --notes-file RELEASE_NOTES.md \
+            --prerelease
+
+          for file in all-artifacts/*; do
+            [ -f "$file" ] || continue
+            echo "Uploading: $(basename "$file")"
+            gh release upload "$TAG" "$file" --repo "$EXPERIMENTAL_REPO"
+          done
+
+          echo "Experimental release published: https://github.com/$EXPERIMENTAL_REPO/releases/tag/$TAG"

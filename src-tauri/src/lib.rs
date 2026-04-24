@@ -220,6 +220,105 @@ fn log_startup(message: String) {
     startup_log!("{}", message);
 }
 
+/// For experimental builds: seed the data directory from the release install.
+///
+/// On first run or when the version changes, this copies `glogger.db` and
+/// `settings.json` from the release data directory so testers start with real
+/// data. The release install is never modified.
+fn seed_experimental_data(app_data_dir: &std::path::Path, current_version: &Option<String>) {
+    use std::fs;
+
+    // Locate the release data directory (sibling of experimental dir)
+    let release_data_dir = if let Some(parent) = app_data_dir.parent() {
+        parent.join("glogger.Release")
+    } else {
+        startup_log!("Experimental seed: cannot determine parent directory, skipping");
+        return;
+    };
+
+    if !release_data_dir.exists() {
+        startup_log!("Experimental seed: no release data dir found at {:?}, starting fresh", release_data_dir);
+        return;
+    }
+
+    // Check if we need to seed: either no DB exists, or version changed
+    let db_path = app_data_dir.join("glogger.db");
+    let settings_path = app_data_dir.join("settings.json");
+    let needs_seed = if !db_path.exists() {
+        startup_log!("Experimental seed: no database found, will copy from release");
+        true
+    } else {
+        // Read the stored version from our settings to see if it's stale
+        let stored_version = if settings_path.exists() {
+            fs::read_to_string(&settings_path)
+                .ok()
+                .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+                .and_then(|v| v.get("last_app_version")?.as_str().map(String::from))
+        } else {
+            None
+        };
+
+        if stored_version.as_ref() != current_version.as_ref() {
+            startup_log!(
+                "Experimental seed: version changed ({} -> {}), will re-copy from release",
+                stored_version.as_deref().unwrap_or("unknown"),
+                current_version.as_deref().unwrap_or("unknown"),
+            );
+            true
+        } else {
+            startup_log!("Experimental seed: version unchanged, keeping existing data");
+            false
+        }
+    };
+
+    if !needs_seed {
+        return;
+    }
+
+    // Ensure the experimental data directory exists
+    if let Err(e) = fs::create_dir_all(app_data_dir) {
+        startup_log!("Experimental seed: failed to create data dir: {}", e);
+        return;
+    }
+
+    // Remove old experimental data so we start clean
+    if db_path.exists() {
+        if let Err(e) = fs::remove_file(&db_path) {
+            startup_log!("Experimental seed: failed to remove old db: {}", e);
+            return;
+        }
+    }
+
+    // Copy database from release
+    let release_db = release_data_dir.join("glogger.db");
+    if release_db.exists() {
+        match fs::copy(&release_db, &db_path) {
+            Ok(bytes) => {
+                startup_log!("Experimental seed: copied database ({} bytes)", bytes);
+            }
+            Err(e) => {
+                startup_log!("Experimental seed: failed to copy database: {}", e);
+                return;
+            }
+        }
+    } else {
+        startup_log!("Experimental seed: no release database found, starting fresh");
+    }
+
+    // Copy settings from release (preserves game data paths, preferences, etc.)
+    let release_settings = release_data_dir.join("settings.json");
+    if release_settings.exists() {
+        match fs::copy(&release_settings, &settings_path) {
+            Ok(_) => {
+                startup_log!("Experimental seed: copied settings.json");
+            }
+            Err(e) => {
+                startup_log!("Experimental seed: failed to copy settings: {}", e);
+            }
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let game_data_state: GameDataState = Arc::new(RwLock::new(game_data::GameData::empty()));
@@ -243,6 +342,16 @@ pub fn run() {
                 .path()
                 .app_data_dir()
                 .expect("Cannot resolve app data dir");
+
+            // Step 1b: Experimental build — seed data from release on new version
+            // Experimental builds get a fresh copy of the release database each time
+            // the version changes, so testers always validate against real data without
+            // risking their release install.
+            let app_identifier = app.config().identifier.clone();
+            if app_identifier.contains("Experimental") {
+                startup_log!("Experimental build detected ({})", app_identifier);
+                seed_experimental_data(&app_data_dir, &current_version);
+            }
 
             // Step 2: Initialize settings FIRST (before database)
             let settings_manager = Arc::new(
