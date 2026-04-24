@@ -210,6 +210,7 @@
               title="Meals"
               :foods="store.meals"
               :eaten-foods="store.eatenFoods"
+              :manually-marked-foods="store.manuallyMarkedFoods"
               :hide-eaten="store.hideEaten"
               :hide-unusable="store.hideUnusable"
               :sort-mode="store.sortMode"
@@ -219,12 +220,14 @@
               :gourmand-level="store.gourmandLevel"
               :selected-food="store.selectedMeal"
               @select="handleMealSelect"
+              @toggle="handleToggle"
             />
 
             <FoodCategorySection
               title="Snacks"
               :foods="store.snacks"
               :eaten-foods="store.eatenFoods"
+              :manually-marked-foods="store.manuallyMarkedFoods"
               :hide-eaten="store.hideEaten"
               :hide-unusable="store.hideUnusable"
               :sort-mode="store.sortMode"
@@ -234,12 +237,14 @@
               :gourmand-level="store.gourmandLevel"
               :selected-food="store.selectedSnack"
               @select="handleSnackSelect"
+              @toggle="handleToggle"
             />
 
             <FoodCategorySection
               title="Instant-Snacks"
               :foods="store.instantSnacks"
               :eaten-foods="store.eatenFoods"
+              :manually-marked-foods="store.manuallyMarkedFoods"
               :hide-eaten="store.hideEaten"
               :hide-unusable="store.hideUnusable"
               :sort-mode="store.sortMode"
@@ -248,6 +253,7 @@
               :selectable="false"
               :gourmand-level="store.gourmandLevel"
               :selected-food="null"
+              @toggle="handleToggle"
             />
           </div>
         </div>
@@ -311,6 +317,10 @@ function handleSnackSelect(food: FoodItem) {
   } else {
     store.selectSnack(food)
   }
+}
+
+function handleToggle(food: FoodItem) {
+  store.toggleFoodEaten(food.name)
 }
 
 function startEditLevel() {

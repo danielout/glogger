@@ -222,6 +222,11 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 39)?;
     }
 
+    if current_version < 40 {
+        migration_v40_gourmand_manual_marking(conn)?;
+        super::record_migration(conn, 40)?;
+    }
+
     Ok(())
 }
 
@@ -2108,6 +2113,15 @@ fn migration_v39_teleportation_binds(conn: &Connection) -> Result<()> {
             last_updated TEXT NOT NULL,
             PRIMARY KEY (character_name, server_name)
         );"
+    )?;
+    Ok(())
+}
+
+/// Migration V40: Add manually_marked column to gourmand_eaten_foods.
+/// Allows users to manually mark foods as eaten when auto-import isn't available.
+fn migration_v40_gourmand_manual_marking(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "ALTER TABLE gourmand_eaten_foods ADD COLUMN manually_marked INTEGER NOT NULL DEFAULT 0;"
     )?;
     Ok(())
 }

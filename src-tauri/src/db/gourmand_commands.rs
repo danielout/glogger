@@ -26,6 +26,7 @@ pub struct FoodItemInfo {
 pub struct GourmandFoodEntry {
     pub name: String,
     pub count: u32,
+    pub manually_marked: bool,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -76,6 +77,7 @@ pub fn get_all_foods(db: State<'_, DbPool>) -> Result<Vec<FoodItemInfo>, String>
 
 /// Import a gourmand report from a content string (e.g. from a ProcessBook event).
 /// Called by the coordinator when a "Foods Consumed" SkillReport book is opened.
+/// Preserves manually-marked foods that aren't in the report.
 pub fn import_gourmand_from_content(
     conn: &rusqlite::Connection,
     content: &str,
@@ -85,11 +87,20 @@ pub fn import_gourmand_from_content(
         return Ok(0);
     }
 
-    conn.execute("DELETE FROM gourmand_eaten_foods", [])
-        .map_err(|e| format!("Failed to clear old data: {e}"))?;
+    // Delete only non-manual entries; manual marks are preserved
+    conn.execute(
+        "DELETE FROM gourmand_eaten_foods WHERE manually_marked = 0",
+        [],
+    )
+    .map_err(|e| format!("Failed to clear old data: {e}"))?;
 
+    // Upsert: if a manually-marked entry matches a report entry, upgrade it to imported
     let mut stmt = conn
-        .prepare("INSERT INTO gourmand_eaten_foods (food_name, times_eaten) VALUES (?1, ?2)")
+        .prepare(
+            "INSERT INTO gourmand_eaten_foods (food_name, times_eaten, manually_marked)
+             VALUES (?1, ?2, 0)
+             ON CONFLICT(food_name) DO UPDATE SET times_eaten = excluded.times_eaten, manually_marked = 0",
+        )
         .map_err(|e| format!("Prepare error: {e}"))?;
 
     for entry in &entries {
@@ -115,12 +126,20 @@ pub fn import_gourmand_report(
         .get()
         .map_err(|e| format!("Database connection error: {e}"))?;
 
-    // Replace all existing data with new import (single snapshot)
-    conn.execute("DELETE FROM gourmand_eaten_foods", [])
-        .map_err(|e| format!("Failed to clear old data: {e}"))?;
+    // Delete only non-manual entries; manual marks are preserved
+    conn.execute(
+        "DELETE FROM gourmand_eaten_foods WHERE manually_marked = 0",
+        [],
+    )
+    .map_err(|e| format!("Failed to clear old data: {e}"))?;
 
+    // Upsert: if a manually-marked entry matches a report entry, upgrade it to imported
     let mut stmt = conn
-        .prepare("INSERT INTO gourmand_eaten_foods (food_name, times_eaten) VALUES (?1, ?2)")
+        .prepare(
+            "INSERT INTO gourmand_eaten_foods (food_name, times_eaten, manually_marked)
+             VALUES (?1, ?2, 0)
+             ON CONFLICT(food_name) DO UPDATE SET times_eaten = excluded.times_eaten, manually_marked = 0",
+        )
         .map_err(|e| format!("Prepare error: {e}"))?;
 
     for entry in &entries {
@@ -141,20 +160,69 @@ pub fn get_gourmand_eaten_foods(db: State<'_, DbPool>) -> Result<Vec<GourmandFoo
         .map_err(|e| format!("Database connection error: {e}"))?;
 
     let mut stmt = conn
-        .prepare("SELECT food_name, times_eaten FROM gourmand_eaten_foods ORDER BY food_name ASC")
+        .prepare("SELECT food_name, times_eaten, manually_marked FROM gourmand_eaten_foods ORDER BY food_name ASC")
         .map_err(|e| format!("Query prepare error: {e}"))?;
 
     let entries = stmt
         .query_map([], |row| {
+            let manually_marked_int: i32 = row.get(2)?;
             Ok(GourmandFoodEntry {
                 name: row.get(0)?,
                 count: row.get(1)?,
+                manually_marked: manually_marked_int != 0,
             })
         })
         .map_err(|e| format!("Query error: {e}"))?;
 
     let result: Vec<GourmandFoodEntry> = entries.filter_map(|r| r.ok()).collect();
     Ok(result)
+}
+
+/// Toggle a food's eaten status manually.
+/// If the food is not in the eaten table, insert it as manually marked.
+/// If it's already there and was manually marked, remove it.
+/// If it was imported (not manually marked), remove it (user is overriding).
+#[tauri::command]
+pub fn toggle_food_eaten_status(
+    db: State<'_, DbPool>,
+    food_name: String,
+) -> Result<bool, String> {
+    let conn = db
+        .get()
+        .map_err(|e| format!("Database connection error: {e}"))?;
+
+    // Check if the food is already in the eaten table
+    let existing: Option<bool> = conn
+        .query_row(
+            "SELECT manually_marked FROM gourmand_eaten_foods WHERE food_name = ?1",
+            params![&food_name],
+            |row| {
+                let val: i32 = row.get(0)?;
+                Ok(val != 0)
+            },
+        )
+        .ok();
+
+    match existing {
+        Some(_) => {
+            // Food exists — remove it (toggle off)
+            conn.execute(
+                "DELETE FROM gourmand_eaten_foods WHERE food_name = ?1",
+                params![&food_name],
+            )
+            .map_err(|e| format!("Delete error: {e}"))?;
+            Ok(false) // now uneaten
+        }
+        None => {
+            // Food not in table — add it as manually marked
+            conn.execute(
+                "INSERT INTO gourmand_eaten_foods (food_name, times_eaten, manually_marked) VALUES (?1, 1, 1)",
+                params![&food_name],
+            )
+            .map_err(|e| format!("Insert error: {e}"))?;
+            Ok(true) // now eaten
+        }
+    }
 }
 
 /// Import a player's gourmand report (the in-game SkillReport .txt file).
@@ -219,10 +287,13 @@ pub fn import_latest_gourmand_report(
         .map_err(|e| format!("Database connection error: {e}"))?;
 
     // Check if we already have this exact data (avoid unnecessary re-imports)
+    // Only count non-manual entries for comparison
     let existing_count: i64 = conn
-        .query_row("SELECT COUNT(*) FROM gourmand_eaten_foods", [], |row| {
-            row.get(0)
-        })
+        .query_row(
+            "SELECT COUNT(*) FROM gourmand_eaten_foods WHERE manually_marked = 0",
+            [],
+            |row| row.get(0),
+        )
         .unwrap_or(0);
 
     if existing_count == entries.len() as i64 {
@@ -230,12 +301,20 @@ pub fn import_latest_gourmand_report(
         return Ok(None);
     }
 
-    // Replace all existing data
-    conn.execute("DELETE FROM gourmand_eaten_foods", [])
-        .map_err(|e| format!("Failed to clear old data: {e}"))?;
+    // Delete only non-manual entries; manual marks are preserved
+    conn.execute(
+        "DELETE FROM gourmand_eaten_foods WHERE manually_marked = 0",
+        [],
+    )
+    .map_err(|e| format!("Failed to clear old data: {e}"))?;
 
+    // Upsert: if a manually-marked entry matches a report entry, upgrade it to imported
     let mut stmt = conn
-        .prepare("INSERT INTO gourmand_eaten_foods (food_name, times_eaten) VALUES (?1, ?2)")
+        .prepare(
+            "INSERT INTO gourmand_eaten_foods (food_name, times_eaten, manually_marked)
+             VALUES (?1, ?2, 0)
+             ON CONFLICT(food_name) DO UPDATE SET times_eaten = excluded.times_eaten, manually_marked = 0",
+        )
         .map_err(|e| format!("Prepare error: {e}"))?;
 
     for entry in &entries {
@@ -326,7 +405,11 @@ pub fn parse_gourmand_report(content: &str) -> Result<Vec<GourmandFoodEntry>, St
         let name = strip_food_tags(name_part);
 
         if !name.is_empty() {
-            entries.push(GourmandFoodEntry { name, count });
+            entries.push(GourmandFoodEntry {
+                name,
+                count,
+                manually_marked: false,
+            });
         }
     }
 

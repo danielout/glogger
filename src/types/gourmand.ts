@@ -15,6 +15,7 @@ export interface FoodItem {
 export interface GourmandFoodEntry {
   name: string
   count: number
+  manually_marked: boolean
 }
 
 export interface GourmandImportResult {

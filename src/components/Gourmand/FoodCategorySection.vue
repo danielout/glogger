@@ -15,10 +15,12 @@
         :food="food"
         :eaten="isEaten(food)"
         :count="getCount(food)"
+        :manually-marked="isManuallyMarked(food)"
         :selected="isSelected(food)"
         :selectable="selectable"
         :can-eat="canEatFood(food)"
         @select="$emit('select', $event)"
+        @toggle="$emit('toggle', $event)"
       />
     </div>
 
@@ -30,10 +32,12 @@
         :food="food"
         :eaten="isEaten(food)"
         :count="getCount(food)"
+        :manually-marked="isManuallyMarked(food)"
         :selected="isSelected(food)"
         :selectable="selectable"
         :can-eat="canEatFood(food)"
         @select="$emit('select', $event)"
+        @toggle="$emit('toggle', $event)"
       />
     </div>
 
@@ -53,6 +57,7 @@ const props = defineProps<{
   title: string
   foods: FoodItem[]
   eatenFoods: Map<string, number>
+  manuallyMarkedFoods: Set<string>
   hideEaten: boolean
   hideUnusable: boolean
   sortMode: 'level' | 'alpha' | 'food-level'
@@ -65,6 +70,7 @@ const props = defineProps<{
 
 defineEmits<{
   select: [food: FoodItem]
+  toggle: [food: FoodItem]
 }>()
 
 const eatenCount = computed(() => props.foods.filter(f => props.eatenFoods.has(f.name)).length)
@@ -99,6 +105,10 @@ const visibleFoods = computed(() => {
 
 function isEaten(food: FoodItem): boolean {
   return props.eatenFoods.has(food.name)
+}
+
+function isManuallyMarked(food: FoodItem): boolean {
+  return props.manuallyMarkedFoods.has(food.name)
 }
 
 function getCount(food: FoodItem): number {

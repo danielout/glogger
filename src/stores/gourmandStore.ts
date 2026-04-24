@@ -12,6 +12,7 @@ export const useGourmandStore = defineStore('gourmand', () => {
 
   const allFoods = ref<FoodItem[]>([])
   const eatenFoods = ref<Map<string, number>>(new Map())
+  const manuallyMarkedFoods = ref<Set<string>>(new Set())
   const reportLoaded = ref(false)
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -133,10 +134,15 @@ export const useGourmandStore = defineStore('gourmand', () => {
       const entries = await invoke<GourmandFoodEntry[]>('get_gourmand_eaten_foods')
       if (entries.length > 0) {
         const map = new Map<string, number>()
+        const manualSet = new Set<string>()
         for (const entry of entries) {
           map.set(entry.name, entry.count)
+          if (entry.manually_marked) {
+            manualSet.add(entry.name)
+          }
         }
         eatenFoods.value = map
+        manuallyMarkedFoods.value = manualSet
         reportLoaded.value = true
       }
     } catch (e) {
@@ -210,6 +216,26 @@ export const useGourmandStore = defineStore('gourmand', () => {
     }
   }
 
+  async function toggleFoodEaten(foodName: string) {
+    try {
+      const isNowEaten = await invoke<boolean>('toggle_food_eaten_status', { foodName })
+      // Update local state immediately
+      if (isNowEaten) {
+        eatenFoods.value.set(foodName, 1)
+        manuallyMarkedFoods.value.add(foodName)
+      } else {
+        eatenFoods.value.delete(foodName)
+        manuallyMarkedFoods.value.delete(foodName)
+      }
+      // Trigger reactivity
+      eatenFoods.value = new Map(eatenFoods.value)
+      manuallyMarkedFoods.value = new Set(manuallyMarkedFoods.value)
+      reportLoaded.value = eatenFoods.value.size > 0
+    } catch (e) {
+      error.value = String(e)
+    }
+  }
+
   async function tryAutoImport() {
     try {
       const result = await invoke<GourmandImportResult | null>('import_latest_gourmand_report')
@@ -249,6 +275,7 @@ export const useGourmandStore = defineStore('gourmand', () => {
     // State
     allFoods,
     eatenFoods,
+    manuallyMarkedFoods,
     reportLoaded,
     loading,
     error,
@@ -288,6 +315,7 @@ export const useGourmandStore = defineStore('gourmand', () => {
     selectSnack,
     clearSelection,
     exportUneaten,
+    toggleFoodEaten,
     tryAutoImport,
     sortedFoods,
   }

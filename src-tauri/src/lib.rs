@@ -115,10 +115,6 @@ use cdn_commands::{
     find_recipe_items_in_inventory,
     cdn_diff_summary,
     cdn_diff_file,
-    // Enemy (AI) queries
-    get_all_enemies,
-    search_enemies,
-    get_enemy,
     GameDataState,
 };
 use db::brewing_commands::{
@@ -184,7 +180,7 @@ use db::game_state_commands::{
 };
 use db::gourmand_commands::{
     export_text_file, get_all_foods, get_gourmand_eaten_foods, import_cooks_helper_file,
-    import_gourmand_report, import_latest_gourmand_report,
+    import_gourmand_report, import_latest_gourmand_report, toggle_food_eaten_status,
 };
 use db::inventory_commands::{
     get_inventory_snapshots, get_inventory_summary, get_snapshot_items, import_inventory_report,
@@ -424,10 +420,6 @@ pub fn run() {
             search_effects,
             get_effect,
             resolve_effect_descs,
-            // Enemy (AI) queries
-            get_all_enemies,
-            search_enemies,
-            get_enemy,
             get_tsys_power_info,
             get_tsys_power_info_batch,
             // TSys browser queries
@@ -563,6 +555,7 @@ pub fn run() {
             import_gourmand_report,
             import_cooks_helper_file,
             get_gourmand_eaten_foods,
+            toggle_food_eaten_status,
             export_text_file,
             import_latest_gourmand_report,
             // Farming calculator
