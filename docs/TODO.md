@@ -115,6 +115,7 @@ These items are investigated but can't be resolved without new runtime captures 
 
 - [x] Hoplology (equipment study) tracker
   - Done: Chat parser for "carefully study" messages, hoplology_studies table, dashboard widget with study count, 5-min cooldown timer, and searchable studied items list.
+  - **Limitation:** Only tracks new studies from live chat — doesn't backfill from the hoplology book/report. Widget shows 0 until the player studies something while the app is running. Backfilling from the hoplology skill report book would require a sample of the book content to parse (similar to gourmand report import). CDN references `HoplologyBook` NPC source but we don't have a capture of the book content format yet.
 
 - [ ] Boss kill loot timers
   - Currently only player *deaths* are tracked (via `ChatCombatEvent::PlayerDeath` with killer detection). No reverse tracking exists (player kills boss). Would need to extend `chat_combat_parser` or `player_event_parser` for enemy kill events with boss identification. Loot timer logic would layer on top.

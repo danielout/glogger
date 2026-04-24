@@ -71,8 +71,28 @@
 
         <div class="flex flex-col gap-3 pt-1">
           <template v-for="(section, sIdx) in parseReleaseBody(release.body)" :key="sIdx">
+            <!-- Section with a heading — auto-collapse downloads -->
+            <details v-if="section.heading && isCollapsedHeading(section.heading)" class="group">
+              <summary class="flex items-center gap-2 cursor-pointer list-none mb-1.5">
+                <span class="text-text-muted text-xs w-4 group-open:rotate-90 transition-transform">&#x25B6;</span>
+                <span
+                  class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
+                  :class="categoryBadgeClass(section.heading)">
+                  {{ categoryLabel(section.heading) }}
+                </span>
+                <span class="text-text-dim text-xs">{{ section.items.length }} items</span>
+              </summary>
+              <ul class="flex flex-col gap-0.5 pl-3 mt-1">
+                <li
+                  v-for="(item, iIdx) in section.items"
+                  :key="iIdx"
+                  class="text-sm text-text-secondary leading-relaxed list-disc ml-1 marker:text-text-dim"
+                  v-html="renderInlineMarkdown(item)" />
+              </ul>
+            </details>
+
             <!-- Section with a heading (categorized changes) -->
-            <div v-if="section.heading">
+            <div v-else-if="section.heading">
               <div class="flex items-center gap-2 mb-1.5">
                 <span
                   class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
@@ -186,6 +206,17 @@ function formatDate(iso: string): string {
  * Parse a GitHub release body into structured sections.
  * Handles ## and ### headings as category separators, list items, and prose text.
  */
+/**
+ * Headings whose content should be auto-collapsed in the changelog.
+ * Users viewing in-app don't need download links prominently displayed.
+ */
+const COLLAPSED_HEADINGS = new Set(['downloads', 'download', 'installers', 'assets'])
+
+function isCollapsedHeading(heading: string | null): boolean {
+  if (!heading) return false
+  return COLLAPSED_HEADINGS.has(heading.toLowerCase().trim())
+}
+
 function parseReleaseBody(body: string): ReleaseSection[] {
   if (!body) return []
 
@@ -194,6 +225,7 @@ function parseReleaseBody(body: string): ReleaseSection[] {
   let currentHeading: string | null = null
   let currentItems: string[] = []
   let currentProse: string[] = []
+  let inTable = false
 
   function flushSection() {
     if (currentProse.length > 0) {
@@ -219,9 +251,33 @@ function parseReleaseBody(body: string): ReleaseSection[] {
     const headingMatch = trimmed.match(/^#{2,3}\s+(.+)$/)
     if (headingMatch) {
       flushSection()
+      inTable = false
       currentHeading = headingMatch[1].trim()
       continue
     }
+
+    // Table rows (lines starting and ending with |) — convert to list items
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      // Skip separator rows (|---|---|)
+      if (/^\|[\s\-:|]+\|$/.test(trimmed)) {
+        inTable = true
+        continue
+      }
+      // Skip header rows (first row before separator)
+      if (!inTable) {
+        inTable = true
+        continue
+      }
+      // Parse table data row: extract cell values
+      const cells = trimmed.split('|').filter(c => c.trim()).map(c => c.trim())
+      if (cells.length > 0) {
+        currentItems.push(cells.join(' — '))
+      }
+      continue
+    }
+
+    // Non-table line resets table state
+    if (inTable && trimmed) inTable = false
 
     // List item (- or *)
     const listMatch = trimmed.match(/^[-*]\s+(.+)$/)
@@ -245,6 +301,12 @@ function parseReleaseBody(body: string): ReleaseSection[] {
       if (currentItems.length === 0 && currentHeading === null && currentProse.length > 0) {
         flushSection()
       }
+      continue
+    }
+
+    // Horizontal rule (--- or ***)
+    if (/^[-*_]{3,}$/.test(trimmed)) {
+      flushSection()
       continue
     }
 
