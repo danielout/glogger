@@ -427,9 +427,12 @@ impl SurveySessionAggregator {
         if let Err(e) = persistence::increment_crafted_count(conn, active) {
             eprintln!("[survey-aggregator] increment_crafted_count failed: {e}");
         }
-        // Track craft timestamps on the session.
+        // Track craft timestamps on the session and tighten started_at so
+        // the session header reflects the actual first activity, not the
+        // wall-clock (or trigger-event) moment the session was created.
         let _ = persistence::update_first_craft_at(conn, active, &now_iso);
         let _ = persistence::update_last_craft_at(conn, active, &now_iso);
+        let _ = persistence::tighten_started_at(conn, active, &now_iso);
     }
 
     /// Called when a survey map is consumed (deleted). Inserts a
@@ -528,6 +531,9 @@ impl SurveySessionAggregator {
             if let Err(e) = persistence::increment_consumed_count(conn, s) {
                 eprintln!("[survey-aggregator] increment_consumed_count failed: {e}");
             }
+            // Tighten started_at so the session header reflects the actual
+            // first survey use, not the session-creation moment.
+            let _ = persistence::tighten_started_at(conn, s, &now_iso);
         }
 
         // For Basic surveys the loot drops in the same tick — no Mining
@@ -995,6 +1001,9 @@ fn update_session_loot_timestamps(conn: &Connection, use_id: i64, ts: &str) {
         if let Some(sid) = su.session_id {
             let _ = persistence::update_first_loot_at(conn, sid, ts);
             let _ = persistence::update_last_loot_at(conn, sid, ts);
+            // Keep started_at tight for open sessions so the header
+            // reflects actual activity, not the session-creation moment.
+            let _ = persistence::tighten_started_at(conn, sid, ts);
         }
     }
 }

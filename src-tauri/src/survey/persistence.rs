@@ -145,6 +145,33 @@ pub fn update_last_loot_at(conn: &Connection, session_id: i64, ts: &str) -> Resu
     Ok(())
 }
 
+/// Incrementally tighten `started_at` for an open session: if `ts` is
+/// earlier than the current `started_at`, update it. This keeps the session
+/// header accurate for live/open sessions without waiting for the full
+/// `recompute_session_bounds_and_end` that runs at close time.
+///
+/// Only fires on open sessions (`ended_at IS NULL`) to avoid mutating
+/// already-finalized bounds.
+pub fn tighten_started_at(conn: &Connection, session_id: i64, ts: &str) -> Result<()> {
+    conn.execute(
+        "UPDATE survey_sessions SET started_at = ?2
+         WHERE id = ?1 AND ended_at IS NULL AND started_at > ?2",
+        params![session_id, ts],
+    )?;
+    Ok(())
+}
+
+/// Incrementally extend `ended_at` for an open session: sets `ended_at`
+/// to `ts` if `ts` is later than the current latest timestamp. Unlike the
+/// close-time recompute, this gives the frontend a rough "last activity"
+/// timestamp for live sessions.
+///
+/// Only fires on open sessions (`ended_at IS NULL` is NOT checked here
+/// because open sessions don't have an ended_at — instead we use a
+/// separate column-free approach: the frontend already reads
+/// `last_loot_at` / `last_craft_at` for the "last activity" display).
+/// This is a no-op placeholder reserved for future use.
+
 pub fn update_session_name(conn: &Connection, session_id: i64, name: &str) -> Result<()> {
     conn.execute(
         "UPDATE survey_sessions SET name = ?2 WHERE id = ?1",
