@@ -40,7 +40,7 @@
               <span
                 v-if="getStockTarget(entry.id)"
                 class="text-[0.65rem]"
-                :class="getStockTarget(entry.id)!.effectiveQty <= 0 ? 'text-value-positive' : 'text-accent-gold'">
+                :class="getStockTarget(entry.id)!.effectiveQty <= 0 ? 'text-green-400' : 'text-accent-gold'">
                 {{ getStockTarget(entry.id)!.effectiveQty <= 0 ? 'met' : `×${getStockTarget(entry.id)!.effectiveQty}` }}
               </span>
               <span v-else class="font-mono text-[0.65rem] text-accent-gold">target {{ entry.target_stock }}</span>
@@ -50,10 +50,27 @@
         </div>
       </AccordionSection>
 
-      <!-- Resolving indicator when no content yet -->
-      <div v-if="resolving && !hasContent" class="flex items-center gap-2 text-text-muted text-xs py-4">
-        <LoadingSpinner />
-        Resolving project...
+      <!-- Skeleton loading state when resolving with no content yet -->
+      <div v-if="resolving && !hasContent" class="flex flex-col gap-3">
+        <!-- Skeleton for intermediates section -->
+        <AccordionSection :default-open="true">
+          <template #title>Intermediates</template>
+          <div class="flex flex-col gap-1">
+            <div
+              v-for="i in 3"
+              :key="`skel-inter-${i}`"
+              class="flex items-center gap-2 px-2 py-1.5 rounded bg-surface-dark/30 border border-surface-elevated/50">
+              <SkeletonLoader variant="rect" width="w-24" height="h-4" />
+              <SkeletonLoader variant="rect" width="w-16" height="h-3" />
+            </div>
+          </div>
+        </AccordionSection>
+
+        <!-- Skeleton for raw materials table -->
+        <AccordionSection :default-open="true">
+          <template #title>Raw Materials</template>
+          <DataTableSkeleton :columns="2" :rows="5" :show-header="true" />
+        </AccordionSection>
       </div>
 
       <!-- Two-column layout for materials + actionable lists -->
@@ -97,10 +114,10 @@
                   <span>need {{ item.quantity }}</span>
                   <template v-if="item.have > 0">
                     <span v-if="item.toCraft > 0">
-                      have <span class="text-value-positive">{{ item.have }}</span>
+                      have <span class="text-green-400">{{ item.have }}</span>
                       → {{ item.isExpanded ? 'craft' : 'buy' }} <span class="text-text-primary">{{ item.toCraft }}</span>
                     </span>
-                    <span v-else class="text-value-positive">have {{ item.have }} ✓</span>
+                    <span v-else class="text-green-400">have {{ item.have }} ✓</span>
                   </template>
                 </div>
                 <button
@@ -122,7 +139,7 @@
             <template #badge>
               <div class="flex gap-3 text-[0.65rem] text-text-muted">
                 <span>{{ materialNeeds.length }}</span>
-                <span><span class="text-value-positive">{{ coveredCount }}</span> ok</span>
+                <span><span class="text-green-400">{{ coveredCount }}</span> ok</span>
                 <span v-if="partialCount > 0"><span class="text-yellow-400">{{ partialCount }}</span> partial</span>
                 <span v-if="missingCount > 0"><span class="text-accent-red">{{ missingCount }}</span> missing</span>
                 <span v-if="checkingAvailability" class="inline-flex items-center gap-1 text-accent-gold/60">
@@ -222,7 +239,7 @@
           <!-- "All covered" state when nothing to shop or pick up -->
           <div
             v-if="materialNeeds.length > 0 && !hasShortfalls && !hasPickupItems"
-            class="border border-surface-elevated rounded px-3 py-4 text-center text-xs text-value-positive">
+            class="border border-surface-elevated rounded px-3 py-4 text-center text-xs text-green-400">
             All materials in inventory — ready to craft!
           </div>
         </div>
@@ -303,6 +320,8 @@ import { formatGold } from "../../composables/useRecipeCost";
 import EmptyState from "../Shared/EmptyState.vue";
 import AccordionSection from "../Shared/AccordionSection.vue";
 import LoadingSpinner from "../Shared/LoadingSpinner.vue";
+import SkeletonLoader from "../Shared/SkeletonLoader.vue";
+import DataTableSkeleton from "../Shared/DataTableSkeleton.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 import RecipeInline from "../Shared/Recipe/RecipeInline.vue";
 import MaterialSummary from "./MaterialSummary.vue";
