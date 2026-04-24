@@ -22,6 +22,7 @@ Core structure, patterns, and standards used across the app.
 - [user-data-management.md](architecture/user-data-management.md) — Multi-character/multi-server data scoping, server auto-detection, character management, market values, and aggregate views.
 - [shared-components.md](architecture/shared-components.md) — Reusable entity inline/tooltip components (ItemInline, NpcInline, etc.) and color tokens.
 - [implementation-checklist.md](architecture/implementation-checklist.md) — Step-by-step checklists for common dev tasks (new parsers, DB tables, CDN fields, commands).
+- [standards-persistence-naming.md](architecture/standards-persistence-naming.md) — Naming conventions, data persistence patterns, store/command/migration/type standards.
 - [startup-sequence.md](architecture/startup-sequence.md) — Full startup sequence: backend init, frontend phases, game data loading, and readiness audit.
 - [styling.md](architecture/styling.md) — CSS architecture using Tailwind v4, theme tokens, and component classes.
 - [color-standards.md](architecture/color-standards.md) — Color usage audit: current state, inconsistencies, proposed semantic token palette, migration plan.
