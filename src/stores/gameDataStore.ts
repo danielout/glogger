@@ -11,6 +11,7 @@ import type {
   QuestInfo,
   NpcInfo,
   EffectInfo,
+  EnemyInfo,
   LorebookEntry,
   LorebookCategoryInfo,
   PlayerTitleInfo,
@@ -348,6 +349,16 @@ export const useGameDataStore = defineStore("gameData", () => {
     return invoke<NpcInfo[]>("get_npcs_in_area", { area });
   }
 
+  // ── Enemy (AI) queries ─────────────────────────────────────────────────────
+
+  async function getAllEnemies(): Promise<EnemyInfo[]> {
+    return invoke<EnemyInfo[]>("get_all_enemies");
+  }
+
+  async function searchEnemies(query: string): Promise<EnemyInfo[]> {
+    return invoke<EnemyInfo[]>("search_enemies", { query });
+  }
+
   // ── Effect queries ─────────────────────────────────────────────────────────
 
   async function searchEffects(query: string, limit = 50): Promise<EffectInfo[]> {
@@ -527,6 +538,8 @@ export const useGameDataStore = defineStore("gameData", () => {
     npcsByKey,
     npcsByDisplayName,
     loadAllNpcsMap,
+    getAllEnemies,
+    searchEnemies,
     searchEffects,
     getEffect,
     getAllTsys,

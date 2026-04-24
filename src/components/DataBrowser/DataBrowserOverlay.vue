@@ -9,12 +9,12 @@
         <div class="absolute inset-6 lg:inset-10 flex flex-col bg-surface-base border border-border-hover rounded-xl shadow-[0_25px_60px_-12px_rgba(0,0,0,0.5)] overflow-hidden">
           <!-- Header: type selector + close -->
           <div class="shrink-0 flex items-center gap-1.5 border-b border-border-default bg-surface-dark/50 px-4 py-2">
-            <span class="text-text-muted text-xs mr-1">Data Browser</span>
+            <span class="text-text-muted text-xs font-mono mr-1">Data Browser</span>
             <div class="w-px h-4 bg-border-default" />
             <button
               v-for="tab in browserTypes"
               :key="tab.id"
-              class="px-2.5 py-1 bg-transparent border-none text-text-secondary cursor-pointer text-xs rounded transition-all hover:bg-surface-elevated hover:text-text-primary"
+              class="px-2.5 py-1 bg-transparent border-none text-text-secondary cursor-pointer font-mono text-xs rounded transition-all hover:bg-surface-elevated hover:text-text-primary"
               :class="{ 'text-accent-gold! bg-surface-elevated! shadow-sm': store.activeType === tab.id }"
               @click="store.setActiveType(tab.id)"
             >
@@ -24,7 +24,7 @@
             <template v-if="devMode">
               <div class="w-px h-4 bg-border-default" />
               <button
-                class="px-2.5 py-1 bg-transparent border-none text-text-secondary cursor-pointer text-xs rounded transition-all hover:bg-surface-elevated hover:text-text-primary"
+                class="px-2.5 py-1 bg-transparent border-none text-text-secondary cursor-pointer font-mono text-xs rounded transition-all hover:bg-surface-elevated hover:text-text-primary"
                 :class="{ 'text-accent-gold! bg-surface-elevated! shadow-sm': store.activeType === 'cdn-diff' }"
                 @click="store.setActiveType('cdn-diff')"
               >
@@ -32,7 +32,7 @@
               </button>
             </template>
             <div class="flex-1" />
-            <kbd class="text-[10px] text-text-dim bg-surface-elevated border border-border-default rounded px-1.5 py-0.5">ESC</kbd>
+            <kbd class="text-[0.55rem] text-text-dim bg-surface-elevated border border-border-default rounded px-1.5 py-0.5">ESC</kbd>
             <button
               class="bg-transparent border-none text-text-muted cursor-pointer text-sm hover:text-accent-red transition-colors px-1.5 py-0.5 rounded hover:bg-surface-elevated"
               title="Close"
@@ -61,6 +61,9 @@
               </div>
               <div v-if="visitedTypes.has('npcs')" v-show="store.activeType === 'npcs'" class="h-full">
                 <NpcBrowser :nav-target="store.activeType === 'npcs' ? navTarget : null" />
+              </div>
+              <div v-if="visitedTypes.has('enemies')" v-show="store.activeType === 'enemies'" class="h-full">
+                <EnemyBrowser :nav-target="store.activeType === 'enemies' ? navTarget : null" />
               </div>
               <div v-if="visitedTypes.has('effects')" v-show="store.activeType === 'effects'" class="h-full">
                 <EffectBrowser />
@@ -99,6 +102,7 @@ import AbilityBrowser from "./AbilityBrowser.vue";
 import RecipeBrowser from "./RecipeBrowser.vue";
 import QuestBrowser from "./QuestBrowser.vue";
 import NpcBrowser from "./NpcBrowser.vue";
+import EnemyBrowser from "./EnemyBrowser.vue";
 import EffectBrowser from "./EffectBrowser.vue";
 import LoreBrowser from "./LoreBrowser.vue";
 import TitleBrowser from "./TitleBrowser.vue";

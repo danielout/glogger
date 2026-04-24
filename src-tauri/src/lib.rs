@@ -115,6 +115,10 @@ use cdn_commands::{
     find_recipe_items_in_inventory,
     cdn_diff_summary,
     cdn_diff_file,
+    // Enemy (AI) queries
+    get_all_enemies,
+    search_enemies,
+    get_enemy,
     GameDataState,
 };
 use db::brewing_commands::{
@@ -420,6 +424,10 @@ pub fn run() {
             search_effects,
             get_effect,
             resolve_effect_descs,
+            // Enemy (AI) queries
+            get_all_enemies,
+            search_enemies,
+            get_enemy,
             get_tsys_power_info,
             get_tsys_power_info_batch,
             // TSys browser queries

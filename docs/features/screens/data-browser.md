@@ -2,7 +2,7 @@
 
 ## Overview
 
-A multi-tab reference browser for exploring all CDN game data, presented as a **popup overlay** that can be opened from any screen. Ten tabs cover the major entity types: Items, Skills, Abilities, Recipes, Quests, NPCs, Effects, Lorebooks, Titles, and Treasure (TSys mods). The overlay uses a three-panel layout: search/filter list on the left (from each browser's own PaneLayout), detail view in the center, and a sidebar on the right with History, Favorites, and Pinned tabs.
+A multi-tab reference browser for exploring all CDN game data, presented as a **popup overlay** that can be opened from any screen. Eleven tabs cover the major entity types: Items, Skills, Abilities, Recipes, Quests, NPCs, Enemies, Effects, Lorebooks, Titles, and Treasure (TSys mods). The overlay uses a three-panel layout: search/filter list on the left (from each browser's own PaneLayout), detail view in the center, and a sidebar on the right with History, Favorites, and Pinned tabs.
 
 **Opening the Data Browser:** Click "Data Browser" in the nav bar, press `Ctrl+D`, or click any entity inline link (ItemInline, SkillInline, etc.) to open the overlay targeting that entity.
 
@@ -19,6 +19,7 @@ A multi-tab reference browser for exploring all CDN game data, presented as a **
 - `src/components/DataBrowser/RecipeBrowser.vue` — recipes browser
 - `src/components/DataBrowser/QuestBrowser.vue` — quests browser
 - `src/components/DataBrowser/NpcBrowser.vue` — NPCs browser
+- `src/components/DataBrowser/EnemyBrowser.vue` — enemies (AI) browser
 - `src/components/DataBrowser/EffectBrowser.vue` — effects browser
 - `src/components/DataBrowser/LoreBrowser.vue` — lorebooks browser (book reader with category filter)
 - `src/components/DataBrowser/TitleBrowser.vue` — titles browser
@@ -43,6 +44,7 @@ DataBrowserOverlay.vue              — teleported overlay, type tabs, ESC/Ctrl+
 ├── RecipeBrowser.vue               — recipes by skill
 ├── QuestBrowser.vue                — quests with area/sort filters
 ├── NpcBrowser.vue                  — NPCs with area filter
+├── EnemyBrowser.vue                — enemies (AI) with strategy filter
 ├── EffectBrowser.vue               — effects
 ├── LoreBrowser.vue                 — lorebooks with category filter + book reader
 ├── TitleBrowser.vue                — titles with color rendering
@@ -109,6 +111,7 @@ All browsers follow a consistent two-panel layout (via their own PaneLayout):
 - [data-browser-recipes.md](data-browser/data-browser-recipes.md) — Recipes
 - [data-browser-quests.md](data-browser/data-browser-quests.md) — Quests
 - [data-browser-npcs.md](data-browser/data-browser-npcs.md) — NPCs
+- [data-browser-enemies.md](data-browser/data-browser-enemies.md) — Enemies (AI)
 - [data-browser-effects.md](data-browser/data-browser-effects.md) — Effects
 - [data-browser-titles.md](data-browser/data-browser-titles.md) — Titles
 - [data-browser-treasure.md](data-browser/data-browser-treasure.md) — Treasure (TSys)
@@ -123,6 +126,7 @@ All browsers follow a consistent two-panel layout (via their own PaneLayout):
 | Recipes | Text + skill selector | Skill dropdown | 250ms |
 | Quests | Text (multi-field) | Area, cancellable, sort options | Computed |
 | NPCs | Text (name, description) | Area | Computed |
+| Enemies | Text (key, comment, abilities) | Strategy | Computed |
 | Effects | Text (name) | — | 250ms |
 | Titles | Text (title, tooltip) | — | Computed |
 | Treasure | Text (name, skill, prefix, suffix, slot, key) | Skill | 250ms |
@@ -177,6 +181,9 @@ The `provideEntityNavigation` composable enables other parts of the app to open 
 
 ### NPCs
 - `get_all_npcs()` / `search_npcs(query)` / `get_npcs_in_area(area)`
+
+### Enemies (AI)
+- `get_all_enemies()` / `search_enemies(query)` / `get_enemy(key)`
 
 ### Treasure (TSys)
 - `get_all_tsys()` / `search_tsys(query, limit?)` / `get_tsys_profiles()`

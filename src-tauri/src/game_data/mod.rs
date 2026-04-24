@@ -59,6 +59,7 @@ pub use quests::QuestInfo;
 pub use recipes::RecipeInfo;
 pub use skills::SkillInfo;
 pub use sources::SourceEntry;
+pub use ai::AiSummary;
 pub use brewing::{BrewingIngredient, BrewingRecipe};
 pub use tsys::TsysClientInfo;
 pub use tsys::TsysTierInfo;
@@ -203,8 +204,6 @@ pub struct GameData {
     pub quests_by_work_order_skill: HashMap<String, Vec<String>>,
     /// item keyword → recipe IDs that accept this keyword as ingredient
     pub recipes_by_ingredient_keyword: HashMap<String, Vec<u32>>,
-    /// item keyword → item IDs that have this keyword (for dynamic ingredient resolution)
-    pub item_keyword_index: HashMap<String, Vec<u32>>,
     /// NPC key → item IDs sold by that NPC (from Vendor/Barter source entries)
     pub vendor_items_by_npc: HashMap<String, Vec<u32>>,
     /// item ID → NPC keys that sell/barter it
@@ -248,7 +247,6 @@ struct GameDataIndices {
     quests_by_npc: HashMap<String, Vec<String>>,
     quests_by_work_order_skill: HashMap<String, Vec<String>>,
     recipes_by_ingredient_keyword: HashMap<String, Vec<u32>>,
-    item_keyword_index: HashMap<String, Vec<u32>>,
     vendor_items_by_npc: HashMap<String, Vec<u32>>,
     vendors_for_item: HashMap<u32, Vec<String>>,
     tsys_to_abilities: HashMap<String, Vec<u32>>,
@@ -310,7 +308,6 @@ impl GameData {
             quests_by_npc: HashMap::new(),
             quests_by_work_order_skill: HashMap::new(),
             recipes_by_ingredient_keyword: HashMap::new(),
-            item_keyword_index: HashMap::new(),
             vendor_items_by_npc: HashMap::new(),
             vendors_for_item: HashMap::new(),
             tsys_to_abilities: HashMap::new(),
@@ -812,7 +809,6 @@ pub async fn load_from_cache_with_progress(
             quests_by_npc: indices.quests_by_npc,
             quests_by_work_order_skill: indices.quests_by_work_order_skill,
             recipes_by_ingredient_keyword: indices.recipes_by_ingredient_keyword,
-            item_keyword_index: indices.item_keyword_index,
             vendor_items_by_npc: indices.vendor_items_by_npc,
             vendors_for_item: indices.vendors_for_item,
             tsys_to_abilities: indices.tsys_to_abilities,
@@ -1049,21 +1045,6 @@ fn build_all_indices(
         }
     }
 
-    // Build item keyword index: keyword → item IDs
-    let mut item_keyword_index: HashMap<String, Vec<u32>> = HashMap::new();
-    for (item_id, item) in items {
-        for keyword in &item.keywords {
-            item_keyword_index
-                .entry(keyword.clone())
-                .or_default()
-                .push(*item_id);
-        }
-    }
-    // Sort each keyword's item list for consistent ordering
-    for ids in item_keyword_index.values_mut() {
-        ids.sort_unstable();
-    }
-
     // Build NPC vendor inventory index: NPC key → item IDs (from Vendor/Barter sources)
     let mut vendor_items_by_npc: HashMap<String, Vec<u32>> = HashMap::new();
     for (&item_id, source_info) in &sources.items {
@@ -1269,7 +1250,6 @@ fn build_all_indices(
         quests_by_npc,
         quests_by_work_order_skill,
         recipes_by_ingredient_keyword,
-        item_keyword_index,
         vendor_items_by_npc,
         vendors_for_item,
         tsys_to_abilities,

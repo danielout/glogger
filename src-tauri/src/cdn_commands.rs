@@ -12,9 +12,9 @@ use serde_json::Value;
 use crate::cdn;
 use crate::db::DbPool;
 use crate::game_data::{
-    self, AbilityFamily, AbilityInfo, AreaInfo, BrewingIngredient, BrewingRecipe, EffectInfo,
-    GameData, ItemInfo, LorebookCategoryInfo, LorebookEntry, NpcInfo, PlayerTitleInfo, QuestInfo,
-    RecipeInfo, SkillInfo, SourceEntry, TsysClientInfo, TsysTierInfo,
+    self, AbilityFamily, AbilityInfo, AiSummary, AreaInfo, BrewingIngredient, BrewingRecipe,
+    EffectInfo, GameData, ItemInfo, LorebookCategoryInfo, LorebookEntry, NpcInfo, PlayerTitleInfo,
+    QuestInfo, RecipeInfo, SkillInfo, SourceEntry, TsysClientInfo, TsysTierInfo,
 };
 
 /// Timestamped log line for startup diagnostics.
@@ -399,15 +399,11 @@ pub async fn get_items_by_keyword(
 ) -> Result<Vec<ItemInfo>, String> {
     let data = state.read().await;
     let mut results: Vec<ItemInfo> = data
-        .item_keyword_index
-        .get(&keyword)
-        .map(|ids| {
-            ids.iter()
-                .filter_map(|id| data.items.get(id))
-                .cloned()
-                .collect()
-        })
-        .unwrap_or_default();
+        .items
+        .values()
+        .filter(|item| item.keywords.contains(&keyword))
+        .cloned()
+        .collect();
     results.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(results)
 }
@@ -3512,5 +3508,70 @@ pub async fn cdn_diff_file(
     }
 
     cdn_diff::compute_file_diff(&file_name, &old_dir, &data_dir).await
+}
+
+// ── Enemy (AI) query commands ─────────────────────────────────────────────────
+
+/// Get all AI/enemy entries as summaries.
+#[tauri::command]
+pub async fn get_all_enemies(state: State<'_, GameDataState>) -> Result<Vec<AiSummary>, String> {
+    let data = state.read().await;
+    let mut results: Vec<AiSummary> = data
+        .ai
+        .iter()
+        .map(|(key, info)| info.to_summary(key))
+        .collect();
+    results.sort_by(|a, b| a.key.cmp(&b.key));
+    Ok(results)
+}
+
+/// Search AI/enemy entries by key name.
+#[tauri::command]
+pub async fn search_enemies(
+    query: String,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<AiSummary>, String> {
+    let data = state.read().await;
+    let q = query.to_lowercase();
+
+    let mut results: Vec<AiSummary> = data
+        .ai
+        .iter()
+        .filter(|(key, info)| {
+            let key_match = key.to_lowercase().contains(&q);
+            let comment_match = info
+                .raw
+                .get("Comment")
+                .and_then(|v| v.as_str())
+                .map(|c| c.to_lowercase().contains(&q))
+                .unwrap_or(false);
+            let strategy_match = info
+                .raw
+                .get("Strategy")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_lowercase().contains(&q))
+                .unwrap_or(false);
+            let ability_match = info
+                .raw
+                .get("Abilities")
+                .and_then(|v| v.as_object())
+                .map(|m| m.keys().any(|k| k.to_lowercase().contains(&q)))
+                .unwrap_or(false);
+            key_match || comment_match || strategy_match || ability_match
+        })
+        .map(|(key, info)| info.to_summary(key))
+        .collect();
+    results.sort_by(|a, b| a.key.cmp(&b.key));
+    Ok(results)
+}
+
+/// Get a single AI/enemy entry with full raw data.
+#[tauri::command]
+pub async fn get_enemy(
+    key: String,
+    state: State<'_, GameDataState>,
+) -> Result<Option<AiSummary>, String> {
+    let data = state.read().await;
+    Ok(data.ai.get(&key).map(|info| info.to_summary(&key)))
 }
 
