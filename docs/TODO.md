@@ -44,9 +44,8 @@ These items are investigated but can't be resolved without new runtime captures 
 - [x] Crafting projects: loading skeleton/shimmer states for material tables
   - Done: ProjectMaterialsPanel now shows SkeletonLoader + DataTableSkeleton sections while resolving instead of spinner text.
 
-- [ ] Crafting projects: accordion recipe summary + split raw/intermediate materials
-  - Recipe list at top takes too much space on large projects — should be collapsible. Materials should split into "Raw Materials" (things to gather/buy) and "Intermediates" (things to craft), shown in dependency order.
-  - **Effort: Medium | Impact: Medium (usability)**
+- [x] Crafting projects: accordion recipe summary + split raw/intermediate materials
+  - Done: Recipe list wrapped in AccordionSection (auto-collapsed >5 recipes). MaterialSummary splits into Intermediates (craftable) and Raw Materials. New MaterialTable component extracts shared table rendering.
 
 - [ ] Crafting projects: in-memory ingredient tree cache
   - Cache resolved ingredient trees keyed by `recipe_id + quantity + expandedItemIds hash`. Avoids re-resolving unchanged entries during bulk operations. Better than DB persistence at this stage.
@@ -72,9 +71,8 @@ These items are investigated but can't be resolved without new runtime captures 
 
 ## Medium Effort, High Value
 
-- [ ] Manual food eaten/not eaten marking for gourmand
-  - Users should be able to manually mark foods if they can't get their skill report. Fallback for when auto-import isn't available.
-  - **Effort: Medium | Impact: Medium (accessibility)**
+- [x] Manual food eaten/not eaten marking for gourmand
+  - Done: Click-to-toggle eaten status with v40 migration. Visual distinction: green=imported, blue=manual, red=uneaten. Manual marks preserved during report imports.
 
 - [ ] Bug: incorrect survey session start/end times
   - **Root causes identified:** (1) Auto-started sessions set `started_at` to the triggering event timestamp, not actual activity start. (2) `recompute_session_bounds_and_end()` only corrects bounds when a session closes — live/open sessions show uncorrected timestamps. (3) During initial log replay, if a manual session is started during catch-up phase, `started_at` uses wall-clock time instead of log date. Fix path: proactively update bounds for open sessions (not just at close), and use `base_date_override` for timestamps during catch-up mode.
@@ -147,9 +145,8 @@ These items are investigated but can't be resolved without new runtime captures 
   - **Partial investigation:** Two-tier architecture: `PlayerLogWatcher` → `PlayerEventParser` → `GameStateManager` (50-event batches, 20ms flush window). Chat parallel: `ChatLogWatcher` → bulk insert + per-event status parsing. Main concerns: (1) chat-to-player correlation window is tight at ±2 seconds, (2) no query-side indexing on `game_state_inventory` for per-character/per-server lookups, (3) pending chat gains buffer ages items after 10s with no metrics on correlation failure rate, (4) all inventory deletes require 1-line lookahead. Overall reasonable design — main focus should be correlation tuning and reconciliation.
   - **Effort: Medium | Impact: Medium (reliability)**
 
-- [ ] Standardize skeletons and loading states
-  - `SkeletonLoader.vue` and `DataTableSkeleton.vue` are built. Remaining work: adopt them across existing screens. Replace "Loading..." text and `v-if="loading"` empty space with skeleton states. DataTable already has built-in skeleton via its `loading` prop.
-  - **Effort: Low-Medium (components exist, just need adoption) | Impact: Medium (polish/consistency)**
+- [x] Standardize skeletons and loading states
+  - Done: SkeletonLoader and DataTableSkeleton adopted across 24 screens (dashboard, crafting, character, data browser, surveying, farming, stall tracker, market, help). Button label toggles and brief inline states intentionally kept as-is.
 
 - [ ] Document standards around persistence, data access, naming
   - Write up conventions so development stays consistent.
@@ -187,9 +184,8 @@ These items are investigated but can't be resolved without new runtime captures 
   - Currently the Reports folder is polled on a timer (`characterStore.ts` `startReportWatching()`, configurable 5–300s interval). The chat log already announces when exports happen. Switching to chat-log-triggered detection would be more responsive and eliminate unnecessary polling. Needs a new handler in the chat status parser for export messages.
   - **Effort: Medium | Impact: Small-Medium (efficiency/responsiveness)**
 
-- [ ] Actually implement audio alerts for watchwords
-  - The "Play sound" checkbox exists in the rule editor UI (`WatchwordsView.vue`) and the setting is stored in `WatchNotifyConfig`. Backend emits `watch-rule-triggered` event with `notify: WatchNotifyConfig` containing the `sound` flag. **Missing:** zero frontend listeners for the emitted event; no audio file loading or playback logic. Needs: event listener, preloaded audio file(s), `new Audio().play()` on match when `notify.sound === true`.
-  - **Effort: Medium | Impact: Medium (key alerting feature)**
+- [x] Actually implement audio alerts for watchwords
+  - Done: watchwordAlertStore plays two-tone ascending beep via Web Audio API when rules trigger with sound enabled. Also shows toast notifications. Listener registered at app startup in startupStore.
 
 - [ ] Market Prices screen needs better layout
   - Currently a simple card-based vertical layout inside EconomicsView's PaneLayout. Table columns are fixed (Item | Price | Notes | Updated | Actions). Could benefit from a two-pane layout, better spacing, and visual hierarchy. Filtering already exists. No pricing history, charts, or comparative features.
