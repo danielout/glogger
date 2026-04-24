@@ -3,7 +3,7 @@
     <!-- Zone selection row -->
     <div class="flex items-center gap-2">
       <div class="flex-1">
-        <label class="text-[10px] text-text-dim uppercase tracking-wide">From</label>
+        <label class="text-[0.6rem] text-text-dim uppercase tracking-wide">From</label>
         <div class="flex items-center gap-1">
           <select
             v-model="startZone"
@@ -11,10 +11,17 @@
             <option v-for="z in ZONES" :key="z.key" :value="z.key">{{ z.name }}</option>
           </select>
           <button
-            class="px-1.5 py-1 rounded text-[10px] bg-surface-elevated border border-border-light text-text-muted hover:text-text-primary shrink-0"
+            class="px-1.5 py-1 rounded text-[0.6rem] bg-surface-elevated border border-border-light text-text-muted hover:text-text-primary shrink-0"
             title="Use current zone"
             @click="useCurrentZone">
             Current
+          </button>
+          <button
+            v-if="homeZone"
+            class="px-1.5 py-1 rounded text-[0.6rem] bg-surface-elevated border border-border-light text-text-muted hover:text-text-primary shrink-0"
+            title="Use home zone"
+            @click="useHomeZone">
+            Home
           </button>
         </div>
       </div>
@@ -22,7 +29,7 @@
       <span class="text-text-muted text-xs mt-3.5">&rarr;</span>
 
       <div class="flex-1">
-        <label class="text-[10px] text-text-dim uppercase tracking-wide">To</label>
+        <label class="text-[0.6rem] text-text-dim uppercase tracking-wide">To</label>
         <select
           v-model="endZone"
           class="w-full px-2 py-1 rounded bg-surface-elevated border border-border-light text-xs text-text-primary">
@@ -32,7 +39,7 @@
     </div>
 
     <!-- Travel options -->
-    <div class="flex items-center gap-3 text-[10px] text-text-dim">
+    <div class="flex items-center gap-3 text-[0.6rem] text-text-dim">
       <label class="flex items-center gap-1 cursor-pointer">
         <input v-model="useTeleports" type="checkbox" class="accent-accent-gold" />
         Use teleports
@@ -44,7 +51,7 @@
     </div>
 
     <!-- Bind summary (compact) -->
-    <div v-if="useTeleports" class="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-text-dim">
+    <div v-if="useTeleports" class="flex flex-wrap gap-x-3 gap-y-0.5 text-[0.6rem] text-text-dim">
       <span v-if="config.primaryBind">
         Bind 1: <span class="text-text-secondary">{{ config.primaryBind }}</span>
       </span>
@@ -61,6 +68,12 @@
       </span>
     </div>
 
+    <!-- Home zone indicator -->
+    <div v-if="homeZone" class="flex items-center gap-1 text-[0.6rem] text-text-dim">
+      <span>Home:</span>
+      <span class="text-text-secondary">{{ zoneName(homeZone) }}</span>
+    </div>
+
     <!-- Plan button -->
     <button
       class="w-full px-2 py-1.5 rounded text-xs font-medium bg-accent-gold/15 border border-accent-gold/30 text-accent-gold hover:bg-accent-gold/25 cursor-pointer transition-colors"
@@ -71,7 +84,7 @@
 
     <!-- Route display -->
     <div v-if="route" class="flex flex-col gap-0.5 overflow-y-auto max-h-64 pr-1">
-      <div class="flex items-center justify-between text-[10px] text-text-dim mb-1">
+      <div class="flex items-center justify-between text-[0.6rem] text-text-dim mb-1">
         <span>{{ route.steps.length }} steps</span>
         <span>{{ route.total_hops }} hop{{ route.total_hops !== 1 ? 's' : '' }}</span>
       </div>
@@ -80,7 +93,7 @@
         :key="i"
         class="flex items-start gap-2 py-1 px-1.5 rounded text-xs"
         :class="stepClass(step)">
-        <span class="shrink-0 w-4 text-text-muted text-[10px] text-right mt-0.5">{{ i + 1 }}</span>
+        <span class="shrink-0 w-4 text-text-muted text-[0.6rem] text-right mt-0.5">{{ i + 1 }}</span>
         <span :class="step.action === 'travel' ? 'text-text-dim italic' : 'text-text-primary'">
           {{ step.details }}
         </span>
@@ -92,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useGameStateStore } from '../../../stores/gameStateStore'
 import { useSettingsStore } from '../../../stores/settingsStore'
@@ -170,6 +183,31 @@ interface PlannedRoute {
 }
 const route = ref<PlannedRoute | null>(null)
 
+// ── Home Zone (per-character) ──────────────────────────────────────────────
+
+const homeZoneKey = computed(() => {
+  const char = settingsStore.settings.activeCharacterName
+  const server = settingsStore.settings.activeServerName
+  if (!char || !server) return null
+  return `tripPlanner.homeZone.${char}.${server}`
+})
+
+const homeZone = ref<string | null>(null)
+
+function loadHomeZone() {
+  if (homeZoneKey.value) {
+    homeZone.value = localStorage.getItem(homeZoneKey.value) || null
+  } else {
+    homeZone.value = null
+  }
+}
+
+function useHomeZone() {
+  if (homeZone.value) {
+    startZone.value = homeZone.value
+  }
+}
+
 // ── Config (persisted to localStorage, editable via config panel) ───────────
 
 const CONFIG_KEY = 'tripPlannerWidget.config'
@@ -199,11 +237,13 @@ const config = reactive<TripPlannerConfig>(loadConfig())
 // Listen for config changes from config panel
 function onConfigChanged() {
   Object.assign(config, loadConfig())
+  loadHomeZone()
 }
 onMounted(() => {
   window.addEventListener('tripPlannerConfigChanged', onConfigChanged)
   loadBindsFromDb()
   loadCasinoPortal()
+  loadHomeZone()
 })
 
 // ── Load binds from database (auto-parsed from game) ────────────────────────

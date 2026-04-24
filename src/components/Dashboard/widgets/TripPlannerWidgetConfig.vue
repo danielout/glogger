@@ -2,14 +2,14 @@
   <div class="flex flex-col gap-3 p-1 min-w-56">
     <div class="text-xs text-text-primary font-medium">Travel Binds</div>
 
-    <div class="text-[10px] text-text-dim">
+    <div class="text-[0.6rem] text-text-dim">
       Bind pad locations are auto-detected when you open your Teleportation skill info in-game.
       You can also set them manually here.
     </div>
 
     <!-- Primary Bind -->
     <div>
-      <label class="text-[10px] text-text-dim uppercase tracking-wide">Primary Bind</label>
+      <label class="text-[0.6rem] text-text-dim uppercase tracking-wide">Primary Bind</label>
       <select
         v-model="config.primaryBind"
         class="w-full px-2 py-1 rounded bg-surface-elevated border border-border-light text-xs text-text-primary"
@@ -21,7 +21,7 @@
 
     <!-- Secondary Bind -->
     <div>
-      <label class="text-[10px] text-text-dim uppercase tracking-wide">Secondary Bind</label>
+      <label class="text-[0.6rem] text-text-dim uppercase tracking-wide">Secondary Bind</label>
       <select
         v-model="config.secondaryBind"
         class="w-full px-2 py-1 rounded bg-surface-elevated border border-border-light text-xs text-text-primary"
@@ -31,14 +31,33 @@
       </select>
     </div>
 
+    <!-- Home Zone -->
+    <div class="border-t border-border-light pt-2">
+      <div class="text-xs text-text-primary font-medium mb-1">Home Zone</div>
+      <div class="text-[0.6rem] text-text-dim mb-2">
+        Set a home zone for this character to use as a default starting point in route planning.
+      </div>
+
+      <div>
+        <label class="text-[0.6rem] text-text-dim uppercase tracking-wide">Home Zone</label>
+        <select
+          v-model="homeZone"
+          class="w-full px-2 py-1 rounded bg-surface-elevated border border-border-light text-xs text-text-primary"
+          @change="saveHomeZone">
+          <option :value="null">None</option>
+          <option v-for="z in ZONES" :key="z.key" :value="z.key">{{ z.name }}</option>
+        </select>
+      </div>
+    </div>
+
     <div class="border-t border-border-light pt-2">
       <div class="text-xs text-text-primary font-medium mb-1">Mushroom Circles</div>
-      <div class="text-[10px] text-text-dim mb-2">
+      <div class="text-[0.6rem] text-text-dim mb-2">
         Circle attunements can't be auto-detected. Set them manually.
       </div>
 
       <div>
-        <label class="text-[10px] text-text-dim uppercase tracking-wide">Mushroom Circle</label>
+        <label class="text-[0.6rem] text-text-dim uppercase tracking-wide">Mushroom Circle</label>
         <select
           v-model="config.mushroomCircle"
           class="w-full px-2 py-1 rounded bg-surface-elevated border border-border-light text-xs text-text-primary"
@@ -52,7 +71,10 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useSettingsStore } from '../../../stores/settingsStore'
+
+const settingsStore = useSettingsStore()
 
 const CONFIG_KEY = 'tripPlannerWidget.config'
 
@@ -119,6 +141,51 @@ const config = reactive<TripPlannerConfig>(loadConfig())
 
 function save() {
   localStorage.setItem(CONFIG_KEY, JSON.stringify(config))
+  window.dispatchEvent(new Event('tripPlannerConfigChanged'))
+}
+
+// ── Home Zone (per-character) ───────────────────────────────────────────────
+
+const ZONES = [
+  { key: 'AreaNewbieIsland', name: 'Anagoge Island' },
+  { key: 'AreaSerbule', name: 'Serbule' },
+  { key: 'AreaSerbule2', name: 'Serbule Hills' },
+  { key: 'AreaEltibule', name: 'Eltibule' },
+  { key: 'AreaSunVale', name: 'Sun Vale' },
+  { key: 'AreaKurMountains', name: 'Kur Mountains' },
+  { key: 'AreaCasino', name: 'Red Wing Casino' },
+  { key: 'AreaDesert1', name: 'Ilmari' },
+  { key: 'AreaRahu', name: 'Rahu' },
+  { key: 'AreaGazluk', name: 'Gazluk' },
+  { key: 'AreaFaeRealm1', name: 'Fae Realm' },
+  { key: 'AreaPovus', name: 'Povus' },
+  { key: 'AreaVidaria', name: 'Vidaria' },
+  { key: 'AreaStatehelm', name: 'Statehelm' },
+  { key: 'AreaPlanes', name: 'Winter Nexus' },
+]
+
+const homeZoneKey = computed(() => {
+  const char = settingsStore.settings.activeCharacterName
+  const server = settingsStore.settings.activeServerName
+  if (!char || !server) return null
+  return `tripPlanner.homeZone.${char}.${server}`
+})
+
+const homeZone = ref<string | null>(null)
+
+onMounted(() => {
+  if (homeZoneKey.value) {
+    homeZone.value = localStorage.getItem(homeZoneKey.value) || null
+  }
+})
+
+function saveHomeZone() {
+  if (!homeZoneKey.value) return
+  if (homeZone.value) {
+    localStorage.setItem(homeZoneKey.value, homeZone.value)
+  } else {
+    localStorage.removeItem(homeZoneKey.value)
+  }
   window.dispatchEvent(new Event('tripPlannerConfigChanged'))
 }
 </script>
