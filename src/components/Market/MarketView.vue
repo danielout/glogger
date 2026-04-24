@@ -82,7 +82,16 @@
       <div class="flex gap-2 items-end mt-2">
         <div class="flex-1 relative">
           <label class="text-text-muted text-xs block mb-1">Item</label>
+          <div v-if="addId" class="flex items-center gap-2 h-7.5 px-2 bg-surface-elevated border border-border-default rounded">
+            <ItemInline :reference="addName" />
+            <button
+              class="text-text-muted hover:text-text-primary bg-transparent border-none cursor-pointer text-xs ml-auto"
+              @click="clearSelectedItem">
+              &times;
+            </button>
+          </div>
           <input
+            v-else
             ref="itemSearchInput"
             v-model="addQuery"
             class="input w-full text-sm"
@@ -92,36 +101,67 @@
             @keydown.down.prevent="itemDropdownIndex = Math.min(itemDropdownIndex + 1, itemSuggestions.length - 1)"
             @keydown.up.prevent="itemDropdownIndex = Math.max(itemDropdownIndex - 1, 0)"
             @keydown.enter.prevent="selectSuggestion(itemSuggestions[itemDropdownIndex])"
-            @keydown.escape="itemSuggestions = []" />
+            @keydown.escape="clearAddForm" />
           <ul
             v-if="itemSuggestions.length > 0 && !addId"
             class="absolute z-10 left-0 right-0 top-full mt-0.5 bg-surface-card border border-border-default rounded shadow-lg max-h-48 overflow-y-auto list-none m-0 p-0">
             <li
               v-for="(item, idx) in itemSuggestions"
               :key="item.id"
-              class="px-3 py-1.5 text-sm cursor-pointer hover:bg-surface-elevated"
+              class="px-3 py-1.5 text-sm cursor-pointer hover:bg-surface-elevated flex items-center gap-2"
               :class="{ 'bg-surface-elevated': idx === itemDropdownIndex }"
               @mousedown.prevent="selectSuggestion(item)">
-              <span class="text-text-primary">{{ item.name }}</span>
-              <span class="text-text-dim text-xs ml-2">#{{ item.id }}</span>
+              <ItemInline :reference="item.name" />
+              <span class="text-text-dim text-[10px] ml-auto tabular-nums">#{{ item.id }}</span>
             </li>
           </ul>
+          <div v-if="addQuery.length > 0 && !addId && itemSuggestions.length === 0 && !isSearching" class="text-red-400 text-[10px] mt-0.5">
+            No items found matching "{{ addQuery }}"
+          </div>
         </div>
         <div class="w-32">
           <label class="text-text-muted text-xs block mb-1">Price (councils)</label>
-          <input v-model.number="addPrice" type="number" min="0" class="input w-full text-sm" placeholder="0" />
+          <input
+            ref="priceInput"
+            v-model.number="addPrice"
+            type="number"
+            min="0"
+            class="input w-full text-sm"
+            placeholder="0"
+            @keydown.enter.prevent="addValue"
+            @keydown.escape="clearAddForm" />
+          <div v-if="addPrice != null && addPrice < 0" class="text-red-400 text-[10px] mt-0.5">
+            Price must be positive
+          </div>
         </div>
         <div class="w-40">
           <label class="text-text-muted text-xs block mb-1">Notes (optional)</label>
-          <input v-model="addNotes" class="input w-full text-sm" placeholder="" />
+          <input
+            v-model="addNotes"
+            class="input w-full text-sm"
+            placeholder=""
+            @keydown.enter.prevent="addValue"
+            @keydown.escape="clearAddForm" />
         </div>
         <button
           class="btn btn-primary text-xs"
-          :disabled="!addName.trim() || !addId || addPrice == null"
+          :disabled="!canSubmit"
           @click="addValue">
-          Save
+          {{ existingEntry ? 'Update' : 'Save' }}
         </button>
-        <button class="btn btn-secondary text-xs" @click="cancelAdd">Clear</button>
+        <button class="btn btn-secondary text-xs" @click="clearAddForm">Clear</button>
+      </div>
+      <!-- Duplicate warning -->
+      <div v-if="existingEntry" class="flex items-center gap-2 mt-2 px-2 py-1.5 bg-amber-900/20 border border-amber-700/30 rounded text-xs">
+        <span class="text-amber-400">&#9888;</span>
+        <span class="text-amber-300">
+          {{ addName }} already has a market value of <span class="font-semibold tabular-nums">{{ existingEntry.market_value.toLocaleString() }}g</span>.
+          Saving will update it.
+        </span>
+      </div>
+      <!-- Success feedback -->
+      <div v-if="addSuccess" class="text-accent-green text-[10px] mt-1.5">
+        {{ addSuccess }}
       </div>
     </AccordionSection>
 
@@ -271,7 +311,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useToast } from '../../composables/useToast'
 import { formatRelative } from '../../composables/useTimestamp'
 import { useMarketStore, type MarketValue, type ImportMarketValuesResult } from '../../stores/marketStore'
@@ -300,7 +340,21 @@ const addQuery = ref('')
 const itemSuggestions = ref<ItemInfo[]>([])
 const itemDropdownIndex = ref(0)
 const itemSearchInput = ref<HTMLInputElement | null>(null)
+const priceInput = ref<HTMLInputElement | null>(null)
+const isSearching = ref(false)
+const addSuccess = ref('')
 let searchDebounce: ReturnType<typeof setTimeout> | null = null
+let successTimeout: ReturnType<typeof setTimeout> | null = null
+
+/** Check if the selected item already has a market value */
+const existingEntry = computed(() => {
+  if (!addId.value) return null
+  return marketStore.valuesByItemId[addId.value] ?? null
+})
+
+const canSubmit = computed(() => {
+  return addName.value.trim() && addId.value && addPrice.value != null && addPrice.value >= 0
+})
 
 // Edit
 const editingId = ref<number | null>(null)
@@ -377,17 +431,21 @@ function onItemSearch() {
   const q = addQuery.value.trim()
   if (!q) {
     itemSuggestions.value = []
+    isSearching.value = false
     return
   }
+  isSearching.value = true
   searchDebounce = setTimeout(async () => {
     try {
       let items = await gameDataStore.searchItems(q)
       if (!settingsStore.settings.showUnobtainableItems) {
         items = items.filter(i => !i.keywords.includes('Lint_NotObtainable'))
       }
-      itemSuggestions.value = items
+      itemSuggestions.value = items.slice(0, 20)
     } catch {
       itemSuggestions.value = []
+    } finally {
+      isSearching.value = false
     }
   }, 200)
 }
@@ -398,21 +456,54 @@ function selectSuggestion(item: ItemInfo | undefined) {
   addName.value = item.name
   addQuery.value = item.name
   itemSuggestions.value = []
+  // Auto-focus price input for fast entry
+  nextTick(() => {
+    priceInput.value?.focus()
+    priceInput.value?.select()
+  })
 }
 
-function cancelAdd() {
+function clearSelectedItem() {
+  addId.value = null
+  addName.value = ''
+  addQuery.value = ''
+  addPrice.value = null
+  nextTick(() => itemSearchInput.value?.focus())
+}
+
+function clearAddForm() {
   addQuery.value = ''
   addName.value = ''
   addId.value = null
   addPrice.value = null
   addNotes.value = ''
   itemSuggestions.value = []
+  addSuccess.value = ''
 }
 
 async function addValue() {
-  if (!addName.value.trim() || !addId.value || addPrice.value == null) return
-  await marketStore.setValue(addId.value, addName.value.trim(), addPrice.value, addNotes.value || undefined)
-  cancelAdd()
+  if (!canSubmit.value) return
+  const wasUpdate = !!existingEntry.value
+  const name = addName.value.trim()
+  const price = addPrice.value!
+  await marketStore.setValue(addId.value!, name, price, addNotes.value || undefined)
+
+  // Show success feedback
+  if (successTimeout) clearTimeout(successTimeout)
+  addSuccess.value = wasUpdate
+    ? `Updated ${name} to ${price.toLocaleString()}g`
+    : `Added ${name} at ${price.toLocaleString()}g`
+  successTimeout = setTimeout(() => { addSuccess.value = '' }, 3000)
+
+  // Reset form for rapid batch entry (keep section open)
+  addQuery.value = ''
+  addName.value = ''
+  addId.value = null
+  addPrice.value = null
+  addNotes.value = ''
+  itemSuggestions.value = []
+  // Focus back on item search for next entry
+  nextTick(() => itemSearchInput.value?.focus())
 }
 
 function startEdit(val: MarketValue) {
