@@ -23,7 +23,8 @@ import StatTrackerConfig from "./widgets/StatTrackerConfig.vue";
 import WordsOfPowerWidget from "./widgets/WordsOfPowerWidget.vue";
 import TripPlannerWidget from "./widgets/TripPlannerWidget.vue";
 import TripPlannerWidgetConfig from "./widgets/TripPlannerWidgetConfig.vue";
-import HoplologyWidget from "./widgets/HoplologyWidget.vue";
+// HoplologyWidget disabled — needs book/report parsing to backfill existing studies before it's useful
+// import HoplologyWidget from "./widgets/HoplologyWidget.vue";
 
 export type WidgetSize = "small" | "medium" | "large";
 
@@ -177,12 +178,13 @@ export const DASHBOARD_WIDGETS: DashboardWidget[] = [
     configComponent: TripPlannerWidgetConfig,
     defaultSize: "medium",
   },
-  {
-    id: "hoplology",
-    name: "Hoplology",
-    component: HoplologyWidget,
-    defaultSize: "medium",
-  },
+  // Hoplology widget disabled — needs book/report parsing to backfill existing studies
+  // {
+  //   id: "hoplology",
+  //   name: "Hoplology",
+  //   component: HoplologyWidget,
+  //   defaultSize: "medium",
+  // },
 ];
 
 /** Default card order — used when no user preferences exist */

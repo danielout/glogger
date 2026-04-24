@@ -37,6 +37,10 @@ These items are investigated but can't be resolved without new runtime captures 
     - STILL UNKNOWN: does this fire when a recipe is first learned, even if completion count is zero? need to capture a log for this.
   - **Blocked on:** Log capture of a recipe being learned for the first time.
 
+- [ ] Hoplology (equipment study) tracker — backfill from book/report
+  - Chat parser, DB table, coordinator handler, and dashboard widget are all built and wired. Widget is disabled in `dashboardWidgets.ts` because without backfill it always shows 0 studied items.
+  - **Blocked on:** Capture of the hoplology skill report book content (opened via ProcessBook in-game). Need the book_type and HTML content format to build the parser. CDN references `HoplologyBook` NPC source.
+
 ---
 
 ## Quick Wins (Small Effort, Noticeable Value)
@@ -113,9 +117,10 @@ These items are investigated but can't be resolved without new runtime captures 
   - Now that provenance is in the transaction ledger (item-provenance plan phases 1-5 complete), new analytics become possible: mining node yield stats per node type, vendor purchase history with total spend, kill loot breakdown by mob type, crafting yield analysis per recipe, "unknown source" diagnostic reports for discovering new signal patterns.
   - **Effort: Medium per feature | Impact: Medium-High (analytics depth)**
 
-- [x] Hoplology (equipment study) tracker
-  - Done: Chat parser for "carefully study" messages, hoplology_studies table, dashboard widget with study count, 5-min cooldown timer, and searchable studied items list.
-  - **Limitation:** Only tracks new studies from live chat — doesn't backfill from the hoplology book/report. Widget shows 0 until the player studies something while the app is running. Backfilling from the hoplology skill report book would require a sample of the book content to parse (similar to gourmand report import). CDN references `HoplologyBook` NPC source but we don't have a capture of the book content format yet.
+- [ ] Hoplology (equipment study) tracker
+  - **Partially implemented (widget disabled):** Chat parser for "carefully study" messages, hoplology_studies table, dashboard widget with study count, 5-min cooldown timer, and searchable studied items list all built — but widget is disabled in dashboardWidgets.ts because it's useless without backfill.
+  - **Blocked on:** Without parsing the hoplology book/report to backfill existing studies, the widget always shows 0. Need a capture of the hoplology skill report book content to build the import. CDN references `HoplologyBook` NPC source but we don't have a sample of the actual book content format.
+  - Moved to Blocked section below.
 
 - [ ] Boss kill loot timers
   - Currently only player *deaths* are tracked (via `ChatCombatEvent::PlayerDeath` with killer detection). No reverse tracking exists (player kills boss). Would need to extend `chat_combat_parser` or `player_event_parser` for enemy kill events with boss identification. Loot timer logic would layer on top.
