@@ -59,6 +59,7 @@ These are investigated items kept for reference — the research is done but the
 
 - [ ] Investigate detecting recipe learning without character.json import
   - **Investigation complete:** `ProcessUpdateRecipe(recipeId, completionCount)` and `ProcessLoadRecipes()` events already exist in `player_event_parser.rs`. `RecipeUpdated` events fire during gameplay when recipes are updated. Log events ARE generated — this feature is implementable without character.json dependency. Remaining work: wire coordinator handler to persist recipe state changes, update cook's helper to consume live events.
+    - STILL UNKNOWN: does this fire when a recipe is first learned, even if completion count is zero? need to capture a log for this.
   - **Effort: Low-Medium (wiring only) | Impact: Medium-High (reduces manual import dependency)**
 
 ---
