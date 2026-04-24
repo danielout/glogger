@@ -11,15 +11,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed } from 'vue'
 import TabBar from '../Shared/TabBar.vue'
 import FarmingSessionCard from '../Farming/FarmingSessionCard.vue'
 import HistoricalTab from '../Farming/HistoricalTab.vue'
+import { useViewPrefs } from '../../composables/useViewPrefs'
 
 const tabs = [
   { id: 'session', label: 'Active Session' },
   { id: 'historical', label: 'Session History' },
 ]
 
-const activeTab = ref('session')
+const { prefs, update } = useViewPrefs('economics.farming', { activeTab: 'session' })
+const activeTab = computed({
+  get: () => prefs.value.activeTab,
+  set: (val: string) => update({ activeTab: val }),
+})
 </script>

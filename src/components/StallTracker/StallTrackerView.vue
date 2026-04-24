@@ -103,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open as openDialog, confirm } from '@tauri-apps/plugin-dialog'
 import TabBar, { type Tab } from '../Shared/TabBar.vue'
@@ -113,6 +113,7 @@ import StallRevenueTab from './StallRevenueTab.vue'
 import StallInventoryTab from './StallInventoryTab.vue'
 import StallShopLogTab from './StallShopLogTab.vue'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
+import { useViewPrefs } from '../../composables/useViewPrefs'
 import type { ImportResult, ExportResult } from '../../types/stallTracker'
 
 const store = useStallTrackerStore()
@@ -295,7 +296,11 @@ const tabs: Tab[] = [
   { id: 'revenue', label: 'Revenue' },
   { id: 'inventory', label: 'Inventory' },
 ]
-const activeTab = ref<string>('sales')
+const { prefs: stallPrefs, update: updateStallPrefs } = useViewPrefs('stallTracker', { activeTab: 'sales' })
+const activeTab = computed({
+  get: () => stallPrefs.value.activeTab,
+  set: (val: string) => updateStallPrefs({ activeTab: val }),
+})
 
 // Shop Log modal state — `shopLogMounted` is one-way: once true, never reset
 // within a session. `shopLogOpen` is the visibility toggle that the v-show

@@ -108,6 +108,7 @@ import { useSettingsStore } from "../stores/settingsStore";
 import { useUpdateStore } from "../stores/updateStore";
 import { useKeyboard } from "../composables/useKeyboard";
 import { useDevPanel } from "../composables/useDevPanel";
+import { useViewPrefs } from "../composables/useViewPrefs";
 import CharacterPicker from "./CharacterPicker.vue";
 
 const settingsStore = useSettingsStore();
@@ -203,13 +204,13 @@ const emit = defineEmits<{
   toggleHelp: [];
 }>();
 
-// Track active sub-tab per view
-const activeSubTabs = reactive<Record<string, string>>({});
+// Persist active sub-tab per view across navigation and app restarts
+const { prefs: subTabPrefs, update: updateSubTabPrefs } = useViewPrefs('menuBar.subTabs', {
+  ...defaultSubTabs,
+} as Record<string, string>);
 
-// Initialize defaults
-for (const [view, defaultTab] of Object.entries(defaultSubTabs)) {
-  activeSubTabs[view] = defaultTab;
-}
+// Track active sub-tab per view — initialized from persisted prefs
+const activeSubTabs = reactive<Record<string, string>>({ ...subTabPrefs.value });
 
 const currentTabs = computed(() => viewTabs[props.currentView] ?? []);
 
@@ -217,6 +218,7 @@ const hasTabs = computed(() => currentTabs.value.length > 0);
 
 function selectSubTab(tabId: string) {
   activeSubTabs[props.currentView] = tabId;
+  updateSubTabPrefs({ [props.currentView]: tabId });
   emit("update:subTab", tabId);
 }
 
@@ -234,6 +236,7 @@ const activeTabRef = computed({
   get: () => activeSubTabs[props.currentView] ?? "",
   set: (val: string) => {
     activeSubTabs[props.currentView] = val;
+    updateSubTabPrefs({ [props.currentView]: val });
     emit("update:subTab", val);
   },
 });

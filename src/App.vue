@@ -149,6 +149,7 @@ import QuickSearchOverlay from "./components/Search/QuickSearchOverlay.vue";
 import ReferenceShelf from "./components/Shared/ReferenceShelf/ReferenceShelf.vue";
 import CdnUpdateModal from "./components/Shared/CdnUpdateModal.vue";
 import { useToast } from "./composables/useToast";
+import { useViewPrefs } from "./composables/useViewPrefs";
 import type { SearchResult } from "./composables/useQuickSearch";
 
 const settingsStore = useSettingsStore();
@@ -174,8 +175,9 @@ async function handleCdnRestart() {
 
 const error = ref("");
 const parsing = ref(false);
-const currentView = ref<AppView>("dashboard");
-const visited = reactive(new Set<AppView>(["dashboard"]));
+const { prefs: appPrefs, update: updateAppPrefs } = useViewPrefs('app', { currentView: 'dashboard' as string });
+const currentView = ref<AppView>(appPrefs.value.currentView as AppView || "dashboard");
+const visited = reactive(new Set<AppView>([currentView.value]));
 const menuBarRef = ref<InstanceType<typeof MenuBar> | null>(null);
 const activeSubTab = ref("");
 
@@ -275,5 +277,6 @@ async function parseLog() {
 function navigateToView(view: AppView) {
   visited.add(view);
   currentView.value = view;
+  updateAppPrefs({ currentView: view });
 }
 </script>

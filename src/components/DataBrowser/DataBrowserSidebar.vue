@@ -179,7 +179,11 @@ const { isResizing, startResize, resetWidth } = usePaneResize({
   onResizeEnd: (w) => { sidebarWidth.value = w; updateSidebarPrefs({ width: w }); },
 });
 
-const activeTab = ref<"history" | "favorites" | "pinned">("history");
+const { prefs: tabPrefs, update: updateTabPrefs } = useViewPrefs("db-sidebar.tab", { activeTab: "history" as string });
+const activeTab = computed({
+  get: () => tabPrefs.value.activeTab as "history" | "favorites" | "pinned",
+  set: (val: "history" | "favorites" | "pinned") => updateTabPrefs({ activeTab: val }),
+});
 const favSearch = ref("");
 const favTypeFilter = ref<BrowserEntityType | null>(null);
 

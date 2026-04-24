@@ -14,15 +14,20 @@
 // "Session History" tabs into one PaneLayout view — the left panel
 // lists all sessions (active pinned at top), the center shows detail
 // for the selected session, and the right shows economics/notes.
-import { ref } from 'vue'
+import { computed } from 'vue'
 import TabBar from '../Shared/TabBar.vue'
 import SurveyTrackerView from '../Surveying/SurveyTrackerView.vue'
 import AnalyticsTab from '../Surveying/AnalyticsTab.vue'
+import { useViewPrefs } from '../../composables/useViewPrefs'
 
 const tabs = [
   { id: 'session', label: 'Session' },
   { id: 'analytics', label: 'Analytics' },
 ]
 
-const activeTab = ref('session')
+const { prefs, update } = useViewPrefs('economics.survey', { activeTab: 'session' })
+const activeTab = computed({
+  get: () => prefs.value.activeTab,
+  set: (val: string) => update({ activeTab: val }),
+})
 </script>
