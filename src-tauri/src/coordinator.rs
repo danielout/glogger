@@ -1042,12 +1042,15 @@ impl DataIngestCoordinator {
 
                     // Check Action Emotes channel for resuscitate events
                     if let Some(rez_event) = parse_resuscitate_message(&msg) {
+                        eprintln!("[resuscitate] Parsed rez event: {:?}", rez_event);
                         if let Err(e) = self.persist_resuscitate_event(&rez_event) {
                             eprintln!("Failed to persist resuscitate event: {}", e);
                         }
-                        self.app_handle
-                            .emit("character-resuscitated", &rez_event)
-                            .ok();
+                        if let Err(e) = self.app_handle.emit("character-resuscitated", &rez_event) {
+                            eprintln!("[resuscitate] Failed to emit event: {}", e);
+                        } else {
+                            eprintln!("[resuscitate] Emitted character-resuscitated event");
+                        }
                     }
 
                     messages.push(msg);
