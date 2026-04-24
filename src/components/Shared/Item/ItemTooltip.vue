@@ -50,7 +50,7 @@
     </div>
   </div>
 
-  <div v-if="vendorNpcs.length" class="mt-2 pt-2 border-t border-border-subtle">
+  <div v-if="vendorNpcs.length" class="mt-2 pt-2 border-t border-[#2a2a3e]">
     <div class="text-text-muted text-[0.65rem] uppercase tracking-wide mb-1">Sold by</div>
     <div class="flex flex-wrap gap-x-0.5 gap-y-0 text-xs">
       <template v-for="(npc, idx) in vendorNpcs" :key="npc.npc_key">
@@ -59,7 +59,7 @@
     </div>
   </div>
 
-  <div v-if="interestedNpcs.length" class="mt-2 pt-2 border-t border-border-subtle">
+  <div v-if="interestedNpcs.length" class="mt-2 pt-2 border-t border-[#2a2a3e]">
     <div class="text-text-muted text-[0.65rem] uppercase tracking-wide mb-1">Wanted as gift by</div>
     <div v-for="entry in interestedNpcs" :key="entry.npc.key" class="flex items-center gap-1.5 text-xs leading-relaxed">
       <NpcInline :reference="entry.npc.key" />
@@ -73,7 +73,7 @@
     </div>
   </div>
 
-  <div v-if="matchingVendors.length" class="mt-2 pt-2 border-t border-border-subtle">
+  <div v-if="matchingVendors.length" class="mt-2 pt-2 border-t border-[#2a2a3e]">
     <div class="text-text-muted text-[0.65rem] uppercase tracking-wide mb-1">Vendors buying this</div>
     <div v-for="v in matchingVendors" :key="v.npc.key" class="flex items-center gap-1.5 text-xs leading-relaxed">
       <NpcInline :reference="v.npc.key" />
@@ -84,13 +84,13 @@
     </div>
   </div>
 
-  <div v-if="item.max_stack_size || ownedCount > 0" class="text-text-muted text-[0.7rem] mt-2 pt-2 border-t border-border-subtle flex justify-between">
-    <span v-if="item.max_stack_size">Max Stack: {{ item.max_stack_size }}</span>
+  <div v-if="(item.max_stack_size && item.max_stack_size > 1) || ownedCount > 0" class="text-text-muted text-[0.7rem] mt-2 pt-2 border-t border-[#2a2a3e] flex justify-between">
+    <span v-if="item.max_stack_size && item.max_stack_size > 1">Max Stack: {{ item.max_stack_size }}</span>
     <span v-if="ownedCount > 0" class="text-accent-gold">Owned: {{ ownedCount.toLocaleString() }}</span>
   </div>
 
   <!-- Set Market Value -->
-  <div class="text-[0.7rem] mt-1.5 pt-1.5 border-t border-border-subtle">
+  <div class="text-[0.7rem] mt-1.5 pt-1.5 border-t border-[#2a2a3e]">
     <div v-if="!editingMarket" class="flex items-center gap-2">
       <button
         class="text-text-muted hover:text-text-primary bg-transparent border-none cursor-pointer text-[0.65rem] p-0 underline"
