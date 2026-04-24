@@ -165,6 +165,31 @@
       </div>
     </AccordionSection>
 
+    <!-- Bulk action bar -->
+    <div v-if="selectedIds.size > 0" class="flex items-center gap-3 shrink-0 px-3 py-2 bg-surface-elevated border border-accent-gold/30 rounded">
+      <span class="text-text-primary text-xs font-semibold">{{ selectedIds.size }} selected</span>
+      <button
+        class="btn btn-secondary text-xs"
+        @click="showBulkSetPrice = true">
+        Set Price
+      </button>
+      <button
+        class="btn btn-secondary text-xs"
+        @click="showBulkAdjust = true">
+        Adjust Prices
+      </button>
+      <button
+        class="btn btn-secondary text-xs text-red-400 hover:text-red-300"
+        @click="showBulkDeleteConfirm = true">
+        Delete Selected
+      </button>
+      <button
+        class="text-text-muted hover:text-text-primary bg-transparent border-none cursor-pointer text-xs ml-auto"
+        @click="selectedIds = new Set()">
+        Clear Selection
+      </button>
+    </div>
+
     <!-- Search / filter bar -->
     <div class="flex items-center gap-3 shrink-0">
       <input
@@ -197,6 +222,14 @@
       <table v-else class="w-full border-collapse text-xs">
         <thead class="sticky top-0 z-10 bg-surface-base border-b border-border-default">
           <tr>
+            <th class="w-8 px-2 py-1">
+              <input
+                type="checkbox"
+                class="accent-accent-gold cursor-pointer"
+                :checked="allFilteredSelected"
+                :indeterminate="someFilteredSelected && !allFilteredSelected"
+                @change="toggleSelectAll" />
+            </th>
             <th
               class="text-[10px] uppercase tracking-wider text-text-muted font-semibold text-left px-2 py-1 cursor-pointer hover:text-text-primary select-none"
               @click="toggleSort('item_name')">
@@ -225,7 +258,15 @@
           <tr
             v-for="val in filteredValues"
             :key="val.item_type_id"
-            class="border-b border-border-default/50 hover:bg-surface-row-hover">
+            class="border-b border-border-default/50 hover:bg-surface-row-hover"
+            :class="{ 'bg-accent-gold/5': selectedIds.has(val.item_type_id) }">
+            <td class="px-2 py-1">
+              <input
+                type="checkbox"
+                class="accent-accent-gold cursor-pointer"
+                :checked="selectedIds.has(val.item_type_id)"
+                @change="toggleSelect(val.item_type_id)" />
+            </td>
             <td class="px-2 py-1 text-text-primary">
               <ItemInline :reference="val.item_name" />
             </td>
@@ -307,6 +348,79 @@
         </div>
       </div>
     </div>
+    <!-- Bulk delete confirmation dialog -->
+    <div v-if="showBulkDeleteConfirm" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showBulkDeleteConfirm = false">
+      <div class="bg-surface-card border border-border-default rounded-lg p-6 w-full max-w-sm">
+        <h3 class="text-text-primary text-lg mb-2 mt-0">Delete {{ selectedIds.size }} Market Values?</h3>
+        <p class="text-text-muted text-sm mb-4">This will permanently remove the selected market values. This cannot be undone.</p>
+        <div class="flex gap-2 justify-end">
+          <button class="btn btn-secondary" @click="showBulkDeleteConfirm = false">Cancel</button>
+          <button class="btn btn-primary bg-red-600 hover:bg-red-500 border-red-600" @click="doBulkDelete">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk set price dialog -->
+    <div v-if="showBulkSetPrice" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showBulkSetPrice = false">
+      <div class="bg-surface-card border border-border-default rounded-lg p-6 w-full max-w-sm">
+        <h3 class="text-text-primary text-lg mb-2 mt-0">Set Price for {{ selectedIds.size }} Items</h3>
+        <p class="text-text-muted text-sm mb-3">All selected items will be set to the same price.</p>
+        <div class="mb-4">
+          <label class="text-text-muted text-xs block mb-1">New Price (councils)</label>
+          <input
+            v-model.number="bulkSetPriceValue"
+            type="number"
+            min="0"
+            class="input w-full text-sm"
+            placeholder="0"
+            @keydown.enter.prevent="doBulkSetPrice" />
+        </div>
+        <div class="flex gap-2 justify-end">
+          <button class="btn btn-secondary" @click="showBulkSetPrice = false">Cancel</button>
+          <button
+            class="btn btn-primary"
+            :disabled="bulkSetPriceValue == null || bulkSetPriceValue < 0"
+            @click="doBulkSetPrice">
+            Set Price
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk adjust prices dialog -->
+    <div v-if="showBulkAdjust" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showBulkAdjust = false">
+      <div class="bg-surface-card border border-border-default rounded-lg p-6 w-full max-w-sm">
+        <h3 class="text-text-primary text-lg mb-2 mt-0">Adjust Prices for {{ selectedIds.size }} Items</h3>
+        <p class="text-text-muted text-sm mb-3">Apply a percentage adjustment to all selected items.</p>
+        <div class="mb-2">
+          <label class="text-text-muted text-xs block mb-1">Percentage (%)</label>
+          <input
+            v-model.number="bulkAdjustPercent"
+            type="number"
+            class="input w-full text-sm"
+            placeholder="e.g. 10 for +10%, -5 for -5%"
+            @keydown.enter.prevent="doBulkAdjust" />
+        </div>
+        <p class="text-text-dim text-xs mb-4">
+          <template v-if="bulkAdjustPercent != null && bulkAdjustPercent !== 0">
+            {{ bulkAdjustPercent > 0 ? 'Increase' : 'Decrease' }} all selected prices by {{ Math.abs(bulkAdjustPercent) }}%.
+            <template v-if="bulkAdjustPreview">
+              Example: {{ bulkAdjustPreview.before.toLocaleString() }}g &rarr; {{ bulkAdjustPreview.after.toLocaleString() }}g
+            </template>
+          </template>
+          <template v-else>Enter a positive number to increase or negative to decrease.</template>
+        </p>
+        <div class="flex gap-2 justify-end">
+          <button class="btn btn-secondary" @click="showBulkAdjust = false">Cancel</button>
+          <button
+            class="btn btn-primary"
+            :disabled="bulkAdjustPercent == null || bulkAdjustPercent === 0"
+            @click="doBulkAdjust">
+            Apply
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -360,6 +474,94 @@ const canSubmit = computed(() => {
 const editingId = ref<number | null>(null)
 const editPrice = ref(0)
 
+// Bulk operations
+const selectedIds = ref(new Set<number>())
+const showBulkDeleteConfirm = ref(false)
+const showBulkSetPrice = ref(false)
+const showBulkAdjust = ref(false)
+const bulkSetPriceValue = ref<number | null>(null)
+const bulkAdjustPercent = ref<number | null>(null)
+
+function toggleSelect(itemTypeId: number) {
+  const newSet = new Set(selectedIds.value)
+  if (newSet.has(itemTypeId)) {
+    newSet.delete(itemTypeId)
+  } else {
+    newSet.add(itemTypeId)
+  }
+  selectedIds.value = newSet
+}
+
+function toggleSelectAll() {
+  if (allFilteredSelected.value) {
+    // Deselect all filtered
+    const newSet = new Set(selectedIds.value)
+    for (const v of filteredValues.value) newSet.delete(v.item_type_id)
+    selectedIds.value = newSet
+  } else {
+    // Select all filtered
+    const newSet = new Set(selectedIds.value)
+    for (const v of filteredValues.value) newSet.add(v.item_type_id)
+    selectedIds.value = newSet
+  }
+}
+
+async function doBulkDelete() {
+  try {
+    await marketStore.bulkDeleteValues([...selectedIds.value])
+    toast.success(`Deleted ${selectedIds.value.size} market values`)
+    selectedIds.value = new Set()
+  } catch (e) {
+    toast.error('Bulk delete failed: ' + String(e))
+  } finally {
+    showBulkDeleteConfirm.value = false
+  }
+}
+
+async function doBulkSetPrice() {
+  if (bulkSetPriceValue.value == null || bulkSetPriceValue.value < 0) return
+  const updates = [...selectedIds.value].map(id => ({
+    item_type_id: id,
+    market_value: bulkSetPriceValue.value!,
+  }))
+  try {
+    await marketStore.bulkUpdateValues(updates)
+    toast.success(`Set price for ${selectedIds.value.size} items to ${bulkSetPriceValue.value.toLocaleString()}g`)
+    selectedIds.value = new Set()
+  } catch (e) {
+    toast.error('Bulk set price failed: ' + String(e))
+  } finally {
+    showBulkSetPrice.value = false
+    bulkSetPriceValue.value = null
+  }
+}
+
+async function doBulkAdjust() {
+  if (bulkAdjustPercent.value == null || bulkAdjustPercent.value === 0) return
+  const pct = bulkAdjustPercent.value
+  const updates = [...selectedIds.value]
+    .map(id => {
+      const existing = marketStore.valuesByItemId[id]
+      if (!existing) return null
+      return {
+        item_type_id: id,
+        market_value: Math.max(0, Math.round(existing.market_value * (1 + pct / 100))),
+      }
+    })
+    .filter((u): u is { item_type_id: number; market_value: number } => u !== null)
+  try {
+    await marketStore.bulkUpdateValues(updates)
+    const direction = pct > 0 ? 'increased' : 'decreased'
+    toast.success(`Prices ${direction} by ${Math.abs(pct)}% for ${updates.length} items`)
+    selectedIds.value = new Set()
+  } catch (e) {
+    toast.error('Bulk adjust failed: ' + String(e))
+  } finally {
+    showBulkAdjust.value = false
+    bulkAdjustPercent.value = null
+  }
+}
+
 // Import
 const showImport = ref(false)
 const importJson = ref('')
@@ -406,6 +608,24 @@ const filteredValues = computed(() => {
   })
 
   return vals
+})
+
+const allFilteredSelected = computed(() => {
+  if (filteredValues.value.length === 0) return false
+  return filteredValues.value.every(v => selectedIds.value.has(v.item_type_id))
+})
+
+const someFilteredSelected = computed(() => {
+  return filteredValues.value.some(v => selectedIds.value.has(v.item_type_id))
+})
+
+const bulkAdjustPreview = computed(() => {
+  if (bulkAdjustPercent.value == null || bulkAdjustPercent.value === 0) return null
+  const first = filteredValues.value.find(v => selectedIds.value.has(v.item_type_id))
+  if (!first) return null
+  const before = first.market_value
+  const after = Math.max(0, Math.round(before * (1 + bulkAdjustPercent.value / 100)))
+  return { before, after }
 })
 
 function toggleSort(field: 'item_name' | 'market_value' | 'updated_at') {

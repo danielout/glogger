@@ -249,6 +249,79 @@ pub fn import_market_values(
     })
 }
 
+// ── Bulk operations ─────────────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+pub struct BulkMarketUpdate {
+    pub item_type_id: i32,
+    pub market_value: i64,
+}
+
+#[tauri::command]
+pub fn bulk_update_market_values(
+    db: State<'_, DbPool>,
+    settings_manager: State<'_, Arc<SettingsManager>>,
+    updates: Vec<BulkMarketUpdate>,
+    server_name: Option<String>,
+) -> Result<usize, String> {
+    let server = resolve_server(&settings_manager, &server_name);
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+
+    conn.execute("BEGIN", []).ok();
+
+    let mut count = 0usize;
+    for update in &updates {
+        let affected = conn
+            .execute(
+                "UPDATE market_values SET market_value = ?1, updated_at = datetime('now')
+                 WHERE server_name = ?2 AND item_type_id = ?3",
+                rusqlite::params![update.market_value, server, update.item_type_id],
+            )
+            .map_err(|e| {
+                conn.execute("ROLLBACK", []).ok();
+                format!("Update error: {e}")
+            })?;
+        count += affected;
+    }
+
+    conn.execute("COMMIT", []).ok();
+    Ok(count)
+}
+
+#[tauri::command]
+pub fn bulk_delete_market_values(
+    db: State<'_, DbPool>,
+    settings_manager: State<'_, Arc<SettingsManager>>,
+    item_ids: Vec<i32>,
+    server_name: Option<String>,
+) -> Result<usize, String> {
+    if item_ids.is_empty() {
+        return Ok(0);
+    }
+    let server = resolve_server(&settings_manager, &server_name);
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+
+    // Build parameterized IN clause
+    let placeholders: Vec<String> = item_ids.iter().enumerate().map(|(i, _)| format!("?{}", i + 2)).collect();
+    let sql = format!(
+        "DELETE FROM market_values WHERE server_name = ?1 AND item_type_id IN ({})",
+        placeholders.join(", ")
+    );
+
+    let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+    params.push(Box::new(server));
+    for id in &item_ids {
+        params.push(Box::new(*id));
+    }
+    let param_refs: Vec<&dyn rusqlite::types::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+
+    let deleted = conn
+        .execute(&sql, param_refs.as_slice())
+        .map_err(|e| format!("Delete error: {e}"))?;
+
+    Ok(deleted)
+}
+
 // ── Internal helpers ─────────────────────────────────────────────────────────
 
 fn get_market_values_internal(

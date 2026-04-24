@@ -186,8 +186,9 @@ use db::inventory_commands::{
     get_inventory_snapshots, get_inventory_summary, get_snapshot_items, import_inventory_report,
 };
 use db::market_commands::{
-    delete_market_value, export_market_values, get_market_value, get_market_values,
-    import_market_values, set_market_value,
+    bulk_delete_market_values, bulk_update_market_values, delete_market_value,
+    export_market_values, get_market_value, get_market_values, import_market_values,
+    set_market_value,
 };
 use db::player_commands::{
     add_market_price, add_sale, get_market_prices_for_item, get_recent_events, get_recent_sales,
@@ -631,6 +632,8 @@ pub fn run() {
             delete_market_value,
             export_market_values,
             import_market_values,
+            bulk_update_market_values,
+            bulk_delete_market_values,
             get_aggregate_inventory,
             get_aggregate_wealth,
             get_aggregate_skills,

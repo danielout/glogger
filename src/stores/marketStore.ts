@@ -99,6 +99,39 @@ export const useMarketStore = defineStore('market', () => {
     }
   }
 
+  async function bulkUpdateValues(updates: { item_type_id: number; market_value: number }[]) {
+    error.value = null
+    try {
+      await invoke('bulk_update_market_values', { updates })
+      // Update local cache
+      for (const upd of updates) {
+        const idx = values.value.findIndex(v => v.item_type_id === upd.item_type_id)
+        if (idx >= 0) {
+          values.value[idx] = {
+            ...values.value[idx],
+            market_value: upd.market_value,
+            updated_at: new Date().toISOString(),
+          }
+        }
+      }
+    } catch (e) {
+      error.value = String(e)
+      throw e
+    }
+  }
+
+  async function bulkDeleteValues(itemIds: number[]) {
+    error.value = null
+    try {
+      await invoke('bulk_delete_market_values', { itemIds })
+      const idSet = new Set(itemIds)
+      values.value = values.value.filter(v => !idSet.has(v.item_type_id))
+    } catch (e) {
+      error.value = String(e)
+      throw e
+    }
+  }
+
   async function exportValues(): Promise<string> {
     return invoke<string>('export_market_values', {})
   }
@@ -123,6 +156,8 @@ export const useMarketStore = defineStore('market', () => {
     getValue,
     setValue,
     deleteValue,
+    bulkUpdateValues,
+    bulkDeleteValues,
     exportValues,
     importValues,
   }
