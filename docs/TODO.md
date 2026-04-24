@@ -26,9 +26,9 @@ These are investigated items kept for reference — the research is done but the
   - **Effort: Low | Impact: Medium (data correctness — entire food category invisible)**
 
 - [ ] Bug: rez counter not working
-  - Should be counting but isn't. The full pipeline (parser → coordinator → DB → store → widget) looks correctly wired. **Most likely cause:** serde enum case mismatch. `ChatResuscitateEvent` uses `#[serde(tag = "kind")]` but has no `rename_all` directive — if Tauri or middleware applies snake_case serialization, the variant serializes as `"resuscitated"` instead of `"Resuscitated"`, causing the frontend `payload.kind === 'Resuscitated'` check to silently fail. DB persistence works independently (inserts directly), so the bug is likely live-event-only. Fix is probably 1 line: add `#[serde(rename_all = "PascalCase")]` or lowercase the frontend check.
-    - if this doesn't work then i'll just need to get a new capture with our hot new capture text. maybe i should do that anyway before we try this one, just to ensure we get the solve.
-  - **Effort: Low | Impact: Low**
+  - **Serde hypothesis disproven** — exhaustive static analysis confirms the full pipeline (parser → coordinator → DB → event emit → frontend listener → store → widget) is correctly wired. Serde serialization of `ChatResuscitateEvent` produces `"Resuscitated"` (PascalCase), matching the frontend check. Parser tests pass (9/9). Debug logging added to coordinator and frontend store to diagnose at runtime.
+  - **Most likely actual cause:** Player's in-game chat configuration doesn't include `[Action Emotes]` channel in any chat tab, so those messages never appear in Chat.log and no rez events are ever parsed. Needs a runtime capture with Action Emotes enabled to confirm.
+  - **Effort: Low (once confirmed) | Impact: Low**
 
 - [x] Crafting projects: loading skeleton/shimmer states for material tables
   - Done: ProjectMaterialsPanel now shows SkeletonLoader + DataTableSkeleton sections while resolving instead of spinner text.
@@ -51,13 +51,11 @@ These are investigated items kept for reference — the research is done but the
 - [x] Stack size in item tooltips
   - Already implemented. Fixed to hide "Max Stack: 1" for non-stackable items.
 
-- [ ] "Home zone" setting for route planner
-  - User-set per character. Option to start routes from home zone instead of current location.
-  - **Effort: Low | Impact: Medium (convenience)**
+- [x] "Home zone" setting for route planner
+  - Done: Per-character home zone stored in localStorage, configurable via trip planner settings panel. "Home" button next to "Current" for quick start zone selection.
 
-- [ ] Configurable critical resources widget
-  - Currently fully hardcoded — `CriticalResourcesWidget.vue` has a static `DEFAULT_TRACKED_ITEMS` array (`Diamond`, `Amethyst`, `Aquamarine`, `Eternal Greens`, `Salt`, `Fire Dust`). No config component registered in `dashboardWidgets.ts` (unlike other configurable widgets). Needs: config store per character, item selection UI, settings persistence. Widget already accepts computed data, just needs the binding change.
-  - **Effort: Low-Medium | Impact: Medium (personalization)**
+- [x] Configurable critical resources widget
+  - Done: Config panel with item search/add/remove, persisted via useViewPrefs. Defaults to original 6 items.
 
 - [ ] Investigate detecting recipe learning without character.json import
   - **Investigation complete:** `ProcessUpdateRecipe(recipeId, completionCount)` and `ProcessLoadRecipes()` events already exist in `player_event_parser.rs`. `RecipeUpdated` events fire during gameplay when recipes are updated. Log events ARE generated — this feature is implementable without character.json dependency. Remaining work: wire coordinator handler to persist recipe state changes, update cook's helper to consume live events.
@@ -123,9 +121,8 @@ These are investigated items kept for reference — the research is done but the
   - Currently only player *deaths* are tracked (via `ChatCombatEvent::PlayerDeath` with killer detection). No reverse tracking exists (player kills boss). Would need to extend `chat_combat_parser` or `player_event_parser` for enemy kill events with boss identification. Loot timer logic would layer on top.
   - **Effort: Medium-High (parser extension + new feature) | Impact: Medium**
 
-- [ ] Enemy database in data browser
-  - Add enemies as a browsable entity type in the data browser.
-  - **Effort: Medium | Impact: Medium (completeness)**
+- [x] Enemy database in data browser
+  - Done: EnemyBrowser with search, strategy filter, detail panel (combat properties, abilities). Backend AiSummary struct + 3 new Tauri commands. Registered in sidebar and overlay.
 
 - [ ] Storage view: "show totals" mode
   - Items stored in multiple locations should optionally collapse into a single row with total quantity. Accordion to expand and see per-location breakdown.
