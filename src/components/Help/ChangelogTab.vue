@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-3">
     <!-- Update banner (when update available) -->
     <div
       v-if="updateStore.updateAvailable"
@@ -41,8 +41,8 @@
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="py-4 space-y-4">
-      <SkeletonLoader v-for="i in 3" :key="i" variant="rect" height="h-24" />
+    <div v-if="loading" class="text-sm text-text-muted py-8 text-center">
+      Loading release notes...
     </div>
 
     <!-- Error -->
@@ -53,23 +53,68 @@
 
     <!-- Releases -->
     <template v-else>
-      <div
-        v-for="release in releases"
+      <AccordionSection
+        v-for="(release, index) in releases"
         :key="release.tag_name"
-        class="bg-surface-base rounded border border-border-default overflow-hidden">
-        <!-- Release header -->
-        <div class="flex items-center justify-between px-4 py-2.5 border-b border-border-default bg-surface-dark">
-          <div class="flex items-center gap-2">
+        :default-open="index === 0">
+        <template #title>
+          <span class="flex items-center gap-2">
             <span class="text-accent-gold font-bold text-sm">{{ release.tag_name }}</span>
-            <span v-if="release.name !== release.tag_name" class="text-text-secondary text-sm">
-              &mdash; {{ release.name }}
+            <span v-if="release.name && release.name !== release.tag_name" class="text-text-muted text-xs">
+              {{ release.name }}
             </span>
+          </span>
+        </template>
+        <template #badge>
+          <span class="text-text-dim text-xs font-normal">{{ formatDate(release.published_at) }}</span>
+        </template>
+
+        <div class="flex flex-col gap-3 pt-1">
+          <template v-for="(section, sIdx) in parseReleaseBody(release.body)" :key="sIdx">
+            <!-- Section with a heading (categorized changes) -->
+            <div v-if="section.heading">
+              <div class="flex items-center gap-2 mb-1.5">
+                <span
+                  class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
+                  :class="categoryBadgeClass(section.heading)">
+                  {{ categoryLabel(section.heading) }}
+                </span>
+              </div>
+              <ul class="flex flex-col gap-0.5 pl-3">
+                <li
+                  v-for="(item, iIdx) in section.items"
+                  :key="iIdx"
+                  class="text-sm text-text-secondary leading-relaxed list-disc ml-1 marker:text-text-dim"
+                  v-html="renderInlineMarkdown(item)" />
+              </ul>
+            </div>
+
+            <!-- Uncategorized items (no heading) -->
+            <div v-else-if="section.items.length > 0">
+              <ul class="flex flex-col gap-0.5 pl-3">
+                <li
+                  v-for="(item, iIdx) in section.items"
+                  :key="iIdx"
+                  class="text-sm text-text-secondary leading-relaxed list-disc ml-1 marker:text-text-dim"
+                  v-html="renderInlineMarkdown(item)" />
+              </ul>
+            </div>
+
+            <!-- Prose paragraphs (not list items) -->
+            <p
+              v-else-if="section.prose"
+              class="text-sm text-text-secondary leading-relaxed m-0"
+              v-html="renderInlineMarkdown(section.prose)" />
+          </template>
+
+          <!-- Fallback: if parsing yields nothing, show raw body -->
+          <div
+            v-if="parseReleaseBody(release.body).length === 0 && release.body"
+            class="text-sm text-text-secondary leading-relaxed whitespace-pre-line">
+            {{ release.body }}
           </div>
-          <span class="text-text-dim text-xs">{{ formatDate(release.published_at) }}</span>
         </div>
-        <!-- Release body -->
-        <div class="px-4 py-3 text-sm text-text-secondary leading-relaxed changelog-body" v-html="renderMarkdown(release.body)" />
-      </div>
+      </AccordionSection>
 
       <div v-if="releases.length === 0" class="text-sm text-text-muted py-8 text-center">
         No releases found.
@@ -82,7 +127,7 @@
 import { ref, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useUpdateStore } from '../../stores/updateStore'
-import SkeletonLoader from '../Shared/SkeletonLoader.vue'
+import AccordionSection from '../Shared/AccordionSection.vue'
 
 const updateStore = useUpdateStore()
 
@@ -95,7 +140,7 @@ async function manualCheck() {
   await updateStore.checkForUpdate(false)
   checking.value = false
   if (updateStore.updateAvailable) {
-    checkResult.value = null // banner will show instead
+    checkResult.value = null
   } else {
     checkResult.value = 'You\'re on the latest version.'
   }
@@ -107,6 +152,12 @@ interface ReleaseInfo {
   published_at: string
   html_url: string
   body: string
+}
+
+interface ReleaseSection {
+  heading: string | null
+  items: string[]
+  prose: string | null
 }
 
 const releases = ref<ReleaseInfo[]>([])
@@ -131,35 +182,135 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
-function renderMarkdown(body: string): string {
-  if (!body) return ''
-  return body
-    // Headers
-    .replace(/^### (.+)$/gm, '<h4 class="text-text-primary font-bold mt-3 mb-1 text-sm">$1</h4>')
-    .replace(/^## (.+)$/gm, '<h3 class="text-accent-gold font-bold mt-4 mb-1.5 text-sm">$1</h3>')
+/**
+ * Parse a GitHub release body into structured sections.
+ * Handles ## and ### headings as category separators, list items, and prose text.
+ */
+function parseReleaseBody(body: string): ReleaseSection[] {
+  if (!body) return []
+
+  const lines = body.split('\n')
+  const sections: ReleaseSection[] = []
+  let currentHeading: string | null = null
+  let currentItems: string[] = []
+  let currentProse: string[] = []
+
+  function flushSection() {
+    if (currentProse.length > 0) {
+      const proseText = currentProse.join('\n').trim()
+      if (proseText) {
+        sections.push({ heading: null, items: [], prose: proseText })
+      }
+      currentProse = []
+    }
+    if (currentHeading !== null || currentItems.length > 0) {
+      if (currentItems.length > 0 || currentHeading) {
+        sections.push({ heading: currentHeading, items: [...currentItems], prose: null })
+      }
+      currentHeading = null
+      currentItems = []
+    }
+  }
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+
+    // Heading (## or ###)
+    const headingMatch = trimmed.match(/^#{2,3}\s+(.+)$/)
+    if (headingMatch) {
+      flushSection()
+      currentHeading = headingMatch[1].trim()
+      continue
+    }
+
+    // List item (- or *)
+    const listMatch = trimmed.match(/^[-*]\s+(.+)$/)
+    if (listMatch) {
+      // Flush any accumulated prose before starting list items
+      if (currentProse.length > 0) {
+        const proseText = currentProse.join('\n').trim()
+        if (proseText) {
+          sections.push({ heading: null, items: [], prose: proseText })
+        }
+        currentProse = []
+      }
+      currentItems.push(listMatch[1])
+      continue
+    }
+
+    // Empty line
+    if (!trimmed) {
+      // If we have items accumulated, an empty line doesn't break the section
+      // But if we only have prose, flush it
+      if (currentItems.length === 0 && currentHeading === null && currentProse.length > 0) {
+        flushSection()
+      }
+      continue
+    }
+
+    // Regular text (prose)
+    if (currentItems.length > 0 || currentHeading !== null) {
+      // If we were collecting list items under a heading, flush and start prose
+      flushSection()
+    }
+    currentProse.push(trimmed)
+  }
+
+  flushSection()
+  return sections
+}
+
+/**
+ * Render inline markdown (bold, inline code, links) to HTML.
+ */
+function renderInlineMarkdown(text: string): string {
+  return text
+    // Links [text](url)
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-accent-blue hover:underline">$1</a>')
     // Bold
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-text-primary">$1</strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-text-primary font-semibold">$1</strong>')
     // Inline code
-    .replace(/`([^`]+)`/g, '<code class="text-accent-gold bg-surface-dark px-1 py-0.5 rounded-sm text-xs">$1</code>')
-    // List items
-    .replace(/^[-*] (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
-    // Wrap consecutive <li> in <ul>
-    .replace(/((?:<li[^>]*>.*<\/li>\n?)+)/g, '<ul class="my-1.5">$1</ul>')
-    // Line breaks for remaining text
-    .replace(/\n\n/g, '<br/><br/>')
-    .replace(/\n/g, '<br/>')
+    .replace(/`([^`]+)`/g, '<code class="text-accent-gold bg-surface-dark px-1 py-0.5 rounded-sm text-xs font-mono">$1</code>')
+}
+
+/**
+ * Map heading text to a badge style class.
+ */
+function categoryBadgeClass(heading: string): string {
+  const h = heading.toLowerCase()
+  if (h.includes('feature') || h.includes('new') || h.includes('added')) {
+    return 'bg-accent-green/15 text-accent-green border border-accent-green/30'
+  }
+  if (h.includes('fix') || h.includes('bug')) {
+    return 'bg-accent-red/15 text-accent-red border border-accent-red/30'
+  }
+  if (h.includes('improve') || h.includes('enhance') || h.includes('change') || h.includes('update')) {
+    return 'bg-accent-blue/15 text-accent-blue border border-accent-blue/30'
+  }
+  if (h.includes('perf') || h.includes('optim')) {
+    return 'bg-accent-warning/15 text-accent-warning border border-accent-warning/30'
+  }
+  if (h.includes('break') || h.includes('deprecat')) {
+    return 'bg-accent-red/15 text-accent-red border border-accent-red/30'
+  }
+  // Default
+  return 'bg-surface-elevated text-text-secondary border border-border-default'
+}
+
+/**
+ * Clean up heading text into a short badge label.
+ */
+function categoryLabel(heading: string): string {
+  // If heading is already short enough, use as-is
+  if (heading.length <= 20) return heading
+  // Try to shorten common patterns
+  const h = heading.toLowerCase()
+  if (h.includes('feature')) return 'Features'
+  if (h.includes('fix')) return 'Fixes'
+  if (h.includes('improve')) return 'Improvements'
+  if (h.includes('breaking')) return 'Breaking'
+  return heading
 }
 
 onMounted(loadReleases)
 </script>
-
-<style scoped>
-.changelog-body :deep(ul) {
-  list-style: disc;
-  padding-left: 1.25rem;
-}
-
-.changelog-body :deep(li) {
-  margin: 0.15rem 0;
-}
-</style>
