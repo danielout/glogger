@@ -1,5 +1,5 @@
 <template>
-  <div class="card flex flex-col h-80" ref="cardRef">
+  <div class="card flex flex-col h-100" ref="cardRef">
     <!-- Title bar — drag handle -->
     <div class="dashboard-card-handle flex items-center gap-2 px-3 py-1 border-b border-border-default cursor-grab active:cursor-grabbing bg-surface-base/30 select-none">
       <span class="text-xs font-bold text-text-secondary uppercase tracking-wide truncate">{{ title }}</span>
