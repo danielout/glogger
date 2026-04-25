@@ -48,6 +48,7 @@ pub const AREA_FAE_REALM_CAVES: &str = "AreaFaeRealm1Caves";
 pub const AREA_MYCONIAN_CAVE: &str = "AreaMyconianCave";
 pub const AREA_TOMB1: &str = "AreaTomb1"; // Khyrulek's Crypt — under Kur
 pub const AREA_WINTER_NEXUS: &str = "AreaPlanes"; // Existential Planes / Winter Nexus
+pub const AREA_PHANTOM_ILMARI: &str = "AreaDesert2"; // Phantom Ilmari Desert
 
 // ── Overworld edges ─────────────────────────────────────────────────────────
 // Each tuple is (zone_a, zone_b). All edges are bidirectional unless noted.
@@ -70,6 +71,7 @@ const OVERWORLD_EDGES: &[(&str, &str)] = &[
     (AREA_POVUS, AREA_RAHU),
     (AREA_POVUS, AREA_VIDARIA),
     (AREA_VIDARIA, AREA_STATEHELM),
+    (AREA_ILMARI, AREA_PHANTOM_ILMARI),
 ];
 
 // ── Sub-zone → parent mapping ───────────────────────────────────────────────
@@ -92,6 +94,11 @@ const SUBZONE_PARENTS: &[(&str, &str)] = &[
     (AREA_FAE_REALM_CAVES, AREA_FAE_REALM),
     (AREA_MYCONIAN_CAVE, AREA_SERBULE),
     (AREA_TOMB1, AREA_KUR_MOUNTAINS),
+    // AreaCave2 is another dungeon entry for Kur caves
+    ("AreaCave2", AREA_KUR_MOUNTAINS),
+    // Instanced zones — map to a reasonable parent for routing
+    ("AreaApartment1", AREA_SERBULE),
+    ("AreaGuildHall1", AREA_SERBULE),
 ];
 
 // ── ZoneGraph ───────────────────────────────────────────────────────────────
@@ -284,6 +291,7 @@ impl ZoneGraph {
             "Vidaria" => AREA_VIDARIA,
             "Statehelm" => AREA_STATEHELM,
             "Winter Nexus" | "Existential Planes" => AREA_WINTER_NEXUS,
+            "Phantom Ilmari Desert" | "Phantom Desert" => AREA_PHANTOM_ILMARI,
             // Sub-zones / dungeons that appear in bind locations
             "Caves Beneath Gazluk" | "Gazluk Caves" => AREA_GAZLUK_CAVES,
             "Caves Under Serbule" | "Serbule Caves" => AREA_SERBULE_CAVES,
@@ -314,7 +322,7 @@ mod tests {
         let g = ZoneGraph::new();
         assert!(g.zone_count() > 0);
         // 15 overworld zones from the edges above
-        assert_eq!(g.zone_count(), 15);
+        assert_eq!(g.zone_count(), 16);
     }
 
     #[test]

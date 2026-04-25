@@ -175,6 +175,22 @@ export function useStorageConsolidation() {
 
   // ── Route stop generation ─────────────────────────────────────────────
 
+  /**
+   * Check if a zone key is a valid routable area.
+   * "*" means portable/global storage (Saddlebag, Council Storage, etc.) — player always has access.
+   */
+  function isRoutableZone(zone: string | null): zone is string {
+    if (!zone) return false;
+    if (zone === "*") return false;
+    if (!zone.startsWith("Area")) return false;
+    return true;
+  }
+
+  /** True if this vault is portable (player carries it everywhere) */
+  function isPortableVault(areaKey: string | null): boolean {
+    return areaKey === "*";
+  }
+
   const routeStops = computed<RouteStop[]>(() => {
     const stops: RouteStop[] = [];
 
@@ -182,21 +198,23 @@ export function useStorageConsolidation() {
       // Source locations: all locations except the target
       for (const loc of candidate.locations) {
         if (loc.vaultKey === candidate.targetVaultKey) continue;
-        const zone = loc.areaKey;
-        if (!zone) continue;
+        // Portable vaults (Saddlebag, Council Storage, etc.) need no pickup stop —
+        // the player always has access to them
+        if (isPortableVault(loc.areaKey)) continue;
+        if (!isRoutableZone(loc.areaKey)) continue;
 
         stops.push({
-          zone,
+          zone: loc.areaKey,
           purpose: "pickup",
           details: `Pick up ${candidate.itemName} x${loc.quantity} from ${loc.displayName}`,
         });
       }
 
-      // Deposit location
-      const depositZone = candidate.targetAreaKey;
-      if (!depositZone) continue;
+      // Deposit location — skip if target is portable storage (no travel needed)
+      if (isPortableVault(candidate.targetAreaKey)) continue;
+      if (!isRoutableZone(candidate.targetAreaKey)) continue;
       stops.push({
-        zone: depositZone,
+        zone: candidate.targetAreaKey,
         purpose: "deposit",
         details: `Deposit ${candidate.itemName} at ${candidate.targetDisplayName}`,
       });
