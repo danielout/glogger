@@ -5,6 +5,7 @@
         <LiveInventoryTab v-if="activeTab === 'live'" />
         <InventoryView v-else-if="activeTab === 'storage'" />
         <VaultDatabaseTab v-else-if="activeTab === 'vaults'" />
+        <ConsolidateTab v-else-if="activeTab === 'consolidate'" />
       </div>
     </div>
   </PaneLayout>
@@ -15,6 +16,7 @@ import PaneLayout from '../Shared/PaneLayout.vue'
 import LiveInventoryTab from './LiveInventoryTab.vue'
 import InventoryView from '../Character/InventoryView.vue'
 import VaultDatabaseTab from './VaultDatabaseTab.vue'
+import ConsolidateTab from './ConsolidateTab.vue'
 
 defineProps<{
   activeTab: string;
