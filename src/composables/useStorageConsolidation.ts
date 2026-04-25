@@ -3,30 +3,51 @@ import { useGameStateStore } from "../stores/gameStateStore";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-export interface ConsolidationLocation {
-  vaultKey: string;
-  displayName: string;
-  areaKey: string | null;
-  areaName: string | null;
-  quantity: number;
-}
-
-export interface ConsolidationCandidate {
+/** A single item that needs to move from one vault to another */
+export interface PlannedMove {
   itemName: string;
-  totalQuantity: number;
-  locations: ConsolidationLocation[];
-  /** The vault key chosen as consolidation target */
-  targetVaultKey: string;
-  targetDisplayName: string;
-  targetAreaKey: string | null;
+  quantity: number;
+  fromVaultKey: string;
+  fromVaultName: string;
+  fromAreaKey: string | null;
+  toVaultKey: string;
+  toVaultName: string;
+  toAreaKey: string | null;
+  /** Why this move was suggested */
+  reason: "duplicate" | "type_specific";
+  /** Has the player completed this move (auto-detected or manual check) */
+  completed: boolean;
 }
 
-export type TargetStrategy = "most_items" | "specific_vault";
+/** All moves grouped by zone, with pickups and dropoffs separated */
+export interface ZoneStop {
+  areaKey: string;
+  areaName: string;
+  /** Items to pick up from vaults here and carry to another zone */
+  pickups: PlannedMove[];
+  /** Items arriving from another zone to deposit in vaults here */
+  dropoffs: PlannedMove[];
+  /** Items moving between two vaults in this same zone (no carrying needed) */
+  localMoves: PlannedMove[];
+  completed: boolean;
+}
 
-export interface RouteStop {
-  zone: string;
-  purpose: "pickup" | "deposit";
-  details: string;
+export interface ConsolidationPlan {
+  moves: PlannedMove[];
+  zoneStops: ZoneStop[];
+  slotsSaved: number;
+  itemsToMove: number;
+  zonesInvolved: number;
+  typeSpecificSuggestions: number;
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+function isRoutableZone(zone: string | null): zone is string {
+  if (!zone) return false;
+  if (zone === "*") return false;
+  if (!zone.startsWith("Area")) return false;
+  return true;
 }
 
 // ── Composable ──────────────────────────────────────────────────────────────
@@ -34,245 +55,253 @@ export interface RouteStop {
 export function useStorageConsolidation() {
   const gameState = useGameStateStore();
 
-  const targetStrategy = ref<TargetStrategy>("most_items");
-  const specificVaultKey = ref<string | null>(null);
-  const selectedItems = ref<Set<string>>(new Set());
+  const wizardActive = ref(false);
+  const completedMoves = ref<Set<string>>(new Set());
 
-  // ── Vault display name helper ─────────────────────────────────────────
+  // ── Vault helpers ───────────────────────────────────────────────────────
 
-  function vaultDisplayName(vaultKey: string): string {
-    const detail = gameState.storageVaultsByKey[vaultKey];
+  function vaultName(key: string): string {
+    const detail = gameState.storageVaultsByKey[key];
     if (detail?.npc_friendly_name) return detail.npc_friendly_name;
-    if (detail?.area_name) return `${detail.area_name} - ${vaultKey}`;
-    return vaultKey;
+    return key;
   }
 
-  function vaultAreaKey(vaultKey: string): string | null {
-    return gameState.storageVaultsByKey[vaultKey]?.area ?? null;
+  function vaultArea(key: string): string | null {
+    return gameState.storageVaultsByKey[key]?.area ?? null;
   }
 
-  function vaultAreaName(vaultKey: string): string | null {
-    return gameState.storageVaultsByKey[vaultKey]?.area_name ?? null;
-  }
+  // ── Plan generation ───────────────────────────────────────────────────
 
-  // ── All items in 2+ locations ─────────────────────────────────────────
+  const plan: ComputedRef<ConsolidationPlan> = computed(() => {
+    const moves: PlannedMove[] = [];
 
-  const allCandidates: ComputedRef<ConsolidationCandidate[]> = computed(() => {
-    // Group storage items by item name -> vault key -> total quantity
-    const itemMap = new Map<string, Map<string, number>>();
+    // ── Step 1: Find duplicates ──────────────────────────────────────
 
+    // Group: item_name → vault_key → total_quantity
+    const itemVaults = new Map<string, Map<string, number>>();
     for (const item of gameState.storage) {
-      if (!itemMap.has(item.item_name)) {
-        itemMap.set(item.item_name, new Map());
+      if (!itemVaults.has(item.item_name)) {
+        itemVaults.set(item.item_name, new Map());
       }
-      const vaultMap = itemMap.get(item.item_name)!;
-      vaultMap.set(
-        item.vault_key,
-        (vaultMap.get(item.vault_key) ?? 0) + item.stack_size
-      );
+      const vm = itemVaults.get(item.item_name)!;
+      vm.set(item.vault_key, (vm.get(item.vault_key) ?? 0) + item.stack_size);
     }
 
-    const candidates: ConsolidationCandidate[] = [];
-
-    for (const [itemName, vaultMap] of itemMap) {
+    for (const [itemName, vaultMap] of itemVaults) {
       if (vaultMap.size < 2) continue;
 
-      const locations: ConsolidationLocation[] = [];
-      let totalQuantity = 0;
-
-      for (const [vaultKey, quantity] of vaultMap) {
-        totalQuantity += quantity;
-        locations.push({
-          vaultKey,
-          displayName: vaultDisplayName(vaultKey),
-          areaKey: vaultAreaKey(vaultKey),
-          areaName: vaultAreaName(vaultKey),
-          quantity,
-        });
+      // Target: vault with the most of this item
+      let bestVault = "";
+      let bestQty = 0;
+      for (const [vk, qty] of vaultMap) {
+        if (qty > bestQty) {
+          bestVault = vk;
+          bestQty = qty;
+        }
       }
 
-      // Sort locations by quantity descending
-      locations.sort((a, b) => b.quantity - a.quantity);
+      // Move from all other vaults to the best
+      for (const [vk, qty] of vaultMap) {
+        if (vk === bestVault) continue;
+        const moveKey = `${itemName}|${vk}|${bestVault}`;
+        moves.push({
+          itemName,
+          quantity: qty,
+          fromVaultKey: vk,
+          fromVaultName: vaultName(vk),
+          fromAreaKey: vaultArea(vk),
+          toVaultKey: bestVault,
+          toVaultName: vaultName(bestVault),
+          toAreaKey: vaultArea(bestVault),
+          reason: "duplicate",
+          completed: completedMoves.value.has(moveKey),
+        });
+      }
+    }
 
-      // Determine target based on strategy
-      const target = resolveTarget(itemName, locations);
+    // ── Step 2: Type-specific vault opportunities ────────────────────
+    // (Future: check items in generic vaults that could go to type-specific ones)
 
-      candidates.push({
-        itemName,
-        totalQuantity,
-        locations,
-        targetVaultKey: target.vaultKey,
-        targetDisplayName: target.displayName,
-        targetAreaKey: target.areaKey,
+    // ── Build zone stops ─────────────────────────────────────────────
+    // Separate moves into:
+    //   - localMoves: source and target are in the same zone (rearrange locally)
+    //   - pickups: source is here, target is in a different zone (carry out)
+    //   - dropoffs: target is here, source is in a different zone (deposit from carry)
+
+    const zonePickups = new Map<string, PlannedMove[]>();
+    const zoneDropoffs = new Map<string, PlannedMove[]>();
+    const zoneLocalMoves = new Map<string, PlannedMove[]>();
+
+    for (const move of moves) {
+      const from = move.fromAreaKey;
+      const to = move.toAreaKey;
+      const sameZone = from && to && from === to;
+
+      if (sameZone && isRoutableZone(from)) {
+        // Local move — both vaults in the same zone
+        if (!zoneLocalMoves.has(from)) zoneLocalMoves.set(from, []);
+        zoneLocalMoves.get(from)!.push(move);
+      } else {
+        // Cross-zone move
+        if (isRoutableZone(from)) {
+          if (!zonePickups.has(from)) zonePickups.set(from, []);
+          zonePickups.get(from)!.push(move);
+        }
+        if (isRoutableZone(to)) {
+          if (!zoneDropoffs.has(to)) zoneDropoffs.set(to, []);
+          zoneDropoffs.get(to)!.push(move);
+        }
+      }
+    }
+
+    // Merge into zone stops
+    const allZones = new Set([
+      ...zonePickups.keys(),
+      ...zoneDropoffs.keys(),
+      ...zoneLocalMoves.keys(),
+    ]);
+    const zoneStops: ZoneStop[] = [];
+    for (const zone of allZones) {
+      const pickups = zonePickups.get(zone) ?? [];
+      const dropoffs = zoneDropoffs.get(zone) ?? [];
+      const localMoves = zoneLocalMoves.get(zone) ?? [];
+
+      // Resolve friendly area name from any vault in this zone
+      let friendlyName = zone;
+      for (const v of gameState.storageVaults) {
+        if (v.area === zone && v.area_name) {
+          friendlyName = v.area_name;
+          break;
+        }
+      }
+
+      const allMovesHere = [...pickups, ...dropoffs, ...localMoves];
+      zoneStops.push({
+        areaKey: zone,
+        areaName: friendlyName,
+        pickups,
+        dropoffs,
+        localMoves,
+        completed: allMovesHere.length > 0 && allMovesHere.every((m) => m.completed),
       });
     }
 
-    // Sort by location count descending, then by name
-    candidates.sort((a, b) => {
-      const locDiff = b.locations.length - a.locations.length;
-      if (locDiff !== 0) return locDiff;
-      return a.itemName.localeCompare(b.itemName);
+    // Sort: zones with only local moves last, then by total action count
+    zoneStops.sort((a, b) => {
+      const aCross = a.pickups.length + a.dropoffs.length;
+      const bCross = b.pickups.length + b.dropoffs.length;
+      if (aCross === 0 && bCross > 0) return 1;
+      if (bCross === 0 && aCross > 0) return -1;
+      return (bCross + b.localMoves.length) - (aCross + a.localMoves.length);
     });
 
-    return candidates;
+    // ── Stats ────────────────────────────────────────────────────────
+
+    // Slots saved = number of source stacks being consolidated (each move frees 1 slot)
+    const slotsSaved = moves.filter((m) => !m.completed).length;
+
+    return {
+      moves,
+      zoneStops,
+      slotsSaved,
+      itemsToMove: moves.filter((m) => !m.completed).length,
+      zonesInvolved: zoneStops.length,
+      typeSpecificSuggestions: moves.filter((m) => m.reason === "type_specific").length,
+    };
   });
 
-  function resolveTarget(
-    _itemName: string,
-    locations: ConsolidationLocation[]
-  ): { vaultKey: string; displayName: string; areaKey: string | null } {
-    if (
-      targetStrategy.value === "specific_vault" &&
-      specificVaultKey.value
-    ) {
-      return {
-        vaultKey: specificVaultKey.value,
-        displayName: vaultDisplayName(specificVaultKey.value),
-        areaKey: vaultAreaKey(specificVaultKey.value),
-      };
-    }
-    // "most_items" -- pick the location with the most of this item
-    const best = locations[0]; // already sorted descending by quantity
-    return {
-      vaultKey: best.vaultKey,
-      displayName: best.displayName,
-      areaKey: best.areaKey,
-    };
+  // ── Move completion ─────────────────────────────────────────────────
+
+  function moveKey(move: PlannedMove): string {
+    return `${move.itemName}|${move.fromVaultKey}|${move.toVaultKey}`;
   }
 
-  // ── Selection management ──────────────────────────────────────────────
-
-  /** Initialize selection with all candidates checked */
-  function selectAll() {
-    selectedItems.value = new Set(
-      allCandidates.value.map((c) => c.itemName)
-    );
+  function toggleMoveCompleted(move: PlannedMove) {
+    const key = moveKey(move);
+    const next = new Set(completedMoves.value);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    completedMoves.value = next;
   }
 
-  function deselectAll() {
-    selectedItems.value = new Set();
+  function isMoveCompleted(move: PlannedMove): boolean {
+    return completedMoves.value.has(moveKey(move));
   }
 
-  function toggleItem(itemName: string) {
-    const next = new Set(selectedItems.value);
-    if (next.has(itemName)) {
-      next.delete(itemName);
-    } else {
-      next.add(itemName);
-    }
-    selectedItems.value = next;
+  function resetCompletion() {
+    completedMoves.value = new Set();
   }
 
-  function isSelected(itemName: string): boolean {
-    return selectedItems.value.has(itemName);
+  // ── Wizard mode ─────────────────────────────────────────────────────
+
+  function startWizard() {
+    wizardActive.value = true;
+    resetCompletion();
   }
 
-  // ── Selected candidates (filtered by checkbox selection) ──────────────
+  function stopWizard() {
+    wizardActive.value = false;
+  }
 
-  const selectedCandidates = computed(() =>
-    allCandidates.value.filter((c) => selectedItems.value.has(c.itemName))
+  /** Current zone from game state */
+  const currentZone = computed(() => {
+    const area = gameState.world?.area as { area_name?: string } | null;
+    return area?.area_name ?? null;
+  });
+
+  /** The zone stop for the player's current location, if any */
+  const currentZoneStop = computed<ZoneStop | null>(() => {
+    if (!currentZone.value) return null;
+    return plan.value.zoneStops.find((zs) => zs.areaKey === currentZone.value) ?? null;
+  });
+
+  /** Zone stops not yet completed, excluding current zone */
+  const remainingZoneStops = computed(() =>
+    plan.value.zoneStops.filter((zs) => !zs.completed && zs.areaKey !== currentZone.value)
   );
 
-  // ── Route stop generation ─────────────────────────────────────────────
+  const completedCount = computed(() => plan.value.moves.filter((m) => m.completed).length);
+  const totalCount = computed(() => plan.value.moves.length);
 
-  /**
-   * Check if a zone key is a valid routable area.
-   * "*" means portable/global storage (Saddlebag, Council Storage, etc.) — player always has access.
-   */
-  function isRoutableZone(zone: string | null): zone is string {
-    if (!zone) return false;
-    if (zone === "*") return false;
-    if (!zone.startsWith("Area")) return false;
-    return true;
-  }
+  // ── Route stops for trip planner ────────────────────────────────────
 
-  /** True if this vault is portable (player carries it everywhere) */
-  function isPortableVault(areaKey: string | null): boolean {
-    return areaKey === "*";
-  }
-
-  const routeStops = computed<RouteStop[]>(() => {
-    const stops: RouteStop[] = [];
-
-    for (const candidate of selectedCandidates.value) {
-      // Source locations: all locations except the target
-      for (const loc of candidate.locations) {
-        if (loc.vaultKey === candidate.targetVaultKey) continue;
-        // Portable vaults (Saddlebag, Council Storage, etc.) need no pickup stop —
-        // the player always has access to them
-        if (isPortableVault(loc.areaKey)) continue;
-        if (!isRoutableZone(loc.areaKey)) continue;
-
+  const routeStops = computed(() => {
+    const stops: { zone: string; purpose: string; details: string }[] = [];
+    for (const zs of plan.value.zoneStops) {
+      if (zs.completed) continue;
+      for (const p of zs.pickups) {
+        if (p.completed) continue;
         stops.push({
-          zone: loc.areaKey,
+          zone: zs.areaKey,
           purpose: "pickup",
-          details: `Pick up ${candidate.itemName} x${loc.quantity} from ${loc.displayName}`,
+          details: `Pick up ${p.itemName} x${p.quantity} from ${p.fromVaultName}`,
         });
       }
-
-      // Deposit location — skip if target is portable storage (no travel needed)
-      if (isPortableVault(candidate.targetAreaKey)) continue;
-      if (!isRoutableZone(candidate.targetAreaKey)) continue;
-      stops.push({
-        zone: candidate.targetAreaKey,
-        purpose: "deposit",
-        details: `Deposit ${candidate.itemName} at ${candidate.targetDisplayName}`,
-      });
+      for (const d of zs.dropoffs) {
+        if (d.completed) continue;
+        stops.push({
+          zone: zs.areaKey,
+          purpose: "deposit",
+          details: `Deposit ${d.itemName} at ${d.toVaultName}`,
+        });
+      }
     }
-
     return stops;
   });
 
-  // ── Available vaults (for specific vault picker) ──────────────────────
-
-  const availableVaults = computed(() => {
-    const vaults: { key: string; displayName: string; areaName: string | null }[] = [];
-    for (const detail of gameState.storageVaults) {
-      if (detail.area) {
-        vaults.push({
-          key: detail.key,
-          displayName: detail.npc_friendly_name ?? detail.key,
-          areaName: detail.area_name ?? null,
-        });
-      }
-    }
-    // Sort by area name then vault name
-    vaults.sort((a, b) => {
-      const areaCmp = (a.areaName ?? "").localeCompare(b.areaName ?? "");
-      if (areaCmp !== 0) return areaCmp;
-      return a.displayName.localeCompare(b.displayName);
-    });
-    return vaults;
-  });
-
-  // ── Summary stats ─────────────────────────────────────────────────────
-
-  const candidateCount = computed(() => allCandidates.value.length);
-
-  const totalLocationCount = computed(() =>
-    allCandidates.value.reduce((sum, c) => sum + c.locations.length, 0)
-  );
-
   return {
-    // Strategy
-    targetStrategy,
-    specificVaultKey,
-
-    // Data
-    allCandidates,
-    selectedCandidates,
-    candidateCount,
-    totalLocationCount,
-    availableVaults,
-
-    // Selection
-    selectedItems,
-    selectAll,
-    deselectAll,
-    toggleItem,
-    isSelected,
-
-    // Route
+    plan,
+    wizardActive,
+    startWizard,
+    stopWizard,
+    currentZone,
+    currentZoneStop,
+    remainingZoneStops,
+    completedCount,
+    totalCount,
+    toggleMoveCompleted,
+    isMoveCompleted,
+    resetCompletion,
     routeStops,
   };
 }
