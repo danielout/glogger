@@ -245,7 +245,7 @@ async function planRoute() {
       mushroomCircle1: config.mushroomCircle ?? null,
       mushroomCircle2: null,
       useTpMachine: config.useTpMachine ?? false,
-      casinoPortal: false,
+      casinoPortal: null,
     }
 
     // Convert our route stops to the format plan_trip expects

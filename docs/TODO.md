@@ -251,9 +251,8 @@ These items are investigated but can't be resolved without new runtime captures 
   - kaeus is working on this i believe.
   - **Effort: Large (mostly frontend) | Impact: High**
 
-- [ ] Consolidate storage helper
-  - Uses the route planner and storage vault data to find items stored in multiple locations, then creates a pickup/dropoff route to consolidate them.
-  - **Effort: Large | Impact: Medium (inventory management)**
+- [x] Consolidate storage helper
+  - Done: New "Consolidate" tab under Inventory. Finds items in 2+ vaults, target selection (most items / specific vault), checkbox selection with expandable breakdown, route planning via trip_router. See `docs/plans/storage-consolidation.md`.
 
 - [ ] Statehelm favor planner
   - Looks at storage vaults, finds appropriate gifts for Statehelm NPCs, creates a route to pick everything up before delivering. Respects remaining gift count needed per NPC that week. Combines storage data + gift preferences + route planner.
