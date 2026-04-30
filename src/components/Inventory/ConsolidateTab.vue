@@ -98,6 +98,31 @@
             :toggle="consolidation.toggleLocal"
             show-both-vaults />
         </div>
+
+        <!-- Next zone indicator -->
+        <div v-if="consolidation.nextZoneStop.value" class="mt-3 flex items-center gap-3 px-2 py-2 rounded bg-surface-elevated/50 border border-border-default">
+          <span class="text-text-muted text-xs">Next stop:</span>
+          <span class="text-text-primary text-sm font-semibold">{{ consolidation.nextZoneStop.value.areaName }}</span>
+          <span class="text-text-dim text-xs">
+            {{ consolidation.nextZoneStop.value.pickups.length }} pickups
+            <template v-if="consolidation.nextZoneStop.value.dropoffs.length">, {{ consolidation.nextZoneStop.value.dropoffs.length }} dropoffs</template>
+          </span>
+        </div>
+        <div v-else-if="consolidation.completedCount.value === consolidation.totalCount.value" class="mt-3 px-2 py-2 rounded bg-value-positive/10 border border-value-positive/30 text-value-positive text-sm font-semibold text-center">
+          All done!
+        </div>
+      </div>
+
+      <!-- Wizard: no current zone stop -->
+      <div v-else-if="consolidation.wizardActive.value && consolidation.nextZoneStop.value" class="shrink-0 mb-3 p-3 rounded-lg border border-border-default bg-surface-base/50">
+        <div class="flex items-center gap-3">
+          <span class="text-text-muted text-xs">Nothing to do here. Next stop:</span>
+          <span class="text-text-primary font-semibold">{{ consolidation.nextZoneStop.value.areaName }}</span>
+          <span class="text-text-dim text-xs">
+            {{ consolidation.nextZoneStop.value.pickups.length }} pickups
+            <template v-if="consolidation.nextZoneStop.value.dropoffs.length">, {{ consolidation.nextZoneStop.value.dropoffs.length }} dropoffs</template>
+          </span>
+        </div>
       </div>
 
       <!-- Zone-by-zone plan -->

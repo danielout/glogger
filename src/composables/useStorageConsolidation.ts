@@ -1,4 +1,4 @@
-import { ref, computed, type ComputedRef } from "vue";
+import { ref, computed, watch, type ComputedRef } from "vue";
 import { useGameStateStore } from "../stores/gameStateStore";
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -352,6 +352,100 @@ export function useStorageConsolidation() {
   const completedCount = computed(() => plan.value.moves.filter((m) => m.completed).length);
   const totalCount = computed(() => plan.value.moves.length);
 
+  /** Next zone the player should travel to (first incomplete zone that isn't the current zone) */
+  const nextZoneStop = computed<ZoneStop | null>(() => {
+    for (const zs of plan.value.zoneStops) {
+      if (zs.completed) continue;
+      if (zs.areaKey === currentZone.value) continue;
+      // Only suggest zones where the player has actionable work:
+      // - pickups are always actionable
+      // - dropoffs only if the item is in carry bag
+      // - local moves are always actionable
+      const hasPickups = zs.pickups.some((p) => !isPickupDone(p));
+      const hasDropoffs = zs.dropoffs.some((d) => !isDropoffDone(d) && isInCarryBag(d));
+      const hasLocal = zs.localMoves.some((l) => !isLocalDone(l));
+      if (hasPickups || hasDropoffs || hasLocal) return zs;
+    }
+    return null;
+  });
+
+  // ── Auto-detection ──────────────────────────────────────────────────
+  // Watch storage changes and auto-check moves when items appear/disappear
+
+  /** Snapshot of storage state for change detection */
+  const prevStorageSnapshot = ref<Map<string, Map<string, number>>>(new Map());
+
+  function buildStorageSnapshot(): Map<string, Map<string, number>> {
+    const snap = new Map<string, Map<string, number>>();
+    for (const item of gameState.storage) {
+      if (!snap.has(item.vault_key)) snap.set(item.vault_key, new Map());
+      const vaultMap = snap.get(item.vault_key)!;
+      vaultMap.set(item.item_name, (vaultMap.get(item.item_name) ?? 0) + item.stack_size);
+    }
+    return snap;
+  }
+
+  function snapshotVaultQty(snap: Map<string, Map<string, number>>, vaultKey: string, itemName: string): number {
+    return snap.get(vaultKey)?.get(itemName) ?? 0;
+  }
+
+  // Watch for storage changes and auto-check matching moves
+  watch(() => gameState.storage, () => {
+    if (!wizardActive.value) return;
+
+    const newSnap = buildStorageSnapshot();
+    const oldSnap = prevStorageSnapshot.value;
+
+    // Only auto-detect if we have a previous snapshot to compare against
+    if (oldSnap.size > 0) {
+      for (const move of plan.value.moves) {
+        if (move.fromAreaKey === move.toAreaKey) continue; // skip local
+
+        // Auto-check pickup: item quantity decreased at source vault
+        if (!isPickupDone(move)) {
+          const oldQty = snapshotVaultQty(oldSnap, move.fromVaultKey, move.itemName);
+          const newQty = snapshotVaultQty(newSnap, move.fromVaultKey, move.itemName);
+          if (oldQty > 0 && newQty < oldQty) {
+            togglePickup(move);
+          }
+        }
+
+        // Auto-check dropoff: item quantity increased at target vault
+        if (isPickupDone(move) && !isDropoffDone(move)) {
+          const oldQty = snapshotVaultQty(oldSnap, move.toVaultKey, move.itemName);
+          const newQty = snapshotVaultQty(newSnap, move.toVaultKey, move.itemName);
+          if (newQty > oldQty) {
+            toggleDropoff(move);
+          }
+        }
+      }
+
+      // Auto-check local moves too
+      for (const move of plan.value.moves) {
+        if (move.fromAreaKey !== move.toAreaKey) continue;
+        if (isLocalDone(move)) continue;
+
+        const oldFrom = snapshotVaultQty(oldSnap, move.fromVaultKey, move.itemName);
+        const newFrom = snapshotVaultQty(newSnap, move.fromVaultKey, move.itemName);
+        const oldTo = snapshotVaultQty(oldSnap, move.toVaultKey, move.itemName);
+        const newTo = snapshotVaultQty(newSnap, move.toVaultKey, move.itemName);
+
+        if (oldFrom > 0 && newFrom < oldFrom && newTo > oldTo) {
+          toggleLocal(move);
+        }
+      }
+    }
+
+    prevStorageSnapshot.value = newSnap;
+  }, { deep: true });
+
+  // Initialize snapshot on wizard start
+  watch(wizardActive, (active) => {
+    if (active) {
+      prevStorageSnapshot.value = buildStorageSnapshot();
+    }
+  });
+
   // ── Route stops for trip planner ────────────────────────────────────
 
   const routeStops = computed(() => {
@@ -385,6 +479,7 @@ export function useStorageConsolidation() {
     stopWizard,
     currentZone,
     currentZoneStop,
+    nextZoneStop,
     carryBag,
     remainingZoneStops,
     completedCount,
