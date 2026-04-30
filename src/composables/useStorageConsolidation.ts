@@ -123,14 +123,18 @@ export function useStorageConsolidation() {
     // (Future: check items in generic vaults that could go to type-specific ones)
 
     // ── Build zone stops ─────────────────────────────────────────────
-    // Separate moves into:
-    //   - localMoves: source and target are in the same zone (rearrange locally)
-    //   - pickups: source is here, target is in a different zone (carry out)
-    //   - dropoffs: target is here, source is in a different zone (deposit from carry)
+    // Classify each move:
+    //   - localMoves: source and target in same zone (no carrying)
+    //   - cross-zone: pickup at source zone, dropoff at target zone
+    //
+    // Key insight: dropoffs should only appear at a zone AFTER the
+    // corresponding pickup zone has been visited. We order zones so
+    // pickup-only zones come first, then zones that are both pickup
+    // and dropoff, then dropoff-only zones.
 
-    const zonePickups = new Map<string, PlannedMove[]>();
-    const zoneDropoffs = new Map<string, PlannedMove[]>();
-    const zoneLocalMoves = new Map<string, PlannedMove[]>();
+    const perZonePickups = new Map<string, PlannedMove[]>();
+    const perZoneDropoffs = new Map<string, PlannedMove[]>();
+    const perZoneLocal = new Map<string, PlannedMove[]>();
 
     for (const move of moves) {
       const from = move.fromAreaKey;
@@ -138,47 +142,45 @@ export function useStorageConsolidation() {
       const sameZone = from && to && from === to;
 
       if (sameZone && isRoutableZone(from)) {
-        // Local move — both vaults in the same zone
-        if (!zoneLocalMoves.has(from)) zoneLocalMoves.set(from, []);
-        zoneLocalMoves.get(from)!.push(move);
+        if (!perZoneLocal.has(from)) perZoneLocal.set(from, []);
+        perZoneLocal.get(from)!.push(move);
       } else {
-        // Cross-zone move
         if (isRoutableZone(from)) {
-          if (!zonePickups.has(from)) zonePickups.set(from, []);
-          zonePickups.get(from)!.push(move);
+          if (!perZonePickups.has(from)) perZonePickups.set(from, []);
+          perZonePickups.get(from)!.push(move);
         }
         if (isRoutableZone(to)) {
-          if (!zoneDropoffs.has(to)) zoneDropoffs.set(to, []);
-          zoneDropoffs.get(to)!.push(move);
+          if (!perZoneDropoffs.has(to)) perZoneDropoffs.set(to, []);
+          perZoneDropoffs.get(to)!.push(move);
         }
       }
     }
 
-    // Merge into zone stops
+    // Collect all zones and classify them for ordering
     const allZones = new Set([
-      ...zonePickups.keys(),
-      ...zoneDropoffs.keys(),
-      ...zoneLocalMoves.keys(),
+      ...perZonePickups.keys(),
+      ...perZoneDropoffs.keys(),
+      ...perZoneLocal.keys(),
     ]);
+
+    // Helper: resolve friendly area name
+    function zoneFriendlyName(zone: string): string {
+      for (const v of gameState.storageVaults) {
+        if (v.area === zone && v.area_name) return v.area_name;
+      }
+      return zone;
+    }
+
     const zoneStops: ZoneStop[] = [];
     for (const zone of allZones) {
-      const pickups = zonePickups.get(zone) ?? [];
-      const dropoffs = zoneDropoffs.get(zone) ?? [];
-      const localMoves = zoneLocalMoves.get(zone) ?? [];
-
-      // Resolve friendly area name from any vault in this zone
-      let friendlyName = zone;
-      for (const v of gameState.storageVaults) {
-        if (v.area === zone && v.area_name) {
-          friendlyName = v.area_name;
-          break;
-        }
-      }
-
+      const pickups = perZonePickups.get(zone) ?? [];
+      const dropoffs = perZoneDropoffs.get(zone) ?? [];
+      const localMoves = perZoneLocal.get(zone) ?? [];
       const allMovesHere = [...pickups, ...dropoffs, ...localMoves];
+
       zoneStops.push({
         areaKey: zone,
-        areaName: friendlyName,
+        areaName: zoneFriendlyName(zone),
         pickups,
         dropoffs,
         localMoves,
@@ -186,13 +188,29 @@ export function useStorageConsolidation() {
       });
     }
 
-    // Sort: zones with only local moves last, then by total action count
+    // Order zones so the route makes sense:
+    // 1. Zones with pickups but no dropoffs (pure sources — visit first)
+    // 2. Zones with both pickups and dropoffs (swap stops)
+    // 3. Zones with dropoffs but no pickups (pure destinations — visit last)
+    // 4. Zones with only local moves (can be done anytime)
+    // Within each group, sort by action count descending.
+    function zoneOrder(zs: ZoneStop): number {
+      const hasPickup = zs.pickups.length > 0;
+      const hasDropoff = zs.dropoffs.length > 0;
+      const hasLocal = zs.localMoves.length > 0;
+      if (hasPickup && !hasDropoff) return 0;  // pure source
+      if (hasPickup && hasDropoff) return 1;    // swap
+      if (!hasPickup && hasDropoff) return 2;   // pure destination
+      if (hasLocal) return 3;                   // local only
+      return 4;
+    }
+
     zoneStops.sort((a, b) => {
-      const aCross = a.pickups.length + a.dropoffs.length;
-      const bCross = b.pickups.length + b.dropoffs.length;
-      if (aCross === 0 && bCross > 0) return 1;
-      if (bCross === 0 && aCross > 0) return -1;
-      return (bCross + b.localMoves.length) - (aCross + a.localMoves.length);
+      const orderDiff = zoneOrder(a) - zoneOrder(b);
+      if (orderDiff !== 0) return orderDiff;
+      const aCount = a.pickups.length + a.dropoffs.length + a.localMoves.length;
+      const bCount = b.pickups.length + b.dropoffs.length + b.localMoves.length;
+      return bCount - aCount;
     });
 
     // ── Stats ────────────────────────────────────────────────────────
