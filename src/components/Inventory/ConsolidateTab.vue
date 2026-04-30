@@ -20,17 +20,16 @@
             <span class="text-text-primary font-bold text-lg tabular-nums">{{ plan.zonesInvolved }}</span>
             <span class="text-text-muted text-xs ml-1">zones</span>
           </div>
+          <div v-if="consolidation.carryBag.value.size > 0">
+            <span class="text-accent-blue font-bold text-lg tabular-nums">{{ consolidation.carryBag.value.size }}</span>
+            <span class="text-text-muted text-xs ml-1">carrying</span>
+          </div>
         </div>
 
         <div class="ml-auto flex items-center gap-2">
           <template v-if="!consolidation.wizardActive.value">
-            <button class="btn btn-primary text-xs" @click="consolidation.startWizard()">
-              Start Wizard
-            </button>
-            <button
-              class="btn btn-secondary text-xs"
-              :disabled="planning"
-              @click="planRoute">
+            <button class="btn btn-primary text-xs" @click="consolidation.startWizard()">Start Wizard</button>
+            <button class="btn btn-secondary text-xs" :disabled="planning" @click="planRoute">
               {{ planning ? 'Planning...' : 'Plan Route' }}
             </button>
           </template>
@@ -49,14 +48,13 @@
       <!-- Route result banner -->
       <div v-if="route" class="shrink-0 mb-3 p-2 rounded bg-accent-gold/10 border border-accent-gold/30 flex items-center gap-3 text-xs">
         <span class="text-accent-gold font-semibold">Route:</span>
-        <span class="text-text-primary">{{ route.total_hops }} hops across {{ plan.zonesInvolved }} zones</span>
+        <span class="text-text-primary">{{ route.total_hops }} hops</span>
         <button class="ml-auto text-text-muted hover:text-text-primary cursor-pointer" @click="showRouteSteps = !showRouteSteps">
           {{ showRouteSteps ? 'Hide' : 'Show steps' }}
         </button>
       </div>
       <div v-if="route && showRouteSteps" class="shrink-0 mb-3 border border-border-default rounded overflow-hidden max-h-32 overflow-y-auto">
-        <div
-          v-for="(step, i) in route.steps" :key="i"
+        <div v-for="(step, i) in route.steps" :key="i"
           class="flex items-start gap-2 py-1 px-2 text-xs border-b border-border-default/30 last:border-b-0"
           :class="step.action === 'travel' ? 'bg-surface-elevated/30' : ''">
           <span class="shrink-0 w-4 text-text-muted text-[10px] text-right mt-0.5">{{ i + 1 }}</span>
@@ -72,112 +70,56 @@
           <span class="text-text-primary font-semibold">{{ consolidation.currentZoneStop.value.areaName }}</span>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <!-- Pickups: items to carry OUT of this zone -->
           <div v-if="consolidation.currentZoneStop.value.pickups.length">
             <div class="micro-label mb-1 text-value-positive">Pick Up to Carry</div>
-            <div class="flex flex-col gap-0.5">
-              <label
-                v-for="move in consolidation.currentZoneStop.value.pickups" :key="`p-${move.itemName}-${move.fromVaultKey}`"
-                class="flex items-center gap-2 text-xs py-0.5 cursor-pointer hover:bg-surface-row-hover rounded px-1"
-                :class="move.completed ? 'opacity-50' : ''">
-                <input type="checkbox" :checked="move.completed" @change="consolidation.toggleMoveCompleted(move)" />
-                <span class="flex-1 min-w-0"><ItemInline :reference="move.itemName" /></span>
-                <span class="tabular-nums text-text-secondary shrink-0">x{{ move.quantity }}</span>
-                <span class="text-text-dim text-[10px] shrink-0">{{ move.fromVaultName }}</span>
-              </label>
-            </div>
+            <MoveChecklist
+              :moves="consolidation.currentZoneStop.value.pickups"
+              type="pickup"
+              :is-done="consolidation.isPickupDone"
+              :toggle="consolidation.togglePickup"
+              show-vault-name />
           </div>
-          <!-- Dropoffs: items arriving FROM another zone -->
           <div v-if="consolidation.currentZoneStop.value.dropoffs.length">
-            <div class="micro-label mb-1 text-value-negative">Drop Off (from travel)</div>
-            <div class="flex flex-col gap-0.5">
-              <label
-                v-for="move in consolidation.currentZoneStop.value.dropoffs" :key="`d-${move.itemName}-${move.toVaultKey}`"
-                class="flex items-center gap-2 text-xs py-0.5 cursor-pointer hover:bg-surface-row-hover rounded px-1"
-                :class="move.completed ? 'opacity-50' : ''">
-                <input type="checkbox" :checked="move.completed" @change="consolidation.toggleMoveCompleted(move)" />
-                <span class="flex-1 min-w-0"><ItemInline :reference="move.itemName" /></span>
-                <span class="tabular-nums text-text-secondary shrink-0">x{{ move.quantity }}</span>
-                <span class="text-text-dim text-[10px] shrink-0">&rarr; {{ move.toVaultName }}</span>
-              </label>
-            </div>
+            <div class="micro-label mb-1 text-value-negative">Drop Off</div>
+            <MoveChecklist
+              :moves="consolidation.currentZoneStop.value.dropoffs"
+              type="dropoff"
+              :is-done="consolidation.isDropoffDone"
+              :toggle="consolidation.toggleDropoff"
+              show-target />
           </div>
         </div>
-        <!-- Local rearrangement: vault-to-vault within this zone -->
         <div v-if="consolidation.currentZoneStop.value.localMoves.length" class="mt-2 pt-2 border-t border-border-default/50">
           <div class="micro-label mb-1 text-accent-blue">Rearrange Locally</div>
-          <div class="flex flex-col gap-0.5">
-            <label
-              v-for="move in consolidation.currentZoneStop.value.localMoves" :key="`l-${move.itemName}-${move.fromVaultKey}`"
-              class="flex items-center gap-2 text-xs py-0.5 cursor-pointer hover:bg-surface-row-hover rounded px-1"
-              :class="move.completed ? 'opacity-50' : ''">
-              <input type="checkbox" :checked="move.completed" @change="consolidation.toggleMoveCompleted(move)" />
-              <span class="flex-1 min-w-0"><ItemInline :reference="move.itemName" /></span>
-              <span class="tabular-nums text-text-secondary shrink-0">x{{ move.quantity }}</span>
-              <span class="text-text-dim text-[10px] shrink-0">{{ move.fromVaultName }} &rarr; {{ move.toVaultName }}</span>
-            </label>
-          </div>
+          <MoveChecklist
+            :moves="consolidation.currentZoneStop.value.localMoves"
+            type="local"
+            :is-done="consolidation.isLocalDone"
+            :toggle="consolidation.toggleLocal"
+            show-both-vaults />
         </div>
       </div>
 
-      <!-- Zone-by-zone plan (main content) -->
+      <!-- Zone-by-zone plan -->
       <div class="flex-1 min-h-0 overflow-y-auto pr-1">
         <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
-          <div
-            v-for="zs in displayedZoneStops" :key="zs.areaKey"
-            class="card p-0 overflow-hidden"
-            :class="zs.completed ? 'opacity-40' : ''">
-            <!-- Zone header -->
+          <div v-for="zs in displayedZoneStops" :key="zs.areaKey" class="card p-0 overflow-hidden" :class="zs.completed ? 'opacity-40' : ''">
             <div class="flex items-center gap-2 px-3 py-2 bg-surface-base/50 border-b border-border-default">
-              <div class="flex-1 min-w-0">
-                <div class="text-xs font-semibold text-text-primary">{{ zs.areaName }}</div>
-              </div>
-              <span class="text-[10px] text-text-muted shrink-0">
-                {{ zs.pickups.length + zs.dropoffs.length + zs.localMoves.length }} actions
-              </span>
+              <div class="text-xs font-semibold text-text-primary flex-1">{{ zs.areaName }}</div>
+              <span class="text-[10px] text-text-muted">{{ zs.pickups.length + zs.dropoffs.length + zs.localMoves.length }} actions</span>
             </div>
-
             <div class="divide-y divide-border-default/30">
-              <!-- Pickups: carry out of this zone -->
               <div v-if="zs.pickups.length" class="px-3 py-1.5">
                 <div class="micro-label mb-1 text-value-positive">Pick Up to Carry</div>
-                <label
-                  v-for="move in zs.pickups" :key="`p-${move.itemName}-${move.fromVaultKey}`"
-                  class="flex items-center gap-1.5 text-xs py-0.5 cursor-pointer"
-                  :class="move.completed ? 'opacity-40 line-through' : ''">
-                  <input type="checkbox" :checked="move.completed" @change="consolidation.toggleMoveCompleted(move)" />
-                  <span class="flex-1 min-w-0 truncate"><ItemInline :reference="move.itemName" /></span>
-                  <span class="tabular-nums text-text-secondary shrink-0">x{{ move.quantity }}</span>
-                  <span class="text-text-dim text-[10px] shrink-0 truncate max-w-20">{{ move.fromVaultName }}</span>
-                </label>
+                <MoveChecklist :moves="zs.pickups" type="pickup" :is-done="consolidation.isPickupDone" :toggle="consolidation.togglePickup" show-vault-name />
               </div>
-
-              <!-- Dropoffs: deposit items from travel -->
               <div v-if="zs.dropoffs.length" class="px-3 py-1.5">
-                <div class="micro-label mb-1 text-value-negative">Drop Off (from travel)</div>
-                <label
-                  v-for="move in zs.dropoffs" :key="`d-${move.itemName}-${move.toVaultKey}`"
-                  class="flex items-center gap-1.5 text-xs py-0.5 cursor-pointer"
-                  :class="move.completed ? 'opacity-40 line-through' : ''">
-                  <input type="checkbox" :checked="move.completed" @change="consolidation.toggleMoveCompleted(move)" />
-                  <span class="flex-1 min-w-0 truncate"><ItemInline :reference="move.itemName" /></span>
-                  <span class="tabular-nums text-text-secondary shrink-0">x{{ move.quantity }}</span>
-                  <span class="text-text-dim text-[10px] shrink-0 truncate max-w-20">&rarr; {{ move.toVaultName }}</span>
-                </label>
+                <div class="micro-label mb-1 text-value-negative">Drop Off</div>
+                <MoveChecklist :moves="zs.dropoffs" type="dropoff" :is-done="consolidation.isDropoffDone" :toggle="consolidation.toggleDropoff" show-target />
               </div>
-
-              <!-- Local: rearrange between vaults in this zone -->
               <div v-if="zs.localMoves.length" class="px-3 py-1.5">
                 <div class="micro-label mb-1 text-accent-blue">Rearrange Locally</div>
-                <label
-                  v-for="move in zs.localMoves" :key="`l-${move.itemName}-${move.fromVaultKey}`"
-                  class="flex items-center gap-1.5 text-xs py-0.5 cursor-pointer"
-                  :class="move.completed ? 'opacity-40 line-through' : ''">
-                  <input type="checkbox" :checked="move.completed" @change="consolidation.toggleMoveCompleted(move)" />
-                  <span class="flex-1 min-w-0 truncate"><ItemInline :reference="move.itemName" /></span>
-                  <span class="tabular-nums text-text-secondary shrink-0">x{{ move.quantity }}</span>
-                  <span class="text-text-dim text-[10px] shrink-0 truncate max-w-20">{{ move.fromVaultName }} &rarr; {{ move.toVaultName }}</span>
-                </label>
+                <MoveChecklist :moves="zs.localMoves" type="local" :is-done="consolidation.isLocalDone" :toggle="consolidation.toggleLocal" show-both-vaults />
               </div>
             </div>
           </div>
@@ -188,10 +130,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, defineComponent, h } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useGameStateStore } from '../../stores/gameStateStore'
-import { useStorageConsolidation } from '../../composables/useStorageConsolidation'
+import { useStorageConsolidation, type PlannedMove } from '../../composables/useStorageConsolidation'
 import EmptyState from '../Shared/EmptyState.vue'
 import ItemInline from '../Shared/Item/ItemInline.vue'
 
@@ -217,7 +159,6 @@ const progressPct = computed(() => {
   return Math.round((consolidation.completedCount.value / consolidation.totalCount.value) * 100)
 })
 
-/** In wizard mode, show current zone separately (highlighted above), so filter it out of the main grid */
 const displayedZoneStops = computed(() => {
   if (!consolidation.wizardActive.value) return plan.value.zoneStops
   const currentArea = consolidation.currentZone.value
@@ -228,11 +169,9 @@ async function planRoute() {
   planning.value = true
   routeError.value = ''
   route.value = null
-
   try {
     const areaObj = gameState.world?.area as { area_name?: string } | null
     const startZone = areaObj?.area_name ?? 'AreaSerbule'
-
     const configStr = localStorage.getItem('tripPlannerWidget.config')
     const config = configStr ? JSON.parse(configStr) : {}
     const travelConfig = {
@@ -243,16 +182,11 @@ async function planRoute() {
       useTpMachine: config.useTpMachine ?? false,
       casinoPortal: null,
     }
-
-    const stops = consolidation.routeStops.value.map(s => ({
-      zone: s.zone, purpose: s.purpose, details: s.details,
-    }))
-
+    const stops = consolidation.routeStops.value.map(s => ({ zone: s.zone, purpose: s.purpose, details: s.details }))
     if (stops.length === 0) {
-      routeError.value = 'No routable stops — items may be in portable storage or unknown zones.'
+      routeError.value = 'No routable stops.'
       return
     }
-
     route.value = await invoke<PlannedRoute>('plan_trip', { startZone, stops, travelConfig })
     showRouteSteps.value = false
   } catch (e) {
@@ -261,4 +195,36 @@ async function planRoute() {
     planning.value = false
   }
 }
+
+// ── Inline checklist component ──────────────────────────────────────────────
+
+const MoveChecklist = defineComponent({
+  props: {
+    moves: { type: Array as () => PlannedMove[], required: true },
+    type: { type: String as () => 'pickup' | 'dropoff' | 'local', required: true },
+    isDone: { type: Function as unknown as () => (m: PlannedMove) => boolean, required: true },
+    toggle: { type: Function as unknown as () => (m: PlannedMove) => void, required: true },
+    showVaultName: { type: Boolean, default: false },
+    showTarget: { type: Boolean, default: false },
+    showBothVaults: { type: Boolean, default: false },
+  },
+  setup(props) {
+    return () => h('div', { class: 'flex flex-col gap-0.5' },
+      props.moves.map(move => {
+        const done = props.isDone(move)
+        return h('label', {
+          key: `${move.itemName}-${move.fromVaultKey}-${move.toVaultKey}`,
+          class: ['flex items-center gap-1.5 text-xs py-0.5 cursor-pointer', done ? 'opacity-40 line-through' : ''],
+        }, [
+          h('input', { type: 'checkbox', checked: done, class: 'shrink-0', onChange: () => props.toggle(move) }),
+          h(ItemInline, { reference: move.itemName, class: 'flex-1 min-w-0 truncate' }),
+          h('span', { class: 'tabular-nums text-text-secondary shrink-0' }, `x${move.quantity}`),
+          props.showVaultName ? h('span', { class: 'text-text-dim text-[10px] shrink-0 truncate max-w-24' }, move.fromVaultName) : null,
+          props.showTarget ? h('span', { class: 'text-text-dim text-[10px] shrink-0 truncate max-w-24' }, `→ ${move.toVaultName}`) : null,
+          props.showBothVaults ? h('span', { class: 'text-text-dim text-[10px] shrink-0 truncate max-w-32' }, `${move.fromVaultName} → ${move.toVaultName}`) : null,
+        ])
+      })
+    )
+  },
+})
 </script>

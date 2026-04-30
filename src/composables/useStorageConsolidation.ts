@@ -228,26 +228,70 @@ export function useStorageConsolidation() {
     };
   });
 
-  // ── Move completion ─────────────────────────────────────────────────
+  // ── Action completion ───────────────────────────────────────────────
+  // Each cross-zone move has two actions: pickup and dropoff.
+  // Local moves have one action (the rearrangement).
+  // We track completion of each action separately.
 
-  function moveKey(move: PlannedMove): string {
-    return `${move.itemName}|${move.fromVaultKey}|${move.toVaultKey}`;
+  /** Completed actions, keyed as "pickup|item|vault" or "dropoff|item|vault" or "local|item|from|to" */
+  const completedActions = ref<Set<string>>(new Set());
+
+  function pickupKey(move: PlannedMove): string {
+    return `pickup|${move.itemName}|${move.fromVaultKey}`;
   }
 
-  function toggleMoveCompleted(move: PlannedMove) {
-    const key = moveKey(move);
-    const next = new Set(completedMoves.value);
+  function dropoffKey(move: PlannedMove): string {
+    return `dropoff|${move.itemName}|${move.toVaultKey}`;
+  }
+
+  function localKey(move: PlannedMove): string {
+    return `local|${move.itemName}|${move.fromVaultKey}|${move.toVaultKey}`;
+  }
+
+  function isPickupDone(move: PlannedMove): boolean {
+    return completedActions.value.has(pickupKey(move));
+  }
+
+  function isDropoffDone(move: PlannedMove): boolean {
+    return completedActions.value.has(dropoffKey(move));
+  }
+
+  function isLocalDone(move: PlannedMove): boolean {
+    return completedActions.value.has(localKey(move));
+  }
+
+  function togglePickup(move: PlannedMove) {
+    const key = pickupKey(move);
+    const next = new Set(completedActions.value);
     if (next.has(key)) next.delete(key);
     else next.add(key);
-    completedMoves.value = next;
+    completedActions.value = next;
   }
 
+  function toggleDropoff(move: PlannedMove) {
+    const key = dropoffKey(move);
+    const next = new Set(completedActions.value);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    completedActions.value = next;
+  }
+
+  function toggleLocal(move: PlannedMove) {
+    const key = localKey(move);
+    const next = new Set(completedActions.value);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    completedActions.value = next;
+  }
+
+  // Legacy compat for plan.moves[].completed
   function isMoveCompleted(move: PlannedMove): boolean {
-    return completedMoves.value.has(moveKey(move));
+    if (move.fromAreaKey === move.toAreaKey) return isLocalDone(move);
+    return isPickupDone(move) && isDropoffDone(move);
   }
 
   function resetCompletion() {
-    completedMoves.value = new Set();
+    completedActions.value = new Set();
   }
 
   // ── Wizard mode ─────────────────────────────────────────────────────
@@ -267,10 +311,37 @@ export function useStorageConsolidation() {
     return area?.area_name ?? null;
   });
 
-  /** The zone stop for the player's current location, if any */
+  /**
+   * Items currently in the player's carry bag: pickup was checked done
+   * but the corresponding dropoff has NOT been checked done yet.
+   */
+  const carryBag = computed<Set<string>>(() => {
+    const bag = new Set<string>();
+    for (const move of plan.value.moves) {
+      if (move.fromAreaKey === move.toAreaKey) continue; // local moves don't carry
+      if (isPickupDone(move) && !isDropoffDone(move)) {
+        bag.add(`${move.itemName}|${move.fromVaultKey}`);
+      }
+    }
+    return bag;
+  });
+
+  /** Is this dropoff item currently in the player's carry bag? */
+  function isInCarryBag(move: PlannedMove): boolean {
+    return carryBag.value.has(`${move.itemName}|${move.fromVaultKey}`);
+  }
+
+  /** The zone stop for the player's current location, filtered for actionability */
   const currentZoneStop = computed<ZoneStop | null>(() => {
     if (!currentZone.value) return null;
-    return plan.value.zoneStops.find((zs) => zs.areaKey === currentZone.value) ?? null;
+    const raw = plan.value.zoneStops.find((zs) => zs.areaKey === currentZone.value);
+    if (!raw) return null;
+
+    // Filter dropoffs to only items actually in the carry bag
+    return {
+      ...raw,
+      dropoffs: raw.dropoffs.filter((d) => isInCarryBag(d)),
+    };
   });
 
   /** Zone stops not yet completed, excluding current zone */
@@ -314,10 +385,18 @@ export function useStorageConsolidation() {
     stopWizard,
     currentZone,
     currentZoneStop,
+    carryBag,
     remainingZoneStops,
     completedCount,
     totalCount,
-    toggleMoveCompleted,
+    // Action tracking (separate pickup/dropoff/local checkboxes)
+    isPickupDone,
+    isDropoffDone,
+    isLocalDone,
+    togglePickup,
+    toggleDropoff,
+    toggleLocal,
+    isInCarryBag,
     isMoveCompleted,
     resetCompletion,
     routeStops,
