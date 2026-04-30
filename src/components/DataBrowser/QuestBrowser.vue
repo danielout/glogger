@@ -263,6 +263,8 @@ import PaneLayout from "../Shared/PaneLayout.vue";
 import { ref, computed, onMounted, watch } from "vue";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useKeyboard } from "../../composables/useKeyboard";
+import { useDataBrowserSearch, checkAreaFilter } from "../../composables/useDataBrowserSearch";
+import { combineFields } from "../../utils/SearchParser";
 import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { QuestInfo, QuestReward, QuestRequirement, EntitySources } from "../../types/gameData";
@@ -284,7 +286,6 @@ const isFav = computed(() =>
   selected.value ? dataBrowserStore.isFavorite("quest", selected.value.internal_name) : false
 );
 
-const query = ref("");
 const allQuests = ref<QuestInfo[]>([]);
 const selected = ref<QuestInfo | null>(null);
 const sources = ref<EntitySources | null>(null);
@@ -293,7 +294,7 @@ const loading = ref(false);
 const selectedIndex = ref(0);
 const listRef = ref<HTMLElement | null>(null);
 
-// Filters
+// Dropdown filters
 const filterArea = ref<string>("all");
 const filterNpc = ref<string>("all");
 const filterCancellable = ref<string>("all");
@@ -352,49 +353,50 @@ const availableNpcs = computed(() => {
     .sort((a, b) => a.displayName.localeCompare(b.displayName));
 });
 
-// Filtered and sorted quests
-const filteredQuests = computed(() => {
-  // Don't show anything until user searches or picks a filter
-  if (!query.value.trim() && filterArea.value === "all" && filterNpc.value === "all") {
-    return [];
-  }
+// Pre-filter by dropdown filters (area, NPC, cancellable)
+const dropdownFiltered = computed(() => {
+  let result = allQuests.value;
 
-  let filtered = allQuests.value;
-
-  // Text search
-  if (query.value.trim()) {
-    const q = query.value.toLowerCase();
-    filtered = filtered.filter(quest => {
-      const name = quest.raw?.Name?.toLowerCase() || "";
-      const desc = quest.raw?.Description?.toLowerCase() || "";
-      const internal = quest.internal_name.toLowerCase();
-      const area = quest.raw?.DisplayedLocation?.toLowerCase() || "";
-      return name.includes(q) || desc.includes(q) || internal.includes(q) || area.includes(q);
-    });
-  }
-
-  // Area filter
   if (filterArea.value !== "all") {
-    filtered = filtered.filter(q => q.raw?.DisplayedLocation === filterArea.value);
+    result = result.filter(q => q.raw?.DisplayedLocation === filterArea.value);
   }
 
-  // NPC filter
   if (filterNpc.value !== "all") {
-    filtered = filtered.filter(q => {
+    result = result.filter(q => {
       const favorNpc = q.raw?.FavorNpc;
       if (!favorNpc) return false;
       return extractNpcKeyFromFavorPath(favorNpc) === filterNpc.value;
     });
   }
 
-  // Cancellable filter
   if (filterCancellable.value !== "all") {
     const shouldBeCancellable = filterCancellable.value === "yes";
-    filtered = filtered.filter(q => q.raw?.IsCancellable === shouldBeCancellable);
+    result = result.filter(q => q.raw?.IsCancellable === shouldBeCancellable);
   }
 
-  // Sort
-  filtered = [...filtered].sort((a, b) => {
+  return result;
+});
+
+// Unified search for text matching on pre-filtered quests
+const { query, filtered: textFiltered } = useDataBrowserSearch(dropdownFiltered, {
+  searchText: (quest) => combineFields(
+    quest.raw?.Name,
+    quest.raw?.Description,
+    quest.internal_name,
+    quest.raw?.DisplayedLocation,
+  ),
+  applyFilters: (quest, q) => checkAreaFilter(quest.raw?.DisplayedLocation, q),
+});
+
+// Final filtered and sorted quests
+const filteredQuests = computed(() => {
+  // Don't show anything until user searches or picks a filter
+  const hasDropdownFilter = filterArea.value !== "all" || filterNpc.value !== "all" || filterCancellable.value !== "all";
+  if (!query.value.trim() && !hasDropdownFilter) {
+    return [];
+  }
+
+  const sorted = [...textFiltered.value].sort((a, b) => {
     if (sortBy.value === "name") {
       const aName = a.raw?.Name || a.internal_name;
       const bName = b.raw?.Name || b.internal_name;
@@ -411,7 +413,7 @@ const filteredQuests = computed(() => {
     return 0;
   });
 
-  return filtered;
+  return sorted;
 });
 
 // Reset NPC filter when area changes (selected NPC may not exist in new area)

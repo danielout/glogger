@@ -145,6 +145,8 @@ import { useGameStateStore } from "../../stores/gameStateStore";
 import { useCharacterStore } from "../../stores/characterStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useKeyboard } from "../../composables/useKeyboard";
+import { useDataBrowserSearch, checkAreaFilter } from "../../composables/useDataBrowserSearch";
+import { combineFields } from "../../utils/SearchParser";
 import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { NpcInfo } from "../../types/gameData";
@@ -186,7 +188,6 @@ const selectedVendorStatus = computed(() => {
   return gameState.vendorByNpc[selected.value.key] ?? null;
 });
 
-const query = ref("");
 const selectedArea = ref<string>("All Areas");
 const selected = ref<NpcInfo | null>(null);
 const vendorItems = ref<VendorItemSummary[]>([]);
@@ -197,7 +198,6 @@ const allNpcs = computed(() =>
   Object.values(store.npcsByKey).sort((a, b) => a.name.localeCompare(b.name))
 );
 const loading = computed(() => allNpcs.value.length === 0 && store.status === 'loading');
-const filteredNpcs = ref<NpcInfo[]>([]);
 
 // Get unique areas for the filter dropdown
 const availableAreas = computed(() => {
@@ -215,31 +215,21 @@ const availableAreas = computed(() => {
   return sorted;
 });
 
-// Filter NPCs based on search query, area, and when data loads
-watch([query, selectedArea, allNpcs], () => {
-  let results = allNpcs.value;
+// Pre-filter by area dropdown, then use unified search for text
+const areaFiltered = computed(() => {
+  if (selectedArea.value === "All Areas") return allNpcs.value;
+  if (selectedArea.value === "Unknown Area") return allNpcs.value.filter(npc => !npc.area_friendly_name);
+  return allNpcs.value.filter(npc => npc.area_friendly_name === selectedArea.value);
+});
 
-  // Filter by area
-  if (selectedArea.value !== "All Areas") {
-    if (selectedArea.value === 'Unknown Area') {
-      results = results.filter(npc => !npc.area_friendly_name);
-    } else {
-      results = results.filter(npc => npc.area_friendly_name === selectedArea.value);
-    }
-  }
+const { query, filtered: filteredNpcs } = useDataBrowserSearch(areaFiltered, {
+  searchText: (npc) => combineFields(npc.name, npc.desc, npc.area_friendly_name),
+  applyFilters: (npc, q) => checkAreaFilter(npc.area_friendly_name, q),
+});
 
-  // Filter by search query
-  if (query.value.trim()) {
-    const q = query.value.toLowerCase();
-    results = results.filter(npc =>
-      npc.name.toLowerCase().includes(q) ||
-      npc.desc?.toLowerCase().includes(q)
-    );
-  }
-
-  filteredNpcs.value = results;
+watch(filteredNpcs, () => {
   selectedIndex.value = 0;
-}, { immediate: true });
+});
 
 function selectNpc(npc: NpcInfo) {
   selected.value = npc;

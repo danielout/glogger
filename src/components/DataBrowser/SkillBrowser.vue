@@ -227,6 +227,8 @@ import PaneLayout from "../Shared/PaneLayout.vue";
 import { ref, computed, onMounted, watch } from "vue";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useKeyboard } from "../../composables/useKeyboard";
+import { useDataBrowserSearch } from "../../composables/useDataBrowserSearch";
+import { combineFields } from "../../utils/SearchParser";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useDataBrowserStore } from "../../stores/dataBrowserStore";
@@ -248,9 +250,7 @@ const isFav = computed(() =>
   selected.value ? dataBrowserStore.isFavorite("skill", selected.value.name) : false
 );
 
-const query = ref("");
 const allSkills = ref<SkillInfo[]>([]);
-const filteredSkills = ref<SkillInfo[]>([]);
 const selected = ref<SkillInfo | null>(null);
 const selectedIndex = ref(0);
 const listRef = ref<HTMLElement | null>(null);
@@ -261,6 +261,10 @@ const workOrderQuests = ref<QuestInfo[]>([]);
 const iconSrc = ref<string | null>(null);
 const iconLoading = ref(false);
 const loading = ref(false);
+
+const { query, filtered: filteredSkills } = useDataBrowserSearch(allSkills, {
+  searchText: (skill) => combineFields(skill.name, skill.description),
+});
 
 onMounted(async () => {
   if (store.status === "ready") {
@@ -279,22 +283,12 @@ async function loadAllSkills() {
   try {
     const skills = await store.getAllSkills();
     allSkills.value = skills.sort((a, b) => a.name.localeCompare(b.name));
-    filteredSkills.value = allSkills.value;
   } finally {
     loading.value = false;
   }
 }
 
-watch(query, (val) => {
-  if (!val.trim()) {
-    filteredSkills.value = allSkills.value;
-  } else {
-    const q = val.toLowerCase();
-    filteredSkills.value = allSkills.value.filter(skill =>
-      skill.name.toLowerCase().includes(q) ||
-      skill.description?.toLowerCase().includes(q)
-    );
-  }
+watch(query, () => {
   selectedIndex.value = 0;
 });
 

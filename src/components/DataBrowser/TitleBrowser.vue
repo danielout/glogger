@@ -127,6 +127,8 @@ import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import { useKeyboard } from "../../composables/useKeyboard";
+import { useDataBrowserSearch } from "../../composables/useDataBrowserSearch";
+import { combineFields } from "../../utils/SearchParser";
 import type { PlayerTitleInfo } from "../../types/gameData";
 
 /** Strip color tags and return { text, color } */
@@ -147,13 +149,15 @@ const isFav = computed(() =>
   selected.value ? dataBrowserStore.isFavorite("title", String(selected.value.id)) : false
 );
 
-const query = ref("");
 const allTitles = ref<PlayerTitleInfo[]>([]);
-const filteredTitles = ref<PlayerTitleInfo[]>([]);
 const selected = ref<PlayerTitleInfo | null>(null);
 const loading = ref(false);
 const selectedIndex = ref(0);
 const listRef = ref<HTMLElement | null>(null);
+
+const { query, filtered: filteredTitles } = useDataBrowserSearch(allTitles, {
+  searchText: (title) => combineFields(parseColorTag(title.title).text, title.tooltip),
+});
 
 onMounted(async () => {
   if (store.status === "ready") {
@@ -171,23 +175,10 @@ async function loadAllTitles() {
   loading.value = true;
   try {
     allTitles.value = await store.getAllPlayerTitles();
-    filteredTitles.value = allTitles.value;
   } finally {
     loading.value = false;
   }
 }
-
-watch(query, (val) => {
-  if (!val.trim()) {
-    filteredTitles.value = allTitles.value;
-    return;
-  }
-  const q = val.toLowerCase();
-  filteredTitles.value = allTitles.value.filter(title =>
-    parseColorTag(title.title).text.toLowerCase().includes(q) ||
-    title.tooltip?.toLowerCase().includes(q)
-  );
-});
 
 watch(filteredTitles, () => {
   selectedIndex.value = 0;

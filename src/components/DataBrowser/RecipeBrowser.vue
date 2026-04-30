@@ -308,6 +308,8 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useKeyboard } from "../../composables/useKeyboard";
+import { useDataBrowserSearch, checkSkillFilter, checkLevelFilter } from "../../composables/useDataBrowserSearch";
+import { combineFields } from "../../utils/SearchParser";
 import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { SkillInfo, RecipeInfo, ItemInfo, EntitySources } from "../../types/gameData";
@@ -333,7 +335,6 @@ const isFav = computed(() =>
 const allSkills = ref<SkillInfo[]>([]);
 const skillRecipeCounts = ref<Record<string, number>>({});
 const selectedSkillFilter = ref<string>("All");
-const query = ref("");
 const allRecipes = ref<RecipeInfo[]>([]);
 const selected = ref<RecipeInfo | null>(null);
 const sources = ref<EntitySources | null>(null);
@@ -398,23 +399,32 @@ const skillsWithRecipes = computed(() => {
   return allSkills.value.filter(skill => (skillRecipeCounts.value[skill.name] || 0) > 0);
 });
 
+// Unified search for client-side filtering (when a skill is selected)
+const { query, filtered: skillFilteredRecipes } = useDataBrowserSearch(allRecipes, {
+  searchText: (r) => combineFields(r.name, r.description, r.skill),
+  applyFilters: (r, q) =>
+    checkSkillFilter(r.skill, q) &&
+    checkLevelFilter(r.skill_level_req, q),
+});
+
+// For "All Skills" mode, do Tauri search on query change
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
+const tauriSearchResults = ref<RecipeInfo[]>([]);
 
 watch(query, (val) => {
+  if (selectedSkillFilter.value !== "All") return; // client-side handles it
   if (searchTimer) clearTimeout(searchTimer);
   if (!val.trim()) {
-    if (selectedSkillFilter.value !== "All") return;
-    allRecipes.value = [];
+    tauriSearchResults.value = [];
     return;
   }
-  if (selectedSkillFilter.value !== "All") return; // client-side filter handles it
   searchTimer = setTimeout(() => doSearch(val.trim()), 250);
 });
 
 async function doSearch(q: string) {
   loading.value = true;
   try {
-    allRecipes.value = await store.searchRecipes(q, 50);
+    tauriSearchResults.value = await store.searchRecipes(q, 50);
   } finally {
     loading.value = false;
   }
@@ -422,16 +432,9 @@ async function doSearch(q: string) {
 
 const filteredRecipes = computed(() => {
   if (selectedSkillFilter.value === "All") {
-    return allRecipes.value; // already filtered by search
+    return tauriSearchResults.value;
   }
-  if (!query.value.trim()) {
-    return allRecipes.value;
-  }
-  const q = query.value.toLowerCase();
-  return allRecipes.value.filter(recipe =>
-    recipe.name.toLowerCase().includes(q) ||
-    recipe.description?.toLowerCase().includes(q)
-  );
+  return skillFilteredRecipes.value;
 });
 
 watch(filteredRecipes, () => {

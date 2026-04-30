@@ -24,6 +24,8 @@ import WordsOfPowerWidget from "./widgets/WordsOfPowerWidget.vue";
 import TimerWidget from "./widgets/TimerWidget.vue";
 import TripPlannerWidget from "./widgets/TripPlannerWidget.vue";
 import TripPlannerWidgetConfig from "./widgets/TripPlannerWidgetConfig.vue";
+import GardenAlmanacWidget from "./widgets/GardenAlmanacWidget.vue";
+import MessagesWidget from "./widgets/MessagesWidget.vue";
 
 export type WidgetSize = "small" | "medium" | "large";
 
@@ -181,6 +183,18 @@ export const DASHBOARD_WIDGETS: DashboardWidget[] = [
     name: "Trip Planner",
     component: TripPlannerWidget,
     configComponent: TripPlannerWidgetConfig,
+    defaultSize: "medium",
+  },
+  {
+    id: "gardening",
+    name: "Gardening",
+    component: GardenAlmanacWidget,
+    defaultSize: "small",
+  },
+  {
+    id: "messages",
+    name: "Messages",
+    component: MessagesWidget,
     defaultSize: "medium",
   },
 ];

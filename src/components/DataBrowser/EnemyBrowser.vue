@@ -148,6 +148,8 @@ import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import { useKeyboard } from "../../composables/useKeyboard";
+import { useDataBrowserSearch } from "../../composables/useDataBrowserSearch";
+import { combineFields } from "../../utils/SearchParser";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { EnemyInfo } from "../../types/gameData";
 
@@ -159,10 +161,8 @@ const store = useGameDataStore();
 const settingsStore = useSettingsStore();
 const dataBrowserStore = useDataBrowserStore();
 
-const query = ref("");
 const selectedStrategy = ref<string>("All");
 const allEnemies = ref<EnemyInfo[]>([]);
-const filteredEnemies = ref<EnemyInfo[]>([]);
 const selected = ref<EnemyInfo | null>(null);
 const selectedIndex = ref(0);
 const listRef = ref<HTMLElement | null>(null);
@@ -197,29 +197,19 @@ const availableStrategies = computed(() => {
   return Array.from(strategies).sort();
 });
 
-// Filter enemies based on query and strategy
-watch([query, selectedStrategy, allEnemies], () => {
-  let results = allEnemies.value;
+// Pre-filter by strategy dropdown, then use unified search for text
+const strategyFiltered = computed(() => {
+  if (selectedStrategy.value === "All") return allEnemies.value;
+  return allEnemies.value.filter(e => e.strategy === selectedStrategy.value);
+});
 
-  // Filter by strategy
-  if (selectedStrategy.value !== "All") {
-    results = results.filter(e => e.strategy === selectedStrategy.value);
-  }
+const { query, filtered: filteredEnemies } = useDataBrowserSearch(strategyFiltered, {
+  searchText: (e) => combineFields(e.key, formatName(e.key), e.comment, e.ability_names.join(" ")),
+});
 
-  // Filter by search query
-  if (query.value.trim()) {
-    const q = query.value.toLowerCase();
-    results = results.filter(e =>
-      e.key.toLowerCase().includes(q) ||
-      formatName(e.key).toLowerCase().includes(q) ||
-      e.comment?.toLowerCase().includes(q) ||
-      e.ability_names.some(a => a.toLowerCase().includes(q))
-    );
-  }
-
-  filteredEnemies.value = results;
+watch(filteredEnemies, () => {
   selectedIndex.value = 0;
-}, { immediate: true });
+});
 
 function selectEnemy(enemy: EnemyInfo) {
   selected.value = enemy;

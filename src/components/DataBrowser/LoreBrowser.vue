@@ -130,6 +130,8 @@ import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import { useKeyboard } from "../../composables/useKeyboard";
+import { useDataBrowserSearch } from "../../composables/useDataBrowserSearch";
+import { combineFields } from "../../utils/SearchParser";
 import type { LorebookEntry, LorebookCategoryInfo } from "../../types/gameData";
 
 const store = useGameDataStore();
@@ -140,15 +142,23 @@ const isFav = computed(() =>
   selected.value ? dataBrowserStore.isFavorite("lorebook", String(selected.value.id)) : false
 );
 
-const query = ref("");
 const selectedCategory = ref("");
 const allBooks = ref<LorebookEntry[]>([]);
 const categories = ref<LorebookCategoryInfo[]>([]);
-const filteredBooks = ref<LorebookEntry[]>([]);
 const selected = ref<LorebookEntry | null>(null);
 const loading = ref(false);
 const selectedIndex = ref(0);
 const listRef = ref<HTMLElement | null>(null);
+
+// Books filtered by category dropdown (pre-filter before text search)
+const categoryFiltered = computed(() => {
+  if (!selectedCategory.value) return allBooks.value;
+  return allBooks.value.filter(b => b.category === selectedCategory.value);
+});
+
+const { query, filtered: filteredBooks } = useDataBrowserSearch(categoryFiltered, {
+  searchText: (book) => combineFields(book.title, book.location_hint, book.text),
+});
 
 onMounted(async () => {
   if (store.status === "ready") {
@@ -171,34 +181,10 @@ async function loadAll() {
     ]);
     allBooks.value = books;
     categories.value = cats;
-    applyFilters();
   } finally {
     loading.value = false;
   }
 }
-
-function applyFilters() {
-  let result = allBooks.value;
-
-  if (selectedCategory.value) {
-    result = result.filter(b => b.category === selectedCategory.value);
-  }
-
-  if (query.value.trim()) {
-    const q = query.value.toLowerCase();
-    result = result.filter(b =>
-      (b.title?.toLowerCase().includes(q)) ||
-      (b.location_hint?.toLowerCase().includes(q)) ||
-      (b.text?.toLowerCase().includes(q))
-    );
-  }
-
-  filteredBooks.value = result;
-}
-
-watch([query, selectedCategory], () => {
-  applyFilters();
-});
 
 watch(filteredBooks, () => {
   selectedIndex.value = 0;

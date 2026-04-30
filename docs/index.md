@@ -130,7 +130,7 @@ Per-screen documentation organized by view.
   - [data-browser-titles.md](features/screens/data-browser/data-browser-titles.md) — Titles tab.
 
 ### Search
-- [search.md](features/screens/search.md) — Search screen: quick search overlay (Ctrl+F), dedicated search page, cross-category search composable.
+- [search.md](features/screens/search.md) — Unified search: Scryfall-inspired structured query syntax, quick search overlay (Ctrl+F), dedicated search page, 14 searchable categories, relevance scoring.
 
 ### Settings
 - [settings.md](features/screens/settings.md) — Settings screen: tabbed configuration for general, chat logs, user data, game data, advanced, and dev tools.

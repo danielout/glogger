@@ -17,12 +17,12 @@
           <input
             v-model="query"
             class="input flex-1"
-            placeholder="Search items…"
+            placeholder="Search items… (keyword:Food, level:30-50, slot:MainHand)"
             autofocus />
           <span v-if="searching" class="text-accent-gold text-sm animate-spin">⟳</span>
-          <span v-else-if="(query || hasActiveFilters) && results.length" class="text-text-dim text-xs min-w-6 text-right">{{
-            results.length
-          }}</span>
+          <span v-else-if="(query || hasActiveFilters) && results.length" class="text-text-dim text-xs min-w-6 text-right">
+            {{ results.length }}
+          </span>
         </div>
 
         <!-- Advanced filters toggle -->
@@ -437,6 +437,7 @@ import { useSettingsStore } from "../../stores/settingsStore";
 import { useKeyboard } from "../../composables/useKeyboard";
 import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import { useEntityNavigation } from "../../composables/useEntityNavigation";
+import { parseQuery, getTextQuery, getFilter, getNegatedFilters } from "../../utils/SearchParser";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
 import type { ItemInfo, RecipeInfo, EntitySources, NpcFavorEntry, GardeningProductChain } from "../../types/gameData";
 import SourcesPanel from "../Shared/SourcesPanel.vue";
@@ -530,6 +531,44 @@ onMounted(async () => {
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
+// Parse structured filters from the query text
+const parsedQuery = computed(() => parseQuery(query.value));
+
+// Merge text-based filters with dropdown filters (dropdowns take priority)
+const effectiveKeyword = computed(() => {
+  if (filterKeyword.value) return filterKeyword.value;
+  const f = getFilter(parsedQuery.value, "keyword");
+  return f?.kind === "keyword" ? f.value : "";
+});
+
+const effectiveSlot = computed(() => {
+  if (filterSlot.value) return filterSlot.value;
+  const f = getFilter(parsedQuery.value, "slot");
+  return f?.kind === "slot" ? f.value : "";
+});
+
+const effectiveLevelMin = computed(() => {
+  if (filterLevelMin.value != null) return filterLevelMin.value;
+  const f = getFilter(parsedQuery.value, "level");
+  return f?.kind === "level" ? f.min : undefined;
+});
+
+const effectiveLevelMax = computed(() => {
+  if (filterLevelMax.value != null) return filterLevelMax.value;
+  const f = getFilter(parsedQuery.value, "level");
+  return f?.kind === "level" ? f.max : undefined;
+});
+
+// The plain text portion of the query (without filter syntax)
+const textQuery = computed(() => getTextQuery(parsedQuery.value));
+
+// Negated keywords from query syntax (e.g. -keyword:NotObtainable)
+const negatedKeywords = computed(() =>
+  getNegatedFilters(parsedQuery.value, "keyword")
+    .filter(f => f.kind === "keyword")
+    .map(f => (f as { kind: "keyword"; value: string }).value)
+);
+
 watch([query, filterSlot, filterKeyword, filterLevelMin, filterLevelMax], () => {
   if (debounceTimer) clearTimeout(debounceTimer);
   selectedIndex.value = 0;
@@ -538,7 +577,7 @@ watch([query, filterSlot, filterKeyword, filterLevelMin, filterLevelMax], () => 
     results.value = [];
     return;
   }
-  debounceTimer = setTimeout(() => doSearch(q), 250);
+  debounceTimer = setTimeout(() => doSearch(), 250);
 });
 
 useKeyboard({
@@ -558,33 +597,60 @@ function filterUnobtainable(items: ItemInfo[]): ItemInfo[] {
   return items.filter(i => !i.keywords.includes('Lint_NotObtainable'));
 }
 
-async function doSearch(q: string) {
+function applyNegatedKeywords(items: ItemInfo[]): ItemInfo[] {
+  if (negatedKeywords.value.length === 0) return items;
+  return items.filter(item =>
+    !negatedKeywords.value.some(nk =>
+      item.keywords.some(k => k.toLowerCase() === nk)
+    )
+  );
+}
+
+async function doSearch() {
   searching.value = true;
   try {
-    if (filterKeyword.value) {
+    const q = textQuery.value;
+    const kw = effectiveKeyword.value;
+    const slot = effectiveSlot.value;
+    const levelMin = effectiveLevelMin.value;
+    const levelMax = effectiveLevelMax.value;
+
+    let items: ItemInfo[];
+
+    if (kw) {
       // Keyword filter: fetch all items with this keyword, then apply text + other filters client-side
-      let items = await store.getItemsByKeyword(filterKeyword.value);
+      items = await store.getItemsByKeyword(kw);
       if (q) {
         const lower = q.toLowerCase();
         items = items.filter(i => i.name.toLowerCase().includes(lower));
       }
-      if (filterSlot.value) {
-        items = items.filter(i => i.equip_slot === filterSlot.value);
+      if (slot) {
+        items = items.filter(i => i.equip_slot?.toLowerCase().includes(slot.toLowerCase()));
       }
-      if (filterLevelMin.value != null) {
-        items = items.filter(i => i.crafting_target_level != null && i.crafting_target_level >= filterLevelMin.value!);
+      if (levelMin != null) {
+        items = items.filter(i => i.crafting_target_level != null && i.crafting_target_level >= levelMin);
       }
-      if (filterLevelMax.value != null) {
-        items = items.filter(i => i.crafting_target_level != null && i.crafting_target_level <= filterLevelMax.value!);
+      if (levelMax != null) {
+        items = items.filter(i => i.crafting_target_level != null && i.crafting_target_level <= levelMax);
       }
-      results.value = filterUnobtainable(items);
     } else {
-      results.value = filterUnobtainable(await store.searchItems(q, {
-        equipSlot: filterSlot.value || undefined,
-        levelMin: filterLevelMin.value,
-        levelMax: filterLevelMax.value,
-      }));
+      items = await store.searchItems(q, {
+        equipSlot: slot || undefined,
+        levelMin,
+        levelMax,
+      });
     }
+
+    // Apply exact phrase matching from parsed query
+    if (parsedQuery.value.exactPhrases.length > 0) {
+      items = items.filter(item => {
+        const searchable = [item.name, item.description, item.food_desc, ...item.keywords, ...item.effect_descs]
+          .filter(Boolean).join(" ").toLowerCase();
+        return parsedQuery.value.exactPhrases.every(p => searchable.includes(p));
+      });
+    }
+
+    results.value = applyNegatedKeywords(filterUnobtainable(items));
   } finally {
     searching.value = false;
   }

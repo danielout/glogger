@@ -27,6 +27,7 @@ mod external_fetch;
 mod gst_manager;
 mod trip_router;
 mod watch_rules;
+mod unified_search;
 mod zone_graph;
 
 use chrono::Local;
@@ -185,6 +186,7 @@ use db::game_state_commands::{
     get_teleportation_binds,
     set_mushroom_circles,
     get_garden_almanac,
+    get_garden_almanac_history,
 };
 use db::gourmand_commands::{
     export_text_file, get_all_foods, get_gourmand_eaten_foods, import_cooks_helper_file,
@@ -207,6 +209,7 @@ use replay::replay_dual_logs;
 use trip_router::plan_trip;
 use external_fetch::{fetch_github_releases, fetch_pg_news};
 use gst_manager::{gst_check_status, gst_download, gst_launch};
+use unified_search::unified_search;
 use settings::{
     get_server_list, get_settings_file_path, load_settings, save_settings, SettingsManager,
 };
@@ -500,6 +503,8 @@ pub fn run() {
             resolve_npc,
             resolve_ability,
             resolve_area,
+            // Unified search
+            unified_search,
             // Item queries
             search_items,
             get_items_by_keyword,
@@ -784,8 +789,11 @@ pub fn run() {
             // Teleportation binds
             get_teleportation_binds,
             set_mushroom_circles,
+            // Player messages (pigeons & stall notes)
+            db::message_commands::get_player_messages,
             // Garden almanac
             get_garden_almanac,
+            get_garden_almanac_history,
             // Trip routing
             plan_trip,
             // External content

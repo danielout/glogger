@@ -150,7 +150,7 @@ import ReferenceShelf from "./components/Shared/ReferenceShelf/ReferenceShelf.vu
 import CdnUpdateModal from "./components/Shared/CdnUpdateModal.vue";
 import { useToast } from "./composables/useToast";
 import { useViewPrefs } from "./composables/useViewPrefs";
-import type { SearchResult } from "./composables/useQuickSearch";
+import type { SearchResult } from "./composables/useUnifiedSearch";
 
 const settingsStore = useSettingsStore();
 const toast = useToast();

@@ -59,7 +59,9 @@
                     <RecipeInline v-else-if="category.name === 'Game Recipes'" :reference="result.label" :show-icon="true" />
                     <NpcInline v-else-if="category.name === 'NPCs'" :reference="String(result.navigation.entityId ?? result.label)" />
                     <QuestInline v-else-if="category.name === 'Quests'" :reference="String(result.navigation.entityId ?? result.label)" />
-                    <SkillInline v-else-if="category.name === 'Your Skills'" :reference="result.label" :show-icon="true" />
+                    <SkillInline v-else-if="category.name === 'Skills' || category.name === 'Your Skills'" :reference="result.label" :show-icon="true" />
+                    <AreaInline v-else-if="category.name === 'Areas'" :reference="String(result.navigation.entityId ?? result.label)" />
+                    <EnemyInline v-else-if="category.name === 'Enemies'" :reference="String(result.navigation.entityId ?? result.label)" />
                     <span v-else class="text-text-primary">{{ result.label }}</span>
                   </div>
                   <div v-if="result.detail" class="text-xs text-text-muted truncate">{{ result.detail }}</div>
@@ -76,10 +78,59 @@
         </div>
       </div>
 
-      <!-- Initial state -->
-      <div v-else class="text-center py-16 text-text-muted">
-        <div class="text-sm">Type at least 2 characters to search</div>
-        <div class="text-xs mt-2">Searches your items, skills, game data, NPCs, recipes, quests, and market values</div>
+      <!-- Initial state with syntax guide -->
+      <div v-else class="py-10 max-w-lg mx-auto text-text-muted">
+        <div class="text-sm text-center mb-6">Searches all game data, your inventory, skills, and market values</div>
+
+        <div class="bg-surface-base border border-border-default rounded-lg p-5">
+          <h3 class="text-xs font-semibold text-text-secondary uppercase tracking-wider m-0 mb-3">Search Syntax</h3>
+          <div class="flex flex-col gap-2 text-xs">
+            <div class="flex items-baseline gap-3">
+              <code class="text-accent-gold bg-surface-dark px-1.5 py-0.5 rounded-sm shrink-0">fire sword</code>
+              <span>plain text search across all fields</span>
+            </div>
+            <div class="flex items-baseline gap-3">
+              <code class="text-accent-gold bg-surface-dark px-1.5 py-0.5 rounded-sm shrink-0">"exact phrase"</code>
+              <span>exact phrase match</span>
+            </div>
+            <div class="flex items-baseline gap-3">
+              <code class="text-accent-gold bg-surface-dark px-1.5 py-0.5 rounded-sm shrink-0">type:item</code>
+              <span>restrict to entity type (item, recipe, npc, quest, skill, ability, effect, enemy, area, title, lorebook)</span>
+            </div>
+            <div class="flex items-baseline gap-3">
+              <code class="text-accent-gold bg-surface-dark px-1.5 py-0.5 rounded-sm shrink-0">skill:Sword</code>
+              <span>entities associated with a skill</span>
+            </div>
+            <div class="flex items-baseline gap-3">
+              <code class="text-accent-gold bg-surface-dark px-1.5 py-0.5 rounded-sm shrink-0">area:Serbule</code>
+              <span>entities in a zone</span>
+            </div>
+            <div class="flex items-baseline gap-3">
+              <code class="text-accent-gold bg-surface-dark px-1.5 py-0.5 rounded-sm shrink-0">level:30-50</code>
+              <span>level or level range</span>
+            </div>
+            <div class="flex items-baseline gap-3">
+              <code class="text-accent-gold bg-surface-dark px-1.5 py-0.5 rounded-sm shrink-0">keyword:Food</code>
+              <span>items with a specific keyword</span>
+            </div>
+            <div class="flex items-baseline gap-3">
+              <code class="text-accent-gold bg-surface-dark px-1.5 py-0.5 rounded-sm shrink-0">has:recipe</code>
+              <span>items that have recipes</span>
+            </div>
+            <div class="flex items-baseline gap-3">
+              <code class="text-accent-gold bg-surface-dark px-1.5 py-0.5 rounded-sm shrink-0">-keyword:NotObtainable</code>
+              <span>exclude matches (prefix any filter with -)</span>
+            </div>
+          </div>
+
+          <h3 class="text-xs font-semibold text-text-secondary uppercase tracking-wider m-0 mt-4 mb-2">Examples</h3>
+          <div class="flex flex-col gap-1 text-xs">
+            <div><code class="text-text-secondary bg-surface-dark px-1.5 py-0.5 rounded-sm">type:item keyword:Food level:30-50</code> — food items in a level range</div>
+            <div><code class="text-text-secondary bg-surface-dark px-1.5 py-0.5 rounded-sm">type:recipe skill:Cooking soup</code> — cooking recipes matching "soup"</div>
+            <div><code class="text-text-secondary bg-surface-dark px-1.5 py-0.5 rounded-sm">type:npc area:Serbule</code> — NPCs in Serbule</div>
+            <div><code class="text-text-secondary bg-surface-dark px-1.5 py-0.5 rounded-sm">sword -type:effect</code> — everything mentioning "sword" except effects</div>
+          </div>
+        </div>
       </div>
     </div>
   </PaneLayout>
@@ -93,7 +144,9 @@ import RecipeInline from "../Shared/Recipe/RecipeInline.vue"
 import NpcInline from "../Shared/NPC/NpcInline.vue"
 import QuestInline from "../Shared/Quest/QuestInline.vue"
 import SkillInline from "../Shared/Skill/SkillInline.vue"
-import { useQuickSearch, type SearchResult } from "../../composables/useQuickSearch"
+import AreaInline from "../Shared/Area/AreaInline.vue"
+import EnemyInline from "../Shared/Enemy/EnemyInline.vue"
+import { useUnifiedSearch, type SearchResult } from "../../composables/useUnifiedSearch"
 
 const emit = defineEmits<{
   navigate: [result: SearchResult]
@@ -104,7 +157,7 @@ const query = ref("")
 const collapsed = reactive(new Set<string>())
 
 // No cap for the dedicated page
-const { categories, loading } = useQuickSearch(query, { cap: 50 })
+const { categories, loading } = useUnifiedSearch(query, { cap: 50 })
 
 const allCategories = [
   { key: "Your Items", label: "Your Items" },
@@ -113,6 +166,13 @@ const allCategories = [
   { key: "Game Recipes", label: "Game Recipes" },
   { key: "NPCs", label: "NPCs" },
   { key: "Quests", label: "Quests" },
+  { key: "Skills", label: "Skills" },
+  { key: "Abilities", label: "Abilities" },
+  { key: "Effects", label: "Effects" },
+  { key: "Enemies", label: "Enemies" },
+  { key: "Areas", label: "Areas" },
+  { key: "Titles", label: "Titles" },
+  { key: "Lorebooks", label: "Lorebooks" },
   { key: "Market Values", label: "Market Values" },
 ]
 

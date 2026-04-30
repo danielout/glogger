@@ -17,6 +17,7 @@ pub mod game_state_commands;
 pub mod gourmand_commands;
 pub mod inventory_commands;
 pub mod market_commands;
+pub mod message_commands;
 pub mod migrations;
 pub mod player_commands;
 #[allow(dead_code)]

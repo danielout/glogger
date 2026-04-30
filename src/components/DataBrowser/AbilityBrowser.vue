@@ -251,6 +251,8 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useKeyboard } from "../../composables/useKeyboard";
+import { useDataBrowserSearch, checkSkillFilter } from "../../composables/useDataBrowserSearch";
+import { combineFields } from "../../utils/SearchParser";
 import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import type { AbilityInfo, AbilityFamily, TsysAbilityXref } from "../../types/gameData";
 import SkillInline from "../Shared/Skill/SkillInline.vue";
@@ -267,7 +269,6 @@ const isFav = computed(() =>
 
 const skillsWithCounts = ref<{ name: string; count: number }[]>([]);
 const selectedSkillFilter = ref<string>("All");
-const query = ref("");
 const allFamilies = ref<AbilityFamily[]>([]);
 const selected = ref<AbilityFamily | null>(null);
 const selectedIndex = ref(0);
@@ -337,20 +338,15 @@ async function loadFamiliesForSkill(skillName: string) {
 
 watch(selectedSkillFilter, async (skillName) => {
   if (skillName === "All") {
-    // If there's a query active, search across all skills
+    allFamilies.value = [];
+    // If there's a query active, trigger Tauri search
     if (query.value.trim()) {
       searchFamilies(query.value.trim());
-    } else {
-      allFamilies.value = [];
     }
     return;
   }
-  // If there's a query, do server-side filtered search; otherwise load all for this skill
-  if (query.value.trim()) {
-    searchFamilies(query.value.trim());
-  } else {
-    loadFamiliesForSkill(skillName);
-  }
+  // Load all families for this skill (client-side composable handles filtering)
+  loadFamiliesForSkill(skillName);
 });
 
 const skillsWithAbilities = computed(() => skillsWithCounts.value);
@@ -358,26 +354,30 @@ const skillsWithAbilities = computed(() => skillsWithCounts.value);
 // When the monster toggle changes, reload the current view
 watch(showMonsterAbilities, async () => {
   await loadSkillList();
-  if (query.value.trim()) {
-    searchFamilies(query.value.trim());
-  } else if (selectedSkillFilter.value !== "All") {
+  if (selectedSkillFilter.value !== "All") {
     loadFamiliesForSkill(selectedSkillFilter.value);
+  } else if (query.value.trim()) {
+    searchFamilies(query.value.trim());
   } else {
     allFamilies.value = [];
   }
 });
 
+// Client-side unified search for when a skill is selected and data is loaded
+const { query, filtered: clientFilteredFamilies } = useDataBrowserSearch(allFamilies, {
+  searchText: (f) => combineFields(f.base_name, f.base_internal_name, f.skill, f.damage_type),
+  applyFilters: (f, q) => checkSkillFilter(f.skill, q),
+});
+
+// For "All Skills" mode, do Tauri search on query change
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
+const tauriSearchResults = ref<AbilityFamily[]>([]);
 
 watch(query, (val) => {
+  if (selectedSkillFilter.value !== "All") return; // client-side handles it
   if (searchTimer) clearTimeout(searchTimer);
   if (!val.trim()) {
-    // When clearing search, reload skill families if a skill is selected, otherwise clear
-    if (selectedSkillFilter.value !== "All") {
-      loadFamiliesForSkill(selectedSkillFilter.value);
-    } else {
-      allFamilies.value = [];
-    }
+    tauriSearchResults.value = [];
     return;
   }
   searchTimer = setTimeout(() => searchFamilies(val.trim()), 250);
@@ -387,13 +387,18 @@ async function searchFamilies(q: string) {
   loading.value = true;
   try {
     const skill = selectedSkillFilter.value !== "All" ? selectedSkillFilter.value : undefined;
-    allFamilies.value = await store.searchAbilityFamilies(q, skill, 50, showMonsterAbilities.value);
+    tauriSearchResults.value = await store.searchAbilityFamilies(q, skill, 50, showMonsterAbilities.value);
   } finally {
     loading.value = false;
   }
 }
 
-const filteredFamilies = computed(() => allFamilies.value);
+const filteredFamilies = computed(() => {
+  if (selectedSkillFilter.value === "All") {
+    return tauriSearchResults.value;
+  }
+  return clientFilteredFamilies.value;
+});
 
 function levelRange(family: AbilityFamily): string {
   if (family.tier_ids.length === 1) {

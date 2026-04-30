@@ -227,6 +227,16 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 40)?;
     }
 
+    if current_version < 41 {
+        migration_v41_garden_almanac(conn)?;
+        super::record_migration(conn, 41)?;
+    }
+
+    if current_version < 42 {
+        migration_v42_player_messages(conn)?;
+        super::record_migration(conn, 42)?;
+    }
+
     Ok(())
 }
 
@@ -2121,6 +2131,39 @@ fn migration_v40_user_timers(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+fn migration_v41_garden_almanac(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS garden_almanac (
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            crop_name TEXT NOT NULL,
+            zone_name TEXT NOT NULL,
+            event_start TEXT,
+            event_end TEXT,
+            is_current INTEGER NOT NULL DEFAULT 0,
+            captured_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_garden_almanac_char_server
+            ON garden_almanac(character_name, server_name);
+
+        CREATE TABLE IF NOT EXISTS garden_almanac_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            crop_name TEXT NOT NULL,
+            zone_name TEXT NOT NULL,
+            event_start TEXT,
+            event_end TEXT,
+            captured_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_garden_almanac_history_char_server
+            ON garden_almanac_history(character_name, server_name);
+        CREATE INDEX IF NOT EXISTS idx_garden_almanac_history_crop
+            ON garden_almanac_history(crop_name, zone_name);"
+    )?;
+    Ok(())
+}
+
 fn migration_v39_teleportation_binds(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS game_state_teleportation (
@@ -2133,6 +2176,27 @@ fn migration_v39_teleportation_binds(conn: &Connection) -> Result<()> {
             last_updated TEXT NOT NULL,
             PRIMARY KEY (character_name, server_name)
         );"
+    )?;
+    Ok(())
+}
+
+/// Migration V42: Player messages — tracks pigeon and stall-note messages.
+fn migration_v42_player_messages(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS player_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            timestamp TEXT NOT NULL,
+            message_type TEXT NOT NULL,
+            direction TEXT NOT NULL,
+            other_player TEXT NOT NULL,
+            body TEXT NOT NULL DEFAULT '',
+            item_name TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_player_messages_char_server
+            ON player_messages(character_name, server_name, timestamp DESC);"
     )?;
     Ok(())
 }

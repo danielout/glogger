@@ -1490,6 +1490,45 @@ impl DataIngestCoordinator {
                 ],
             )
             .ok();
+
+            // Save to history (deduplicate by crop+zone+event timing)
+            let event_key_start = event.event_start.as_deref().unwrap_or("");
+            let event_key_end = event.event_end.as_deref().unwrap_or("");
+            let exists: bool = conn
+                .query_row(
+                    "SELECT COUNT(*) > 0 FROM garden_almanac_history
+                     WHERE character_name = ?1 AND server_name = ?2
+                       AND crop_name = ?3 AND zone_name = ?4
+                       AND COALESCE(event_start, '') = ?5
+                       AND COALESCE(event_end, '') = ?6",
+                    rusqlite::params![
+                        character,
+                        server,
+                        event.crop_name,
+                        event.zone_name,
+                        event_key_start,
+                        event_key_end,
+                    ],
+                    |row| row.get(0),
+                )
+                .unwrap_or(false);
+
+            if !exists {
+                conn.execute(
+                    "INSERT INTO garden_almanac_history (character_name, server_name, crop_name, zone_name, event_start, event_end, captured_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                    rusqlite::params![
+                        character,
+                        server,
+                        event.crop_name,
+                        event.zone_name,
+                        event.event_start,
+                        event.event_end,
+                        event.captured_at,
+                    ],
+                )
+                .ok();
+            }
         }
 
         startup_log!(

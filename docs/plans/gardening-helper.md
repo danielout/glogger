@@ -38,8 +38,16 @@ Medium-size widget with:
 - **Almanac**: "What should I plant?" (server-wide bonus events)
 - **Garden Plots**: "What do my plants need right now?" (player's actual plots)
 - Cross-reference: highlight planted crops with active almanac bonuses
+- Both live under the single "Gardening" dashboard widget, as tabs or sections
 
 ## Phases
+
+### Phase 0: Almanac widget + history (DONE)
+- Migration v41: `garden_almanac` + `garden_almanac_history` tables
+- Coordinator saves history on each almanac ingest (deduped by crop+zone+timing)
+- `get_garden_almanac` + `get_garden_almanac_history` Tauri commands
+- `GardenAlmanacWidget.vue` registered as "Gardening" in dashboardWidgets.ts
+- Shows active bonuses with countdown timers, upcoming events, and empty-state prompt
 
 ### Phase 1: Backend event handling + persistence
 - EntityDescriptionUpdated handler in game_state.rs
@@ -48,18 +56,19 @@ Medium-size widget with:
 - `get_garden_plots` Tauri command
 
 ### Phase 2: Basic widget
-- GardenPlotsWidget.vue with plot list grouped by area
-- State-colored badges, register in dashboardWidgets.ts
+- Add garden plots tab/section to Gardening widget
+- Plot list grouped by area, state-colored badges
 
 ### Phase 3: Inventory integration
 - `get_garden_inventory` command
 - Supply count display, cross-reference with plot states
 
 ### Phase 4: Almanac cross-reference
-- Query garden_almanac for active bonuses, show badges
+- Query garden_almanac for active bonuses, show badges on matching plots
 
 ### Phase 5: History + analytics (future)
 - garden_plot_history table, average grow times, yield tracking
+- Use garden_almanac_history to show season rotation patterns
 
 ## Key Files
 

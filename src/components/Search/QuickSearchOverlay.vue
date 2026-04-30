@@ -14,7 +14,7 @@
               ref="inputRef"
               v-model="query"
               type="text"
-              placeholder="Search items, skills, NPCs, recipes..."
+              placeholder="Search everything... (try type:item, skill:Sword, level:30-50)"
               class="flex-1 bg-transparent border-none text-sm text-text-primary placeholder-text-muted focus:outline-none"
               @keydown="handleKeydown"
             />
@@ -42,7 +42,9 @@
                   <RecipeInline v-else-if="category.name === 'Game Recipes'" :reference="result.label" :show-icon="false" />
                   <NpcInline v-else-if="category.name === 'NPCs'" :reference="String(result.navigation.entityId ?? result.label)" />
                   <QuestInline v-else-if="category.name === 'Quests'" :reference="String(result.navigation.entityId ?? result.label)" />
-                  <SkillInline v-else-if="category.name === 'Your Skills'" :reference="result.label" :show-icon="false" />
+                  <SkillInline v-else-if="category.name === 'Skills' || category.name === 'Your Skills'" :reference="result.label" :show-icon="false" />
+                  <AreaInline v-else-if="category.name === 'Areas'" :reference="String(result.navigation.entityId ?? result.label)" />
+                  <EnemyInline v-else-if="category.name === 'Enemies'" :reference="String(result.navigation.entityId ?? result.label)" />
                   <span v-else>{{ result.label }}</span>
                 </span>
                 <span class="text-xs text-text-muted truncate max-w-50">{{ result.detail }}</span>
@@ -60,9 +62,25 @@
             Searching...
           </div>
 
-          <!-- Hint when empty -->
-          <div v-else class="px-4 py-6 text-center text-xs text-text-muted">
-            Type at least 2 characters to search
+          <!-- Syntax help when empty -->
+          <div v-else class="px-4 py-4 text-xs text-text-muted">
+            <div class="text-center mb-3">Type to search across all game data, your inventory, and more</div>
+            <div class="grid grid-cols-2 gap-x-6 gap-y-1 max-w-sm mx-auto">
+              <span class="text-text-secondary font-mono">type:item</span>
+              <span>restrict to entity type</span>
+              <span class="text-text-secondary font-mono">skill:Sword</span>
+              <span>filter by skill</span>
+              <span class="text-text-secondary font-mono">area:Serbule</span>
+              <span>filter by zone</span>
+              <span class="text-text-secondary font-mono">level:30-50</span>
+              <span>level range</span>
+              <span class="text-text-secondary font-mono">keyword:Food</span>
+              <span>item keyword</span>
+              <span class="text-text-secondary font-mono">"exact phrase"</span>
+              <span>exact match</span>
+              <span class="text-text-secondary font-mono">-keyword:X</span>
+              <span>exclude</span>
+            </div>
           </div>
 
           <!-- Footer -->
@@ -84,7 +102,9 @@ import RecipeInline from "../Shared/Recipe/RecipeInline.vue"
 import NpcInline from "../Shared/NPC/NpcInline.vue"
 import QuestInline from "../Shared/Quest/QuestInline.vue"
 import SkillInline from "../Shared/Skill/SkillInline.vue"
-import { useQuickSearch, type SearchResult } from "../../composables/useQuickSearch"
+import AreaInline from "../Shared/Area/AreaInline.vue"
+import EnemyInline from "../Shared/Enemy/EnemyInline.vue"
+import { useUnifiedSearch, type SearchResult } from "../../composables/useUnifiedSearch"
 
 const props = defineProps<{
   show: boolean
@@ -100,7 +120,7 @@ const resultsRef = ref<HTMLElement>()
 const query = ref("")
 const selectedIndex = ref(0)
 
-const { categories, loading } = useQuickSearch(query)
+const { categories, loading } = useUnifiedSearch(query)
 
 // Build a flat index map so arrow keys work across categories
 const allResults = computed(() => {

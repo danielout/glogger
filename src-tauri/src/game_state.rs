@@ -976,6 +976,24 @@ impl GameStateManager {
                 domains.push("strings");
             }
 
+            PlayerEvent::PlayerMessage {
+                timestamp,
+                message_type,
+                direction,
+                other_player,
+                body,
+                item_name,
+            } => {
+                let dt = self.to_utc(timestamp);
+                conn.execute(
+                    "INSERT INTO player_messages (character_name, server_name, timestamp, message_type, direction, other_player, body, item_name)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                    rusqlite::params![character, server, dt, message_type, direction, other_player, body, item_name],
+                )
+                .ok();
+                domains.push("player_messages");
+            }
+
             _ => {}
         }
     }

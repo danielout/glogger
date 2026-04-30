@@ -968,6 +968,48 @@ pub fn get_garden_almanac(
         .map_err(|e| format!("Row error: {e}"))
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct GardenAlmanacHistoryEntry {
+    pub crop_name: String,
+    pub zone_name: String,
+    pub event_start: Option<String>,
+    pub event_end: Option<String>,
+    pub captured_at: String,
+}
+
+#[tauri::command]
+pub fn get_garden_almanac_history(
+    db: State<'_, DbPool>,
+    character_name: String,
+    server_name: String,
+) -> Result<Vec<GardenAlmanacHistoryEntry>, String> {
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT crop_name, zone_name, event_start, event_end, captured_at
+             FROM garden_almanac_history
+             WHERE character_name = ?1 AND server_name = ?2
+             ORDER BY captured_at DESC
+             LIMIT 100",
+        )
+        .map_err(|e| format!("Query error: {e}"))?;
+
+    let rows = stmt
+        .query_map(rusqlite::params![character_name, server_name], |row| {
+            Ok(GardenAlmanacHistoryEntry {
+                crop_name: row.get(0)?,
+                zone_name: row.get(1)?,
+                event_start: row.get(2)?,
+                event_end: row.get(3)?,
+                captured_at: row.get(4)?,
+            })
+        })
+        .map_err(|e| format!("Query error: {e}"))?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Row error: {e}"))
+}
+
 // ── Computed Stats ──────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize)]

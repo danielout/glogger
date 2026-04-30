@@ -259,6 +259,22 @@ pub enum PlayerEvent {
         appearance: String,
         flags: u32,
     },
+
+    // === Player Message Events ===
+    /// Pigeon or stall-note message (sent or received).
+    PlayerMessage {
+        timestamp: String,
+        /// "pigeon" or "stall_note"
+        message_type: String,
+        /// "sent" or "received"
+        direction: String,
+        /// The other player involved (sender if received, recipient if sent)
+        other_player: String,
+        /// Message body text
+        body: String,
+        /// Attached item name (pigeons only)
+        item_name: Option<String>,
+    },
 }
 
 #[derive(serde::Serialize, Clone, Debug, PartialEq)]
@@ -658,6 +674,24 @@ struct PendingChatGain {
     captured_at_secs: u32,
 }
 
+/// Tracks a pigeon send in progress. The confirmation TalkScreen contains
+/// the recipient, item, and message before the final "The pigeon is sent!"
+/// confirmation.
+#[derive(Clone, Debug)]
+struct PendingPigeonSend {
+    recipient: String,
+    message: String,
+    item_name: Option<String>,
+}
+
+/// Tracks a stall note send in progress. The ProcessInputBox title contains
+/// "Send Note to <player>". The actual note text is entered by the user but
+/// not logged, so we just track the recipient.
+#[derive(Clone, Debug)]
+struct PendingStallNoteSend {
+    recipient: String,
+}
+
 /// Window (seconds) either side of a `ProcessAddItem` timestamp within which a
 /// chat gain entry is considered a match. Chat and player.log flush
 /// independently, so the chat message can arrive slightly before or after the
@@ -688,6 +722,16 @@ pub struct PlayerEventParser {
     /// with an upcoming `ProcessAddItem`. Entries are consumed on first match
     /// and age out after `CHAT_GAIN_BUFFER_LIFETIME_SECS`.
     pending_chat_gains: Vec<PendingChatGain>,
+
+    /// State for tracking an in-progress pigeon send (multi-step NPC flow).
+    /// Set when we see the confirmation TalkScreen with item/message details,
+    /// consumed when "The pigeon is sent!" confirmation appears.
+    pending_pigeon_send: Option<PendingPigeonSend>,
+
+    /// State for tracking an in-progress stall note send.
+    /// Set when we see ProcessInputBox with "Send Note to <player>",
+    /// consumed when "Note Sent" confirmation appears.
+    pending_stall_note_send: Option<PendingStallNoteSend>,
 }
 
 impl PlayerEventParser {
@@ -700,6 +744,8 @@ impl PlayerEventParser {
             activity_contexts: Vec::new(),
             pending_interaction: None,
             pending_chat_gains: Vec::new(),
+            pending_pigeon_send: None,
+            pending_stall_note_send: None,
         }
     }
 
@@ -972,19 +1018,17 @@ impl PlayerEventParser {
             }
         } else if line.contains("ProcessBook(") {
             self.flush_pending_deletes(&mut events);
-            if let Some(ev) = self.parse_book(line) {
-                events.push(ev);
-            }
+            events.extend(self.parse_book(line));
         } else if line.contains("ProcessEndInteraction(") {
             self.flush_pending_deletes(&mut events);
             if let Some(ev) = self.parse_end_interaction(line) {
                 events.push(ev);
             }
         } else if line.contains("ProcessTalkScreen(") {
-            // No event emitted — this is context-only. Opens a CorpseSearch
-            // when the TalkScreen is a corpse dialog; ignored otherwise.
+            // Context-only for corpse search. Also emits PlayerMessage events
+            // for pigeon sends and stall note sends.
             self.flush_pending_deletes(&mut events);
-            self.handle_talk_screen(line);
+            self.handle_talk_screen(line, &mut events);
         } else if line.contains("ProcessVendorScreen(") {
             // Context-only: vendor window open.
             self.flush_pending_deletes(&mut events);
@@ -1083,6 +1127,10 @@ impl PlayerEventParser {
             if let Some(ev) = self.parse_set_string(line) {
                 events.push(ev);
             }
+        } else if line.contains("ProcessInputBox(") {
+            // Track stall note sends: title contains "Send Note to <player>"
+            self.flush_pending_deletes(&mut events);
+            self.handle_input_box(line);
         } else {
             // Unrecognized Process line — flush pending
             self.flush_pending_deletes(&mut events);
@@ -1773,34 +1821,112 @@ impl PlayerEventParser {
     }
 
     /// ProcessBook("title", "content", "bookType", ...)
-    fn parse_book(&self, line: &str) -> Option<PlayerEvent> {
-        let ts = parse_timestamp(line)?;
-        let args_start = line.find("ProcessBook(")? + "ProcessBook(".len();
+    fn parse_book(&self, line: &str) -> Vec<PlayerEvent> {
+        let ts = match parse_timestamp(line) {
+            Some(t) => t,
+            None => return vec![],
+        };
+        let args_start = match line.find("ProcessBook(") {
+            Some(i) => i + "ProcessBook(".len(),
+            None => return vec![],
+        };
         let args = &line[args_start..];
 
         // Extract first three quoted strings
-        let title = extract_quoted_string(args, 0)?;
-        let after_title = &args[args.find(&format!("\"{}\"", title))? + title.len() + 2..];
-        let content = extract_quoted_string(after_title, 0)?;
-        let after_content =
-            &after_title[after_title.find(&format!("\"{}\"", content))? + content.len() + 2..];
-        let book_type = extract_quoted_string(after_content, 0)?;
+        let title = match extract_quoted_string(args, 0) {
+            Some(t) => t,
+            None => return vec![],
+        };
+        let after_title = match args.find(&format!("\"{}\"", title)) {
+            Some(i) => &args[i + title.len() + 2..],
+            None => return vec![],
+        };
+        let content = match extract_quoted_string(after_title, 0) {
+            Some(c) => c,
+            None => return vec![],
+        };
+        let after_content = match after_title.find(&format!("\"{}\"", content)) {
+            Some(i) => &after_title[i + content.len() + 2..],
+            None => return vec![],
+        };
+        let book_type = match extract_quoted_string(after_content, 0) {
+            Some(b) => b,
+            None => return vec![],
+        };
 
-        Some(PlayerEvent::BookOpened {
+        let mut events = vec![];
+
+        // Detect pigeon receive: title = "Pigeon From <player>"
+        if let Some(sender) = title.strip_prefix("Pigeon From ") {
+            // Body is text before the optional "\n\n<i>You received:" section
+            let body = if let Some(idx) = content.find("\\n\\n<i>You received:") {
+                content[..idx].to_string()
+            } else {
+                content.clone()
+            };
+
+            // Item is after "You received:\n" and before "</i>"
+            let item = content
+                .find("You received:\\n")
+                .map(|i| &content[i + "You received:\\n".len()..])
+                .and_then(|s| {
+                    let end = s.find("</i>").unwrap_or(s.len());
+                    let item_name = s[..end].trim();
+                    if item_name.is_empty() {
+                        None
+                    } else {
+                        Some(item_name.to_string())
+                    }
+                });
+
+            events.push(PlayerEvent::PlayerMessage {
+                timestamp: ts.clone(),
+                message_type: "pigeon".to_string(),
+                direction: "received".to_string(),
+                other_player: sender.to_string(),
+                body,
+                item_name: item,
+            });
+        }
+
+        // Detect stall note receive: book_type = "PlayerShopNote", title = "Note From <player>"
+        if book_type == "PlayerShopNote" {
+            if let Some(sender) = title.strip_prefix("Note From ") {
+                // Content format: "From: <sender>\nTime: <timestamp>\n\n<message>"
+                // The actual newlines in the escaped content are \\n
+                let body = content
+                    .find("\\n\\n")
+                    .map(|i| content[i + 4..].to_string())
+                    .unwrap_or_default();
+
+                events.push(PlayerEvent::PlayerMessage {
+                    timestamp: ts.clone(),
+                    message_type: "stall_note".to_string(),
+                    direction: "received".to_string(),
+                    other_player: sender.to_string(),
+                    body,
+                    item_name: None,
+                });
+            }
+        }
+
+        // Always emit the original BookOpened event too (coordinator uses it)
+        events.push(PlayerEvent::BookOpened {
             timestamp: ts,
             title,
             content,
             book_type,
-        })
+        });
+
+        events
     }
 
     /// ProcessEndInteraction(entityId)
     /// ProcessTalkScreen(entityId, "title", "body", "footer", ints[], strs[], N, Category)
     ///
     /// Opens a CorpseSearch context when title starts with "Search Corpse of ".
-    /// Other TalkScreen categories (Generic, etc.) are ignored here. No event
-    /// is emitted — this is pure context state.
-    fn handle_talk_screen(&mut self, line: &str) {
+    /// Also detects pigeon-send confirmation screens and stall-note-send confirmations.
+    fn handle_talk_screen(&mut self, line: &str, events: &mut Vec<PlayerEvent>) {
         let ts = match parse_timestamp(line) {
             Some(t) => t,
             None => return,
@@ -1833,6 +1959,75 @@ impl PlayerEventParser {
         };
         let title = &rest[q_start..q_end];
 
+        // Body is the second quoted string
+        let after_title = &rest[q_end + 1..];
+        let body_text = extract_quoted_string(after_title, 0).unwrap_or_default();
+
+        // --- Pigeon send detection ---
+        // Confirmation screen: "I am sending <recipient> the following..."
+        // Contains item name in <i>...</i> tags and message after "Message:\\n<indent=3em>"
+        if body_text.contains("I am sending") && body_text.contains("Message:") {
+            // Extract recipient: "I am sending <name> the following"
+            if let Some(after_sending) = body_text.strip_prefix("Excellent. I am sending ") {
+                if let Some(name_end) = after_sending.find(" the following") {
+                    let recipient = after_sending[..name_end].to_string();
+
+                    // Extract item from <i>...</i>
+                    let item = after_sending
+                        .find("<i>")
+                        .and_then(|start| {
+                            let s = &after_sending[start + 3..];
+                            s.find("</i>").map(|end| s[..end].trim().to_string())
+                        })
+                        .and_then(|s| if s.is_empty() { None } else { Some(s) });
+
+                    // Extract message from "Message:\\n<indent=3em>...<"
+                    let message = after_sending
+                        .find("Message:\\n<indent=3em>")
+                        .map(|i| {
+                            let s = &after_sending[i + "Message:\\n<indent=3em>".len()..];
+                            let end = s.find("</indent>").or_else(|| s.find('<')).unwrap_or(s.len());
+                            s[..end].to_string()
+                        })
+                        .unwrap_or_default();
+
+                    self.pending_pigeon_send = Some(PendingPigeonSend {
+                        recipient,
+                        message,
+                        item_name: item,
+                    });
+                }
+            }
+        }
+
+        // "The pigeon is sent!" — emit the pending pigeon send
+        if body_text.contains("The pigeon is sent!") {
+            if let Some(pending) = self.pending_pigeon_send.take() {
+                events.push(PlayerEvent::PlayerMessage {
+                    timestamp: ts.clone(),
+                    message_type: "pigeon".to_string(),
+                    direction: "sent".to_string(),
+                    other_player: pending.recipient,
+                    body: pending.message,
+                    item_name: pending.item_name,
+                });
+            }
+        }
+
+        // Stall note send confirmation: body contains "Note Sent"
+        if body_text.contains("Note Sent") {
+            if let Some(pending) = self.pending_stall_note_send.take() {
+                events.push(PlayerEvent::PlayerMessage {
+                    timestamp: ts.clone(),
+                    message_type: "stall_note".to_string(),
+                    direction: "sent".to_string(),
+                    other_player: pending.recipient,
+                    body: String::new(), // Note text isn't in the log
+                    item_name: None,
+                });
+            }
+        }
+
         if let Some(corpse_name) = title.strip_prefix("Search Corpse of ") {
             let started_at_secs = timestamp_to_secs(&ts);
             let source = ActivitySource::CorpseSearch {
@@ -1855,6 +2050,27 @@ impl PlayerEventParser {
                     started_at_secs,
                     close_deadline_secs: started_at_secs + DEFAULT_CONTEXT_LIFETIME_SECS,
                     entity_id: Some(entity_id),
+                });
+            }
+        }
+    }
+
+    /// ProcessInputBox — used to detect stall note sends.
+    /// Title "Send Note to <player>" sets up pending stall note state.
+    fn handle_input_box(&mut self, line: &str) {
+        // Look for the title string in the ProcessInputBox args
+        // Format: ProcessInputBox(entityId, Type, "title", "body", "label", ...)
+        let args_start = match line.find("ProcessInputBox(") {
+            Some(i) => i + "ProcessInputBox(".len(),
+            None => return,
+        };
+        let args = &line[args_start..];
+
+        // Title is the third quoted string (after entityId, Type)
+        if let Some(title) = extract_quoted_string(args, 0) {
+            if let Some(recipient) = title.strip_prefix("Send Note to ") {
+                self.pending_stall_note_send = Some(PendingStallNoteSend {
+                    recipient: recipient.to_string(),
                 });
             }
         }
