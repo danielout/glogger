@@ -13,7 +13,7 @@ permissions:
   contents: write
 
 env:
-  RELEASE_REPO: ${{ github.repository_owner }}/glogger-release
+  RELEASE_REPO: ${{ github.repository }}
 
 jobs:
   # ── Step 0: validate the project builds and tests pass ──
@@ -220,7 +220,7 @@ jobs:
           name: artifacts-${{ matrix.label }}
           path: release-artifacts/*
 
-  # ── Step 3: create release on glogger-release and upload everything ──
+  # ── Step 3: create release and upload everything ──
   publish:
     needs: [prepare, build]
     runs-on: ubuntu-latest
@@ -302,7 +302,7 @@ jobs:
       - name: Create release and upload artifacts
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           TAG="v${VERSION}"
@@ -332,7 +332,7 @@ jobs:
             cat RELEASE_NOTES.md
           } > FULL_RELEASE_NOTES.md
 
-          # Create the release on glogger-release
+          # Create the release
           gh release create "$TAG" \
             --repo "$RELEASE_REPO" \
             --title "$TAG" \
