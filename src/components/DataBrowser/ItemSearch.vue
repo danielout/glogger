@@ -315,6 +315,28 @@
           <!-- Sources -->
           <SourcesPanel :sources="sources" :loading="sourcesLoading" />
 
+          <!-- Seen Dropped From (kill tracking) -->
+          <div v-if="dropSourcesLoading || dropSources.length > 0" class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-[#e87e7e] border-b border-surface-card pb-0.5">
+              Seen Dropped From
+              <span v-if="dropSources.length > 0" class="text-text-dim font-normal ml-1">({{ dropSources.length }})</span>
+            </div>
+            <div v-if="dropSourcesLoading" class="text-text-dim text-xs italic px-2">Loading...</div>
+            <div v-else class="flex flex-col gap-1">
+              <div
+                v-for="src in dropSources"
+                :key="src.enemy_name"
+                class="grid grid-cols-[1fr_50px_50px_55px] gap-1 items-center text-xs px-2 py-1 bg-surface-inset border-l-2 border-l-[#e87e7e]">
+                <EnemyInline :reference="src.enemy_name" />
+                <span class="text-right text-text-secondary font-mono">x{{ src.total_quantity }}</span>
+                <span class="text-right text-text-dim font-mono text-[0.65rem]">{{ src.times_dropped }}/{{ src.total_kills }}</span>
+                <span class="text-right font-mono font-bold" :class="dropRateColor(src.drop_rate)">
+                  {{ (src.drop_rate * 100).toFixed(0) }}%
+                </span>
+              </div>
+            </div>
+          </div>
+
           <!-- Recipes Producing This Item -->
           <div v-if="recipesProducing.length" class="flex flex-col gap-1.5">
             <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Produced By ({{ recipesProducing.length }})</div>
@@ -432,8 +454,9 @@
 
 <script setup lang="ts">
 import PaneLayout from "../Shared/PaneLayout.vue";
+import EnemyInline from "../Shared/Enemy/EnemyInline.vue";
 import { ref, computed, watch, onMounted } from "vue";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useKeyboard } from "../../composables/useKeyboard";
@@ -477,6 +500,16 @@ const npcsWantingItem = ref<NpcFavorEntry[]>([]);
 const keywordRecipes = ref<RecipeInfo[]>([]);
 const gardeningChain = ref<GardeningProductChain | null>(null);
 const listRef = ref<HTMLElement | null>(null);
+
+interface ItemDropSource {
+  enemy_name: string;
+  total_kills: number;
+  times_dropped: number;
+  total_quantity: number;
+  drop_rate: number;
+}
+const dropSources = ref<ItemDropSource[]>([]);
+const dropSourcesLoading = ref(false);
 
 // Advanced filters
 const showFilters = ref(false);
@@ -668,6 +701,7 @@ async function selectItem(item: ItemInfo) {
   npcsWantingItem.value = [];
   keywordRecipes.value = [];
   gardeningChain.value = null;
+  dropSources.value = [];
 
   // Load gardening product chain
   store.getGardeningProductChain(item.id)
@@ -694,6 +728,13 @@ async function selectItem(item: ItemInfo) {
   store.getNpcsWantingItem(item.id)
     .then(entries => { npcsWantingItem.value = entries; })
     .catch(e => { console.warn("NPC favor fetch failed:", e); });
+
+  // Load kill-tracked drop sources
+  dropSourcesLoading.value = true;
+  invoke<ItemDropSource[]>("get_item_drop_sources", { itemName: item.name })
+    .then(sources => { dropSources.value = sources; })
+    .catch(e => { console.warn("Drop source fetch failed:", e); })
+    .finally(() => { dropSourcesLoading.value = false; });
 
   // Load keyword-based recipe matches
   const nonLintKeywords = item.keywords.filter(kw => !kw.startsWith('Lint_'));
@@ -748,6 +789,14 @@ function clearSelection() {
   npcsWantingItem.value = [];
   keywordRecipes.value = [];
   gardeningChain.value = null;
+  dropSources.value = [];
+}
+
+function dropRateColor(rate: number): string {
+  if (rate >= 0.9) return "text-value-positive";
+  if (rate >= 0.5) return "text-value-neutral-warm";
+  if (rate >= 0.1) return "text-text-secondary";
+  return "text-text-dim";
 }
 
 // Navigate to a specific item when navTarget changes
