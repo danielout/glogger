@@ -24,7 +24,7 @@
     </div>
 
     <!-- Card content -->
-    <div class="p-4 flex-1 min-h-0 overflow-hidden">
+    <div class="p-4 flex-1 min-h-0 overflow-scroll">
       <slot />
     </div>
   </div>
