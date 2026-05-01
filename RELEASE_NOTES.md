@@ -1,12 +1,13 @@
-## What's Changed since v0.8.0
+## What's Changed since v0.8.1
 
 ### Features
-- feat: added drop data to item views (`08914c4`)
-- feat: add kills and drop rate info to data browser (`f79d6cf`)
-- feat: kill and loot tracking (`ec133a6`)
+- feat: enemy browser now uses player facing names from string table. (`0e1fb95`)
+- feat: improved item info layout in data browser (`8032b1d`)
+- feat: area browser with monster and npc info (`54fbd0c`)
+- feat: downloading string data as well now as part of CDN retrieval (`e754dbe`)
 
-### Fixes
-- fix: making sure the widget and vendor details are communicating with each other. (`8eb8846`)
+### Improvements
+- impv: consolidation workflow changes (`0dd7ad7`)
 
 ---
-*5 commits since v0.8.0*
+*6 commits since v0.8.1*
