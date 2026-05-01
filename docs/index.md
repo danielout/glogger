@@ -125,6 +125,8 @@ Per-screen documentation organized by view.
   - [data-browser-recipes.md](features/screens/data-browser/data-browser-recipes.md) — Recipes tab.
   - [data-browser-quests.md](features/screens/data-browser/data-browser-quests.md) — Quests tab.
   - [data-browser-npcs.md](features/screens/data-browser/data-browser-npcs.md) — NPCs tab.
+  - [data-browser-enemies.md](features/screens/data-browser/data-browser-enemies.md) — Enemies tab (translation strings + AI data).
+  - [data-browser-areas.md](features/screens/data-browser/data-browser-areas.md) — Areas tab (NPCs, monsters, storage vaults).
   - [data-browser-effects.md](features/screens/data-browser/data-browser-effects.md) — Effects tab.
   - [data-browser-lorebooks.md](features/screens/data-browser/data-browser-lorebooks.md) — Lorebooks tab (book reader).
   - [data-browser-titles.md](features/screens/data-browser/data-browser-titles.md) — Titles tab.

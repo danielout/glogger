@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use tokio::fs;
 
-use crate::cdn::DATA_FILES;
+use crate::cdn::{DATA_FILES, TRANSLATION_FILES};
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,73 +56,97 @@ pub struct FileDiff {
 
 // ── Summary computation ──────────────────────────────────────────────────────
 
-/// Compute diff summaries for all DATA_FILES by comparing old_dir vs new_dir.
-/// Both directories should contain `{name}.json` files.
+/// Compute diff summaries for all DATA_FILES and TRANSLATION_FILES by comparing
+/// old_dir vs new_dir. Data files live directly in the dir; translation files
+/// live under a `translation/` subdirectory.
 pub async fn compute_summary(old_dir: &Path, new_dir: &Path) -> Result<Vec<FileDiffSummary>, String> {
     let mut summaries = Vec::new();
 
+    // Data files: {dir}/{name}.json
     for &name in DATA_FILES {
         let old_path = old_dir.join(format!("{name}.json"));
         let new_path = new_dir.join(format!("{name}.json"));
+        summaries.push(summarize_file(name, &old_path, &new_path).await);
+    }
 
-        // If either file is missing, skip (shouldn't happen in practice)
-        if !old_path.exists() || !new_path.exists() {
-            summaries.push(FileDiffSummary {
-                file_name: name.to_string(),
-                added_count: 0,
-                removed_count: 0,
-                changed_count: 0,
-            });
-            continue;
-        }
-
-        let old_map = load_json_keys(&old_path).await?;
-        let new_map = load_json_keys(&new_path).await?;
-
-        let mut added = 0usize;
-        let mut removed = 0usize;
-        let mut changed = 0usize;
-
-        // Check for added and changed
-        for (key, new_val) in &new_map {
-            match old_map.get(key) {
-                None => added += 1,
-                Some(old_val) => {
-                    if old_val != new_val {
-                        changed += 1;
-                    }
-                }
-            }
-        }
-
-        // Check for removed
-        for key in old_map.keys() {
-            if !new_map.contains_key(key) {
-                removed += 1;
-            }
-        }
-
-        summaries.push(FileDiffSummary {
-            file_name: name.to_string(),
-            added_count: added,
-            removed_count: removed,
-            changed_count: changed,
-        });
+    // Translation string files: {dir}/translation/{name}.json
+    for &name in TRANSLATION_FILES {
+        let old_path = old_dir.join("translation").join(format!("{name}.json"));
+        let new_path = new_dir.join("translation").join(format!("{name}.json"));
+        summaries.push(summarize_file(name, &old_path, &new_path).await);
     }
 
     Ok(summaries)
 }
 
+/// Compute add/remove/change counts for a single JSON file pair.
+async fn summarize_file(name: &str, old_path: &Path, new_path: &Path) -> FileDiffSummary {
+    // If either file is missing, report zero changes
+    if !old_path.exists() || !new_path.exists() {
+        return FileDiffSummary {
+            file_name: name.to_string(),
+            added_count: 0,
+            removed_count: 0,
+            changed_count: 0,
+        };
+    }
+
+    let (old_map, new_map) = match (
+        load_json_keys(old_path).await,
+        load_json_keys(new_path).await,
+    ) {
+        (Ok(o), Ok(n)) => (o, n),
+        _ => {
+            return FileDiffSummary {
+                file_name: name.to_string(),
+                added_count: 0,
+                removed_count: 0,
+                changed_count: 0,
+            };
+        }
+    };
+
+    let mut added = 0usize;
+    let mut removed = 0usize;
+    let mut changed = 0usize;
+
+    for (key, new_val) in &new_map {
+        match old_map.get(key) {
+            None => added += 1,
+            Some(old_val) => {
+                if old_val != new_val {
+                    changed += 1;
+                }
+            }
+        }
+    }
+
+    for key in old_map.keys() {
+        if !new_map.contains_key(key) {
+            removed += 1;
+        }
+    }
+
+    FileDiffSummary {
+        file_name: name.to_string(),
+        added_count: added,
+        removed_count: removed,
+        changed_count: changed,
+    }
+}
+
 // ── File-level diff ──────────────────────────────────────────────────────────
 
-/// Compute a detailed diff for a single data file.
+/// Compute a detailed diff for a single data or translation file.
 pub async fn compute_file_diff(
     file_name: &str,
     old_dir: &Path,
     new_dir: &Path,
 ) -> Result<FileDiff, String> {
-    let old_path = old_dir.join(format!("{file_name}.json"));
-    let new_path = new_dir.join(format!("{file_name}.json"));
+    let is_translation = TRANSLATION_FILES.contains(&file_name);
+    let sub = if is_translation { "translation/" } else { "" };
+    let old_path = old_dir.join(format!("{sub}{file_name}.json"));
+    let new_path = new_dir.join(format!("{sub}{file_name}.json"));
 
     let old_map = load_json_keys(&old_path).await?;
     let new_map = load_json_keys(&new_path).await?;

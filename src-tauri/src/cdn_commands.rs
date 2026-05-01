@@ -92,12 +92,27 @@ pub async fn init_game_data(app: &AppHandle, state: &GameDataState) -> Result<()
         startup_log!("Downloading CDN data v{remote_version}...");
         emit_startup_detail(app, 0, &format!("Downloading update v{remote_version}..."));
         cdn::download_all_data_files(remote_version, &data_dir).await?;
+        // Download translation strings (non-fatal — don't block startup)
+        emit_startup_detail(app, 0, "Downloading translation strings...");
+        if let Err(e) = cdn::download_translation_zip(remote_version, &data_dir).await {
+            startup_log!("Translation download failed (non-fatal): {e}");
+        }
         cdn::write_cached_version(&data_dir, remote_version).await?;
         // Remove stale cached indices so they'll be rebuilt from new data
         let _ = tokio::fs::remove_file(data_dir.join("indices.json")).await;
         startup_log!("CDN download complete");
     } else {
         startup_log!("CDN data up to date (v{remote_version}), loading from cache");
+        // Backfill translation strings if they're missing (e.g. first launch after
+        // this feature was added while CDN version hasn't changed)
+        let translation_dir = data_dir.join("translation");
+        if !translation_dir.exists() {
+            startup_log!("Translation strings missing, downloading...");
+            emit_startup_detail(app, 0, "Downloading translation strings...");
+            if let Err(e) = cdn::download_translation_zip(remote_version, &data_dir).await {
+                startup_log!("Translation download failed (non-fatal): {e}");
+            }
+        }
     }
 
     let data = game_data::load_from_cache_with_progress(&data_dir, remote_version, |detail| {
@@ -189,6 +204,8 @@ pub async fn force_refresh_cdn(
 
     let remote_version = cdn::fetch_remote_version().await?;
     cdn::download_all_data_files(remote_version, &data_dir).await?;
+    // Download translation strings (non-fatal)
+    let _ = cdn::download_translation_zip(remote_version, &data_dir).await;
     cdn::write_cached_version(&data_dir, remote_version).await?;
     let _ = tokio::fs::remove_file(data_dir.join("indices.json")).await;
 
@@ -1264,6 +1281,130 @@ pub async fn get_npcs_in_area(
     Ok(results)
 }
 
+/// Summary info for one area, used by the area browser list.
+#[derive(serde::Serialize, Clone)]
+pub struct AreaSummary {
+    pub key: String,
+    pub friendly_name: String,
+    pub short_friendly_name: Option<String>,
+    pub npc_count: usize,
+    pub monster_count: usize,
+}
+
+/// Return all areas with NPC and monster counts for the browser list.
+#[tauri::command]
+pub async fn get_all_areas(
+    app: AppHandle,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<AreaSummary>, String> {
+    let data = state.read().await;
+
+    // Count NPCs per area
+    let mut npc_counts: HashMap<String, usize> = HashMap::new();
+    for npc in data.npcs.values() {
+        if let Some(area) = &npc.area_name {
+            *npc_counts.entry(area.clone()).or_default() += 1;
+        }
+    }
+
+    // Count unique monsters per area from translation strings
+    let monster_counts = load_monster_counts_by_area(&app);
+
+    let mut results: Vec<AreaSummary> = data
+        .areas
+        .iter()
+        .map(|(key, info)| {
+            let friendly_name = info
+                .friendly_name
+                .clone()
+                .unwrap_or_else(|| key.replace("Area", ""));
+            AreaSummary {
+                key: key.clone(),
+                friendly_name,
+                short_friendly_name: info.short_friendly_name.clone(),
+                npc_count: npc_counts.get(key).copied().unwrap_or(0),
+                monster_count: monster_counts.get(key).copied().unwrap_or(0),
+            }
+        })
+        .collect();
+
+    results.sort_by(|a, b| a.friendly_name.cmp(&b.friendly_name));
+    Ok(results)
+}
+
+/// Parse translation strings once and return unique monster counts per area key.
+fn load_monster_counts_by_area(app: &AppHandle) -> HashMap<String, usize> {
+    let data_dir = match data_cache_dir(app) {
+        Ok(d) => d,
+        Err(_) => return HashMap::new(),
+    };
+    let path = data_dir.join("translation").join("strings_requested.json");
+    let bytes = match std::fs::read_to_string(&path) {
+        Ok(b) => b,
+        Err(_) => return HashMap::new(),
+    };
+    let map: HashMap<String, String> = match serde_json::from_str(&bytes) {
+        Ok(m) => m,
+        Err(_) => return HashMap::new(),
+    };
+
+    let mut area_monsters: HashMap<String, std::collections::HashSet<String>> = HashMap::new();
+    for (key, name) in &map {
+        if !key.starts_with("monster_Area") || !key.ends_with("_Name") {
+            continue;
+        }
+        // Key format: monster_{AreaKey}/{MonsterId}_Name
+        let without_prefix = &key["monster_".len()..];
+        if let Some(slash) = without_prefix.find('/') {
+            let area_key = &without_prefix[..slash];
+            area_monsters
+                .entry(area_key.to_string())
+                .or_default()
+                .insert(name.clone());
+        }
+    }
+
+    area_monsters
+        .into_iter()
+        .map(|(k, v)| (k, v.len()))
+        .collect()
+}
+
+/// Get monsters that spawn in a specific area, extracted from translation strings.
+/// Returns a sorted list of unique monster display names.
+#[tauri::command]
+pub async fn get_monsters_in_area(
+    app: AppHandle,
+    area: String,
+) -> Result<Vec<String>, String> {
+    let data_dir = data_cache_dir(&app)?;
+    let path = data_dir.join("translation").join("strings_requested.json");
+
+    if !path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let json = tokio::fs::read_to_string(&path)
+        .await
+        .map_err(|e| format!("Failed to read translation strings: {e}"))?;
+
+    let map: HashMap<String, String> = serde_json::from_str(&json)
+        .map_err(|e| format!("Failed to parse translation strings: {e}"))?;
+
+    // Keys look like: monster_AreaSerbule/GiantRat_Name = "Giant Rat"
+    // We match keys starting with "monster_{area}/" and ending with "_Name"
+    let prefix = format!("monster_{area}/");
+    let mut names: Vec<String> = map
+        .iter()
+        .filter(|(k, _)| k.starts_with(&prefix) && k.ends_with("_Name"))
+        .map(|(_, v)| v.clone())
+        .collect();
+
+    names.sort();
+    names.dedup();
+    Ok(names)
+}
+
 // ── Effect query commands ────────────────────────────────────────────────────
 
 /// Search effects by name or description.
@@ -1981,6 +2122,41 @@ pub async fn get_storage_vault_zones(
         })
         .collect();
     results.sort_by(|a, b| a.vault_key.cmp(&b.vault_key));
+    Ok(results)
+}
+
+/// Vault summary for a specific area (used by AreaBrowser).
+#[derive(serde::Serialize)]
+pub struct AreaVaultSummary {
+    pub key: String,
+    pub npc_friendly_name: String,
+    pub max_slots: u32,
+}
+
+/// Get storage vaults in a specific area.
+#[tauri::command]
+pub async fn get_storage_vaults_in_area(
+    area: String,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<AreaVaultSummary>, String> {
+    let data = state.read().await;
+    let mut results: Vec<AreaVaultSummary> = data
+        .storage_vaults
+        .iter()
+        .filter(|(_, v)| v.area.as_ref().map(|a| a == &area).unwrap_or(false))
+        .map(|(key, v)| {
+            let max_slots = v.levels.as_ref()
+                .and_then(|lvls| lvls.values().copied().max())
+                .or(v.num_slots)
+                .unwrap_or(0);
+            AreaVaultSummary {
+                key: key.clone(),
+                npc_friendly_name: v.npc_friendly_name.clone().unwrap_or_else(|| key.clone()),
+                max_slots,
+            }
+        })
+        .collect();
+    results.sort_by(|a, b| a.npc_friendly_name.cmp(&b.npc_friendly_name));
     Ok(results)
 }
 
@@ -3487,6 +3663,8 @@ pub async fn cdn_diff_summary(
     let old_cached = cdn::read_cached_version(&old_dir).await;
     if old_cached != Some(old_version) {
         cdn::download_all_data_files(old_version, &old_dir).await?;
+        // Also grab old translation files for string diffing
+        let _ = cdn::download_translation_zip(old_version, &old_dir).await;
         cdn::write_cached_version(&old_dir, old_version).await?;
     }
 
@@ -3501,7 +3679,9 @@ pub async fn cdn_diff_file(
     app: AppHandle,
     file_name: String,
 ) -> Result<FileDiff, String> {
-    if !cdn::DATA_FILES.contains(&file_name.as_str()) {
+    if !cdn::DATA_FILES.contains(&file_name.as_str())
+        && !cdn::TRANSLATION_FILES.contains(&file_name.as_str())
+    {
         return Err(format!("Unknown data file: {file_name}"));
     }
 
@@ -3578,6 +3758,169 @@ pub async fn get_enemy(
 ) -> Result<Option<AiSummary>, String> {
     let data = state.read().await;
     Ok(data.ai.get(&key).map(|info| info.to_summary(&key)))
+}
+
+// ── Monster list from translation strings ────────────────────────────────────
+
+/// A monster entry derived from translation strings, enriched with AI data
+/// when available. This is the primary data source for the Enemies browser.
+#[derive(serde::Serialize, Clone)]
+pub struct MonsterEntry {
+    /// Internal identifier (e.g. "AreaSerbule/GiantRat")
+    pub key: String,
+    /// Display name from translation strings (e.g. "Giant Rat")
+    pub name: String,
+    /// Area key if the monster is area-specific (e.g. "AreaSerbule")
+    pub area_key: Option<String>,
+    /// Friendly area name
+    pub area_name: Option<String>,
+    // AI-enriched fields (None if no matching AI template)
+    pub strategy: Option<String>,
+    pub mobility_type: Option<String>,
+    pub comment: Option<String>,
+    pub swimming: Option<bool>,
+    pub uncontrolled_pet: Option<bool>,
+    pub ability_count: Option<usize>,
+    pub ability_names: Option<Vec<String>>,
+}
+
+/// Build the full monster list from translation strings, enriched with AI data.
+#[tauri::command]
+pub async fn get_all_monsters(
+    app: AppHandle,
+    state: State<'_, GameDataState>,
+) -> Result<Vec<MonsterEntry>, String> {
+    let data_dir = data_cache_dir(&app)?;
+    let path = data_dir.join("translation").join("strings_requested.json");
+
+    if !path.exists() {
+        // Fall back: return AI-only entries if translation strings aren't available
+        let data = state.read().await;
+        return Ok(data
+            .ai
+            .iter()
+            .map(|(key, info)| {
+                let summary = info.to_summary(key);
+                MonsterEntry {
+                    key: key.clone(),
+                    name: format_ai_key(key),
+                    area_key: None,
+                    area_name: None,
+                    strategy: summary.strategy,
+                    mobility_type: summary.mobility_type,
+                    comment: summary.comment,
+                    swimming: Some(summary.swimming),
+                    uncontrolled_pet: Some(summary.uncontrolled_pet),
+                    ability_count: Some(summary.ability_count),
+                    ability_names: Some(summary.ability_names),
+                }
+            })
+            .collect());
+    }
+
+    let json = tokio::fs::read_to_string(&path)
+        .await
+        .map_err(|e| format!("Failed to read translation strings: {e}"))?;
+
+    let map: HashMap<String, String> = serde_json::from_str(&json)
+        .map_err(|e| format!("Failed to parse translation strings: {e}"))?;
+
+    let data = state.read().await;
+
+    // Deduplicate by display name (many monster variants share the same name)
+    // Track which names we've seen along with their first key and area
+    let mut seen: HashMap<String, MonsterEntry> = HashMap::new();
+
+    for (key, name) in &map {
+        if !key.starts_with("monster_") || !key.ends_with("_Name") {
+            continue;
+        }
+
+        let monster_id = &key["monster_".len()..key.len() - "_Name".len()];
+
+        // Extract area key if present (format: Area{Name}/{MonsterPart})
+        let (area_key, ai_part) = if let Some(slash) = monster_id.find('/') {
+            let area = &monster_id[..slash];
+            let monster_part = &monster_id[slash + 1..];
+            (Some(area.to_string()), monster_part.to_string())
+        } else {
+            (None, monster_id.to_string())
+        };
+
+        // Use display name as dedup key; prefer entries with area info
+        if let Some(existing) = seen.get(name) {
+            // If existing has no area but this one does, replace
+            if existing.area_key.is_none() && area_key.is_some() {
+                // keep going to replace
+            } else {
+                continue;
+            }
+        }
+
+        let area_name = area_key
+            .as_ref()
+            .and_then(|ak| data.areas.get(ak))
+            .and_then(|a| a.friendly_name.clone());
+
+        // Try to find matching AI data: strip trailing numbers/letters
+        let ai_base = ai_part
+            .trim_end_matches(|c: char| c.is_ascii_digit())
+            .trim_end_matches(|c: char| c.is_ascii_uppercase() && c != ai_part.chars().next().unwrap_or('_'));
+        let ai_info = data.ai.get(&ai_part)
+            .or_else(|| data.ai.get(ai_base));
+
+        let entry = if let Some(info) = ai_info {
+            let summary = info.to_summary(&ai_part);
+            MonsterEntry {
+                key: monster_id.to_string(),
+                name: name.clone(),
+                area_key,
+                area_name,
+                strategy: summary.strategy,
+                mobility_type: summary.mobility_type,
+                comment: summary.comment,
+                swimming: Some(summary.swimming),
+                uncontrolled_pet: Some(summary.uncontrolled_pet),
+                ability_count: Some(summary.ability_count),
+                ability_names: Some(summary.ability_names),
+            }
+        } else {
+            MonsterEntry {
+                key: monster_id.to_string(),
+                name: name.clone(),
+                area_key,
+                area_name,
+                strategy: None,
+                mobility_type: None,
+                comment: None,
+                swimming: None,
+                uncontrolled_pet: None,
+                ability_count: None,
+                ability_names: None,
+            }
+        };
+
+        seen.insert(name.clone(), entry);
+    }
+
+    let mut results: Vec<MonsterEntry> = seen.into_values().collect();
+    results.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(results)
+}
+
+/// Format an AI key into a display name (e.g. "GiantRat" → "Giant Rat")
+fn format_ai_key(key: &str) -> String {
+    let mut result = String::with_capacity(key.len() + 10);
+    for (i, c) in key.chars().enumerate() {
+        if i > 0 && c.is_uppercase() {
+            let prev = key.chars().nth(i - 1).unwrap_or('_');
+            if prev.is_lowercase() {
+                result.push(' ');
+            }
+        }
+        result.push(c);
+    }
+    result.replace('_', " ")
 }
 
 // ── Gardening product chain ─────────────────────────────────────────────────

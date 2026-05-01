@@ -2,7 +2,9 @@
 ///
 /// Version check:  GET http://client.projectgorgon.com/fileversion.txt  → integer
 /// Data files:     https://cdn.projectgorgon.com/v{ver}/data/{file}.json
+/// Translation:    https://cdn.projectgorgon.com/v{ver}/data/Translation.zip
 /// Icons:          https://cdn.projectgorgon.com/v{ver}/icons/icon_{id}.png
+use std::io::Read as _;
 use std::path::{Path, PathBuf};
 use tokio::fs;
 
@@ -114,6 +116,79 @@ pub async fn download_all_data_files(version: u32, cache_dir: &Path) -> Result<(
 #[allow(dead_code)]
 pub fn data_file_path(cache_dir: &Path, name: &str) -> PathBuf {
     cache_dir.join(format!("{name}.json"))
+}
+
+// ── Translation (string) file helpers ────────────────────────────────────────
+
+/// The individual JSON files extracted from Translation.zip.
+/// These are flat key→string maps used for localization and for diffing
+/// text-only changes between CDN versions.
+pub const TRANSLATION_FILES: &[&str] = &[
+    "strings_abilities",
+    "strings_ai",
+    "strings_areas",
+    "strings_attributes",
+    "strings_directedgoals",
+    "strings_effects",
+    "strings_items",
+    "strings_lorebookinfo",
+    "strings_lorebooks",
+    "strings_npcs",
+    "strings_playertitles",
+    "strings_quests",
+    "strings_recipes",
+    "strings_requested",
+    "strings_skills",
+    "strings_storagevaults",
+    "strings_tsysclientinfo",
+    "strings_ui",
+];
+
+/// Download Translation.zip and extract the string JSON files into
+/// `cache_dir/translation/`.
+pub async fn download_translation_zip(version: u32, cache_dir: &Path) -> Result<(), String> {
+    let url = format!("{CDN_BASE}/v{version}/data/Translation.zip");
+    let bytes = reqwest::get(&url)
+        .await
+        .map_err(|e| format!("Translation.zip download failed: {e}"))?
+        .bytes()
+        .await
+        .map_err(|e| format!("Translation.zip read failed: {e}"))?;
+
+    let translation_dir = cache_dir.join("translation");
+    std::fs::create_dir_all(&translation_dir)
+        .map_err(|e| format!("Failed to create translation dir: {e}"))?;
+
+    // Extract in a blocking task since zip crate is synchronous
+    let dir = translation_dir.clone();
+    tokio::task::spawn_blocking(move || {
+        let cursor = std::io::Cursor::new(bytes);
+        let mut archive = zip::ZipArchive::new(cursor)
+            .map_err(|e| format!("Failed to open Translation.zip: {e}"))?;
+
+        for i in 0..archive.len() {
+            let mut file = archive
+                .by_index(i)
+                .map_err(|e| format!("Failed to read zip entry {i}: {e}"))?;
+
+            let name = file.name().to_string();
+            if !name.ends_with(".json") {
+                continue;
+            }
+
+            let mut contents = Vec::new();
+            file.read_to_end(&mut contents)
+                .map_err(|e| format!("Failed to extract {name}: {e}"))?;
+
+            let dest = dir.join(&name);
+            std::fs::write(&dest, &contents)
+                .map_err(|e| format!("Failed to write {name}: {e}"))?;
+        }
+
+        Ok::<(), String>(())
+    })
+    .await
+    .map_err(|e| format!("Translation extract task panicked: {e}"))?
 }
 
 // ── Icon helpers ──────────────────────────────────────────────────────────────
