@@ -173,6 +173,7 @@ use db::crafting_commands::{
 use db::farming_commands::{
     delete_farming_session, get_farming_sessions, save_farming_session, update_farming_session,
 };
+use db::kill_tracking_commands::get_enemy_kill_stats;
 use db::game_state_commands::{
     get_game_state_active_skills, get_game_state_attributes, get_game_state_currencies,
     get_game_state_effects, get_game_state_equipment, get_game_state_favor,
@@ -694,6 +695,8 @@ pub fn run() {
             get_farming_sessions,
             update_farming_session,
             delete_farming_session,
+            // Kill tracking
+            get_enemy_kill_stats,
             // Crafting helper
             create_crafting_project,
             get_crafting_projects,

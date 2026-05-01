@@ -131,6 +131,45 @@
             </div>
           </div>
 
+          <!-- Kill Stats -->
+          <div class="flex flex-col gap-1.5">
+            <div class="text-[0.65rem] uppercase tracking-widest text-[#e87e7e] border-b border-surface-card pb-0.5">
+              Kill Stats
+              <span v-if="killStats && killStats.total_kills > 0" class="text-text-dim font-normal ml-1">
+                ({{ killStats.total_kills }} kill{{ killStats.total_kills !== 1 ? 's' : '' }} recorded)
+              </span>
+            </div>
+            <div v-if="killStatsLoading" class="text-text-dim text-xs italic">Loading kill data...</div>
+            <div v-else-if="!killStats || killStats.total_kills === 0" class="text-text-dim text-xs italic">
+              No kills recorded yet
+            </div>
+            <template v-else>
+              <!-- Loot table -->
+              <div v-if="killStats.loot.length > 0" class="flex flex-col gap-0.5">
+                <div class="grid grid-cols-[1fr_60px_60px_70px] gap-1 text-[0.6rem] uppercase tracking-wider text-text-muted pb-0.5 px-1">
+                  <span>Item</span>
+                  <span class="text-right">Qty</span>
+                  <span class="text-right">Drops</span>
+                  <span class="text-right">Rate</span>
+                </div>
+                <div
+                  v-for="drop in killStats.loot"
+                  :key="drop.item_name"
+                  class="grid grid-cols-[1fr_60px_60px_70px] gap-1 items-center px-1 py-1 text-xs bg-black/20 border border-border-default rounded">
+                  <ItemInline :reference="drop.item_name" />
+                  <span class="text-right text-text-secondary font-mono">{{ drop.total_quantity }}</span>
+                  <span class="text-right text-text-dim font-mono">{{ drop.times_dropped }}</span>
+                  <span class="text-right font-mono font-bold" :class="dropRateColor(drop.drop_rate)">
+                    {{ (drop.drop_rate * 100).toFixed(0) }}%
+                  </span>
+                </div>
+              </div>
+              <div v-else class="text-text-dim text-xs italic">
+                No loot recorded (corpses not searched)
+              </div>
+            </template>
+          </div>
+
           <!-- Raw JSON (via settings toggle) -->
           <div v-if="settingsStore.settings.showRawJsonInDataBrowser" class="flex flex-col gap-1.5">
             <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
@@ -143,7 +182,9 @@
 
 <script setup lang="ts">
 import PaneLayout from "../Shared/PaneLayout.vue";
+import ItemInline from "../Shared/Item/ItemInline.vue";
 import { ref, watch, computed } from "vue";
+import { invoke } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useDataBrowserStore } from "../../stores/dataBrowserStore";
@@ -167,6 +208,22 @@ const selected = ref<EnemyInfo | null>(null);
 const selectedIndex = ref(0);
 const listRef = ref<HTMLElement | null>(null);
 const loading = ref(false);
+
+interface EnemyLootDrop {
+  item_name: string;
+  total_quantity: number;
+  times_dropped: number;
+  drop_rate: number;
+}
+
+interface EnemyKillStats {
+  enemy_name: string;
+  total_kills: number;
+  loot: EnemyLootDrop[];
+}
+
+const killStats = ref<EnemyKillStats | null>(null);
+const killStatsLoading = ref(false);
 
 const isFav = computed(() =>
   selected.value ? dataBrowserStore.isFavorite("enemy", selected.value.key) : false
@@ -214,10 +271,33 @@ watch(filteredEnemies, () => {
 function selectEnemy(enemy: EnemyInfo) {
   selected.value = enemy;
   dataBrowserStore.addToHistory({ type: "enemy", reference: enemy.key, label: formatName(enemy.key) });
+  loadKillStats(enemy);
+}
+
+async function loadKillStats(enemy: EnemyInfo) {
+  killStatsLoading.value = true;
+  killStats.value = null;
+  try {
+    killStats.value = await invoke<EnemyKillStats>("get_enemy_kill_stats", {
+      enemyName: formatName(enemy.key),
+    });
+  } catch (e) {
+    console.error("[enemy-browser] Failed to load kill stats:", e);
+  } finally {
+    killStatsLoading.value = false;
+  }
 }
 
 function clearSelection() {
   selected.value = null;
+  killStats.value = null;
+}
+
+function dropRateColor(rate: number): string {
+  if (rate >= 0.9) return "text-value-positive";
+  if (rate >= 0.5) return "text-value-neutral-warm";
+  if (rate >= 0.1) return "text-text-secondary";
+  return "text-text-dim";
 }
 
 /** Convert a CamelCase or underscore key to a more readable name */

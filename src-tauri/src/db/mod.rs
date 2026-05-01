@@ -12,6 +12,7 @@ pub mod chat_commands;
 pub mod crafting_commands;
 pub mod death_commands;
 pub mod farming_commands;
+pub mod kill_tracking_commands;
 pub mod resuscitate_commands;
 pub mod game_state_commands;
 pub mod gourmand_commands;
