@@ -25,10 +25,7 @@ const STORAGE_KEY = 'glogger-user-timers'
 const PRESETS_KEY = 'glogger-timer-presets'
 
 const DEFAULT_PRESETS: TimerPreset[] = [
-  { id: 'mushroom-barrel', label: 'Mushroom Barrel', durationSecs: 90 * 60 },
-  { id: 'brewing', label: 'Brewing', durationSecs: 60 * 60 },
-  { id: 'cheesemaking', label: 'Cheesemaking', durationSecs: 3 * 60 * 60 },
-  { id: 'composting', label: 'Composting', durationSecs: 2 * 60 * 60 },
+  { id: 'pudding', label: 'Pudding', durationSecs: 3 * 60 * 60 },
 ]
 
 function loadTimers(): UserTimer[] {
