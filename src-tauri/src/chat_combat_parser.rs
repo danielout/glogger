@@ -1,5 +1,5 @@
-/// Chat Combat channel parser — detects player deaths and incoming damage
-/// from [Combat] messages.
+/// Chat Combat channel parser — detects player deaths, incoming damage,
+/// and enemy kills from [Combat] messages.
 ///
 /// Stateless parser: each message maps to 0 or 1 events.
 use crate::chat_parser::ChatMessage;
@@ -13,6 +13,17 @@ pub enum ChatCombatEvent {
         timestamp: String,
         killer_name: String,
         killer_entity_id: String,
+        killing_ability: String,
+        health_damage: u32,
+        armor_damage: u32,
+    },
+    /// The player killed an enemy.
+    /// Detected via "(FATALITY!)" suffix where the attacker matches the active character.
+    /// Format: "PlayerName: AbilityName on EnemyName #EntityID! Dmg: N health, N armor. (FATALITY!)"
+    EnemyKilled {
+        timestamp: String,
+        enemy_name: String,
+        enemy_entity_id: String,
         killing_ability: String,
         health_damage: u32,
         armor_damage: u32,
@@ -47,6 +58,11 @@ pub fn parse_combat_message(
         if let Some(event) = try_player_death(text, &ts, player_name) {
             return Some(event);
         }
+        // For player-kills-enemy lines, the chat parser splits the player name into msg.sender
+        // ("Zenith: Ability on Enemy #ID! ...") → sender="Zenith", message="Ability on Enemy #ID! ..."
+        if let Some(event) = try_enemy_kill(text, &ts, player_name, msg.sender.as_deref()) {
+            return Some(event);
+        }
     }
 
     // Try non-fatal damage on player
@@ -77,6 +93,68 @@ fn try_player_death(text: &str, ts: &str, player_name: &str) -> Option<ChatComba
         killer_name: parsed.attacker_name.to_string(),
         killer_entity_id: parsed.entity_id.to_string(),
         killing_ability: parsed.ability_name.to_string(),
+        health_damage,
+        armor_damage,
+    })
+}
+
+/// Parse player-kills-enemy FATALITY.
+/// Original chat format: "PlayerName: AbilityName on EnemyName #EntityID! Dmg: N health, N armor. (FATALITY!)"
+/// But the chat parser splits the sender out, so we receive:
+///   sender = Some("PlayerName")
+///   text (msg.message) = "AbilityName on EnemyName #EntityID! Dmg: N health, N armor. (FATALITY!)"
+fn try_enemy_kill(text: &str, ts: &str, player_name: &str, sender: Option<&str>) -> Option<ChatCombatEvent> {
+    if !text.ends_with("(FATALITY!)") {
+        return None;
+    }
+
+    // The sender must match the player name
+    if sender? != player_name {
+        return None;
+    }
+
+    // text is "AbilityName on EnemyName #EntityID! Dmg: ..."
+    // Find " on " to split ability from target
+    let on_pos = text.find(" on ")?;
+    let ability_name = &text[..on_pos];
+
+    let after_on = &text[on_pos + 4..];
+
+    // Target is "EnemyName #EntityID! Dmg: ... (FATALITY!)"
+    // Find the entity ID separator in the target portion
+    let hash_pos = find_entity_id_separator(after_on)?;
+    let enemy_name = &after_on[..hash_pos];
+
+    let after_hash = &after_on[hash_pos + 2..];
+
+    // Entity ID ends at "!"
+    let bang_pos = after_hash.find('!')?;
+    let entity_id = &after_hash[..bang_pos];
+
+    if !entity_id.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+
+    // Extract damage — find "Dmg: " marker
+    let dmg_marker = "Dmg: ";
+    let dmg_start = after_hash.find(dmg_marker)?;
+    let dmg_text = &after_hash[dmg_start + dmg_marker.len()..];
+
+    // Strip trailing "(FATALITY!)"
+    let dmg_text = dmg_text
+        .strip_suffix("(FATALITY!)")
+        .unwrap_or(dmg_text)
+        .trim()
+        .trim_end_matches('.');
+    let dmg_text = dmg_text.trim();
+
+    let (health_damage, armor_damage) = parse_damage(dmg_text)?;
+
+    Some(ChatCombatEvent::EnemyKilled {
+        timestamp: ts.to_string(),
+        enemy_name: enemy_name.to_string(),
+        enemy_entity_id: entity_id.to_string(),
+        killing_ability: ability_name.to_string(),
         health_damage,
         armor_damage,
     })
@@ -304,12 +382,99 @@ mod tests {
         assert_eq!(killer_entity_id, "8004000");
     }
 
+    // ── EnemyKilled tests ───────────────────────────────────────────────────
+
     #[test]
-    fn test_mob_fatality_ignored() {
+    fn test_enemy_killed_basic() {
         let msg = combat_msg(
             "Zenith: Rib Shatter 9 on Orcish Ranger #7442047! Dmg: 3790 health, 1741 armor. (FATALITY!)",
         );
+        let event = parse_combat_message(&msg, "Zenith").unwrap();
+        let ChatCombatEvent::EnemyKilled {
+            enemy_name,
+            enemy_entity_id,
+            killing_ability,
+            health_damage,
+            armor_damage,
+            ..
+        } = event
+        else {
+            panic!("Expected EnemyKilled, got {:?}", event);
+        };
+        assert_eq!(enemy_name, "Orcish Ranger");
+        assert_eq!(enemy_entity_id, "7442047");
+        assert_eq!(killing_ability, "Rib Shatter 9");
+        assert_eq!(health_damage, 3790);
+        assert_eq!(armor_damage, 1741);
+    }
+
+    #[test]
+    fn test_enemy_killed_from_capture() {
+        // Real data from kill-and-loot.json devtools capture
+        let msg = combat_msg(
+            "Zenith: System Shock 8 on Bear Groupie #6749319! Dmg: 804 health, 166 armor. (FATALITY!)",
+        );
+        let event = parse_combat_message(&msg, "Zenith").unwrap();
+        let ChatCombatEvent::EnemyKilled {
+            enemy_name,
+            enemy_entity_id,
+            killing_ability,
+            health_damage,
+            armor_damage,
+            ..
+        } = event
+        else {
+            panic!("Expected EnemyKilled, got {:?}", event);
+        };
+        assert_eq!(enemy_name, "Bear Groupie");
+        assert_eq!(enemy_entity_id, "6749319");
+        assert_eq!(killing_ability, "System Shock 8");
+        assert_eq!(health_damage, 804);
+        assert_eq!(armor_damage, 166);
+    }
+
+    #[test]
+    fn test_enemy_killed_long_ability_name() {
+        let msg = combat_msg(
+            "Zenith: Pound To Slag 9 on Bear Groupie #6701962! Dmg: 4521 health, 166 armor. (FATALITY!)",
+        );
+        let event = parse_combat_message(&msg, "Zenith").unwrap();
+        let ChatCombatEvent::EnemyKilled {
+            killing_ability,
+            health_damage,
+            ..
+        } = event
+        else {
+            panic!("Expected EnemyKilled");
+        };
+        assert_eq!(killing_ability, "Pound To Slag 9");
+        assert_eq!(health_damage, 4521);
+    }
+
+    #[test]
+    fn test_enemy_killed_different_player_ignored() {
+        let msg = combat_msg(
+            "OtherPlayer: Rib Shatter 9 on Orcish Ranger #7442047! Dmg: 3790 health, 1741 armor. (FATALITY!)",
+        );
         assert!(parse_combat_message(&msg, "Zenith").is_none());
+    }
+
+    #[test]
+    fn test_enemy_killed_health_only() {
+        let msg = combat_msg(
+            "Zenith: Fire Bolt 5 on Skeleton #1234567! Dmg: 500 health. (FATALITY!)",
+        );
+        let event = parse_combat_message(&msg, "Zenith").unwrap();
+        let ChatCombatEvent::EnemyKilled {
+            health_damage,
+            armor_damage,
+            ..
+        } = event
+        else {
+            panic!("Expected EnemyKilled");
+        };
+        assert_eq!(health_damage, 500);
+        assert_eq!(armor_damage, 0);
     }
 
     #[test]

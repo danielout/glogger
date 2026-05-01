@@ -55,6 +55,9 @@
               <span v-if="session.items.length > 0" class="text-text-secondary">
                 {{ session.items.length }} item{{ session.items.length !== 1 ? 's' : '' }}
               </span>
+              <span v-if="sessionTotalKills(session) > 0" class="text-[#e87e7e]">
+                {{ sessionTotalKills(session) }} kill{{ sessionTotalKills(session) !== 1 ? 's' : '' }}
+              </span>
               <span v-if="session.vendor_gold > 0" class="text-[#d4af37]">
                 {{ session.vendor_gold.toLocaleString() }}g
               </span>
@@ -141,6 +144,21 @@
               </div>
             </div>
 
+            <!-- Kills -->
+            <div v-if="session.kills && session.kills.length > 0" class="mb-3">
+              <div class="text-[0.6rem] uppercase tracking-widest text-[#e87e7e] mb-1 font-bold">Kills</div>
+              <div class="flex gap-2 flex-wrap">
+                <div
+                  v-for="kill in session.kills"
+                  :key="kill.enemy_name"
+                  class="flex items-center gap-2 px-3 py-1.5 rounded text-xs bg-black/20 border border-border-default">
+                  <EnemyInline :reference="kill.enemy_name" />
+                  <span class="text-[#e87e7e] font-bold">x{{ kill.kill_count }}</span>
+                  <span class="text-text-dim text-[0.6rem]">{{ killsPerHour(kill.kill_count, session.elapsed_seconds) }}/hr</span>
+                </div>
+              </div>
+            </div>
+
             <!-- Delete button -->
             <div class="flex justify-end pt-2 border-t border-border-default">
               <button
@@ -166,6 +184,7 @@ import ItemInline from "../Shared/Item/ItemInline.vue";
 import { formatDateTimeShort, formatDuration } from "../../composables/useTimestamp";
 import SkillInline from "../Shared/Skill/SkillInline.vue";
 import NpcInline from "../Shared/NPC/NpcInline.vue";
+import EnemyInline from "../Shared/Enemy/EnemyInline.vue";
 
 const sessions = ref<HistoricalFarmingSession[]>([]);
 const loading = ref(false);
@@ -241,6 +260,15 @@ function skillXpPerHour(xpGained: number, elapsedSeconds: number): number {
 function itemPerHour(netQuantity: number, elapsedSeconds: number): number {
   const hours = Math.max(1, elapsedSeconds) / 3600;
   return Math.round(Math.abs(netQuantity) / hours);
+}
+
+function sessionTotalKills(session: HistoricalFarmingSession): number {
+  return (session.kills ?? []).reduce((sum, k) => sum + k.kill_count, 0);
+}
+
+function killsPerHour(killCount: number, elapsedSeconds: number): number {
+  const hours = Math.max(1, elapsedSeconds) / 3600;
+  return Math.round(killCount / hours);
 }
 
 const totalElapsed = computed(() =>

@@ -304,6 +304,9 @@ export const useStartupStore = defineStore("startup", () => {
       await listen("character-death", (event: any) => {
         deathStore.handleDeathEvent(event.payload);
       });
+      await listen("enemy-killed", (event: any) => {
+        farmingStore.handleEnemyKilled(event.payload);
+      });
       await listen("character-resuscitated", (event: any) => {
         resuscitateStore.handleResuscitateEvent(event.payload);
       });

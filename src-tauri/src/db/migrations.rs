@@ -247,6 +247,11 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 44)?;
     }
 
+    if current_version < 45 {
+        migration_v45_kill_tracking(conn)?;
+        super::record_migration(conn, 45)?;
+    }
+
     Ok(())
 }
 
@@ -2231,6 +2236,48 @@ fn migration_v43_hoplology_studies(conn: &Connection) -> Result<()> {
 
 /// Migration V44: Rebuild hoplology_studies to guarantee UNIQUE constraint
 /// and clean up duplicate/stale rows from early development.
+/// Migration v45: Kill tracking system.
+/// - `enemy_kills` — every enemy kill observed from chat combat FATALITY lines
+/// - `enemy_kill_loot` — items looted from a specific killed enemy (linked via entity_id matching)
+/// - `farming_session_kills` — aggregated kill counts per enemy type per farming session
+fn migration_v45_kill_tracking(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE enemy_kills (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            enemy_name TEXT NOT NULL,
+            enemy_entity_id TEXT NOT NULL,
+            killing_ability TEXT NOT NULL,
+            health_damage INTEGER NOT NULL DEFAULT 0,
+            armor_damage INTEGER NOT NULL DEFAULT 0,
+            killed_at TEXT NOT NULL,
+            character_name TEXT,
+            server_name TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE INDEX idx_enemy_kills_name ON enemy_kills(enemy_name);
+        CREATE INDEX idx_enemy_kills_entity ON enemy_kills(enemy_entity_id);
+
+        CREATE TABLE enemy_kill_loot (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            kill_id INTEGER NOT NULL,
+            item_name TEXT NOT NULL,
+            quantity INTEGER NOT NULL DEFAULT 1,
+            FOREIGN KEY (kill_id) REFERENCES enemy_kills(id) ON DELETE CASCADE
+        );
+        CREATE INDEX idx_kill_loot_kill ON enemy_kill_loot(kill_id);
+
+        CREATE TABLE farming_session_kills (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER NOT NULL,
+            enemy_name TEXT NOT NULL,
+            kill_count INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (session_id) REFERENCES farming_sessions(id) ON DELETE CASCADE
+        );
+        CREATE INDEX idx_farming_kills_session ON farming_session_kills(session_id);"
+    )?;
+    Ok(())
+}
+
 fn migration_v44_hoplology_dedup(conn: &Connection) -> Result<()> {
     conn.execute_batch(
         "-- Rebuild table: keep best row per (character, server, item).

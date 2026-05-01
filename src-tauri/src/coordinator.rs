@@ -109,6 +109,9 @@ pub struct DataIngestCoordinator {
     /// Set on ProcessStartInteraction with a Cow_ NPC, cleared on InteractionEnded.
     /// Used to attribute "Bottle of Milk" chat gains to a specific cow.
     pending_cow_interaction: Option<String>,
+    /// Maps enemy entity_id → (kill_row_id, timestamp) for attributing corpse loot
+    /// to specific kills. Entries expire after 120 seconds.
+    recent_kills: std::collections::HashMap<String, (i64, std::time::Instant)>,
 }
 
 impl DataIngestCoordinator {
@@ -149,6 +152,7 @@ impl DataIngestCoordinator {
             recent_damage: Vec::new(),
             debug_capture: DebugCaptureState::new(),
             pending_cow_interaction: None,
+            recent_kills: std::collections::HashMap::new(),
         })
     }
 
@@ -550,6 +554,9 @@ impl DataIngestCoordinator {
                     // Persist all accumulated events in a single SQLite transaction
                     let result = $self.game_state.process_events_batch(&$pe, &$self.db_pool);
                     $dom.extend(result.domains_updated);
+
+                    // Link corpse loot items to recent kills
+                    $self.attribute_loot_to_kills(&$pe);
 
                     $self
                         .app_handle
@@ -1063,6 +1070,12 @@ impl DataIngestCoordinator {
                                     // Clear buffer after death
                                     self.recent_damage.clear();
                                 }
+                                crate::chat_combat_parser::ChatCombatEvent::EnemyKilled { .. } => {
+                                    self.persist_enemy_kill(&combat_event);
+                                    self.app_handle
+                                        .emit("enemy-killed", &combat_event)
+                                        .ok();
+                                }
                                 crate::chat_combat_parser::ChatCombatEvent::DamageOnPlayer { .. } => {
                                     // Keep rolling buffer of last 10 damage events
                                     if self.recent_damage.len() >= 10 {
@@ -1325,6 +1338,135 @@ impl DataIngestCoordinator {
         }
 
         Ok(())
+    }
+
+    /// Persist an enemy kill to the database and cache the entity_id→kill_id mapping
+    /// for later loot attribution.
+    fn persist_enemy_kill(
+        &mut self,
+        event: &crate::chat_combat_parser::ChatCombatEvent,
+    ) {
+        let crate::chat_combat_parser::ChatCombatEvent::EnemyKilled {
+            timestamp,
+            enemy_name,
+            enemy_entity_id,
+            killing_ability,
+            health_damage,
+            armor_damage,
+        } = event
+        else {
+            return;
+        };
+
+        let character_name = self
+            .game_state
+            .get_active_character()
+            .unwrap_or("Unknown")
+            .to_string();
+        let server_name = self
+            .game_state
+            .get_active_server()
+            .unwrap_or("Unknown")
+            .to_string();
+
+        let conn = match self.db_pool.get() {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("Failed to get DB connection for enemy kill: {e}");
+                return;
+            }
+        };
+
+        match conn.execute(
+            "INSERT INTO enemy_kills
+                (enemy_name, enemy_entity_id, killing_ability,
+                 health_damage, armor_damage, killed_at, character_name, server_name)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            rusqlite::params![
+                enemy_name,
+                enemy_entity_id,
+                killing_ability,
+                health_damage,
+                armor_damage,
+                timestamp,
+                character_name,
+                server_name,
+            ],
+        ) {
+            Ok(_) => {
+                let kill_id = conn.last_insert_rowid();
+                // Cache entity_id → kill_id for loot attribution when the player searches the corpse
+                self.recent_kills.insert(enemy_entity_id.clone(), (kill_id, std::time::Instant::now()));
+                // Prune old entries (> 120s) to prevent unbounded growth
+                self.recent_kills.retain(|_, (_, t)| t.elapsed().as_secs() < 120);
+            }
+            Err(e) => {
+                eprintln!("Failed to insert enemy kill: {e}");
+            }
+        }
+    }
+
+    /// Scan a batch of player events for items with CorpseSearch provenance
+    /// and link them to recent kills in the enemy_kill_loot table.
+    fn attribute_loot_to_kills(&self, events: &[PlayerEvent]) {
+        if self.recent_kills.is_empty() {
+            return;
+        }
+
+        let conn = match self.db_pool.get() {
+            Ok(c) => c,
+            Err(_) => return,
+        };
+
+        for event in events {
+            let (item_name, quantity, provenance) = match event {
+                PlayerEvent::ItemAdded {
+                    item_name,
+                    initial_quantity,
+                    provenance,
+                    ..
+                } => (item_name.as_str(), *initial_quantity as i32, provenance),
+                PlayerEvent::ItemStackChanged {
+                    item_name,
+                    delta,
+                    provenance,
+                    ..
+                } => {
+                    if *delta <= 0 {
+                        continue;
+                    }
+                    let name = match item_name {
+                        Some(n) => n.as_str(),
+                        None => continue,
+                    };
+                    (name, *delta, provenance)
+                }
+                _ => continue,
+            };
+
+            // Check if provenance is CorpseSearch
+            let entity_id = match provenance {
+                crate::player_event_parser::ItemProvenance::Attributed { source, .. } => {
+                    match source {
+                        crate::player_event_parser::ActivitySource::CorpseSearch {
+                            entity_id,
+                            ..
+                        } => entity_id.to_string(),
+                        _ => continue,
+                    }
+                }
+                _ => continue,
+            };
+
+            // Look up kill_id for this entity
+            if let Some((kill_id, _)) = self.recent_kills.get(&entity_id) {
+                conn.execute(
+                    "INSERT INTO enemy_kill_loot (kill_id, item_name, quantity) VALUES (?1, ?2, ?3)",
+                    rusqlite::params![kill_id, item_name, quantity],
+                )
+                .ok();
+            }
+        }
     }
 
     /// Persist a resuscitate event (successful or failed) to the database.

@@ -46,6 +46,17 @@ export const useFarmingStore = defineStore("farming", () => {
         const name = event.item_name ?? `item#${event.item_type_id}`;
         s.itemDeltas[name] = (s.itemDeltas[name] ?? 0) + event.delta;
 
+        // Attribute loot to kills via CorpseSearch provenance
+        if (event.delta > 0 && event.provenance?.kind === "Attributed") {
+          const src = event.provenance.source;
+          if (src.kind === "CorpseSearch") {
+            const enemyName = src.corpse_name;
+            if (s.kills[enemyName]) {
+              s.kills[enemyName].loot[name] = (s.kills[enemyName].loot[name] ?? 0) + event.delta;
+            }
+          }
+        }
+
         const kind: FarmingLogKind = event.delta > 0 ? "item-gained" : "item-lost";
         const sign = event.delta > 0 ? "+" : "";
         pushLog(kind, event.timestamp, `${name} ${sign}${event.delta}`);
@@ -145,6 +156,28 @@ export const useFarmingStore = defineStore("farming", () => {
     }
   }
 
+  function handleEnemyKilled(payload: {
+    enemy_name: string;
+    enemy_entity_id: string;
+    killing_ability: string;
+    health_damage: number;
+    armor_damage: number;
+    timestamp: string;
+  }) {
+    if (!sessionActive.value || !session.value) return;
+    if (session.value.isPaused) return;
+
+    const s = session.value;
+    const name = payload.enemy_name;
+
+    if (!s.kills[name]) {
+      s.kills[name] = { count: 0, loot: {} };
+    }
+    s.kills[name].count++;
+
+    pushLog("enemy-killed", payload.timestamp, `Killed ${name}`);
+  }
+
   // ── Session Controls ────────────────────────────────────────────────────
 
   function startSession(name?: string) {
@@ -164,6 +197,7 @@ export const useFarmingStore = defineStore("farming", () => {
       itemDeltas: {},
       ignoredItems: new Set(),
       favorDeltas: {},
+      kills: {},
       vendorGold: 0,
     };
     log.value = [];
@@ -221,6 +255,9 @@ export const useFarmingStore = defineStore("farming", () => {
               };
             })
         ),
+        kills: Object.entries(s.kills)
+          .filter(([, v]) => v.count > 0)
+          .map(([enemy_name, v]) => ({ enemy_name, kill_count: v.count })),
       };
 
       await invoke("save_farming_session", { input });
@@ -314,6 +351,29 @@ export const useFarmingStore = defineStore("farming", () => {
       .reduce((sum, [, qty]) => sum + Math.abs(Math.min(0, qty)), 0);
   });
 
+  const totalKills = computed(() => {
+    if (!session.value) return 0;
+    return Object.values(session.value.kills).reduce((sum, k) => sum + k.count, 0);
+  });
+
+  const killSummary = computed(() => {
+    void timerTick.value;
+    if (!session.value) return [];
+    const activeHours = Math.max(1, getActiveSeconds()) / 3600;
+    return Object.entries(session.value.kills)
+      .filter(([, v]) => v.count > 0)
+      .map(([name, v]) => ({
+        name,
+        count: v.count,
+        perHour: Math.round(v.count / activeHours),
+        loot: Object.entries(v.loot)
+          .filter(([, qty]) => qty > 0)
+          .map(([itemName, qty]) => ({ name: itemName, quantity: qty }))
+          .sort((a, b) => b.quantity - a.quantity),
+      }))
+      .sort((a, b) => b.count - a.count);
+  });
+
   const totalFavorGained = computed(() => {
     if (!session.value) return 0;
     return Object.values(session.value.favorDeltas).reduce((sum, v) => sum + v.delta, 0);
@@ -403,14 +463,17 @@ export const useFarmingStore = defineStore("farming", () => {
     totalXpGained,
     totalItemsGained,
     totalItemsLost,
+    totalKills,
     totalFavorGained,
     skillSummary,
     itemSummary,
+    killSummary,
     favorSummary,
     xpPerHour,
     getActiveSeconds,
     handlePlayerEvent,
     handleSkillUpdate,
+    handleEnemyKilled,
     startSession,
     endSession,
     togglePause,

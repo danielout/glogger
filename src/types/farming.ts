@@ -15,6 +15,11 @@ export interface FarmingFavorEntry {
   delta: number
 }
 
+export interface FarmingKillEntry {
+  count: number
+  loot: Record<string, number>  // item_name -> quantity from this enemy type
+}
+
 export interface FarmingSession {
   name: string
   notes: string
@@ -36,6 +41,9 @@ export interface FarmingSession {
   // Favor tracking keyed by npc_name
   favorDeltas: Record<string, FarmingFavorEntry>
 
+  // Kill tracking keyed by enemy_name
+  kills: Record<string, FarmingKillEntry>
+
   // Gold earned from vendor sales
   vendorGold: number
 }
@@ -50,6 +58,7 @@ export type FarmingLogKind =
   | 'level-up'
   | 'favor-change'
   | 'vendor-sale'
+  | 'enemy-killed'
   | 'session-end'
 
 export interface FarmingLogEntry {
@@ -72,6 +81,7 @@ export interface SaveFarmingSessionInput {
   skills: Array<{ skill_id: number; skill_name: string; xp_gained: number; levels_gained: number }>
   items: Array<{ item_name: string; net_quantity: number }>
   favors: Array<{ npc_key: string; npc_name: string; delta: number }>
+  kills: Array<{ enemy_name: string; kill_count: number }>
 }
 
 // === Historical (loaded from DB) ===
@@ -89,4 +99,5 @@ export interface HistoricalFarmingSession {
   skills: Array<{ skill_id: number; skill_name: string; xp_gained: number; levels_gained: number }>
   items: Array<{ item_name: string; net_quantity: number }>
   favors: Array<{ npc_key: string; npc_name: string; delta: number }>
+  kills: Array<{ enemy_name: string; kill_count: number }>
 }

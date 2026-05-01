@@ -27,6 +27,12 @@ pub struct FarmingFavorInput {
 }
 
 #[derive(Deserialize)]
+pub struct FarmingKillInput {
+    pub enemy_name: String,
+    pub kill_count: i32,
+}
+
+#[derive(Deserialize)]
 pub struct SaveFarmingSessionInput {
     pub name: String,
     pub notes: String,
@@ -38,6 +44,7 @@ pub struct SaveFarmingSessionInput {
     pub skills: Vec<FarmingSkillInput>,
     pub items: Vec<FarmingItemInput>,
     pub favors: Vec<FarmingFavorInput>,
+    pub kills: Vec<FarmingKillInput>,
 }
 
 // ── Output types ────────────────────────────────────────────────────────────
@@ -64,6 +71,12 @@ pub struct FarmingFavorRecord {
 }
 
 #[derive(Serialize)]
+pub struct FarmingKillRecord {
+    pub enemy_name: String,
+    pub kill_count: i32,
+}
+
+#[derive(Serialize)]
 pub struct HistoricalFarmingSession {
     pub id: i64,
     pub name: String,
@@ -77,6 +90,7 @@ pub struct HistoricalFarmingSession {
     pub skills: Vec<FarmingSkillRecord>,
     pub items: Vec<FarmingItemRecord>,
     pub favors: Vec<FarmingFavorRecord>,
+    pub kills: Vec<FarmingKillRecord>,
 }
 
 // ── Commands ────────────────────────────────────────────────────────────────
@@ -136,6 +150,16 @@ pub fn save_farming_session(
         .map_err(|e| format!("Failed to save farming favor: {e}"))?;
     }
 
+    // Insert kill records
+    for kill in &input.kills {
+        conn.execute(
+            "INSERT INTO farming_session_kills (session_id, enemy_name, kill_count)
+             VALUES (?1, ?2, ?3)",
+            rusqlite::params![session_id, kill.enemy_name, kill.kill_count],
+        )
+        .map_err(|e| format!("Failed to save farming kill: {e}"))?;
+    }
+
     Ok(session_id)
 }
 
@@ -175,6 +199,7 @@ pub fn get_farming_sessions(
                 skills: Vec::new(),
                 items: Vec::new(),
                 favors: Vec::new(),
+                kills: Vec::new(),
             })
         })
         .map_err(|e| format!("Query failed: {e}"))?;
@@ -249,6 +274,28 @@ pub fn get_farming_sessions(
             session
                 .favors
                 .push(row.map_err(|e| format!("Favor row error: {e}"))?);
+        }
+
+        // Kills
+        let mut kill_stmt = conn
+            .prepare(
+                "SELECT enemy_name, kill_count FROM farming_session_kills WHERE session_id = ?1 ORDER BY kill_count DESC",
+            )
+            .map_err(|e| format!("Failed to prepare kill query: {e}"))?;
+
+        let kill_rows = kill_stmt
+            .query_map([session.id], |row| {
+                Ok(FarmingKillRecord {
+                    enemy_name: row.get(0)?,
+                    kill_count: row.get(1)?,
+                })
+            })
+            .map_err(|e| format!("Kill query failed: {e}"))?;
+
+        for row in kill_rows {
+            session
+                .kills
+                .push(row.map_err(|e| format!("Kill row error: {e}"))?);
         }
     }
 

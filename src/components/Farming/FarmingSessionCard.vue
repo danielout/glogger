@@ -101,6 +101,10 @@
             {{ store.totalFavorGained > 0 ? '+' : '' }}{{ store.totalFavorGained.toFixed(0) }}
           </span>
         </div>
+        <div v-if="store.totalKills > 0" class="text-center">
+          <span class="text-[0.6rem] text-text-muted uppercase tracking-wide">Kills</span>
+          <span class="text-sm font-bold text-[#e87e7e] ml-1">{{ store.totalKills }}</span>
+        </div>
         <div v-if="s.vendorGold > 0" class="text-center">
           <span class="text-[0.6rem] text-text-muted uppercase tracking-wide">Gold</span>
           <span class="text-sm font-bold text-value-gold ml-1">{{ s.vendorGold.toLocaleString() }}g</span>
@@ -155,6 +159,32 @@
                 ]">
                 {{ fav.delta > 0 ? '+' : '' }}{{ fav.delta.toFixed(1) }}
               </span>
+            </div>
+          </div>
+        </template>
+
+        <!-- Kills section -->
+        <template v-if="store.killSummary.length > 0">
+          <div class="text-[0.65rem] uppercase tracking-widest text-[#e87e7e] mt-3 mb-2 font-bold">Kills</div>
+          <div class="flex flex-col gap-1">
+            <div
+              v-for="kill in store.killSummary"
+              :key="kill.name"
+              class="rounded text-xs bg-black/20 border border-border-default">
+              <div class="flex items-center justify-between px-2 py-1.5">
+                <EnemyInline :reference="kill.name" />
+                <div class="flex items-center gap-2 shrink-0">
+                  <span class="font-mono font-bold text-[#e87e7e]">x{{ kill.count }}</span>
+                  <span class="text-[0.55rem] text-text-dim">{{ kill.perHour }}/hr</span>
+                </div>
+              </div>
+              <!-- Loot from this enemy type -->
+              <div v-if="kill.loot.length > 0" class="px-2 pb-1.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                <div v-for="loot in kill.loot" :key="loot.name" class="flex items-center gap-1 text-[0.6rem] text-text-dim">
+                  <ItemInline :reference="loot.name" class="text-[0.6rem]!" />
+                  <span class="text-value-positive font-mono">x{{ loot.quantity }}</span>
+                </div>
+              </div>
             </div>
           </div>
         </template>
@@ -222,6 +252,7 @@ import EmptyState from "../Shared/EmptyState.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
 import SkillInline from "../Shared/Skill/SkillInline.vue";
 import NpcInline from "../Shared/NPC/NpcInline.vue";
+import EnemyInline from "../Shared/Enemy/EnemyInline.vue";
 import FarmingLog from "./FarmingLog.vue";
 
 const store = useFarmingStore();

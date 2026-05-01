@@ -32,6 +32,7 @@ const kindIcon: Record<FarmingLogKind, string> = {
   "level-up": "\u{1F3C6}",
   "favor-change": "\u2764",
   "vendor-sale": "\u{1F4B0}",
+  "enemy-killed": "\u2694",
   "session-end": "\u23F9",
 };
 
@@ -43,6 +44,7 @@ const kindColor: Record<FarmingLogKind, string> = {
   "level-up": "#d4af37",
   "favor-change": "#c87ec8",
   "vendor-sale": "#d4af37",
+  "enemy-killed": "#e87e7e",
   "session-end": "#7ec8e3",
 };
 </script>

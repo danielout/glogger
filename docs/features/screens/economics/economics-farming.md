@@ -2,7 +2,7 @@
 
 ## Overview
 
-A general-purpose session tracker that lets users manually start/stop "farming sessions" to measure efficiency of any in-game activity. Tracks XP gains, item changes, NPC favor, and vendor gold during a session, with live rate-per-hour metrics.
+A general-purpose session tracker that lets users manually start/stop "farming sessions" to measure efficiency of any in-game activity. Tracks XP gains, item changes, NPC favor, vendor gold, and **enemy kills** during a session, with live rate-per-hour metrics.
 
 ## Architecture
 
@@ -24,17 +24,18 @@ A general-purpose session tracker that lets users manually start/stop "farming s
 
 ### Event Pipeline
 
-The farming calculator subscribes to **existing event channels** — no new Rust-side parsing needed:
+The farming calculator subscribes to multiple event channels:
 
 ```
-Player.log → PlayerEventParser → player-event channel ─┐
-                                 skill-update channel ──┤
-                                                        ▼
-                                              farmingStore (if session active)
-                                                        │
-                                              accumulate deltas + push log
-                                                        │
-                                              on endSession() → invoke("save_farming_session")
+Player.log → PlayerEventParser → player-events-batch channel ─┐
+                                skill-update channel ─────────┤
+Chat.log  → ChatCombatParser  → enemy-killed channel ─────────┤
+                                                              ▼
+                                                    farmingStore (if session active)
+                                                              │
+                                                    accumulate deltas + push log
+                                                              │
+                                                    on endSession() → invoke("save_farming_session")
 ```
 
 ### What Gets Tracked
@@ -46,6 +47,7 @@ Player.log → PlayerEventParser → player-event channel ─┐
 | Items Lost | `ItemStackChanged` (negative delta), `ItemDeleted` (Consumed/Unknown) | Storage transfers and vendor sales excluded |
 | NPC Favor | `FavorChanged` | Accumulated per NPC |
 | Vendor Gold | `VendorSold` | Total gold from vendor sales |
+| Enemy Kills | `enemy-killed` (chat combat) | Kill count per enemy type, kills/hr, loot attributed via CorpseSearch provenance |
 
 ### Item Tracking Design
 
@@ -58,9 +60,9 @@ Player.log → PlayerEventParser → player-event channel ─┐
 - **Start/Pause/Resume/End** controls with editable session name and notes
 - **Elapsed timer** with pause accounting (paused time excluded from per-hour rates)
 - **Three-column live display:**
-  - **Skills panel** — XP progress bars per skill, level-ups, XP/hour rates
+  - **Skills panel** — XP progress bars per skill, level-ups, XP/hour rates; favor changes; kill summary with per-creature loot attribution
   - **Items grid** — net item quantities with per-hour rates; ability to ignore specific items from tracking
-  - **Activity log** — chronological event feed (item changes, XP gains, favor changes, vendor sales)
+  - **Activity log** — chronological event feed (item changes, XP gains, favor changes, vendor sales, kills)
 
 ### Session Lifecycle
 
@@ -74,9 +76,27 @@ Player.log → PlayerEventParser → player-event channel ─┐
 
 ### Historical Sessions
 
-- Browse past sessions with full detail (skills, items, favors)
+- Browse past sessions with full detail (skills, items, favors, kills)
 - Edit session name and notes after the fact
 - Delete sessions
+
+## Kill Tracking
+
+Kill tracking operates at two levels:
+
+### Standalone Kill Database
+
+Every enemy kill is persisted to the `enemy_kills` table regardless of whether a farming session is active. When the player loots a corpse, items with `CorpseSearch` provenance are linked to the kill via entity_id matching and stored in `enemy_kill_loot`. This builds a drop-rate database over time.
+
+The kill-to-loot link uses a short-lived in-memory map (`recent_kills`) that maps `enemy_entity_id -> kill_row_id`. When items arrive with `CorpseSearch { entity_id }` provenance, the coordinator looks up the matching kill and inserts into `enemy_kill_loot`. Entries expire after 120 seconds.
+
+### Farming Session Integration
+
+During an active farming session, the farming store:
+1. Listens for `enemy-killed` events and increments per-enemy-type kill counts
+2. Uses `CorpseSearch` provenance on `ItemStackChanged` events to attribute loot to specific enemy types
+3. Displays kills/hr and per-creature loot breakdown in the session card
+4. Persists aggregated kill counts to `farming_session_kills` when the session ends
 
 ## Database Tables
 
@@ -84,8 +104,11 @@ Player.log → PlayerEventParser → player-event channel ─┐
 - **`farming_session_skills`** — XP gained per skill per session
 - **`farming_session_items`** — net item quantity changes per session
 - **`farming_session_favors`** — favor changes per NPC per session
+- **`farming_session_kills`** — kill counts per enemy type per session
+- **`enemy_kills`** — standalone record of every enemy kill (not session-scoped)
+- **`enemy_kill_loot`** — items attributed to specific kills via entity_id matching
 
-All child tables cascade on delete from `farming_sessions`.
+`farming_session_*` tables cascade on delete from `farming_sessions`. `enemy_kill_loot` cascades on delete from `enemy_kills`.
 
 ## Time Handling
 
