@@ -1,6 +1,6 @@
 [package]
 name = "glogger"
-version = "0.8.1"
+version = "0.8.2"
 description = "Project: Gorgon Log Watcher and Data Tracker"
 authors = ["Daniel"]
 edition = "2021"
