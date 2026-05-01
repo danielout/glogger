@@ -137,13 +137,14 @@
 
     <!-- Right panel: item detail -->
     <div
-      class="h-full overflow-y-auto border-l border-surface-elevated p-4 flex flex-col gap-4"
-      :class="{ 'items-center justify-center': !selected }">
+      class="h-full border-l border-surface-elevated p-4 flex flex-col gap-3"
+      :class="selected ? 'overflow-hidden' : 'overflow-y-auto items-center justify-center'">
         <div v-if="!selected" class="text-border-default italic">
           Select an item to inspect
         </div>
 
         <template v-else>
+          <!-- ═══ HEADER ═══ -->
           <div class="flex gap-3 items-start">
             <!-- Icon -->
             <div class="shrink-0">
@@ -163,259 +164,76 @@
 
             <div class="flex-1 min-w-0">
               <div class="text-accent-gold text-base font-bold mb-1">{{ selected.name }}</div>
-              <div class="text-xs text-text-dim mb-1">
-                ID: <span class="text-text-secondary font-mono">{{ selected.id }}</span>
-                <template v-if="selected.icon_id">
-                  · Icon:
-                  <span class="text-text-secondary font-mono">{{ selected.icon_id }}</span></template
-                >
-                <template v-if="selected.value">
-                  · Value:
-                  <span class="text-text-secondary font-mono">{{ selected.value }}c</span></template
-                >
-                <template v-if="selected.max_stack_size">
-                  · Stack:
-                  <span class="text-text-secondary font-mono">{{
-                    selected.max_stack_size
-                  }}</span></template
-                >
-              </div>
-              <div v-if="selected.description" class="text-xs text-text-secondary italic">
-                {{ selected.description }}
-              </div>
-            </div>
-
-            <button
-              class="bg-transparent border-none cursor-pointer px-1 py-0 text-sm shrink-0 transition-colors"
-              :class="isFav ? 'text-accent-gold' : 'text-text-dim hover:text-accent-gold'"
-              :title="isFav ? 'Remove from favorites' : 'Add to favorites'"
-              @click="dataBrowserStore.toggleFavorite({ type: 'item', reference: selected.name, label: selected.name })"
-            >&#x2605;</button>
-            <button class="bg-transparent border-none text-text-dim cursor-pointer px-1 py-0 text-sm shrink-0 hover:text-accent-red" @click="clearSelection">✕</button>
-          </div>
-
-          <!-- Equipment Info -->
-          <div v-if="selected.equip_slot || selected.skill_reqs" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Equipment</div>
-            <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-1.5">
-              <div v-if="selected.equip_slot" class="text-xs flex gap-2">
-                <span class="text-text-muted min-w-20">Slot:</span>
-                <span class="text-text-secondary">{{ selected.equip_slot }}</span>
-              </div>
-              <div v-if="selected.skill_reqs" class="text-xs flex gap-2 items-center flex-wrap">
-                <span class="text-text-muted min-w-20">Requires:</span>
-                <span v-for="(level, skill) in selected.skill_reqs" :key="skill" class="flex items-center gap-1">
-                  <SkillInline :reference="String(skill)" /> <span class="text-text-secondary">{{ level }}</span>
+              <div class="text-xs text-text-dim flex flex-wrap gap-x-3 gap-y-0.5 mb-1">
+                <span v-if="selected.value">Value: <span class="text-text-secondary font-mono">{{ selected.value }}c</span></span>
+                <span class="inline-flex items-center gap-1">
+                  <template v-if="!editingMarket">
+                    Market Value:
+                    <button
+                      class="bg-transparent border-none p-0 cursor-pointer text-xs font-mono"
+                      :class="marketValue ? 'text-text-secondary hover:text-text-primary' : 'text-text-dim italic hover:text-text-secondary'"
+                      @click="startEditMarket">
+                      {{ marketValue ? `${marketValue.market_value.toLocaleString()}c` : 'Not Set' }}
+                    </button>
+                    <button
+                      v-if="marketValue"
+                      class="bg-transparent border-none p-0 cursor-pointer text-[0.6rem] text-text-dim hover:text-accent-red"
+                      title="Remove market value"
+                      @click="removeMarketValue">&#x2715;</button>
+                  </template>
+                  <template v-else>
+                    Market Value:
+                    <input
+                      ref="marketInput"
+                      v-model="marketEditValue"
+                      type="number"
+                      min="0"
+                      class="w-18 bg-surface-dark border border-border-default px-1 py-0 text-xs text-text-primary font-mono"
+                      placeholder="Price"
+                      @keydown.enter.stop="saveMarketValue"
+                      @keydown.escape.stop="editingMarket = false"
+                      @blur="saveMarketValue" />
+                    <span class="text-text-muted">c</span>
+                    <button
+                      class="bg-transparent border-none p-0 cursor-pointer text-[0.65rem] text-value-positive hover:text-green-400"
+                      @mousedown.prevent="saveMarketValue">Save</button>
+                    <button
+                      class="bg-transparent border-none p-0 cursor-pointer text-[0.65rem] text-text-dim hover:text-text-primary"
+                      @mousedown.prevent="cancelEditMarket">Cancel</button>
+                  </template>
                 </span>
+                <span v-if="selected.max_stack_size">Stack Size: <span class="text-text-secondary font-mono">{{ selected.max_stack_size }}</span></span>
               </div>
-            </div>
-          </div>
-
-          <!-- Crafting Info -->
-          <div v-if="selected.tsys_profile || selected.craft_points" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Crafting</div>
-            <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-1.5">
-              <div v-if="selected.tsys_profile" class="text-xs flex gap-2">
-                <span class="text-text-muted min-w-20">TSys Profile:</span>
-                <span class="text-text-secondary font-mono">{{ selected.tsys_profile }}</span>
-              </div>
-              <div v-if="selected.craft_points" class="text-xs flex gap-2">
-                <span class="text-text-muted min-w-20">Craft Points:</span>
-                <span class="text-text-secondary">{{ selected.craft_points }}</span>
-              </div>
-              <div v-if="selected.crafting_target_level" class="text-xs flex gap-2">
-                <span class="text-text-muted min-w-20">Target Level:</span>
-                <span class="text-text-secondary">{{ selected.crafting_target_level }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Food Description -->
-          <div v-if="selected.food_desc" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Food</div>
-            <div class="text-xs text-[#c8a86e] italic px-2 py-1 bg-surface-inset border-l-2 border-l-[#4a3a1a]">
-              {{ selected.food_desc }}
-            </div>
-          </div>
-
-          <!-- Bestow Info -->
-          <div v-if="selected.bestow_ability || selected.bestow_quest || selected.bestow_recipes?.length || selected.bestow_title" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Bestows</div>
-            <div class="flex flex-col gap-1">
-              <div v-if="selected.bestow_ability" class="text-xs flex gap-2 items-center px-2 py-0.5">
-                <span class="text-text-muted min-w-16">Ability:</span>
-                <button
-                  class="bg-transparent border-none text-[#e08060] cursor-pointer p-0 text-xs hover:underline"
-                  @click="navigateToEntity({ type: 'ability', id: selected.bestow_ability })">
-                  {{ selected.bestow_ability }}
-                </button>
-              </div>
-              <div v-if="selected.bestow_quest" class="text-xs flex gap-2 items-center px-2 py-0.5">
-                <span class="text-text-muted min-w-16">Quest:</span>
-                <QuestInline :reference="selected.bestow_quest" />
-              </div>
-              <div v-if="selected.bestow_recipes?.length" class="text-xs flex gap-2 items-center px-2 py-0.5 flex-wrap">
-                <span class="text-text-muted min-w-16">Recipes:</span>
-                <RecipeInline v-for="recipe in selected.bestow_recipes" :key="String(recipe)" :reference="String(recipe)" />
-              </div>
-              <div v-if="selected.bestow_title" class="text-xs flex gap-2 px-2 py-0.5">
-                <span class="text-text-muted min-w-16">Title ID:</span>
-                <span class="text-text-secondary">{{ selected.bestow_title }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Gardening Product Chain -->
-          <div v-if="gardeningChain" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
-              Gardening Chain
-              <span v-if="gardeningChain.gardening_level" class="text-text-muted normal-case tracking-normal ml-1">(Gardening Lv {{ gardeningChain.gardening_level }})</span>
-            </div>
-            <div class="flex flex-col gap-1.5 px-2">
-              <!-- Chain visualization: Seedling → Plant → Products -->
-              <div class="flex items-center gap-1.5 flex-wrap text-xs">
-                <template v-if="gardeningChain.seedling">
-                  <ItemInline :reference="gardeningChain.seedling.name" />
-                  <span class="text-text-dim">→</span>
-                </template>
-                <template v-if="gardeningChain.plant">
-                  <ItemInline :reference="gardeningChain.plant.name" />
-                </template>
-              </div>
-              <!-- Products from recipes using the plant -->
-              <div v-if="gardeningChain.products.length" class="flex flex-col gap-1 mt-1">
-                <div class="text-[0.6rem] uppercase tracking-widest text-text-dim">Used in {{ gardeningChain.products.length }} recipe{{ gardeningChain.products.length !== 1 ? 's' : '' }}</div>
-                <div
-                  v-for="product in gardeningChain.products"
-                  :key="product.recipe.id"
-                  class="flex gap-2 items-center text-xs px-2 py-0.5 bg-surface-inset border-l-2 border-l-[#2a6a2a]">
-                  <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ product.recipe.skill_level_req || 0 }}]</span>
-                  <RecipeInline :reference="product.recipe.name" />
-                  <span class="text-text-dim mx-0.5">→</span>
-                  <span class="flex items-center gap-1 flex-wrap">
-                    <ItemInline v-for="item in product.items" :key="item.id" :reference="item.name" />
+              <div class="text-xs text-text-dim flex flex-wrap gap-x-3 gap-y-0.5">
+                <span v-if="selected.equip_slot">Slot: <span class="text-text-secondary">{{ selected.equip_slot }}</span></span>
+                <span v-if="selected.crafting_target_level">Target Level: <span class="text-text-secondary">{{ selected.crafting_target_level }}</span></span>
+                <template v-if="selected.skill_reqs">
+                  <span class="flex items-center gap-1">Requires:
+                    <span v-for="(level, skill) in selected.skill_reqs" :key="skill" class="inline-flex items-center gap-0.5">
+                      <SkillInline :reference="String(skill)" /> <span class="text-text-secondary">{{ level }}</span>
+                    </span>
                   </span>
-                  <span v-if="product.recipe.skill" class="text-text-dim text-[0.65rem] ml-auto">{{ product.recipe.skill }}</span>
-                </div>
+                </template>
               </div>
-              <div v-else-if="gardeningChain.plant" class="text-xs text-text-dim italic">
-                No recipes found using this plant
+            </div>
+
+            <div class="flex flex-col items-end gap-1 shrink-0">
+              <div class="flex items-center gap-1">
+                <button
+                  class="bg-transparent border-none cursor-pointer px-1 py-0 text-sm transition-colors"
+                  :class="isFav ? 'text-accent-gold' : 'text-text-dim hover:text-accent-gold'"
+                  :title="isFav ? 'Remove from favorites' : 'Add to favorites'"
+                  @click="dataBrowserStore.toggleFavorite({ type: 'item', reference: selected.name, label: selected.name })"
+                >&#x2605;</button>
+                <button class="bg-transparent border-none text-text-dim cursor-pointer px-1 py-0 text-sm hover:text-accent-red" @click="clearSelection">&#x2715;</button>
               </div>
+              <span class="text-[0.65rem] text-text-dim font-mono">ID: {{ selected.id }}</span>
             </div>
           </div>
 
-          <!-- Uses -->
-          <div v-if="selected.num_uses" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Usage</div>
-            <div class="text-xs text-text-secondary px-2 py-1">
-              {{ selected.num_uses }} use{{ selected.num_uses > 1 ? 's' : '' }}
-            </div>
-          </div>
-
-          <!-- Sources -->
-          <SourcesPanel :sources="sources" :loading="sourcesLoading" />
-
-          <!-- Seen Dropped From (kill tracking) -->
-          <div v-if="dropSourcesLoading || dropSources.length > 0" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-[#e87e7e] border-b border-surface-card pb-0.5">
-              Seen Dropped From
-              <span v-if="dropSources.length > 0" class="text-text-dim font-normal ml-1">({{ dropSources.length }})</span>
-            </div>
-            <div v-if="dropSourcesLoading" class="text-text-dim text-xs italic px-2">Loading...</div>
-            <div v-else class="flex flex-col gap-1">
-              <div
-                v-for="src in dropSources"
-                :key="src.enemy_name"
-                class="grid grid-cols-[1fr_50px_50px_55px] gap-1 items-center text-xs px-2 py-1 bg-surface-inset border-l-2 border-l-[#e87e7e]">
-                <EnemyInline :reference="src.enemy_name" />
-                <span class="text-right text-text-secondary font-mono">x{{ src.total_quantity }}</span>
-                <span class="text-right text-text-dim font-mono text-[0.65rem]">{{ src.times_dropped }}/{{ src.total_kills }}</span>
-                <span class="text-right font-mono font-bold" :class="dropRateColor(src.drop_rate)">
-                  {{ (src.drop_rate * 100).toFixed(0) }}%
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Recipes Producing This Item -->
-          <div v-if="recipesProducing.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Produced By ({{ recipesProducing.length }})</div>
-            <div class="flex flex-col gap-1">
-              <div
-                v-for="recipe in recipesProducing"
-                :key="recipe.id"
-                class="flex gap-2 items-center text-xs px-2 py-0.5 bg-surface-inset border-l-2 border-l-[#2a4a2a]">
-                <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
-                <RecipeInline :reference="recipe.name" />
-                <span v-if="recipe.skill" class="text-text-dim text-[0.65rem] ml-auto">{{ recipe.skill }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Recipes Using This Item -->
-          <div v-if="recipesUsing.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Used In ({{ recipesUsing.length }})</div>
-            <div class="flex flex-col gap-1">
-              <div
-                v-for="recipe in recipesUsing"
-                :key="recipe.id"
-                class="flex gap-2 items-center text-xs px-2 py-0.5 bg-surface-inset border-l-2 border-l-[#4a3a1a]">
-                <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
-                <RecipeInline :reference="recipe.name" />
-                <span v-if="recipe.skill" class="text-text-dim text-[0.65rem] ml-auto">{{ recipe.skill }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- NPCs Who Want This Item -->
-          <div v-if="npcsWantingItem.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">NPC Favor ({{ npcsWantingItem.length }})</div>
-            <div class="flex flex-col gap-1 max-h-60 overflow-y-auto">
-              <div
-                v-for="entry in npcsWantingItem"
-                :key="entry.npc_key"
-                class="flex gap-2 items-center text-xs px-2 py-0.5 bg-surface-inset border-l-2"
-                :class="{
-                  'border-l-[#ff69b4]': entry.desire.toLowerCase() === 'love',
-                  'border-l-[#7ec8e3]': entry.desire.toLowerCase() === 'like',
-                  'border-l-accent-red': entry.desire.toLowerCase() === 'dislike',
-                  'border-l-[#aa4444]': entry.desire.toLowerCase() === 'hate',
-                }">
-                <span
-                  class="text-[0.65rem] uppercase font-bold px-1 py-0.5 min-w-12 text-center shrink-0"
-                  :class="{
-                    'bg-[#4a1a3a] text-[#ff69b4] border border-[#6a2a5a]': entry.desire.toLowerCase() === 'love',
-                    'bg-[#1a3a1a] text-[#7ec8e3] border border-[#2a5a2a]': entry.desire.toLowerCase() === 'like',
-                    'bg-[#3a2a1a] text-accent-red border border-[#5a3a2a]': entry.desire.toLowerCase() === 'dislike',
-                    'bg-[#3a1a1a] text-[#aa4444] border border-[#5a2a2a]': entry.desire.toLowerCase() === 'hate',
-                  }">
-                  {{ entry.desire }}
-                </span>
-                <NpcInline :reference="entry.npc_key" />
-                <span class="text-[#7ec8e3] font-bold ml-auto shrink-0">+{{ entry.pref.toFixed(0) }}</span>
-                <span v-if="entry.match_type !== 'name'" class="text-text-dim text-[0.6rem] italic shrink-0">({{ entry.match_type }})</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Keyword Recipe Uses -->
-          <div v-if="keywordRecipes.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Could Fill Keyword Slots In ({{ keywordRecipes.length }})</div>
-            <div class="flex flex-col gap-1">
-              <div
-                v-for="recipe in keywordRecipes"
-                :key="recipe.id"
-                class="flex gap-2 items-center text-xs px-2 py-0.5 bg-surface-inset border-l-2 border-l-[#4a4a1a]">
-                <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
-                <RecipeInline :reference="recipe.name" />
-                <span v-if="recipe.skill" class="text-text-dim text-[0.65rem] ml-auto">{{ recipe.skill }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Keywords -->
-          <div v-if="selected.keywords.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
+          <!-- ═══ KEYWORDS (below header) ═══ -->
+          <div v-if="selected.keywords.length" class="flex flex-col gap-1">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim">Item Keywords</div>
             <div class="flex flex-wrap gap-1">
               <button
                 v-for="kw in selected.keywords"
@@ -429,23 +247,255 @@
             </div>
           </div>
 
-          <!-- Effect descs -->
-          <div v-if="selected.effect_descs.length" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Effects</div>
-            <ul class="m-0 pl-4 p-0">
-              <li
-                v-for="(eff, i) in selected.effect_descs"
-                :key="i"
-                class="text-xs text-[#9a9] py-0.5">
-                {{ eff }}
-              </li>
-            </ul>
+          <!-- ═══ THREE-COLUMN GRID ═══ -->
+          <div class="grid grid-cols-3 grid-rows-[1fr] gap-3 border-t border-surface-elevated pt-3 min-h-0" :class="settingsStore.settings.showRawJsonInDataBrowser ? 'flex-2' : 'flex-1'">
+            <!-- ─── LEFT COLUMN ─── -->
+            <div class="flex flex-col gap-3 overflow-y-auto min-h-0">
+              <!-- Sources -->
+              <SourcesPanel :sources="sources" :loading="sourcesLoading" />
+
+              <!-- Seen Dropped From -->
+              <div v-if="dropSourcesLoading || dropSources.length > 0" class="flex flex-col gap-1.5">
+                <div class="text-[0.65rem] uppercase tracking-widest text-[#e87e7e] border-b border-surface-card pb-0.5">
+                  Seen Dropped From
+                  <span v-if="dropSources.length > 0" class="text-text-dim font-normal ml-1">({{ dropSources.length }})</span>
+                </div>
+                <div v-if="dropSourcesLoading" class="text-text-dim text-xs italic px-2">Loading...</div>
+                <div v-else class="flex flex-col gap-1">
+                  <div
+                    v-for="src in dropSources"
+                    :key="src.enemy_name"
+                    class="grid grid-cols-[1fr_40px_45px_45px] gap-1 items-center text-xs px-2 py-1 bg-surface-inset border-l-2 border-l-[#e87e7e]">
+                    <EnemyInline :reference="src.enemy_name" />
+                    <span class="text-right text-text-secondary font-mono">x{{ src.total_quantity }}</span>
+                    <span class="text-right text-text-dim font-mono text-[0.65rem]">{{ src.times_dropped }}/{{ src.total_kills }}</span>
+                    <span class="text-right font-mono font-bold" :class="dropRateColor(src.drop_rate)">
+                      {{ (src.drop_rate * 100).toFixed(0) }}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Effects -->
+              <div v-if="selected.effect_descs.length" class="flex flex-col gap-1.5">
+                <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Effects</div>
+                <ul class="m-0 pl-4 p-0">
+                  <li
+                    v-for="(eff, i) in selected.effect_descs"
+                    :key="i"
+                    class="text-xs text-[#9a9] py-0.5">
+                    {{ eff }}
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Crafting -->
+              <div v-if="selected.tsys_profile || selected.craft_points" class="flex flex-col gap-1.5">
+                <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Crafting</div>
+                <div class="flex flex-col gap-1">
+                  <div v-if="selected.tsys_profile" class="text-xs flex gap-2">
+                    <span class="text-text-muted min-w-20">TSys Profile:</span>
+                    <span class="text-text-secondary font-mono">{{ selected.tsys_profile }}</span>
+                  </div>
+                  <div v-if="selected.craft_points" class="text-xs flex gap-2">
+                    <span class="text-text-muted min-w-20">Craft Points:</span>
+                    <span class="text-text-secondary">{{ selected.craft_points }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Gardening Product Chain -->
+              <div v-if="gardeningChain" class="flex flex-col gap-1.5">
+                <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+                  Gardening Chain
+                  <span v-if="gardeningChain.gardening_level" class="text-text-muted normal-case tracking-normal ml-1">(Gardening Lv {{ gardeningChain.gardening_level }})</span>
+                </div>
+                <div class="flex flex-col gap-1.5 px-2">
+                  <div class="flex items-center gap-1.5 flex-wrap text-xs">
+                    <template v-if="gardeningChain.seedling">
+                      <ItemInline :reference="gardeningChain.seedling.name" />
+                      <span class="text-text-dim">→</span>
+                    </template>
+                    <template v-if="gardeningChain.plant">
+                      <ItemInline :reference="gardeningChain.plant.name" />
+                    </template>
+                  </div>
+                  <div v-if="gardeningChain.products.length" class="flex flex-col gap-1 mt-1">
+                    <div class="text-[0.6rem] uppercase tracking-widest text-text-dim">Used in {{ gardeningChain.products.length }} recipe{{ gardeningChain.products.length !== 1 ? 's' : '' }}</div>
+                    <div
+                      v-for="product in gardeningChain.products"
+                      :key="product.recipe.id"
+                      class="flex gap-2 items-center text-xs px-2 py-0.5 bg-surface-inset border-l-2 border-l-[#2a6a2a]">
+                      <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ product.recipe.skill_level_req || 0 }}]</span>
+                      <RecipeInline :reference="product.recipe.name" />
+                      <span class="text-text-dim mx-0.5">→</span>
+                      <span class="flex items-center gap-1 flex-wrap">
+                        <ItemInline v-for="item in product.items" :key="item.id" :reference="item.name" />
+                      </span>
+                      <span v-if="product.recipe.skill" class="text-text-dim text-[0.65rem] ml-auto">{{ product.recipe.skill }}</span>
+                    </div>
+                  </div>
+                  <div v-else-if="gardeningChain.plant" class="text-xs text-text-dim italic">
+                    No recipes found using this plant
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ─── MIDDLE COLUMN ─── -->
+            <div class="flex flex-col gap-3 overflow-y-auto min-h-0">
+              <!-- NPC Favor -->
+              <div v-if="npcsWantingItem.length" class="flex flex-col gap-1.5">
+                <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">NPC Favor ({{ npcsWantingItem.length }})</div>
+                <div class="flex flex-col gap-1 max-h-60 overflow-y-auto">
+                  <div
+                    v-for="entry in npcsWantingItem"
+                    :key="entry.npc_key"
+                    class="flex gap-2 items-center text-xs px-2 py-0.5 bg-surface-inset border-l-2"
+                    :class="{
+                      'border-l-[#ff69b4]': entry.desire.toLowerCase() === 'love',
+                      'border-l-[#7ec8e3]': entry.desire.toLowerCase() === 'like',
+                      'border-l-accent-red': entry.desire.toLowerCase() === 'dislike',
+                      'border-l-[#aa4444]': entry.desire.toLowerCase() === 'hate',
+                    }">
+                    <span
+                      class="text-[0.65rem] uppercase font-bold px-1 py-0.5 min-w-12 text-center shrink-0"
+                      :class="{
+                        'bg-[#4a1a3a] text-[#ff69b4] border border-[#6a2a5a]': entry.desire.toLowerCase() === 'love',
+                        'bg-[#1a3a1a] text-[#7ec8e3] border border-[#2a5a2a]': entry.desire.toLowerCase() === 'like',
+                        'bg-[#3a2a1a] text-accent-red border border-[#5a3a2a]': entry.desire.toLowerCase() === 'dislike',
+                        'bg-[#3a1a1a] text-[#aa4444] border border-[#5a2a2a]': entry.desire.toLowerCase() === 'hate',
+                      }">
+                      {{ entry.desire }}
+                    </span>
+                    <NpcInline :reference="entry.npc_key" />
+                    <span class="text-[#7ec8e3] font-bold ml-auto shrink-0">+{{ entry.pref.toFixed(0) }}</span>
+                    <span v-if="entry.match_type !== 'name'" class="text-text-dim text-[0.6rem] italic shrink-0">({{ entry.match_type }})</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Used In -->
+              <div v-if="recipesUsing.length" class="flex flex-col gap-1.5">
+                <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Used In ({{ recipesUsing.length }})</div>
+                <div class="flex flex-col gap-1">
+                  <div
+                    v-for="recipe in recipesUsing"
+                    :key="recipe.id"
+                    class="flex gap-2 items-center text-xs px-2 py-0.5 bg-surface-inset border-l-2 border-l-[#4a3a1a]">
+                    <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
+                    <RecipeInline :reference="recipe.name" />
+                    <span v-if="recipe.skill" class="text-text-dim text-[0.65rem] ml-auto">{{ recipe.skill }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Keyword Recipe Uses -->
+              <div v-if="keywordRecipes.length" class="flex flex-col gap-1.5">
+                <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Can Fill Keyword Slot In ({{ keywordRecipes.length }})</div>
+                <div class="flex flex-col gap-1">
+                  <div
+                    v-for="recipe in keywordRecipes"
+                    :key="recipe.id"
+                    class="flex gap-2 items-center text-xs px-2 py-0.5 bg-surface-inset border-l-2 border-l-[#4a4a1a]">
+                    <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
+                    <RecipeInline :reference="recipe.name" />
+                    <span v-if="recipe.skill" class="text-text-dim text-[0.65rem] ml-auto">{{ recipe.skill }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ─── RIGHT COLUMN ─── -->
+            <div class="flex flex-col gap-3 overflow-y-auto min-h-0">
+              <!-- Description -->
+              <div v-if="selected.description" class="flex flex-col gap-1.5">
+                <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Description</div>
+                <div class="text-xs text-text-secondary italic px-2 py-1">
+                  {{ selected.description }}
+                </div>
+              </div>
+
+              <!-- Food Description -->
+              <div v-if="selected.food_desc" class="flex flex-col gap-1.5">
+                <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Food</div>
+                <div class="text-xs text-[#c8a86e] italic px-2 py-1 bg-surface-inset border-l-2 border-l-[#4a3a1a]">
+                  {{ selected.food_desc }}
+                </div>
+              </div>
+
+              <!-- Bestows -->
+              <div v-if="selected.bestow_ability || selected.bestow_quest || selected.bestow_recipes?.length || selected.bestow_title" class="flex flex-col gap-1.5">
+                <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Bestows</div>
+                <div class="flex flex-col gap-1">
+                  <div v-if="selected.bestow_ability" class="text-xs flex gap-2 items-center px-2 py-0.5">
+                    <span class="text-text-muted min-w-16">Ability:</span>
+                    <button
+                      class="bg-transparent border-none text-[#e08060] cursor-pointer p-0 text-xs hover:underline"
+                      @click="navigateToEntity({ type: 'ability', id: selected.bestow_ability })">
+                      {{ selected.bestow_ability }}
+                    </button>
+                  </div>
+                  <div v-if="selected.bestow_quest" class="text-xs flex gap-2 items-center px-2 py-0.5">
+                    <span class="text-text-muted min-w-16">Quest:</span>
+                    <QuestInline :reference="selected.bestow_quest" />
+                  </div>
+                  <div v-if="selected.bestow_recipes?.length" class="text-xs flex gap-2 items-center px-2 py-0.5 flex-wrap">
+                    <span class="text-text-muted min-w-16">Recipes:</span>
+                    <RecipeInline v-for="recipe in selected.bestow_recipes" :key="String(recipe)" :reference="String(recipe)" />
+                  </div>
+                  <div v-if="selected.bestow_title" class="text-xs flex gap-2 px-2 py-0.5">
+                    <span class="text-text-muted min-w-16">Title ID:</span>
+                    <span class="text-text-secondary">{{ selected.bestow_title }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Usage -->
+              <div v-if="selected.num_uses" class="flex flex-col gap-1.5">
+                <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Usage</div>
+                <div class="text-xs text-text-secondary px-2 py-1">
+                  {{ selected.num_uses }} use{{ selected.num_uses > 1 ? 's' : '' }}
+                </div>
+              </div>
+
+              <!-- Produced By -->
+              <div v-if="recipesProducing.length" class="flex flex-col gap-1.5">
+                <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Produced By ({{ recipesProducing.length }})</div>
+                <div class="flex flex-col gap-1">
+                  <div
+                    v-for="recipe in recipesProducing"
+                    :key="recipe.id"
+                    class="flex gap-2 items-center text-xs px-2 py-0.5 bg-surface-inset border-l-2 border-l-[#2a4a2a]">
+                    <span class="text-text-muted text-[0.72rem] min-w-14 shrink-0">[Lv {{ recipe.skill_level_req || 0 }}]</span>
+                    <RecipeInline :reference="recipe.name" />
+                    <span v-if="recipe.skill" class="text-text-dim text-[0.65rem] ml-auto">{{ recipe.skill }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- You Own -->
+              <div v-if="ownershipInfo && ownershipInfo.total_count > 0" class="flex flex-col gap-1.5">
+                <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
+                  You Own: <span class="text-text-secondary normal-case tracking-normal font-mono">{{ ownershipInfo.total_count }}</span>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                  <div
+                    v-for="loc in ownershipInfo.locations"
+                    :key="loc.location"
+                    class="text-xs flex justify-between px-2 py-0.5 bg-surface-inset">
+                    <span class="text-text-muted">{{ loc.location }}</span>
+                    <span class="text-text-secondary font-mono">{{ loc.count }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <!-- Raw JSON -->
-          <div v-if="settingsStore.settings.showRawJsonInDataBrowser" class="flex flex-col gap-1.5">
-            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Raw JSON</div>
-            <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-x-auto whitespace-pre m-0 leading-relaxed">{{ JSON.stringify(selected, null, 2) }}</pre>
+          <!-- ═══ RAW JSON (full width, below grid) ═══ -->
+          <div v-if="settingsStore.settings.showRawJsonInDataBrowser" class="flex flex-col gap-1.5 flex-1 min-h-0 shrink-0">
+            <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5 shrink-0">Raw JSON</div>
+            <pre class="bg-surface-dark border border-surface-card p-3 text-[0.72rem] text-text-muted overflow-auto whitespace-pre m-0 leading-relaxed flex-1 min-h-0">{{ JSON.stringify(selected, null, 2) }}</pre>
           </div>
         </template>
     </div>
@@ -455,10 +505,11 @@
 <script setup lang="ts">
 import PaneLayout from "../Shared/PaneLayout.vue";
 import EnemyInline from "../Shared/Enemy/EnemyInline.vue";
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, nextTick } from "vue";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { useMarketStore, type MarketValue } from "../../stores/marketStore";
 import { useKeyboard } from "../../composables/useKeyboard";
 import { useDataBrowserStore } from "../../stores/dataBrowserStore";
 import { useEntityNavigation } from "../../composables/useEntityNavigation";
@@ -478,6 +529,7 @@ const props = defineProps<{
 
 const store = useGameDataStore();
 const settingsStore = useSettingsStore();
+const marketStore = useMarketStore();
 const dataBrowserStore = useDataBrowserStore();
 const { navigateToEntity } = useEntityNavigation();
 
@@ -510,6 +562,48 @@ interface ItemDropSource {
 }
 const dropSources = ref<ItemDropSource[]>([]);
 const dropSourcesLoading = ref(false);
+
+// Market value
+const marketValue = ref<MarketValue | null>(null);
+const editingMarket = ref(false);
+const marketEditValue = ref('');
+const marketInput = ref<HTMLInputElement | null>(null);
+
+function startEditMarket() {
+  marketEditValue.value = marketValue.value?.market_value?.toString() ?? '';
+  editingMarket.value = true;
+  nextTick(() => marketInput.value?.focus());
+}
+
+async function saveMarketValue() {
+  if (!editingMarket.value || !selected.value) return;
+  editingMarket.value = false;
+  const val = parseInt(marketEditValue.value);
+  if (isNaN(val) || val < 0) return;
+  await marketStore.setValue(selected.value.id, selected.value.name, val);
+  marketValue.value = marketStore.valuesByItemId[selected.value.id] ?? null;
+}
+
+function cancelEditMarket() {
+  editingMarket.value = false;
+}
+
+async function removeMarketValue() {
+  if (!selected.value) return;
+  await marketStore.deleteValue(selected.value.id);
+  marketValue.value = null;
+}
+
+// Ownership
+interface ItemOwnershipLocation {
+  location: string;
+  count: number;
+}
+interface ItemOwnershipInfo {
+  total_count: number;
+  locations: ItemOwnershipLocation[];
+}
+const ownershipInfo = ref<ItemOwnershipInfo | null>(null);
 
 // Advanced filters
 const showFilters = ref(false);
@@ -702,6 +796,25 @@ async function selectItem(item: ItemInfo) {
   keywordRecipes.value = [];
   gardeningChain.value = null;
   dropSources.value = [];
+  marketValue.value = null;
+  editingMarket.value = false;
+  ownershipInfo.value = null;
+
+  // Load market value
+  marketValue.value = marketStore.valuesByItemId[item.id] ?? null;
+
+  // Load ownership info
+  const charName = settingsStore.settings.activeCharacterName;
+  const serverName = settingsStore.settings.activeServerName;
+  if (charName && serverName) {
+    invoke<ItemOwnershipInfo>("get_item_ownership", {
+      characterName: charName,
+      serverName: serverName,
+      itemName: item.name,
+    })
+      .then(info => { ownershipInfo.value = info; })
+      .catch(e => { console.warn("Ownership fetch failed:", e); });
+  }
 
   // Load gardening product chain
   store.getGardeningProductChain(item.id)
@@ -731,7 +844,7 @@ async function selectItem(item: ItemInfo) {
 
   // Load kill-tracked drop sources
   dropSourcesLoading.value = true;
-  invoke<ItemDropSource[]>("get_item_drop_sources", { itemName: item.name })
+  invoke<ItemDropSource[]>("get_item_drop_sources", { itemName: item.name, internalName: item.internal_name })
     .then(sources => { dropSources.value = sources; })
     .catch(e => { console.warn("Drop source fetch failed:", e); })
     .finally(() => { dropSourcesLoading.value = false; });
@@ -790,6 +903,9 @@ function clearSelection() {
   keywordRecipes.value = [];
   gardeningChain.value = null;
   dropSources.value = [];
+  marketValue.value = null;
+  editingMarket.value = false;
+  ownershipInfo.value = null;
 }
 
 function dropRateColor(rate: number): string {
