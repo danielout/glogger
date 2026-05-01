@@ -7,14 +7,36 @@
       placeholder="Search words..."
       class="w-full px-2 py-1 rounded bg-surface-2 border border-border text-sm text-text-primary placeholder:text-text-dim focus:outline-none focus:border-accent-blue shrink-0" />
 
+    <!-- Expand/Collapse all -->
+    <div v-if="filteredGroups.length > 1" class="flex gap-2 shrink-0">
+      <button
+        class="text-[11px] text-text-dim hover:text-text-primary cursor-pointer"
+        @click="expandAll">
+        Expand all
+      </button>
+      <span class="text-[11px] text-text-dim">|</span>
+      <button
+        class="text-[11px] text-text-dim hover:text-text-primary cursor-pointer"
+        @click="collapseAll">
+        Collapse all
+      </button>
+    </div>
+
     <!-- Word list grouped by power name -->
     <div class="flex-1 overflow-y-auto min-h-0 flex flex-col gap-2">
       <div
         v-for="group in filteredGroups"
         :key="group.powerName"
         class="rounded bg-surface-2/50 px-2 py-1.5">
-        <div class="text-xs font-semibold text-accent-gold mb-1">{{ group.powerName }}</div>
-        <div class="flex flex-col gap-1">
+        <div
+          class="text-xs font-semibold text-accent-gold flex items-center gap-1 cursor-pointer select-none"
+          :class="{ 'mb-1': !collapsedGroups.has(group.powerName) }"
+          @click="toggleGroup(group.powerName)">
+          <span class="text-[10px] text-text-dim w-3 inline-block">{{ collapsedGroups.has(group.powerName) ? '▶' : '▼' }}</span>
+          {{ group.powerName }}
+          <span class="text-[10px] text-text-dim font-normal ml-auto">{{ group.words.length }}</span>
+        </div>
+        <div v-show="!collapsedGroups.has(group.powerName)" class="flex flex-col gap-1">
           <div
             v-for="word in group.words"
             :key="word.id"
@@ -122,6 +144,7 @@ const newWord = ref('')
 const newPowerName = ref('')
 const copiedWord = ref('')
 const now = ref(Date.now())
+const collapsedGroups = ref(new Set<string>())
 
 let refreshInterval: ReturnType<typeof setInterval> | null = null
 let copiedTimeout: ReturnType<typeof setTimeout> | null = null
@@ -188,6 +211,22 @@ function wordAgeClass(word: WordOfPower): string {
   if (hours < 6) return 'bg-accent-gold/20 text-accent-gold'
   if (hours < 24) return 'bg-orange-500/20 text-orange-400'
   return 'bg-red-500/20 text-value-negative'
+}
+
+function toggleGroup(powerName: string) {
+  if (collapsedGroups.value.has(powerName)) {
+    collapsedGroups.value.delete(powerName)
+  } else {
+    collapsedGroups.value.add(powerName)
+  }
+}
+
+function expandAll() {
+  collapsedGroups.value.clear()
+}
+
+function collapseAll() {
+  collapsedGroups.value = new Set(filteredGroups.value.map(g => g.powerName))
 }
 
 async function copyWord(word: string) {
