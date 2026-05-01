@@ -6,10 +6,11 @@ A player-maintained price database for tracking market values of items. Used thr
 
 ## How It Works
 
-- **Search and browse** existing market values by item name or ID
-- **Add prices** via autocomplete item picker — search for an item, enter its market value
-- **Edit inline** — click any price to modify it with real-time save
+- **Search and browse** existing market values via full-width search with FilterBar, summary stat cards at top
+- **Add prices** via autocomplete item picker with ItemInline previews — auto-focus price input, Enter/Escape shortcuts, batch entry with success feedback, duplicate detection with update option. Add form in collapsible AccordionSection.
+- **Edit inline** — click any price to modify it with real-time save, Cancel button to discard
 - **Delete** prices no longer needed
+- **Bulk operations** — multi-select checkboxes on rows, bulk action bar with Set Price, Adjust Prices (percentage), and Delete Selected. Backend `bulk_update`/`bulk_delete` commands. Confirmation dialog for destructive operations.
 - **Notes** field per item for context (e.g., "checked 2024-03-15")
 
 ## Price Modes
@@ -42,5 +43,7 @@ Six options controlling how item values are calculated app-wide:
 - `get_market_value(item_type_id) → Option<MarketValue>`
 - `set_market_value(item_type_id, item_name, market_value, notes)`
 - `delete_market_value(item_type_id)`
+- `bulk_update_market_values(updates)` — batch update multiple prices
+- `bulk_delete_market_values(item_type_ids)` — batch delete multiple entries
 - `export_market_values() → String` (JSON)
 - `import_market_values(json_data, strategy) → ImportResult`

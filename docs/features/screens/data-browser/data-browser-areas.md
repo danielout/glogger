@@ -9,6 +9,14 @@ Browse all game areas/zones. The area list comes from the CDN `areas.json`, enri
 - Text search by friendly name, short name, or area key
 - Result count displayed
 
+## Area Tooltips
+
+`AreaInline` components display a rich tooltip on hover showing:
+- Area friendly name and short name
+- Notable NPCs (up to 8, with "+N more" overflow)
+- Monsters in area (up to 12, with "+N more" overflow)
+- Click navigates to the area's detail view in the Data Browser
+
 ## Detail View
 
 - Area friendly name and short name

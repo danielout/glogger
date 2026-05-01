@@ -78,7 +78,8 @@ Uses `PaneLayout` (screen-key `char-gourmand`) with left + conditional right pan
 - **Click to select** — click meals/snacks to populate the food buff comparison panel
 - **Export uneaten** — save remaining uneaten foods to a text file
 - **Unmatched detection** — warns when report foods don't match CDN data (renamed/removed items)
-- **Color coding** — green (eaten), red (uneaten), dimmed (can't eat), gold border (selected)
+- **Manual eaten marking** — click any food to toggle its eaten/uneaten status without importing a report. Manual marks are preserved during report imports (report data won't overwrite manual marks).
+- **Color coding** — green (report-imported eaten), blue (manually marked eaten), red (uneaten), dimmed (can't eat), gold border (selected)
 
 ## Database Tables
 

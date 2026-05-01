@@ -24,6 +24,7 @@ Browse and search all game items with advanced filtering by keywords, equipment 
 - **Sources** — items/entities that drop or bestow this item
 - **Keywords** — color-coded badges (Lint_* in bronze, others in blue)
 - **Effect descriptions** — green text list
+- **Gardening Chain** — for seedling/plant items, shows the full seedling → plant → product chain with inline item and recipe links. Uses `get_gardening_product_chain` Tauri command. Seedlings identified by `Seedling=XX` keyword; plant linkage via naming convention (strip "Seedling"/"Leafling"/"Seeds" suffix).
 - **Raw JSON**
 
 ## Item Tooltip

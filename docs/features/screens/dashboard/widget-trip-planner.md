@@ -8,6 +8,7 @@ Interactive zone-to-zone route planner. Pick a start and end zone, optionally en
 
 - **Zone dropdowns** — select from all 15 overworld zones for start and destination
 - **"Current" button** — sets the start zone to the player's current zone (from live game state)
+- **"Home" button** — sets the start zone to the player's configured home zone (quick shortcut next to "Current")
 - **Teleport toggle** — enable/disable bind recall, mushroom circle, and TP machine shortcuts
 - **TP Machine toggle** — separately enable TP machine routing (only visible when teleports are on)
 - **Bind summary** — shows configured bind pads and mushroom circles at a glance
@@ -21,6 +22,8 @@ Accessed via the gear icon on the widget card. Allows manual configuration of:
 - **Secondary Bind** — second pad bind (unlocked later in game)
 - **Mushroom Circle 1** — attuned circle location (dropdown of zones known to have circles)
 - **Mushroom Circle 2** — second circle attunement
+
+- **Home Zone** — per-character home zone for quick start zone selection via the "Home" button
 
 Bind pad locations are also auto-populated from the database when available — the coordinator parses them from `BookOpened` events when the player opens their Teleportation skill info in-game. Manual config takes priority over auto-detected values only if the manual value is already set; otherwise the DB value fills in the blanks.
 

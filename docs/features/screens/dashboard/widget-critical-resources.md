@@ -9,6 +9,12 @@ Displays quantities of tracked valuable items at a glance:
 
 Uses `gameStateStore.ownedItemCounts[itemName]` which merges persisted inventory (database) with live inventory (session events) for accurate counts.
 
-**Future:** User-configurable tracked item list via the DashboardCard config popover slot.
+## Configuration
+
+Gear icon opens a config popover to customize tracked items:
+- **Item search** — autocomplete item picker to add new items to the tracked list
+- **Remove** — click to remove an item from the list
+- Persisted via `useViewPrefs`
+- Defaults to 6 items: Diamond, Amethyst, Aquamarine, Eternal Green, Salt, Fire Dust
 
 **Data source:** `gameStateStore.ownedItemCounts`. Persistent + live merged.

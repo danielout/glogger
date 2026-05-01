@@ -23,6 +23,10 @@ Each entity type has a dedicated color token defined in [`theme.css`](../../src/
 src/components/Shared/
 ├── GameIcon.vue                 # Reusable icon with loading/fallback
 ├── EntityTooltipWrapper.vue     # Slot-based tooltip positioning
+├── DataTable.vue                # Sortable table with skeletons, empty state, cell slots
+├── FilterBar.vue                # Search input with result count and filter slots
+├── SkeletonLoader.vue           # Animated placeholder (text/circle/rect variants)
+├── DataTableSkeleton.vue        # Table-shaped loading skeleton
 ├── EmptyState.vue               # Empty state display (panel or compact)
 ├── TabBar.vue                   # Tab navigation bar (v-model)
 ├── ModalDialog.vue              # Confirm/prompt modal dialog
@@ -62,9 +66,10 @@ src/components/Shared/
 │   ├── AbilityTooltip.vue       # Tooltip content
 │   └── AbilityInline.vue        # Inline text reference
 ├── Area/
-│   └── AreaInline.vue           # Placeholder (no backend data yet)
+│   ├── AreaInline.vue           # Inline area reference with tooltip and navigation
+│   └── AreaTooltip.vue          # Area tooltip (name, NPCs, monsters)
 └── Enemy/
-    └── EnemyInline.vue          # Placeholder (no backend data yet)
+    └── EnemyInline.vue          # Inline enemy reference with click navigation
 ```
 
 ## Composables
@@ -159,17 +164,18 @@ Requires the full `AbilityInfo` object because the store only supports `getAbili
 
 Data resolved eagerly via `store.resolveRecipe()` on mount.
 
-### Area (placeholder)
+### Area
 
 ```vue
 <AreaInline reference="Serbule" />
+<AreaInline reference="AreaSerbule" bordered />
 ```
 
-**Props:** `reference: string`
+**Props:** `reference: string`, `bordered?: boolean` (default `false`)
 
-Renders as styled text with a dotted underline. No tooltip, no click navigation. Will be upgraded when backend area data is available.
+Resolves the area reference to a friendly name via `gameDataStore`. Hover shows `AreaTooltip` with area name, short name, notable NPCs (up to 8), and monsters (up to 12). Click navigates to the area in the Data Browser.
 
-### Enemy (placeholder)
+### Enemy
 
 ```vue
 <EnemyInline reference="Feral Cow" />
@@ -177,7 +183,7 @@ Renders as styled text with a dotted underline. No tooltip, no click navigation.
 
 **Props:** `reference: string`
 
-Same as AreaInline — styled placeholder only.
+Renders as styled text with entity-enemy color. Click navigates to the enemy in the Data Browser. No tooltip yet.
 
 ## Item-Specific Components
 
@@ -330,6 +336,72 @@ Displays a formatted timestamp that respects the user's `timestampDisplayMode` s
 **Granularity options:** `time-short` ("14:30"), `time-full` ("14:30:00"), `date-short` ("Mar 26"), `date-full` ("2026-03-26"), `datetime-short` ("Mar 26, 14:30"), `datetime-full` ("2026-03-26 14:30:00"), `relative` ("2m ago"), `smart` (time if today, datetime-short otherwise)
 
 Renders as a `<time>` element with `datetime` attribute for accessibility. Use the component when timestamps appear as standalone display elements. Use the composable functions directly when timestamps are embedded in strings (e.g., `<option>` tags, interpolated text).
+
+## Data Display Components
+
+### DataTable
+
+A sortable data table with built-in loading skeletons, empty state, and custom cell rendering via scoped slots.
+
+```vue
+<DataTable
+  :columns="columns"
+  :rows="filteredRows"
+  :sort-key="sortKey"
+  :sort-dir="sortDir"
+  :loading="isLoading"
+  empty-text="No items found"
+  @sort="onSort"
+>
+  <template #cell-name="{ row }">
+    <ItemInline :reference="row.name" />
+  </template>
+</DataTable>
+```
+
+**Props:** `columns: ColumnDef[]`, `rows: Record<string, unknown>[]`, `sortKey?: string`, `sortDir?: 'asc' | 'desc'` (default `'asc'`), `loading?: boolean` (default `false`), `emptyText?: string` (default `"No data"`), `emptyHint?: string`, `compact?: boolean` (default `false`), `hoverable?: boolean` (default `true`), `stickyHeader?: boolean` (default `true`), `skeletonRows?: number` (default `5`), `rowClass?: (row, index) => string`
+
+**ColumnDef:** `{ key: string; label: string; sortable?: boolean; align?: 'left' | 'center' | 'right'; width?: string; numeric?: boolean }`
+
+**Slots:** `header-{key}` (custom header), `cell-{key}` (custom cell, receives `{ row, value }`)
+
+**Events:** `sort({ key, dir })`
+
+### FilterBar
+
+A search input bar with result count display and a slot for additional filter controls.
+
+```vue
+<FilterBar v-model="search" placeholder="Search items..." :result-count="filtered.length">
+  <StyledSelect v-model="category" :options="categoryOptions" />
+</FilterBar>
+```
+
+**Props:** `modelValue: string` (v-model), `placeholder?: string` (default `"Search..."`), `resultCount?: number`, `resultLabel?: string` (default `"results"`)
+
+**Slots:** default — filter buttons or dropdowns rendered alongside the search input.
+
+### SkeletonLoader
+
+Animated placeholder for loading states. Three variants for different content shapes.
+
+```vue
+<SkeletonLoader variant="text" :lines="3" />
+<SkeletonLoader variant="circle" />
+<SkeletonLoader variant="rect" width="w-full" height="h-32" />
+```
+
+**Props:** `variant?: 'text' | 'circle' | 'rect'` (default `'text'`), `lines?: number` (default `1`, text variant only), `width?: string`, `height?: string`
+
+### DataTableSkeleton
+
+A table-shaped skeleton for use as a loading state in contexts where `DataTable`'s built-in `loading` prop isn't available (e.g., before the table component mounts).
+
+```vue
+<DataTableSkeleton :columns="4" :rows="8" />
+```
+
+**Props:** `columns?: number` (default `4`), `rows?: number` (default `5`), `showHeader?: boolean` (default `true`)
 
 ## UI Utility Components
 
@@ -591,8 +663,8 @@ The mapping from entity type to Data Browser tab:
 | `recipe`    | Recipes     |
 | `quest`     | Quests      |
 | `npc`       | NPCs        |
-| `area`      | *(no-op)*   |
-| `enemy`     | *(no-op)*   |
+| `area`      | Areas       |
+| `enemy`     | Enemies     |
 
 To use navigation in a custom component:
 

@@ -89,7 +89,9 @@ Each widget is documented in its own file under `dashboard/`:
 | Mushroom Farming | Large | Moon-phase-aware mushroom reference table with level, grow time, substrates, and extra/reduced yield highlighting |
 | Stat Tracker | Small | Configurable display of player attributes and computed stats. Gear icon opens config to search and add/remove tracked stats. Defaults: Total Skill Levels, Combat XP Earned Mod, Crafting XP Earned Mod, Max Inventory Size. Updates live as attributes change. |
 | [Words of Power](dashboard/widget-words-of-power.md) | Medium | Auto-captures words of power when crafted, grouped by power name with age counters, click-to-copy, and manual add/remove. |
-| Recurring Events | Small | Calendar-based recurring event timers with countdowns. Supports daily, weekly, biweekly, and monthly recurrence. Events auto-advance and sort by next occurrence. |
+| Timers | Small | Countdown timers with add/pause/resume/restart/remove. Flexible duration input, preset quick-start buttons with configurable presets. Persisted via SQLite (`user_timers` table) with localStorage write-through cache. Timers scoped per character/server. Expired timers pulse red. |
+| Recurring Events | Small | Calendar-based recurring event timers with countdowns. Supports daily, weekly, biweekly (with anchor date), and monthly recurrence. Events auto-advance and sort by next occurrence. Imminent events (<1h) highlighted. Persisted via useViewPrefs. |
+| Garden Almanac | Small | Parses GardeningAlmanac book content, extracts current and upcoming crop bonus events. Shows ItemInline/AreaInline display, countdown timer, upcoming events list. Data stored in `garden_almanac` table. |
 | Vendor Councils | Medium | Vendor gold summary across all tracked vendors, grouped by item type category (Armor, Weapons, Jewelry, Skins, Potions, Food). Shows per-vendor gold remaining with color-coded ratios, reset timers, and category/grand totals. Toggle between active character and cross-character aggregate view. |
 
 ## Adding a New Widget
@@ -144,10 +146,8 @@ Each widget is documented in its own file under `dashboard/`:
 - **Rez Timer** — detect death events in PlayerEventParser, track cooldown, display countdown. Research needed into death/rez log lines. **Effort: Large | Impact: Medium**
 - **Long-Cooldown Timers** — Resuscitate, portals, Hoplology, etc. Needs cooldown tracking infrastructure, parser work, and possibly manual duration config. Generalized version of rez timer. **Effort: Large | Impact: Medium-High**
 - **"What Should I Do Next"** — suggestion engine using skill levels, recipe data, crafting history. Start simple (random tips), get smarter over time. **Effort: Large | Impact: Medium**
-- **Gardening Almanac** — unclear if garden data appears in Player.log. May require manual entry. Needs research. **Effort: Large | Impact: Medium**
 
 ### Widget System Enhancements
 
 - **Size override from settings pane** — allow changing a widget's width class (small/medium/large) from the Widgets pane
-- **Critical Resources: user-configurable item list** — let users pick which items to track via the DashboardCard config popover
 - **Status widget polish** — grouped/categorized currencies, icons or color coding, richer header with character name, level range, current area, session duration
