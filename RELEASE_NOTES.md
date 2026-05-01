@@ -1,7 +1,11 @@
-## What's Changed since v0.8.4
+## What's Changed since v0.8.5
+
+### Features
+- feat: devtools: can now do a simple, non-persisted playback of debug captures to validate loot attribution stuff (`499f577`)
 
 ### Fixes
-- fix: kill loot attribution and farming tracker missing new stacks (`b2e5941`)
+- fix: actually fixing the kill loot attribution bug i hope (`f74482f`)
+- fix: synergies should work for multi-word skills now (`3086e19`)
 
 ---
-*2 commits since v0.8.4*
+*5 commits since v0.8.5*
