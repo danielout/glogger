@@ -45,9 +45,6 @@ These items are investigated but can't be resolved without new runtime captures 
   - **Blocked on:** Additional garden captures to document fertilizer/watering/growth mechanics fully.
   - **Effort: Medium-Large | Impact: High**
 
-- [ ] Hoplology (equipment study) tracker — backfill from book/report
-  - Chat parser, DB table, coordinator handler, and dashboard widget are all built and wired. Widget is disabled in `dashboardWidgets.ts` because without backfill it always shows 0 studied items.
-  - **Blocked on:** Capture of the hoplology skill report book content (opened via ProcessBook in-game). Need the book_type and HTML content format to build the parser. CDN references `HoplologyBook` NPC source.
 
 ---
 
@@ -122,10 +119,6 @@ These items are investigated but can't be resolved without new runtime captures 
 - [ ] Skillbook autowatchwords
   - Automatically watch chat for item links of skill books the player could learn but doesn't own or know. Two modes: (1) books for currently-trained skills, (2) "future skill" mode where players select skills and we watch for any skillbooks they don't already own/know, even if skill level is too low to use them yet. **Investigation:** watchword system is fully operational (`watch_rules.rs`) with pattern matching and toast notifications. CDN has skillbook items with pattern `Skillbook_*`/`SkillBook_*` (e.g. `Skillbook_FoxInABox` with `AbilityRecipe` keyword). Implementation requires: (1) mapping skillbooks → skills via CDN items, (2) filtering against player's known skills, (3) auto-generating watch rules for desired skillbooks.
   - **Effort: Large | Impact: High (proactive skill progression)**
-
-- [ ] Standardize search across the app (scryfall-inspired)
-  - Search is implemented differently in different places. Need a smart, unified search system. Take inspiration from Scryfall's search syntax (https://scryfall.com/docs/syntax) for filtering and querying. Note: some game entity names contain `:` so syntax needs to account for that. Search should also cover descriptions, effects/mods, quest details/objectives — currently we search names only for most things.
-  - **Effort: Large | Impact: High (UX consistency, power-user feature)**
 
 - [ ] Statehelm repeatable quest tracking — see `docs/plans/quest-tracking.md` §3
   - Sub-task: track statehelm renown possible vs earned.
