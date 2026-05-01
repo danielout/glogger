@@ -1,4 +1,7 @@
-## What's Changed since v0.8.2
+## What's Changed since v0.8.3
+
+### Improvements
+- impv: words of power effects are collapsable now (`ccc8c31`)
 
 ---
-*2 commits since v0.8.2*
+*5 commits since v0.8.3*
