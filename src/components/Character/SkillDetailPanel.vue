@@ -321,14 +321,17 @@ const allRewards = computed<ParsedReward[]>(() => {
 // Compute which skills grant bonus levels to this skill (reverse lookup)
 const bonusSources = computed<BonusSource[]>(() => {
   if (!props.skill || !props.cdnSkills) return []
-  const targetName = props.skill.skill_name
+  // BonusToSkill values in CDN rewards use internal names (e.g. "FireMagic"),
+  // so resolve the target skill's internal name for comparison
+  const targetInternalName = cdnData.value?.internal_name ?? null
+  const targetDisplayName = props.skill.skill_name
   const sources: BonusSource[] = []
 
   for (const [skillName, skillInfo] of Object.entries(props.cdnSkills)) {
     if (!skillInfo.rewards) continue
     const rewards = skillInfo.rewards as Record<string, Record<string, unknown>>
     for (const [level, data] of Object.entries(rewards)) {
-      if (data.BonusToSkill === targetName) {
+      if (data.BonusToSkill === targetInternalName || data.BonusToSkill === targetDisplayName) {
         // Check if the player has reached this level in the granting skill
         const playerSkill = store.skillsByName[skillName]
         sources.push({
