@@ -395,12 +395,14 @@
           <div v-if="selected.keywords.length" class="flex flex-col gap-1.5">
             <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Keywords</div>
             <div class="flex flex-wrap gap-1">
-              <span
+              <button
                 v-for="kw in selected.keywords"
                 :key="kw"
-                class="text-[0.72rem] px-1.5 py-0.5 bg-surface-card border border-border-subtle text-[#7ec8e3]"
-                :class="{ 'bg-[#1e1a10]! border-[#3a3010]! text-[#887040]!': kw.startsWith('Lint_') }"
-                >{{ kw }}</span
+                class="text-[0.72rem] px-1.5 py-0.5 bg-surface-card border border-border-subtle text-[#7ec8e3] cursor-pointer hover:bg-surface-elevated transition-colors"
+                :class="{ 'bg-[#1e1a10]! border-[#3a3010]! text-[#887040]! hover:bg-[#2e2a20]!': kw.startsWith('Lint_') }"
+                :title="`Search for items with keyword: ${kw}`"
+                @click="searchByKeyword(kw)"
+                >{{ kw }}</button
               >
             </div>
           </div>
@@ -725,6 +727,16 @@ async function selectItem(item: ItemInfo) {
       iconLoading.value = false;
     }
   }
+}
+
+function searchByKeyword(kw: string) {
+  // Set the keyword via the dropdown filter (exact CDN casing) and clear any text query
+  clearFilters();
+  filterKeyword.value = kw;
+  keywordQuery.value = kw;
+  query.value = "";
+  showFilters.value = true;
+  selected.value = null;
 }
 
 function clearSelection() {
