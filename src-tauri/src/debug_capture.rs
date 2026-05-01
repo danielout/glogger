@@ -555,3 +555,156 @@ fn query_active_skills(
     let rows = query_table_as_json(conn, "game_state_active_skills", character, server);
     rows.into_iter().next().unwrap_or(serde_json::Value::Null)
 }
+
+// ── Capture Replay ───────────────────────────────────────────────────────
+
+/// A single loot attribution result from replaying a capture file.
+#[derive(Debug, Serialize)]
+pub struct ReplayLootEvent {
+    pub timestamp: String,
+    pub item_name: Option<String>,
+    pub item_type_id: Option<u16>,
+    pub quantity: u32,
+    pub corpse_name: Option<String>,
+    pub corpse_entity_id: Option<u32>,
+    pub instance_id: u64,
+    /// "direct" if instance_id matched a known AddItem, "fallback" if resolved
+    /// via last_item_event, "unresolved" if neither worked
+    pub resolution: String,
+}
+
+/// Result of replaying a capture file through the parser.
+#[derive(Debug, Serialize)]
+pub struct CaptureReplayResult {
+    pub total_lines: usize,
+    pub player_lines: usize,
+    pub chat_lines: usize,
+    pub loot_events: Vec<ReplayLootEvent>,
+    /// All enemy kills detected from chat combat FATALITY lines
+    pub kills: Vec<ReplayKillEvent>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ReplayKillEvent {
+    pub timestamp: String,
+    pub enemy_name: String,
+    pub enemy_entity_id: String,
+    pub killing_ability: String,
+}
+
+/// Replay a debug capture JSON file through the parser and return all
+/// LootPickedUp events with their attributions. No database interaction —
+/// pure parser validation.
+#[tauri::command]
+pub fn replay_capture_file(path: String) -> Result<CaptureReplayResult, String> {
+    let content =
+        fs::read_to_string(&path).map_err(|e| format!("Failed to read capture file: {e}"))?;
+
+    let json: serde_json::Value =
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse JSON: {e}"))?;
+
+    let lines = json
+        .get("lines")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "Capture file has no 'lines' array".to_string())?;
+
+    // Also check for character name in state_at_start for chat combat parsing
+    let character_name = json
+        .get("state_at_start")
+        .and_then(|s| s.get("active_skills"))
+        .and_then(|s| s.get("character_name"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("Unknown")
+        .to_string();
+
+    let mut parser = crate::player_event_parser::PlayerEventParser::new();
+    let mut loot_events = Vec::new();
+    let mut kills = Vec::new();
+    let mut player_lines = 0usize;
+    let mut chat_lines = 0usize;
+
+    for line_val in lines {
+        let source = line_val
+            .get("source")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let line = line_val
+            .get("line")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+
+        match source {
+            "player" => {
+                player_lines += 1;
+                let events = parser.process_line(line);
+                for event in events {
+                    if let crate::player_event_parser::PlayerEvent::LootPickedUp {
+                        timestamp,
+                        instance_id,
+                        corpse_entity_id,
+                        corpse_name,
+                        item_name,
+                        item_type_id,
+                        quantity,
+                    } = event
+                    {
+                        let resolution = if item_name.is_some() {
+                            // Check if it was a direct registry match or fallback
+                            if parser.has_instance(instance_id) {
+                                "direct"
+                            } else {
+                                "fallback"
+                            }
+                        } else {
+                            "unresolved"
+                        };
+                        loot_events.push(ReplayLootEvent {
+                            timestamp,
+                            item_name,
+                            item_type_id,
+                            quantity,
+                            corpse_name,
+                            corpse_entity_id,
+                            instance_id,
+                            resolution: resolution.to_string(),
+                        });
+                    }
+                }
+            }
+            "chat" => {
+                chat_lines += 1;
+                // Parse chat combat for enemy kills
+                if let Some(msg) = crate::chat_parser::parse_chat_line(line) {
+                    if let Some(combat_event) =
+                        crate::chat_combat_parser::parse_combat_message(&msg, &character_name)
+                    {
+                        if let crate::chat_combat_parser::ChatCombatEvent::EnemyKilled {
+                            timestamp,
+                            enemy_name,
+                            enemy_entity_id,
+                            killing_ability,
+                            ..
+                        } = combat_event
+                        {
+                            kills.push(ReplayKillEvent {
+                                timestamp,
+                                enemy_name,
+                                enemy_entity_id,
+                                killing_ability,
+                            });
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Ok(CaptureReplayResult {
+        total_lines: lines.len(),
+        player_lines,
+        chat_lines,
+        loot_events,
+        kills,
+    })
+}

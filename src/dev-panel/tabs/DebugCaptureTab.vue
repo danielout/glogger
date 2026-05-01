@@ -138,13 +138,92 @@
         </div>
       </div>
     </section>
+
+    <!-- Capture Replay -->
+    <section class="border border-border-default rounded p-4 space-y-4">
+      <h4 class="text-text-secondary text-sm mb-3 mt-0">Replay Capture File</h4>
+      <p class="text-text-muted text-xs">
+        Replay a saved capture file through the parser and inspect loot attribution.
+        No database interaction — just validates what the parser would emit.
+      </p>
+
+      <div class="flex gap-2 items-center">
+        <button
+          class="btn btn-secondary text-xs"
+          :disabled="replaying"
+          @click="pickAndReplay">
+          {{ replaying ? 'Replaying...' : 'Open Capture File...' }}
+        </button>
+        <span v-if="replayError" class="text-value-negative text-xs">{{ replayError }}</span>
+      </div>
+
+      <template v-if="replayResult">
+        <div class="grid grid-cols-3 gap-3 text-xs">
+          <div class="bg-surface-elevated rounded p-2">
+            <div class="text-text-muted mb-1">Lines Replayed</div>
+            <div class="text-text-primary text-sm">{{ replayResult.total_lines.toLocaleString() }}</div>
+          </div>
+          <div class="bg-surface-elevated rounded p-2">
+            <div class="text-text-muted mb-1">Kills Detected</div>
+            <div class="text-[#e87e7e] text-sm">{{ replayResult.kills.length }}</div>
+          </div>
+          <div class="bg-surface-elevated rounded p-2">
+            <div class="text-text-muted mb-1">Loot Events</div>
+            <div class="text-value-positive text-sm">{{ replayResult.loot_events.length }}</div>
+          </div>
+        </div>
+
+        <!-- Kills -->
+        <div v-if="replayResult.kills.length" class="space-y-1">
+          <div class="text-[0.65rem] uppercase tracking-widest text-[#e87e7e] font-bold">Kills</div>
+          <div
+            v-for="(kill, i) in replayResult.kills"
+            :key="i"
+            class="flex gap-3 text-xs px-2 py-1 bg-surface-elevated rounded">
+            <span class="text-text-dim font-mono shrink-0">{{ kill.timestamp.slice(11, 19) }}</span>
+            <span class="text-entity-enemy">{{ kill.enemy_name }}</span>
+            <span class="text-text-dim">#{{ kill.enemy_entity_id }}</span>
+            <span class="text-text-muted ml-auto">{{ kill.killing_ability }}</span>
+          </div>
+        </div>
+
+        <!-- Loot Attribution -->
+        <div v-if="replayResult.loot_events.length" class="space-y-1">
+          <div class="text-[0.65rem] uppercase tracking-widest text-value-positive font-bold">Loot Attribution</div>
+          <div
+            v-for="(loot, i) in replayResult.loot_events"
+            :key="i"
+            class="flex gap-3 items-center text-xs px-2 py-1 bg-surface-elevated rounded"
+            :class="{ 'border-l-2 border-l-value-negative': !loot.item_name || !loot.corpse_name }">
+            <span class="text-text-dim font-mono shrink-0">{{ loot.timestamp.slice(11, 19) }}</span>
+            <span class="text-text-primary">{{ loot.item_name ?? '???' }}</span>
+            <span class="text-text-dim">x{{ loot.quantity }}</span>
+            <span class="text-text-muted">&larr;</span>
+            <span class="text-entity-enemy">{{ loot.corpse_name ?? 'no context' }}</span>
+            <span
+              class="text-[0.6rem] px-1 rounded ml-auto shrink-0"
+              :class="{
+                'bg-green-900/40 text-green-400': loot.resolution === 'direct',
+                'bg-yellow-900/40 text-yellow-400': loot.resolution === 'fallback',
+                'bg-red-900/40 text-red-400': loot.resolution === 'unresolved',
+              }">
+              {{ loot.resolution }}
+            </span>
+          </div>
+        </div>
+
+        <div v-if="replayResult.loot_events.length === 0 && replayResult.kills.length === 0" class="text-text-dim text-xs italic">
+          No kills or loot events found in this capture.
+        </div>
+      </template>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { save } from "@tauri-apps/plugin-dialog";
+import { save, open } from "@tauri-apps/plugin-dialog";
 
 interface CaptureStatus {
   active: boolean;
@@ -261,6 +340,61 @@ async function discardCapture() {
     await refreshStatus();
   } catch (e) {
     console.error("Failed to discard capture:", e);
+  }
+}
+
+// ── Capture Replay ──────────────────────────────────────────────────────
+
+interface ReplayLootEvent {
+  timestamp: string;
+  item_name: string | null;
+  item_type_id: number | null;
+  quantity: number;
+  corpse_name: string | null;
+  corpse_entity_id: number | null;
+  instance_id: number;
+  resolution: string;
+}
+
+interface ReplayKillEvent {
+  timestamp: string;
+  enemy_name: string;
+  enemy_entity_id: string;
+  killing_ability: string;
+}
+
+interface CaptureReplayResult {
+  total_lines: number;
+  player_lines: number;
+  chat_lines: number;
+  loot_events: ReplayLootEvent[];
+  kills: ReplayKillEvent[];
+}
+
+const replaying = ref(false);
+const replayResult = ref<CaptureReplayResult | null>(null);
+const replayError = ref<string | null>(null);
+
+async function pickAndReplay() {
+  replaying.value = true;
+  replayError.value = null;
+  replayResult.value = null;
+  try {
+    const filePath = await open({
+      filters: [{ name: "JSON Capture", extensions: ["json"] }],
+      multiple: false,
+    });
+    if (!filePath) {
+      replaying.value = false;
+      return;
+    }
+    replayResult.value = await invoke<CaptureReplayResult>("replay_capture_file", {
+      path: filePath,
+    });
+  } catch (e) {
+    replayError.value = String(e);
+  } finally {
+    replaying.value = false;
   }
 }
 

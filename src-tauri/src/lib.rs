@@ -142,6 +142,7 @@ use chat_commands::{
     purge_chat_messages, scan_chat_log_file, scan_chat_logs, tail_chat_log,
 };
 use commands::parse_log;
+use debug_capture::replay_capture_file;
 use coordinator::{
     debug_capture_discard, debug_capture_save, debug_capture_start, debug_capture_status,
     debug_capture_stop,
@@ -656,6 +657,7 @@ pub fn run() {
             debug_capture_save,
             debug_capture_discard,
             debug_capture_status,
+            replay_capture_file,
             // Survey tracker (Phase 5)
             survey::commands::survey_tracker_status,
             survey::commands::survey_tracker_start_session,

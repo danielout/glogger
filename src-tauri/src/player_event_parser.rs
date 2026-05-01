@@ -782,6 +782,12 @@ impl PlayerEventParser {
         }
     }
 
+    /// Check whether an instance_id is known in the instance registry.
+    /// Used by replay/debug tools to determine how a LootPickedUp was resolved.
+    pub fn has_instance(&self, instance_id: u64) -> bool {
+        self.instance_registry.contains_key(&instance_id)
+    }
+
     /// Feed a chat `[Status] X added to inventory` event into the parser's
     /// correlation buffer.
     ///
