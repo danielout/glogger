@@ -298,6 +298,16 @@ export interface EffectNameUpdatedEvent {
   display_name: string
 }
 
+// === Loot Events ===
+
+export interface LootPickedUpEvent {
+  kind: 'LootPickedUp'
+  timestamp: string
+  instance_id: number
+  corpse_entity_id: number | null
+  corpse_name: string | null
+}
+
 // === Union Type ===
 
 export type PlayerEvent =
@@ -328,3 +338,4 @@ export type PlayerEvent =
   | EffectsAddedEvent
   | EffectsRemovedEvent
   | EffectNameUpdatedEvent
+  | LootPickedUpEvent

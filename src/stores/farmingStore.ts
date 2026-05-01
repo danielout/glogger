@@ -32,6 +32,9 @@ export const useFarmingStore = defineStore("farming", () => {
     }
   }
 
+  // Buffer of recent item gain events for correlating with LootPickedUp
+  const recentItemEvents: Array<{ instanceId: number; itemName: string; quantity: number }> = [];
+
   // ── Event Handlers ──────────────────────────────────────────────────────
 
   function handlePlayerEvent(event: PlayerEvent) {
@@ -46,20 +49,47 @@ export const useFarmingStore = defineStore("farming", () => {
         const name = event.item_name ?? `item#${event.item_type_id}`;
         s.itemDeltas[name] = (s.itemDeltas[name] ?? 0) + event.delta;
 
-        // Attribute loot to kills via CorpseSearch provenance
-        if (event.delta > 0 && event.provenance?.kind === "Attributed") {
-          const src = event.provenance.source;
-          if (src.kind === "CorpseSearch") {
-            const enemyName = src.corpse_name;
-            if (s.kills[enemyName]) {
-              s.kills[enemyName].loot[name] = (s.kills[enemyName].loot[name] ?? 0) + event.delta;
-            }
-          }
+        // Buffer positive gains for LootPickedUp correlation
+        if (event.delta > 0) {
+          recentItemEvents.push({ instanceId: event.instance_id, itemName: name, quantity: event.delta });
+          if (recentItemEvents.length > 100) recentItemEvents.splice(0, recentItemEvents.length - 50);
         }
 
         const kind: FarmingLogKind = event.delta > 0 ? "item-gained" : "item-lost";
         const sign = event.delta > 0 ? "+" : "";
         pushLog(kind, event.timestamp, `${name} ${sign}${event.delta}`);
+        break;
+      }
+
+      case "ItemAdded": {
+        // Buffer for LootPickedUp correlation (ItemAdded carries instance_id + item_name)
+        recentItemEvents.push({ instanceId: event.instance_id, itemName: event.item_name, quantity: 1 });
+        if (recentItemEvents.length > 100) recentItemEvents.splice(0, recentItemEvents.length - 50);
+        break;
+      }
+
+      case "LootPickedUp": {
+        // Ground truth: this item was picked up from a corpse loot window
+        // (skinning/butchering items do NOT produce LootPickedUp)
+        if (!event.corpse_name) break;
+        const enemyName = event.corpse_name;
+        if (!s.kills[enemyName]) break;
+
+        // Find matching item by instance_id (search from end for most recent)
+        let match: { instanceId: number; itemName: string; quantity: number } | undefined;
+        for (let i = recentItemEvents.length - 1; i >= 0; i--) {
+          if (recentItemEvents[i].instanceId === event.instance_id) {
+            match = recentItemEvents[i];
+            break;
+          }
+        }
+        if (match) {
+          s.kills[enemyName].loot[match.itemName] = (s.kills[enemyName].loot[match.itemName] ?? 0) + match.quantity;
+        }
+        // If no match (stacking case with orphaned id), the item was already
+        // tracked in itemDeltas via ItemStackChanged — we just can't attribute it
+        // to a specific enemy type on the frontend. The backend coordinator handles
+        // this case with item_type_id resolution.
         break;
       }
 

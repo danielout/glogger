@@ -4,21 +4,21 @@
       <!-- Status banner if data not ready -->
       <div v-if="store.status !== 'ready'" class="p-4 text-sm">
         <span v-if="store.status === 'loading'" class="text-accent-gold"
-          >⟳ Loading game data…</span
+          >&#x27F3; Loading game data…</span
         >
         <span v-else-if="store.status === 'error'" class="text-accent-red"
-          >✕ {{ store.errorMessage }}</span
+          >&#x2715; {{ store.errorMessage }}</span
         >
       </div>
 
       <template v-else>
       <div class="flex flex-col gap-2 h-full overflow-hidden">
-        <!-- Strategy filter -->
+        <!-- Area filter -->
         <div class="flex gap-2">
-          <select v-model="selectedStrategy" class="input flex-1 cursor-pointer">
-            <option value="All">All Strategies</option>
-            <option v-for="s in availableStrategies" :key="s" :value="s">
-              {{ s }}
+          <select v-model="selectedArea" class="input flex-1 cursor-pointer">
+            <option value="All">All Areas</option>
+            <option v-for="area in availableAreas" :key="area" :value="area">
+              {{ area }}
             </option>
           </select>
         </div>
@@ -30,7 +30,7 @@
             class="input flex-1"
             placeholder="Search enemies…"
             autofocus />
-          <span v-if="loading" class="text-accent-gold text-sm animate-spin">⟳</span>
+          <span v-if="loading" class="text-accent-gold text-sm animate-spin">&#x27F3;</span>
           <span v-else-if="filteredEnemies.length" class="text-text-dim text-xs min-w-6 text-right">{{
             filteredEnemies.length
           }}</span>
@@ -48,15 +48,17 @@
           <li
             v-for="(enemy, idx) in filteredEnemies"
             :key="enemy.key"
-            class="flex items-baseline gap-2 px-2 py-1.5 cursor-pointer border-b border-surface-dark text-xs hover:bg-[#1e1e1e]"
+            class="flex flex-col gap-0.5 px-2 py-1.5 cursor-pointer border-b border-surface-dark text-xs hover:bg-surface-row-hover"
             :class="{
-              'bg-[#1a1a2e] border-l-2 border-l-accent-gold': selected?.key === enemy.key,
+              'bg-surface-card border-l-2 border-l-accent-gold': selected?.key === enemy.key,
               'bg-surface-elevated': selectedIndex === idx && selected?.key !== enemy.key,
             }"
             @click="selectEnemy(enemy)">
-            <span class="text-entity-enemy flex-1">{{ formatName(enemy.key) }}</span>
-            <span v-if="enemy.strategy" class="text-text-dim text-[0.65rem] shrink-0">{{ enemy.strategy }}</span>
-            <span v-if="enemy.mobility_type" class="text-text-muted text-[0.65rem] shrink-0">{{ enemy.mobility_type }}</span>
+            <span class="text-entity-enemy flex-1">{{ enemy.name }}</span>
+            <div class="flex gap-2 text-text-dim text-[0.65rem]">
+              <span v-if="enemy.area_name">{{ enemy.area_name }}</span>
+              <span v-if="enemy.strategy" class="text-text-muted">{{ enemy.strategy }}</span>
+            </div>
           </li>
         </ul>
       </div>
@@ -75,9 +77,12 @@
           <!-- Header -->
           <div class="flex gap-3 items-start">
             <div class="flex-1 min-w-0">
-              <div class="text-entity-enemy text-base font-bold mb-1">{{ formatName(selected.key) }}</div>
+              <div class="text-entity-enemy text-base font-bold mb-1">{{ selected.name }}</div>
               <div class="text-xs text-text-dim mb-1">
                 Key: <span class="text-text-secondary font-mono">{{ selected.key }}</span>
+              </div>
+              <div v-if="selected.area_name" class="text-xs text-text-muted mb-1">
+                <AreaInline :reference="selected.area_key!" />
               </div>
               <div v-if="selected.comment" class="text-xs text-text-secondary italic">
                 {{ selected.comment }}
@@ -88,13 +93,13 @@
               class="bg-transparent border-none cursor-pointer px-1 py-0 text-sm shrink-0 transition-colors"
               :class="isFav ? 'text-accent-gold' : 'text-text-dim hover:text-accent-gold'"
               :title="isFav ? 'Remove from favorites' : 'Add to favorites'"
-              @click="dataBrowserStore.toggleFavorite({ type: 'enemy', reference: selected.key, label: formatName(selected.key) })"
+              @click="dataBrowserStore.toggleFavorite({ type: 'enemy', reference: selected.key, label: selected.name })"
             >&#x2605;</button>
             <button class="bg-transparent border-none text-text-dim cursor-pointer px-1 py-0 text-sm shrink-0 hover:text-accent-red" @click="clearSelection">&#x2715;</button>
           </div>
 
-          <!-- Properties -->
-          <div class="flex flex-col gap-1.5">
+          <!-- Properties (only shown when AI data is available) -->
+          <div v-if="selected.strategy || selected.mobility_type || selected.swimming != null" class="flex flex-col gap-1.5">
             <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">Properties</div>
             <div class="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-1.5">
               <div v-if="selected.strategy" class="text-xs flex gap-2">
@@ -105,7 +110,7 @@
                 <span class="text-text-muted min-w-24">Mobility:</span>
                 <span class="text-text-secondary">{{ selected.mobility_type }}</span>
               </div>
-              <div class="text-xs flex gap-2">
+              <div v-if="selected.swimming != null" class="text-xs flex gap-2">
                 <span class="text-text-muted min-w-24">Swimming:</span>
                 <span class="text-text-secondary">{{ selected.swimming ? 'Yes' : 'No' }}</span>
               </div>
@@ -117,7 +122,7 @@
           </div>
 
           <!-- Abilities -->
-          <div v-if="selected.ability_names.length" class="flex flex-col gap-1.5">
+          <div v-if="selected.ability_names?.length" class="flex flex-col gap-1.5">
             <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
               Abilities ({{ selected.ability_count }})
             </div>
@@ -125,7 +130,7 @@
               <span
                 v-for="ability in selected.ability_names"
                 :key="ability"
-                class="text-[0.72rem] px-1.5 py-0.5 bg-[#1a1a2e] border border-[#2a2a4e] text-entity-ability">
+                class="text-[0.72rem] px-1.5 py-0.5 bg-surface-card border border-surface-elevated text-entity-ability">
                 {{ ability }}
               </span>
             </div>
@@ -183,6 +188,7 @@
 <script setup lang="ts">
 import PaneLayout from "../Shared/PaneLayout.vue";
 import ItemInline from "../Shared/Item/ItemInline.vue";
+import AreaInline from "../Shared/Area/AreaInline.vue";
 import { ref, watch, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useGameDataStore } from "../../stores/gameDataStore";
@@ -192,7 +198,7 @@ import { useKeyboard } from "../../composables/useKeyboard";
 import { useDataBrowserSearch } from "../../composables/useDataBrowserSearch";
 import { combineFields } from "../../utils/SearchParser";
 import type { EntityNavigationTarget } from "../../composables/useEntityNavigation";
-import type { EnemyInfo } from "../../types/gameData";
+import type { MonsterEntry } from "../../types/gameData";
 
 const props = defineProps<{
   navTarget?: EntityNavigationTarget | null;
@@ -202,9 +208,9 @@ const store = useGameDataStore();
 const settingsStore = useSettingsStore();
 const dataBrowserStore = useDataBrowserStore();
 
-const selectedStrategy = ref<string>("All");
-const allEnemies = ref<EnemyInfo[]>([]);
-const selected = ref<EnemyInfo | null>(null);
+const selectedArea = ref<string>("All");
+const allEnemies = ref<MonsterEntry[]>([]);
+const selected = ref<MonsterEntry | null>(null);
 const selectedIndex = ref(0);
 const listRef = ref<HTMLElement | null>(null);
 const loading = ref(false);
@@ -229,12 +235,12 @@ const isFav = computed(() =>
   selected.value ? dataBrowserStore.isFavorite("enemy", selected.value.key) : false
 );
 
-// Load all enemies once
+// Load all monsters once
 async function loadEnemies() {
   if (allEnemies.value.length > 0) return;
   loading.value = true;
   try {
-    allEnemies.value = await store.getAllEnemies();
+    allEnemies.value = await invoke<MonsterEntry[]>("get_all_monsters");
   } finally {
     loading.value = false;
   }
@@ -245,41 +251,41 @@ watch(() => store.status, (s) => {
   if (s === "ready") loadEnemies();
 }, { immediate: true });
 
-// Get unique strategies for the filter dropdown
-const availableStrategies = computed(() => {
-  const strategies = new Set<string>();
+// Get unique area names for the filter dropdown
+const availableAreas = computed(() => {
+  const areas = new Set<string>();
   allEnemies.value.forEach(e => {
-    if (e.strategy) strategies.add(e.strategy);
+    if (e.area_name) areas.add(e.area_name);
   });
-  return Array.from(strategies).sort();
+  return Array.from(areas).sort();
 });
 
-// Pre-filter by strategy dropdown, then use unified search for text
-const strategyFiltered = computed(() => {
-  if (selectedStrategy.value === "All") return allEnemies.value;
-  return allEnemies.value.filter(e => e.strategy === selectedStrategy.value);
+// Pre-filter by area dropdown, then use unified search for text
+const areaFiltered = computed(() => {
+  if (selectedArea.value === "All") return allEnemies.value;
+  return allEnemies.value.filter(e => e.area_name === selectedArea.value);
 });
 
-const { query, filtered: filteredEnemies } = useDataBrowserSearch(strategyFiltered, {
-  searchText: (e) => combineFields(e.key, formatName(e.key), e.comment, e.ability_names.join(" ")),
+const { query, filtered: filteredEnemies } = useDataBrowserSearch(areaFiltered, {
+  searchText: (e) => combineFields(e.name, e.key, e.comment, e.area_name, e.ability_names?.join(" ")),
 });
 
 watch(filteredEnemies, () => {
   selectedIndex.value = 0;
 });
 
-function selectEnemy(enemy: EnemyInfo) {
+function selectEnemy(enemy: MonsterEntry) {
   selected.value = enemy;
-  dataBrowserStore.addToHistory({ type: "enemy", reference: enemy.key, label: formatName(enemy.key) });
+  dataBrowserStore.addToHistory({ type: "enemy", reference: enemy.key, label: enemy.name });
   loadKillStats(enemy);
 }
 
-async function loadKillStats(enemy: EnemyInfo) {
+async function loadKillStats(enemy: MonsterEntry) {
   killStatsLoading.value = true;
   killStats.value = null;
   try {
     killStats.value = await invoke<EnemyKillStats>("get_enemy_kill_stats", {
-      enemyName: formatName(enemy.key),
+      enemyName: enemy.name,
     });
   } catch (e) {
     console.error("[enemy-browser] Failed to load kill stats:", e);
@@ -300,15 +306,6 @@ function dropRateColor(rate: number): string {
   return "text-text-dim";
 }
 
-/** Convert a CamelCase or underscore key to a more readable name */
-function formatName(key: string): string {
-  // Replace underscores with spaces, then add spaces before capitals
-  return key
-    .replace(/_/g, ' ')
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
-}
-
 useKeyboard({
   listNavigation: {
     items: filteredEnemies,
@@ -324,9 +321,9 @@ watch(() => props.navTarget, (target) => {
   const key = String(target.id);
   if (selected.value?.key === key) return;
 
-  const match = allEnemies.value.find(e => e.key === key || formatName(e.key) === key);
+  const match = allEnemies.value.find(e => e.key === key || e.name === key);
   if (match) {
-    query.value = formatName(match.key);
+    query.value = match.name;
     selectEnemy(match);
   }
 }, { immediate: true });

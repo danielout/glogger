@@ -13,7 +13,7 @@ export type {
 } from './quests'
 export type { NpcPreference, NpcInfo } from './npcs'
 export type { EffectInfo } from './effects'
-export type { EnemyInfo } from './enemies'
+export type { EnemyInfo, MonsterEntry } from './enemies'
 export type { LorebookEntry, LorebookCategoryInfo } from './lorebooks'
 export type { PlayerTitleInfo } from './playerTitles'
 export type { TsysBrowserEntry, TsysTierInfo } from './tsys'

@@ -1,26 +1,30 @@
-# Data Browser — Enemies (AI)
+# Data Browser — Enemies
 
 ## Overview
 
-Browse enemy AI templates from the CDN `ai.json` data. Each entry represents an enemy type with its combat strategy, mobility, and ability list.
+Browse enemies/monsters from the game. The primary data source is the translation strings (`strings_requested.json` from `Translation.zip`), which provides display names and area assignments for ~1,150 unique monsters. When available, AI template data from `ai.json` enriches entries with combat properties (strategy, mobility, abilities).
 
 ## Search & Filter
 
-- Text search by key name, comment, or ability name (computed, no debounce)
-- Strategy filter dropdown (Melee, Ranged)
+- Area filter dropdown (filters by spawn location)
+- Text search by name, key, comment, area name, or ability name
 - Result count displayed
 
 ## Detail View
 
-- Enemy name (formatted from CamelCase key)
-- CDN key
-- **Comment** (if present)
-- **Properties** — strategy (Melee/Ranged), mobility type (Immobile/Turret), swimming, uncontrolled pet
-- **Abilities** — list of ability internal names as badges
+- Monster display name (from translation strings)
+- Internal key
+- Area link (clickable `AreaInline` if area-specific)
+- **Comment** (if AI data available)
+- **Properties** (if AI data available) — strategy (Melee/Ranged), mobility type, swimming, uncontrolled pet
+- **Abilities** (if AI data available) — list of ability internal names as badges
+- **Kill Stats** — total kills, loot table with drop rates (from player kill tracking)
 - **Raw JSON** (opt-in via settings)
 
-## Data Source
+## Data Sources
 
-- Backend: `src-tauri/src/game_data/ai.rs` — parses `ai.json` into `AiInfo` structs
-- Commands: `get_all_enemies()`, `search_enemies(query)`, `get_enemy(key)`
+- **Primary:** Translation strings (`Translation.zip` -> `strings_requested.json`) — monster keys follow the pattern `monster_{identifier}_Name` where identifier can be `Area{Name}/{MonsterId}` or just `{MonsterId}`
+- **Enrichment:** AI templates (`ai.json`) — matched by stripping trailing numbers from the monster identifier
+- **Kill stats:** SQLite `enemy_kills` table, matched by display name
+- Backend commands: `get_all_monsters()` (translation-based list), `get_all_enemies()` (AI-only, legacy)
 - Frontend: `src/components/DataBrowser/EnemyBrowser.vue`

@@ -803,13 +803,33 @@ Relevant for features that depend on weather conditions (e.g., some Fletching re
 
 **NOT YET PARSED.**
 
-### ProcessRemoveLoot — Loot removed
+### ProcessRemoveLoot — Item picked up from loot window
 
 ```
-[HH:MM:SS] LocalPlayer: ProcessRemoveLoot(lootId)
+[HH:MM:SS] LocalPlayer: ProcessRemoveLoot(instanceId)
 ```
 
-**When it fires:** Loot container removed from the world (after looting or timeout).
+| Field | Type | Meaning |
+|---|---|---|
+| `instanceId` | u64 | Instance ID of the item being removed from the corpse/loot window |
+
+**When it fires:** The player picks up an item from a corpse's loot window. One `ProcessRemoveLoot` fires per item picked up.
+
+**Key behavior:**
+
+- The `instanceId` refers to the **corpse-side instance** of the item, not the player's inventory instance.
+- When the item creates a **new inventory stack**: `ProcessAddItem(Name(instanceId), ...)` fires first with the **same** instanceId, then `ProcessRemoveLoot(instanceId)` follows. The instance IDs match.
+- When the item **merges into an existing stack**: `ProcessUpdateItemCode(existingInstanceId, ...)` fires for the player's existing stack, then `ProcessRemoveLoot(corpseInstanceId)` fires with a **different** instanceId that was never seen in any `ProcessAddItem`. The corpse-side instance ID is orphaned.
+
+**Critical distinction from skinning/butchering:** Items granted by skinning, butchering, anatomy, or mycology do **not** produce `ProcessRemoveLoot` events. They are granted directly via `ProcessAddItem` or `ProcessUpdateItemCode` without going through the loot window. This makes `ProcessRemoveLoot` the only reliable signal that an item was a **corpse drop** rather than a skill-harvesting reward.
+
+**Loot attribution strategy:**
+
+| Scenario | Events (in order) | How to identify the item |
+|---|---|---|
+| New item (new stack) | `ProcessAddItem(Name(id))` → `ProcessRemoveLoot(id)` | Instance IDs match; `AddItem` gives the item name |
+| Stacking item (merges) | `ProcessUpdateItemCode(existingId, encoded)` → `ProcessRemoveLoot(unknownId)` | Decode `encoded & 0xFFFF` for `itemTypeId`, resolve via CDN to get item name. The `RemoveLoot` instanceId is orphaned but the `UpdateItemCode` in the same tick during a `CorpseSearch` context identifies what was picked up |
+| Skinning/butchering | `ProcessAddItem` or `ProcessUpdateItemCode` only | **No** `ProcessRemoveLoot` — this is how you distinguish harvesting rewards from actual drops |
 
 **NOT YET PARSED.**
 
@@ -1127,6 +1147,62 @@ Instance IDs are arbitrary per-session numbers. They do **not** correspond to CD
 Both approaches should be used together. The AddItem path gives you the internal name mapping; the UpdateItemCode path gives you the numeric type ID and stack size.
 
 ## Practical Patterns
+
+### Corpse Looting — Kill → Search → Loot → Skin/Butcher
+
+A complete kill-and-loot cycle involves events from both Player.log and Chat.log. This is the authoritative reference for attributing specific items to specific kills.
+
+**Event sequence (from devtools capture of killing 5 Bear Groupies):**
+
+```
+── Kill (Chat.log) ──────────────────────────────────────────────────
+[Combat] Zenith: Rib Shatter 9 on Bear Groupie #6701962! Dmg: 1861 health, 166 armor. (FATALITY!)
+
+── Search Corpse (Player.log) ───────────────────────────────────────
+ProcessTalkScreen(6701962, "Search Corpse of Bear Groupie", "<death details>", "", [301,401,701,], ..., 0, Corpse)
+    ← buttons [301,401,701] = Skin, Butcher, Loot All (available actions)
+
+── Skinning (Player.log) ───────────────────────────────────────────
+ProcessAddItem(Skin3(203413381), -1, True)          ← Crude Animal Skin, new stack
+ProcessAddItem(Skin2(203413382), -1, True)          ← Rough Animal Skin, new stack
+ProcessUpdateSkill({type=Skinning,...}, True, 40, 0, 0)  ← 40 Skinning XP
+ProcessTalkScreen(6701962, ..., [701,], ..., 1, Corpse)
+    ← buttons now [701] only (Loot All) — skinning consumed button 301
+    ← body text updated: "Zenith skinned the corpse ... obtained Crude Animal Skin x2 plus Rough Animal Skin"
+    ★ NO ProcessRemoveLoot for skinning items
+
+── Anatomy/Bury (Player.log) ────────────────────────────────────────
+ProcessScreenText(GeneralInfo, "You bury the corpse.")
+ProcessTalkScreen(6701962, ..., [], ..., 1, Corpse)
+    ← buttons now [] — all actions consumed
+
+── Loot Pickup (Player.log) ────────────────────────────────────────
+ProcessAddItem(EnchantedBearClaw(203413356), -1, True)   ← new stack created
+ProcessRemoveLoot(203413356)                              ← SAME instanceId = corpse drop confirmed
+    ★ ProcessRemoveLoot fires ONLY for actual loot pickups
+
+── Next Corpse — Stacking Example ──────────────────────────────────
+ProcessUpdateItemCode(203413381, 213611, True)       ← Crude Animal Skin stack: 1 → 4
+ProcessUpdateItemCode(203413382, 82538, True)        ← Rough Animal Skin stack: 1 → 2
+    ★ Skinning items via UpdateItemCode, NO RemoveLoot
+
+ProcessAddItem(OakWood(203413346), -1, True)         ← new Oak Wood stack
+ProcessRemoveLoot(203413346)                          ← corpse drop confirmed
+
+── Later Corpse — Merge-Into-Existing-Stack ────────────────────────
+ProcessUpdateItemCode(203413346, 144173, True)       ← Oak Wood stack grows (itemTypeId=13101)
+ProcessRemoveLoot(203413293)                          ← orphaned instanceId (never seen in AddItem)
+    ★ Item identity recoverable: decode 144173 & 0xFFFF = 13101 → Oak Wood via CDN
+```
+
+**Key discriminator:** `ProcessRemoveLoot` fires **only** for items from the corpse's loot table. Skinning, butchering, anatomy, and mycology rewards are granted directly without going through the loot window. This is the only reliable way to distinguish actual drops from harvesting rewards.
+
+**Attribution algorithm:**
+
+1. Parse `ProcessRemoveLoot(instanceId)` during a `CorpseSearch` context
+2. Check if `instanceId` matches a recent `ProcessAddItem` → item identity known directly
+3. If no match (stacking case), find the `ProcessUpdateItemCode` in the same tick → decode `encodedValue & 0xFFFF` for `itemTypeId`, resolve to item name via CDN
+4. Ignore `ProcessAddItem`/`ProcessUpdateItemCode` events during `CorpseSearch` that are **not** followed by `ProcessRemoveLoot` → those are skinning/butchering rewards
 
 ### Motherlode Survey Lifecycle
 
