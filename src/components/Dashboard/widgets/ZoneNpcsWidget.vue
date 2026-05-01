@@ -48,7 +48,10 @@
           <span v-if="entry.goldLabel" class="flex items-center gap-1">
             <span class="text-accent-gold">$</span>
             Gold: {{ entry.goldLabel }}
-            <span v-if="entry.timerLabel" class="text-text-dim text-[10px]">
+            <span v-if="entry.timerExpired" class="text-value-positive text-[10px] italic">
+              (likely reset)
+            </span>
+            <span v-else-if="entry.timerLabel" class="text-text-dim text-[10px]">
               (resets ~{{ entry.timerLabel }})
             </span>
           </span>
@@ -150,6 +153,7 @@ interface NpcDisplayEntry {
   storageLabel: string | null
   goldLabel: string | null
   timerLabel: string | null
+  timerExpired: boolean
   hasSecondLine: boolean
   hasStorageOrShop: boolean
   storageUsed: number | null
@@ -183,6 +187,7 @@ function buildEntry(npc: NpcInfo): NpcDisplayEntry {
   // Gold
   let goldLabel: string | null = null
   let timerLabel: string | null = null
+  let timerExpired = false
   const vendorData = gameState.vendorByNpc[npc.key]
   if (hasVendor(npc)) {
     if (vendorData?.vendor_gold_available != null) {
@@ -203,6 +208,8 @@ function buildEntry(npc: NpcInfo): NpcDisplayEntry {
         const days = Math.floor(hours / 24)
         const remainingHours = hours % 24
         timerLabel = days > 0 ? `${days}d ${remainingHours}h` : `${hours}h`
+      } else {
+        timerExpired = true
       }
     }
   }
@@ -217,7 +224,7 @@ function buildEntry(npc: NpcInfo): NpcDisplayEntry {
   const storageTotalSlots = vault ? gameState.getVaultUnlockedSlots(vault) : null
   const goldAvailable = vendorData?.vendor_gold_available ?? null
 
-  return { npc, favorTier, trainedSkills, storageLabel, goldLabel, timerLabel, hasSecondLine, hasStorageOrShop, storageUsed, storageTotalSlots, goldAvailable }
+  return { npc, favorTier, trainedSkills, storageLabel, goldLabel, timerLabel, timerExpired, hasSecondLine, hasStorageOrShop, storageUsed, storageTotalSlots, goldAvailable }
 }
 
 const displayNpcs = computed(() => {

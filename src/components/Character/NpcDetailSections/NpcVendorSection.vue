@@ -1,10 +1,57 @@
 <template>
   <div class="flex flex-col gap-1.5">
-    <div class="text-[0.65rem] uppercase tracking-widest text-text-dim border-b border-surface-card pb-0.5">
-      Vendor Status
+    <div class="flex items-center justify-between border-b border-surface-card pb-0.5">
+      <span class="text-[0.65rem] uppercase tracking-widest text-text-dim">
+        Vendor Status
+      </span>
+      <button
+        v-if="!editing"
+        class="text-[0.6rem] text-text-muted hover:text-accent-gold transition-colors cursor-pointer"
+        title="Manually set vendor gold"
+        @click="startEditing"
+      >
+        &#x270E; Edit
+      </button>
     </div>
 
-    <template v-if="vendorStatus">
+    <!-- Edit form -->
+    <div v-if="editing" class="flex flex-col gap-2 px-2 py-1.5 bg-surface-inset rounded">
+      <div class="flex items-center gap-2 text-xs">
+        <label class="text-text-muted w-20 shrink-0">Gold Available:</label>
+        <input
+          v-model.number="editGoldAvailable"
+          type="number"
+          min="0"
+          class="flex-1 px-2 py-1 bg-surface-base border border-border-default rounded text-xs text-text-primary font-mono focus:outline-none focus:border-accent-gold/50"
+        />
+      </div>
+      <div class="flex items-center gap-2 text-xs">
+        <label class="text-text-muted w-20 shrink-0">Gold Max:</label>
+        <input
+          v-model.number="editGoldMax"
+          type="number"
+          min="0"
+          class="flex-1 px-2 py-1 bg-surface-base border border-border-default rounded text-xs text-text-primary font-mono focus:outline-none focus:border-accent-gold/50"
+        />
+      </div>
+      <div class="flex items-center gap-2">
+        <button
+          class="px-2 py-0.5 text-xs bg-accent-gold/20 border border-accent-gold/40 rounded hover:bg-accent-gold/30 text-text-primary cursor-pointer"
+          :disabled="saving"
+          @click="saveEdit"
+        >
+          {{ saving ? 'Saving...' : 'Save' }}
+        </button>
+        <button
+          class="px-2 py-0.5 text-xs text-text-muted hover:text-text-primary cursor-pointer"
+          @click="editing = false"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+
+    <template v-else-if="vendorStatus">
       <!-- Gold display -->
       <div class="flex items-center gap-2 px-2 text-xs">
         <span class="text-text-muted">Gold:</span>
@@ -20,8 +67,12 @@
         <span class="text-text-dim text-[0.6rem]">councils</span>
       </div>
 
-      <!-- Timer -->
-      <div v-if="resetTimeLabel" class="flex items-center gap-2 px-2 text-xs">
+      <!-- Timer / Reset notice -->
+      <div v-if="timerExpired" class="flex items-center gap-2 px-2 text-xs">
+        <span class="text-value-positive italic">Likely reset to full</span>
+        <span class="text-text-dim text-[0.55rem]">(7d+ since last sale)</span>
+      </div>
+      <div v-else-if="resetTimeLabel" class="flex items-center gap-2 px-2 text-xs">
         <span class="text-text-muted">Resets in:</span>
         <span class="text-text-secondary">~{{ resetTimeLabel }}</span>
         <span class="text-text-dim text-[0.55rem] italic">(estimated)</span>
@@ -34,23 +85,31 @@
       </div>
     </template>
 
-    <div v-else class="text-xs text-text-dim italic px-2">
-      No vendor data yet — sell an item to start tracking
+    <div v-else class="flex items-center gap-2 px-2">
+      <span class="text-xs text-text-dim italic">
+        No vendor data yet — sell an item or click Edit to set manually
+      </span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
 import type { NpcInfo } from '../../../types/gameData'
 import type { GameStateVendor } from '../../../types/gameState'
 import { goldCapAtTier } from '../../../composables/useNpcServices'
+import { useSettingsStore } from '../../../stores/settingsStore'
+import { useGameStateStore } from '../../../stores/gameStateStore'
 
 const props = defineProps<{
   vendorStatus: GameStateVendor | null
   npc: NpcInfo
   playerTier: string
 }>()
+
+const settingsStore = useSettingsStore()
+const gameState = useGameStateStore()
 
 const currentCapGold = computed(() => {
   const cap = goldCapAtTier(props.npc, props.playerTier)
@@ -75,6 +134,14 @@ function formatGold(val: number | null | undefined): string {
 
 const VENDOR_RESET_HOURS = 168
 
+const timerExpired = computed(() => {
+  const start = props.vendorStatus?.vendor_gold_timer_start
+  if (!start) return false
+  const startDate = new Date(start + 'Z')
+  if (isNaN(startDate.getTime())) return false
+  return Date.now() >= startDate.getTime() + VENDOR_RESET_HOURS * 3600 * 1000
+})
+
 const resetTimeLabel = computed(() => {
   const start = props.vendorStatus?.vendor_gold_timer_start
   if (!start) return null
@@ -83,7 +150,7 @@ const resetTimeLabel = computed(() => {
   const resetAt = new Date(startDate.getTime() + VENDOR_RESET_HOURS * 3600 * 1000)
   const now = new Date()
   const diffMs = resetAt.getTime() - now.getTime()
-  if (diffMs <= 0) return 'soon'
+  if (diffMs <= 0) return null // handled by timerExpired
   const diffH = Math.floor(diffMs / (3600 * 1000))
   const days = Math.floor(diffH / 24)
   const hours = diffH % 24
@@ -107,4 +174,40 @@ const lastSellLabel = computed(() => {
   const diffD = Math.floor(diffH / 24)
   return `${diffD}d ago`
 })
+
+// ── Manual editing ──────────────────────────────────────────────
+
+const editing = ref(false)
+const saving = ref(false)
+const editGoldAvailable = ref(0)
+const editGoldMax = ref(0)
+
+function startEditing() {
+  editGoldAvailable.value = props.vendorStatus?.vendor_gold_available ?? currentCapGold.value ?? 0
+  editGoldMax.value = props.vendorStatus?.vendor_gold_max ?? currentCapGold.value ?? 0
+  editing.value = true
+}
+
+async function saveEdit() {
+  const characterName = settingsStore.settings.activeCharacterName
+  const serverName = settingsStore.settings.activeServerName
+  if (!characterName || !serverName) return
+
+  saving.value = true
+  try {
+    await invoke('set_manual_vendor_gold', {
+      characterName,
+      serverName,
+      npcKey: props.npc.key,
+      goldAvailable: editGoldAvailable.value,
+      goldMax: editGoldMax.value,
+    })
+    await gameState.refreshDomain('vendor')
+    editing.value = false
+  } catch (e) {
+    console.error('[NpcVendorSection] Failed to save vendor gold:', e)
+  } finally {
+    saving.value = false
+  }
+}
 </script>

@@ -72,6 +72,12 @@ export function hasVendor(npc: NpcInfo): boolean {
   return getServices(npc).some(s => s.type === 'Store')
 }
 
+/** True if NPC has a Store service with CapIncreases — i.e. they actually buy items from players. */
+export function hasBuyCapacity(npc: NpcInfo): boolean {
+  const store = getStoreService(npc)
+  return store != null && store.capIncreases.length > 0
+}
+
 export function hasStorage(npc: NpcInfo): boolean {
   return getServices(npc).some(s => s.type === 'Storage')
 }

@@ -154,7 +154,7 @@ These items are investigated but can't be resolved without new runtime captures 
   - Done: See `docs/architecture/standards-persistence-naming.md`. Covers naming conventions, persistence decision table, store patterns, Tauri command patterns, migration patterns, type organization.
 
 - [x] Timer widget
-  - Done: Countdown timers with add/pause/resume/restart/remove. Flexible duration input, preset quick-start buttons (Mushroom Barrel, Brewing, Cheesemaking, Composting). Configurable presets. Persisted via localStorage with absolute timestamps. Expired timers pulse red.
+  - Done: Countdown timers with add/pause/resume/restart/remove. Flexible duration input, preset quick-start buttons. Configurable presets. Persisted via localStorage with absolute timestamps. Expired timers pulse red.
 
 - [ ] Show work order completion state in tooltips for all characters
   - Work order tooltips should show completion/cooldown state across all tracked characters.

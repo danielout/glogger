@@ -75,6 +75,7 @@ pub struct CharacterVendorBreakdown {
     pub vendor_gold_available: Option<i64>,
     pub vendor_gold_max: Option<i64>,
     pub vendor_gold_timer_start: Option<String>,
+    pub favor_tier: Option<String>,
 }
 
 // ── Commands ────────────────────────────────────────────────────────────────
@@ -326,18 +327,38 @@ pub fn get_aggregate_vendor(
 ) -> Result<Vec<AggregateVendorEntry>, String> {
     let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
 
+    // Join vendor data with favor data (game_state_favor preferred, snapshot as fallback)
     let mut stmt = conn
         .prepare(
-            "SELECT npc_key, character_name, vendor_gold_available, vendor_gold_max, vendor_gold_timer_start
-             FROM game_state_npc_vendor
-             WHERE server_name = ?1
-             ORDER BY npc_key, character_name",
+            "SELECT
+                v.npc_key,
+                v.character_name,
+                v.vendor_gold_available,
+                v.vendor_gold_max,
+                v.vendor_gold_timer_start,
+                COALESCE(
+                    f.favor_tier,
+                    (SELECT cnf.favor_level
+                     FROM character_npc_favor cnf
+                     JOIN character_snapshots cs ON cnf.snapshot_id = cs.id
+                     WHERE cs.character_name = v.character_name
+                       AND cs.server_name = v.server_name
+                       AND cnf.npc_key = v.npc_key
+                     ORDER BY cs.id DESC LIMIT 1)
+                ) AS favor_tier
+             FROM game_state_npc_vendor v
+             LEFT JOIN game_state_favor f
+                ON f.character_name = v.character_name
+               AND f.server_name = v.server_name
+               AND f.npc_key = v.npc_key
+             WHERE v.server_name = ?1
+             ORDER BY v.npc_key, v.character_name",
         )
         .map_err(|e| format!("Query error: {e}"))?;
 
-    let rows: Vec<(String, String, Option<i64>, Option<i64>, Option<String>)> = stmt
+    let rows: Vec<(String, String, Option<i64>, Option<i64>, Option<String>, Option<String>)> = stmt
         .query_map(rusqlite::params![server_name], |row| {
-            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?))
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?))
         })
         .map_err(|e| format!("Query error: {e}"))?
         .flatten()
@@ -345,7 +366,7 @@ pub fn get_aggregate_vendor(
 
     let mut vendors: std::collections::BTreeMap<String, Vec<CharacterVendorBreakdown>> =
         std::collections::BTreeMap::new();
-    for (npc_key, character_name, gold_available, gold_max, timer_start) in rows {
+    for (npc_key, character_name, gold_available, gold_max, timer_start, favor_tier) in rows {
         vendors
             .entry(npc_key)
             .or_default()
@@ -354,6 +375,7 @@ pub fn get_aggregate_vendor(
                 vendor_gold_available: gold_available,
                 vendor_gold_max: gold_max,
                 vendor_gold_timer_start: timer_start,
+                favor_tier,
             });
     }
 

@@ -35,6 +35,9 @@
       </div>
     </div>
 
+    <!-- Area / Zone -->
+    <AreaInline v-if="npc.area_friendly_name" :reference="npc.area_friendly_name" class="text-[0.6rem]" />
+
     <!-- Gift tracking -->
     <div v-if="showGiftTracking && giftTracking" class="flex flex-col gap-1">
       <div class="flex items-center justify-between text-xs">
@@ -70,7 +73,10 @@
         </span>
       </span>
       <span v-else class="text-text-dim">unknown</span>
-      <span v-if="timerRemaining" class="text-text-dim text-[0.6rem]">
+      <span v-if="vendorTimerExpired" class="text-value-positive text-[0.6rem] italic">
+        (likely reset)
+      </span>
+      <span v-else-if="timerRemaining" class="text-text-dim text-[0.6rem]">
         (resets in {{ timerRemaining }})
       </span>
     </div>
@@ -178,6 +184,7 @@ import type { StoreService, TrainingService, StorageService } from '../../../typ
 import { getServices } from '../../../composables/useNpcServices'
 import { favorColor, favorBadgeClasses, tierDisplayName } from '../../../composables/useFavorTiers'
 import { useReferenceShelfStore } from '../../../stores/referenceShelfStore'
+import AreaInline from '../Area/AreaInline.vue'
 import NpcInline from './NpcInline.vue'
 import SkillInline from '../Skill/SkillInline.vue'
 
@@ -250,6 +257,13 @@ const storageService = computed(() => storageServices.value[0] ?? null)
 const limitedPreferences = computed<NpcPreference[]>(() => {
   const sorted = [...(props.npc.preferences ?? [])].sort((a, b) => b.pref - a.pref)
   return sorted.slice(0, props.maxPreferences)
+})
+
+// Vendor gold timer — expired detection
+const vendorTimerExpired = computed(() => {
+  if (!props.vendorStatus?.vendor_gold_timer_start) return false
+  const start = new Date(props.vendorStatus.vendor_gold_timer_start + 'Z')
+  return Date.now() >= start.getTime() + 168 * 60 * 60 * 1000
 })
 
 // Vendor gold timer

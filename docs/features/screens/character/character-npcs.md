@@ -145,7 +145,8 @@ Shows vendor gold status for NPCs with a store service:
 - Gold available vs max with color coding (green when high, yellow when low, red when empty)
 - Estimated reset timer (168h from `vendor_gold_timer_start`, labeled as estimated)
 - Last sell relative timestamp
-- Falls back to "No vendor data yet" when no sell events have been tracked
+- **Manual edit**: Edit button allows users to manually set gold available and gold max values — useful when vendors are stuck on "unknown" because no sell events were logged. Upserts into `game_state_npc_vendor` via `set_manual_vendor_gold` Tauri command.
+- Falls back to "No vendor data yet" when no sell events have been tracked (with a prompt to use the Edit button)
 
 ### NpcStorageSection (`src/components/Character/NpcDetailSections/NpcStorageSection.vue`)
 
@@ -223,6 +224,17 @@ Some player questions can't be answered with currently available CDN/log data:
 - **Exact favor values** — We track cumulative deltas and tier but not absolute numerical favor
 
 Previously missing data that is now available:
-- **Council pool / reset timing** — Vendor gold tracked via `game_state_vendor` table; estimated 168h reset timer shown in NpcVendorSection
+- **Council pool / reset timing** — Vendor gold tracked via `game_state_vendor` table; estimated 168h reset timer shown in NpcVendorSection. Users can also manually set vendor gold via the Edit button.
 - **Quest/task associations** — Precomputed NPC-quest index in gameDataStore; shown in NpcQuestsSection
 - **Storage contents** — Tracked in `game_state_storage`; shown in NpcStorageSection
+
+## NPC Card Features
+
+The `NpcCard` component (`src/components/Shared/NPC/NpcCard.vue`) displays a compact summary of an NPC in the card grid:
+- NPC name (via `NpcInline`) with pin-to-shelf button and favor badge
+- **Area/zone** — displays the NPC's `area_friendly_name` via `AreaInline` (clickable)
+- Gift tracking dots (when enabled)
+- Vendor gold status with reset timer
+- Storage usage
+- Gift preferences (top N)
+- Service summary (training skills, vendor caps, storage tiers)
