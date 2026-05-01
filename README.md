@@ -1,10 +1,35 @@
-# glogger
+# Glogger
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 [![Latest Release](https://img.shields.io/github/v/release/danielout/glogger)](https://github.com/danielout/glogger/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)]()
 
 A desktop companion app for **[Project: Gorgon](https://projectgorgon.com)**. glogger reads your game's log files in real time and gives you dashboards, analytics, and tools for tracking your gameplay.
+
+## About
+
+- Thanks Reyetta, Wogan, Kaeus, Fidge, TwinkleofToes, DisasterGaymer, Cakedydidooda, Lucyfeir and Deradon! Feedback and early testing was super helpful in getting Glogger to where it is now. :D
+- Some things only will work with VIP! This is just a limitation of how and where I can access data. The DataBrowser works no matter what though, and it is a very handy. Nothing in here is intentionally broken because of non-vip. I just can only work with what I have.
+- It operates on the Player.log, ChatLogs, and the CDN data provided by Citan for app developers. (Thanks Citan!) No shady poking in to running processes or anything like that.
+- There is no server for this app to talk to; everything runs locally to try and keep it as speedy and responsive as possible. Has to download some Citan-provided data on boot and with new patches, and pokes github to check for app updates.
+
+I apologize for bad UI/UX/programming - I'm a game designer by trade, not a software engineer. I'm more at home with excel and scripts than app development, so I'm learning as I go.
+
+## Why beta?
+
+- We still don't have 100% capture rate on items going in/out of inventory sometimes. It is a stubborn bug, and I'm trying to track it down. It is pretty dang good, but not 100%
+- There is a lot of UI/UX inconsistencies that I just haven't rooted out yet.
+- Lots of little leftover minor bugs to fix here and there.
+- A few key features I want to implement before it feels whole.
+- but the biggest issue is _no documentation_ so far! It very much is in a "play with it and figure it out" state, and a lot of the screens _really_ need some guidance to tell you how to use them.
+
+## Initial Setup
+
+Instructions available in short (<2 minutes) video form here. Featuring Cheb! https://www.youtube.com/watch?v=9BhzbM92rv4
+
+1. Go to your VIP settings, export your character and storage JSONs. (If you've got alts, it is helpful to do them as well!)
+2. Go to GUI, scroll to the bottom, and turn on the chat logging! This will give you a chat history browser and allow you to set watchwords! Also turning on combat logging doesn't do a ton, but does allow you to see death reports on what killed you. (I have no plans to try to make DPS meters or anything.)
+3. Start Glogger! The setup wizard should walk you through the very fast setup with hopefully minimal issues. 
 
 ## Features
 

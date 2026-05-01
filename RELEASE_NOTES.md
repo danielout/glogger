@@ -1,7 +1,7 @@
-## What's Changed since v0.8.3
+## What's Changed since v0.8.4
 
-### Improvements
-- impv: words of power effects are collapsable now (`ccc8c31`)
+### Fixes
+- fix: kill loot attribution and farming tracker missing new stacks (`b2e5941`)
 
 ---
-*5 commits since v0.8.3*
+*2 commits since v0.8.4*
