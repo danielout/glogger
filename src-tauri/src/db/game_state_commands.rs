@@ -717,13 +717,21 @@ pub fn set_manual_vendor_gold(
     npc_key: String,
     gold_available: i64,
     gold_max: i64,
+    reset_hours_remaining: Option<f64>,
 ) -> Result<(), String> {
     let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
-    let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
-    let timer_start: Option<&str> = if gold_available < gold_max {
-        Some(&now)
+    let now = chrono::Utc::now();
+    let now_str = now.format("%Y-%m-%dT%H:%M:%SZ").to_string();
+    let timer_start: Option<String> = if gold_available >= gold_max {
+        None // at cap, no timer needed
+    } else if let Some(hours) = reset_hours_remaining {
+        // Back-calculate timer start: if N hours remain, timer started at (now - (168 - N) hours)
+        let elapsed_hours = 168.0 - hours.clamp(0.0, 168.0);
+        let elapsed_secs = (elapsed_hours * 3600.0) as i64;
+        let start = now - chrono::Duration::seconds(elapsed_secs);
+        Some(start.format("%Y-%m-%dT%H:%M:%SZ").to_string())
     } else {
-        None
+        Some(now_str.clone()) // default: timer starts now
     };
     conn.execute(
         "INSERT INTO game_state_npc_vendor (character_name, server_name, npc_key, vendor_gold_available, vendor_gold_max, vendor_gold_timer_start, last_confirmed_at)
@@ -731,9 +739,9 @@ pub fn set_manual_vendor_gold(
          ON CONFLICT(character_name, server_name, npc_key) DO UPDATE SET
             vendor_gold_available = excluded.vendor_gold_available,
             vendor_gold_max = excluded.vendor_gold_max,
-            vendor_gold_timer_start = COALESCE(game_state_npc_vendor.vendor_gold_timer_start, excluded.vendor_gold_timer_start),
+            vendor_gold_timer_start = excluded.vendor_gold_timer_start,
             last_confirmed_at = excluded.last_confirmed_at",
-        rusqlite::params![character_name, server_name, npc_key, gold_available, gold_max, timer_start, now],
+        rusqlite::params![character_name, server_name, npc_key, gold_available, gold_max, timer_start, now_str],
     )
     .map_err(|e| format!("Upsert error: {e}"))?;
     Ok(())

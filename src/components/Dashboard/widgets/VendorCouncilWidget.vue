@@ -270,7 +270,7 @@ async function saveVendorGold(npcKey: string, goldAvailable: number, goldMax: nu
   const serverName = settingsStore.settings.activeServerName
   if (!characterName || !serverName) return
   try {
-    await invoke('set_manual_vendor_gold', { characterName, serverName, npcKey, goldAvailable, goldMax })
+    await invoke('set_manual_vendor_gold', { characterName, serverName, npcKey, goldAvailable, goldMax, resetHoursRemaining: null })
     await gameState.refreshDomain('vendor')
   } catch (e) {
     console.error('[VendorCouncilWidget] Failed to save vendor gold:', e)

@@ -34,6 +34,28 @@
           class="flex-1 px-2 py-1 bg-surface-base border border-border-default rounded text-xs text-text-primary font-mono focus:outline-none focus:border-accent-gold/50"
         />
       </div>
+      <div class="flex items-center gap-2 text-xs">
+        <label class="text-text-muted w-20 shrink-0">Resets in:</label>
+        <div class="flex items-center gap-1 flex-1">
+          <input
+            v-model.number="editResetDays"
+            type="number"
+            min="0"
+            max="7"
+            class="w-14 px-2 py-1 bg-surface-base border border-border-default rounded text-xs text-text-primary font-mono focus:outline-none focus:border-accent-gold/50"
+          />
+          <span class="text-text-dim">d</span>
+          <input
+            v-model.number="editResetHours"
+            type="number"
+            min="0"
+            max="23"
+            class="w-14 px-2 py-1 bg-surface-base border border-border-default rounded text-xs text-text-primary font-mono focus:outline-none focus:border-accent-gold/50"
+          />
+          <span class="text-text-dim">h</span>
+          <span class="text-[10px] text-text-dim italic ml-1">(leave 0 for no timer)</span>
+        </div>
+      </div>
       <div class="flex items-center gap-2">
         <button
           class="px-2 py-0.5 text-xs bg-accent-gold/20 border border-accent-gold/40 rounded hover:bg-accent-gold/30 text-text-primary cursor-pointer"
@@ -181,10 +203,27 @@ const editing = ref(false)
 const saving = ref(false)
 const editGoldAvailable = ref(0)
 const editGoldMax = ref(0)
+const editResetDays = ref(0)
+const editResetHours = ref(0)
 
 function startEditing() {
   editGoldAvailable.value = props.vendorStatus?.vendor_gold_available ?? currentCapGold.value ?? 0
   editGoldMax.value = props.vendorStatus?.vendor_gold_max ?? currentCapGold.value ?? 0
+
+  // Pre-populate timer from current status
+  const start = props.vendorStatus?.vendor_gold_timer_start
+  if (start && !timerExpired.value) {
+    const startDate = new Date(start + 'Z')
+    const resetAt = startDate.getTime() + VENDOR_RESET_HOURS * 3600 * 1000
+    const remainingMs = Math.max(0, resetAt - Date.now())
+    const remainingH = Math.floor(remainingMs / (3600 * 1000))
+    editResetDays.value = Math.floor(remainingH / 24)
+    editResetHours.value = remainingH % 24
+  } else {
+    editResetDays.value = 0
+    editResetHours.value = 0
+  }
+
   editing.value = true
 }
 
@@ -192,6 +231,12 @@ async function saveEdit() {
   const characterName = settingsStore.settings.activeCharacterName
   const serverName = settingsStore.settings.activeServerName
   if (!characterName || !serverName) return
+
+  const totalResetHours = editResetDays.value * 24 + editResetHours.value
+  // Only pass reset hours if there's actually time remaining and gold < max
+  const resetHoursRemaining = (totalResetHours > 0 && editGoldAvailable.value < editGoldMax.value)
+    ? totalResetHours
+    : null
 
   saving.value = true
   try {
@@ -201,6 +246,7 @@ async function saveEdit() {
       npcKey: props.npc.key,
       goldAvailable: editGoldAvailable.value,
       goldMax: editGoldMax.value,
+      resetHoursRemaining,
     })
     await gameState.refreshDomain('vendor')
     editing.value = false

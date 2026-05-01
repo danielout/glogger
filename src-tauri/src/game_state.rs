@@ -871,7 +871,11 @@ impl GameStateManager {
                              ON CONFLICT(character_name, server_name, npc_key) DO UPDATE SET
                                 vendor_gold_available = excluded.vendor_gold_available,
                                 vendor_gold_max = excluded.vendor_gold_max,
-                                vendor_gold_timer_start = CASE WHEN game_state_npc_vendor.vendor_gold_timer_start IS NULL THEN excluded.vendor_gold_timer_start ELSE game_state_npc_vendor.vendor_gold_timer_start END,
+                                vendor_gold_timer_start = CASE
+                                    WHEN game_state_npc_vendor.vendor_gold_timer_start IS NULL THEN excluded.vendor_gold_timer_start
+                                    WHEN datetime(game_state_npc_vendor.vendor_gold_timer_start, '+168 hours') < excluded.last_confirmed_at THEN excluded.vendor_gold_timer_start
+                                    ELSE game_state_npc_vendor.vendor_gold_timer_start
+                                END,
                                 last_confirmed_at = excluded.last_confirmed_at",
                             rusqlite::params![character, server, npc_key, *current_gold as i64, *max_gold as i64, dt],
                         ).ok();
