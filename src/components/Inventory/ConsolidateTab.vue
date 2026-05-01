@@ -1,5 +1,11 @@
 <template>
   <div class="flex flex-col h-full min-h-0">
+    <!-- Experimental warning -->
+    <div class="shrink-0 mb-3 p-2 rounded bg-status-warning/10 border border-status-warning/30 flex items-center gap-2 text-xs">
+      <span class="text-status-warning font-semibold">Experimental</span>
+      <span class="text-text-secondary">This feature is a work in progress with known bugs. The consolidation plan may not always be optimal and the wizard may not perfectly track all item movements.</span>
+    </div>
+
     <!-- Empty states -->
     <EmptyState v-if="!gameState.storage.length" variant="panel" primary="No storage data" secondary="Import an inventory report to see stored items." />
     <EmptyState v-else-if="plan.moves.length === 0" variant="panel" primary="Nothing to consolidate" secondary="All your items are already in single locations." />
