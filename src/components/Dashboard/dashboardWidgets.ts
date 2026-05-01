@@ -26,6 +26,8 @@ import TripPlannerWidget from "./widgets/TripPlannerWidget.vue";
 import TripPlannerWidgetConfig from "./widgets/TripPlannerWidgetConfig.vue";
 import GardenAlmanacWidget from "./widgets/GardenAlmanacWidget.vue";
 import MessagesWidget from "./widgets/MessagesWidget.vue";
+import HoplologyWidget from "./widgets/HoplologyWidget.vue";
+import VendorCouncilWidget from "./widgets/VendorCouncilWidget.vue";
 
 export type WidgetSize = "small" | "medium" | "large";
 
@@ -89,6 +91,12 @@ export const DASHBOARD_WIDGETS: DashboardWidget[] = [
     id: "councils",
     name: "Councils",
     component: CouncilsWidget,
+    defaultSize: "medium",
+  },
+  {
+    id: "vendor-councils",
+    name: "Vendor Councils",
+    component: VendorCouncilWidget,
     defaultSize: "medium",
   },
 
@@ -196,6 +204,12 @@ export const DASHBOARD_WIDGETS: DashboardWidget[] = [
     name: "Messages",
     component: MessagesWidget,
     defaultSize: "medium",
+  },
+  {
+    id: "hoplology",
+    name: "Hoplology",
+    component: HoplologyWidget,
+    defaultSize: "small",
   },
 ];
 

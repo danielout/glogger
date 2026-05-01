@@ -709,6 +709,36 @@ pub fn get_game_state_vendor(
         .map_err(|e| format!("Row error: {e}"))
 }
 
+#[tauri::command]
+pub fn set_manual_vendor_gold(
+    db: State<'_, DbPool>,
+    character_name: String,
+    server_name: String,
+    npc_key: String,
+    gold_available: i64,
+    gold_max: i64,
+) -> Result<(), String> {
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+    let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
+    let timer_start: Option<&str> = if gold_available < gold_max {
+        Some(&now)
+    } else {
+        None
+    };
+    conn.execute(
+        "INSERT INTO game_state_npc_vendor (character_name, server_name, npc_key, vendor_gold_available, vendor_gold_max, vendor_gold_timer_start, last_confirmed_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+         ON CONFLICT(character_name, server_name, npc_key) DO UPDATE SET
+            vendor_gold_available = excluded.vendor_gold_available,
+            vendor_gold_max = excluded.vendor_gold_max,
+            vendor_gold_timer_start = COALESCE(game_state_npc_vendor.vendor_gold_timer_start, excluded.vendor_gold_timer_start),
+            last_confirmed_at = excluded.last_confirmed_at",
+        rusqlite::params![character_name, server_name, npc_key, gold_available, gold_max, timer_start, now],
+    )
+    .map_err(|e| format!("Upsert error: {e}"))?;
+    Ok(())
+}
+
 // ── Book reports ────────────────────────────────────────────────
 
 #[derive(Debug, Clone, serde::Serialize)]

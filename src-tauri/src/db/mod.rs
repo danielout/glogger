@@ -30,6 +30,7 @@ pub mod stall_tracker_commands;
 #[allow(dead_code)]
 pub mod survey_commands;
 pub mod timer_commands;
+pub mod hoplology_commands;
 pub mod words_of_power_commands;
 
 pub type DbPool = r2d2::Pool<SqliteConnectionManager>;

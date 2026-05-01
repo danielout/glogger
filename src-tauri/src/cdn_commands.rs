@@ -397,11 +397,16 @@ pub async fn get_items_by_keyword(
     keyword: String,
     state: State<'_, GameDataState>,
 ) -> Result<Vec<ItemInfo>, String> {
+    let kw_lower = keyword.to_lowercase();
     let data = state.read().await;
     let mut results: Vec<ItemInfo> = data
         .items
         .values()
-        .filter(|item| item.keywords.contains(&keyword))
+        .filter(|item| {
+            item.keywords
+                .iter()
+                .any(|k| k.to_lowercase() == kw_lower)
+        })
         .cloned()
         .collect();
     results.sort_by(|a, b| a.name.cmp(&b.name));

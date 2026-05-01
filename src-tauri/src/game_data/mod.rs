@@ -390,6 +390,33 @@ impl GameData {
         None
     }
 
+    /// Find the base equipment name within a potentially-modified item name.
+    ///
+    /// Crafted items include TSys prefixes and suffixes (e.g. "Hailin' Thorian
+    /// Kilt of Deathspark") but hoplology only cares about the base item
+    /// ("Thorian Kilt"). This performs longest-first case-insensitive substring
+    /// matching against all known equipment item names (items with an equip_slot).
+    pub fn find_equipment_base_name(&self, crafted_name: &str) -> Option<String> {
+        let lower = crafted_name.to_lowercase();
+
+        // Build a sorted list of (lowercase_name, original_name) for equipment items.
+        // Sorted by descending length so longest match wins.
+        let mut equipment_names: Vec<(&str, &str)> = self
+            .items
+            .values()
+            .filter(|item| item.equip_slot.is_some())
+            .map(|item| (item.name.as_str(), item.name.as_str()))
+            .collect();
+        equipment_names.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+
+        for (_, name) in &equipment_names {
+            if lower.contains(&name.to_lowercase()) {
+                return Some(name.to_string());
+            }
+        }
+        None
+    }
+
     /// Resolve any string reference to a SkillInfo.
     /// Tries: numeric ID → display name → internal name.
     pub fn resolve_skill(&self, reference: &str) -> Option<&skills::SkillInfo> {

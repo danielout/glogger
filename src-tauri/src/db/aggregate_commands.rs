@@ -63,6 +63,20 @@ pub struct CharacterSkillEntry {
     pub xp: i64,
 }
 
+#[derive(Serialize)]
+pub struct AggregateVendorEntry {
+    pub npc_key: String,
+    pub characters: Vec<CharacterVendorBreakdown>,
+}
+
+#[derive(Serialize)]
+pub struct CharacterVendorBreakdown {
+    pub character_name: String,
+    pub vendor_gold_available: Option<i64>,
+    pub vendor_gold_max: Option<i64>,
+    pub vendor_gold_timer_start: Option<String>,
+}
+
 // ── Commands ────────────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -300,6 +314,53 @@ pub fn get_aggregate_skills(
         .into_iter()
         .map(|(skill_name, characters)| AggregateSkillSummary {
             skill_name,
+            characters,
+        })
+        .collect())
+}
+
+#[tauri::command]
+pub fn get_aggregate_vendor(
+    db: State<'_, DbPool>,
+    server_name: String,
+) -> Result<Vec<AggregateVendorEntry>, String> {
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT npc_key, character_name, vendor_gold_available, vendor_gold_max, vendor_gold_timer_start
+             FROM game_state_npc_vendor
+             WHERE server_name = ?1
+             ORDER BY npc_key, character_name",
+        )
+        .map_err(|e| format!("Query error: {e}"))?;
+
+    let rows: Vec<(String, String, Option<i64>, Option<i64>, Option<String>)> = stmt
+        .query_map(rusqlite::params![server_name], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?))
+        })
+        .map_err(|e| format!("Query error: {e}"))?
+        .flatten()
+        .collect();
+
+    let mut vendors: std::collections::BTreeMap<String, Vec<CharacterVendorBreakdown>> =
+        std::collections::BTreeMap::new();
+    for (npc_key, character_name, gold_available, gold_max, timer_start) in rows {
+        vendors
+            .entry(npc_key)
+            .or_default()
+            .push(CharacterVendorBreakdown {
+                character_name,
+                vendor_gold_available: gold_available,
+                vendor_gold_max: gold_max,
+                vendor_gold_timer_start: timer_start,
+            });
+    }
+
+    Ok(vendors
+        .into_iter()
+        .map(|(npc_key, characters)| AggregateVendorEntry {
+            npc_key,
             characters,
         })
         .collect())

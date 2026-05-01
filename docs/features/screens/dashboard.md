@@ -90,6 +90,7 @@ Each widget is documented in its own file under `dashboard/`:
 | Stat Tracker | Small | Configurable display of player attributes and computed stats. Gear icon opens config to search and add/remove tracked stats. Defaults: Total Skill Levels, Combat XP Earned Mod, Crafting XP Earned Mod, Max Inventory Size. Updates live as attributes change. |
 | [Words of Power](dashboard/widget-words-of-power.md) | Medium | Auto-captures words of power when crafted, grouped by power name with age counters, click-to-copy, and manual add/remove. |
 | Recurring Events | Small | Calendar-based recurring event timers with countdowns. Supports daily, weekly, biweekly, and monthly recurrence. Events auto-advance and sort by next occurrence. |
+| Vendor Councils | Medium | Vendor gold summary across all tracked vendors, grouped by item type category (Armor, Weapons, Jewelry, Skins, Potions, Food). Shows per-vendor gold remaining with color-coded ratios, reset timers, and category/grand totals. Toggle between active character and cross-character aggregate view. |
 
 ## Adding a New Widget
 

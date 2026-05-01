@@ -147,7 +147,7 @@ use coordinator::{
     spawn_polling_thread, DataIngestCoordinator, PollingHandle,
 };
 use db::admin_commands::{force_rebuild_cdn_tables, get_database_stats, purge_player_data};
-use db::aggregate_commands::{get_aggregate_inventory, get_aggregate_skills, get_aggregate_wealth};
+use db::aggregate_commands::{get_aggregate_inventory, get_aggregate_skills, get_aggregate_vendor, get_aggregate_wealth};
 use db::build_planner_commands::{
     clear_build_preset_slot_item, clone_build_preset, create_build_preset, delete_build_preset,
     export_build_preset, get_build_preset_abilities, get_build_preset_cp_recipes,
@@ -179,7 +179,7 @@ use db::game_state_commands::{
     get_game_state_inventory, get_game_state_recipes, get_game_state_skills,
     get_character_report_stats, get_game_state_books, get_game_state_storage,
     get_game_state_vendor, get_game_state_world, get_gift_log, get_milking_timers,
-    add_manual_gift, remove_last_gift, get_tracked_skills, set_tracked_skills,
+    add_manual_gift, remove_last_gift, set_manual_vendor_gold, get_tracked_skills, set_tracked_skills,
     get_computed_stats,
     get_attribute_extremes,
     get_player_milking_leaderboard,
@@ -748,6 +748,7 @@ pub fn run() {
             get_game_state_effects,
             get_game_state_storage,
             get_game_state_vendor,
+            set_manual_vendor_gold,
             get_game_state_books,
             get_milking_timers,
             get_character_report_stats,
@@ -767,6 +768,7 @@ pub fn run() {
             get_aggregate_inventory,
             get_aggregate_wealth,
             get_aggregate_skills,
+            get_aggregate_vendor,
             // Stall Tracker
             db::stall_tracker_commands::get_stall_events,
             db::stall_tracker_commands::get_stall_stats,
@@ -778,6 +780,9 @@ pub fn run() {
             db::stall_tracker_commands::import_shop_log_file,
             db::stall_tracker_commands::export_shop_log_files,
             db::stall_tracker_commands::seed_stall_events_dev,
+            // Hoplology
+            db::hoplology_commands::get_hoplology_studies,
+            db::hoplology_commands::get_hoplology_stats,
             // Words of Power
             db::words_of_power_commands::get_words_of_power,
             db::words_of_power_commands::add_word_of_power,

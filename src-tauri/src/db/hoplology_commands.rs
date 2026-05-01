@@ -75,10 +75,12 @@ pub fn get_hoplology_stats(
         )
         .map_err(|e| e.to_string())?;
 
+    // Only use live study events (source='chat') for cooldown tracking.
+    // Report backfills (source='report') are not actual study actions.
     let last = conn
         .query_row(
             "SELECT studied_at, item_name FROM hoplology_studies
-             WHERE character_name = ?1 AND server_name = ?2
+             WHERE character_name = ?1 AND server_name = ?2 AND source = 'chat'
              ORDER BY studied_at DESC LIMIT 1",
             [&character_name, &server_name],
             |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
@@ -92,10 +94,40 @@ pub fn get_hoplology_stats(
     })
 }
 
-// ── Internal helper (called from coordinator, not a Tauri command) ──────────
+// ── Internal helpers (called from coordinator, not Tauri commands) ──────────
 
-/// Insert or ignore a hoplology study record. Returns the row id if newly inserted.
-pub fn insert_hoplology_study(
+/// Insert a hoplology study from a live chat event (source='chat').
+/// If the item was previously known only from a report, upgrades the
+/// source to 'chat' and updates the timestamp.
+pub fn insert_hoplology_study_from_chat(
+    conn: &rusqlite::Connection,
+    character_name: &str,
+    server_name: &str,
+    item_name: &str,
+    studied_at: &str,
+) -> Result<Option<i64>, rusqlite::Error> {
+    // Try inserting; on conflict update source/timestamp if the existing row
+    // was only from a report — a live study is more authoritative.
+    let changed = conn.execute(
+        "INSERT INTO hoplology_studies (character_name, server_name, item_name, studied_at, source)
+         VALUES (?1, ?2, ?3, ?4, 'chat')
+         ON CONFLICT(character_name, server_name, item_name) DO UPDATE SET
+             studied_at = excluded.studied_at,
+             source = 'chat'
+         WHERE source = 'report'",
+        rusqlite::params![character_name, server_name, item_name, studied_at],
+    )?;
+
+    if changed > 0 {
+        Ok(Some(conn.last_insert_rowid()))
+    } else {
+        Ok(None) // Already known from a live study
+    }
+}
+
+/// Insert a hoplology study from a skill report (source='report').
+/// Only inserts if the item is not already known at all.
+pub fn insert_hoplology_study_from_report(
     conn: &rusqlite::Connection,
     character_name: &str,
     server_name: &str,
@@ -104,13 +136,13 @@ pub fn insert_hoplology_study(
 ) -> Result<Option<i64>, rusqlite::Error> {
     let changed = conn.execute(
         "INSERT OR IGNORE INTO hoplology_studies (character_name, server_name, item_name, studied_at, source)
-         VALUES (?1, ?2, ?3, ?4, 'auto')",
+         VALUES (?1, ?2, ?3, ?4, 'report')",
         rusqlite::params![character_name, server_name, item_name, studied_at],
     )?;
 
     if changed > 0 {
         Ok(Some(conn.last_insert_rowid()))
     } else {
-        Ok(None) // Already studied
+        Ok(None) // Already known
     }
 }

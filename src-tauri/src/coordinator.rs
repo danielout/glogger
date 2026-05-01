@@ -741,6 +741,13 @@ impl DataIngestCoordinator {
                                 }
                             }
 
+                            // Auto-import hoplology study report when opened.
+                            if book_type == "SkillReport"
+                                && content.trim_start().starts_with("Equipment Studied:")
+                            {
+                                self.ingest_hoplology_report(timestamp, content);
+                            }
+
                             // Auto-import teleportation bind locations.
                             if book_type == "SkillReport"
                                 && content.contains("Primary Bind Location:")
@@ -991,6 +998,44 @@ impl DataIngestCoordinator {
                                             ],
                                         )
                                         .ok();
+                                    }
+                                }
+                            }
+                            ChatStatusEvent::ItemStudied {
+                                timestamp,
+                                item_name,
+                            } => {
+                                // Resolve to base equipment name (strip TSys prefixes/suffixes).
+                                // "Hailin' Thorian Kilt of Deathspark" → "Thorian Kilt"
+                                let base_name = self
+                                    .game_data
+                                    .try_read()
+                                    .ok()
+                                    .and_then(|gd| gd.find_equipment_base_name(item_name))
+                                    .unwrap_or_else(|| item_name.to_string());
+
+                                if let Ok(conn) = self.db_pool.get() {
+                                    if let (Some(character), Some(server)) = (
+                                        self.game_state.get_active_character(),
+                                        self.game_state.get_active_server(),
+                                    ) {
+                                        match crate::db::hoplology_commands::insert_hoplology_study_from_chat(
+                                            &conn,
+                                            &character,
+                                            &server,
+                                            &base_name,
+                                            timestamp,
+                                        ) {
+                                            Ok(Some(_)) => {
+                                                self.app_handle
+                                                    .emit("game-state-updated", &vec!["hoplology"])
+                                                    .ok();
+                                            }
+                                            Ok(None) => {} // already studied
+                                            Err(e) => {
+                                                eprintln!("Failed to persist hoplology study: {}", e);
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -1721,6 +1766,66 @@ impl DataIngestCoordinator {
             }
         }
         None
+    }
+
+    /// Parse a hoplology "Equipment Studied:" skill report and backfill studied items.
+    ///
+    /// Content format (escaped newlines):
+    ///   "Equipment Studied:\n\n  CrudBurst's Hammer of Thumping\n  Thentree Harness\n"
+    fn ingest_hoplology_report(&self, _timestamp: &str, content: &str) {
+        let (character, server) = match self.active_character_server() {
+            Some(cs) => cs,
+            None => return,
+        };
+
+        let conn = match self.db_pool.get() {
+            Ok(c) => c,
+            Err(_) => return,
+        };
+
+        // Use current wall-clock time as the "first seen" timestamp for
+        // report-backfilled items (the player.log timestamp is just HH:MM:SS
+        // which isn't a valid datetime).
+        let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+
+        // Try to acquire CDN data for base-name resolution
+        let game_data = self.game_data.try_read().ok();
+
+        let mut inserted = 0u32;
+        // Content uses literal \n (escaped in the log line) — split on those
+        for line in content.split("\\n") {
+            let trimmed = line.trim();
+            if trimmed.is_empty()
+                || trimmed.starts_with("Equipment Studied:")
+            {
+                continue;
+            }
+            // Resolve to base equipment name if CDN data is available
+            let base_name = game_data
+                .as_ref()
+                .and_then(|gd| gd.find_equipment_base_name(trimmed))
+                .unwrap_or_else(|| trimmed.to_string());
+
+            match crate::db::hoplology_commands::insert_hoplology_study_from_report(
+                &conn, &character, &server, &base_name, &now,
+            ) {
+                Ok(Some(_)) => inserted += 1,
+                Ok(None) => {} // already known
+                Err(e) => {
+                    eprintln!("[coordinator] Failed to insert hoplology study '{}': {}", trimmed, e);
+                }
+            }
+        }
+
+        if inserted > 0 {
+            startup_log!(
+                "[coordinator] Hoplology report: backfilled {} new items",
+                inserted
+            );
+            self.app_handle
+                .emit("game-state-updated", vec!["hoplology"])
+                .ok();
+        }
     }
 
     /// Extract and persist a word of power from a "You discovered a word of power!" book.

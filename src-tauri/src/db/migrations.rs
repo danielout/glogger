@@ -237,6 +237,16 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 42)?;
     }
 
+    if current_version < 43 {
+        migration_v43_hoplology_studies(conn)?;
+        super::record_migration(conn, 43)?;
+    }
+
+    if current_version < 44 {
+        migration_v44_hoplology_dedup(conn)?;
+        super::record_migration(conn, 44)?;
+    }
+
     Ok(())
 }
 
@@ -2197,6 +2207,59 @@ fn migration_v42_player_messages(conn: &Connection) -> Result<()> {
         );
         CREATE INDEX IF NOT EXISTS idx_player_messages_char_server
             ON player_messages(character_name, server_name, timestamp DESC);"
+    )?;
+    Ok(())
+}
+
+/// Migration V43: Hoplology studies tracking table.
+fn migration_v43_hoplology_studies(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS hoplology_studies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            character_name TEXT NOT NULL,
+            server_name TEXT NOT NULL,
+            item_name TEXT NOT NULL,
+            studied_at TEXT NOT NULL,
+            source TEXT NOT NULL DEFAULT 'auto',
+            UNIQUE(character_name, server_name, item_name)
+        );
+        CREATE INDEX IF NOT EXISTS idx_hoplology_char_server
+            ON hoplology_studies(character_name, server_name, studied_at DESC);"
+    )?;
+    Ok(())
+}
+
+/// Migration V44: Rebuild hoplology_studies to guarantee UNIQUE constraint
+/// and clean up duplicate/stale rows from early development.
+fn migration_v44_hoplology_dedup(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "-- Rebuild table: keep best row per (character, server, item).
+         -- Prefer source='chat' over 'report'/'auto'; among ties keep newest studied_at.
+         CREATE TABLE hoplology_studies_new (
+             id INTEGER PRIMARY KEY AUTOINCREMENT,
+             character_name TEXT NOT NULL,
+             server_name TEXT NOT NULL,
+             item_name TEXT NOT NULL,
+             studied_at TEXT NOT NULL,
+             source TEXT NOT NULL DEFAULT 'auto',
+             UNIQUE(character_name, server_name, item_name)
+         );
+         INSERT INTO hoplology_studies_new (character_name, server_name, item_name, studied_at, source)
+             SELECT character_name, server_name, item_name, studied_at, source
+             FROM (
+                 SELECT character_name, server_name, item_name, studied_at, source,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY character_name, server_name, item_name
+                            ORDER BY CASE source WHEN 'chat' THEN 0 WHEN 'auto' THEN 1 ELSE 2 END,
+                                     studied_at DESC
+                        ) AS rn
+                 FROM hoplology_studies
+             )
+             WHERE rn = 1;
+         DROP TABLE hoplology_studies;
+         ALTER TABLE hoplology_studies_new RENAME TO hoplology_studies;
+         CREATE INDEX IF NOT EXISTS idx_hoplology_char_server
+             ON hoplology_studies(character_name, server_name, studied_at DESC);"
     )?;
     Ok(())
 }

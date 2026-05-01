@@ -48,7 +48,7 @@ pub enum ChatStatusEvent {
         quantity: u32,
     },
 
-    /// "You carefully study the Moldy Ancient Shoes."
+    /// "CrudBurst's Hammer of Thumping carefully studied!"
     ItemStudied {
         timestamp: String,
         item_name: String,
@@ -236,15 +236,15 @@ fn try_summoned(text: &str, ts: &str) -> Option<ChatStatusEvent> {
     })
 }
 
-/// "You carefully study the Moldy Ancient Shoes."
+/// "CrudBurst's Hammer of Thumping carefully studied!"
 /// Hoplology equipment study — fires when a player studies a piece of equipment.
 /// The 5-minute cooldown between studies is tracked on the frontend.
 fn try_item_studied(text: &str, ts: &str) -> Option<ChatStatusEvent> {
-    let prefix = "You carefully study the ";
-    if !text.starts_with(prefix) || !text.ends_with('.') {
+    let suffix = " carefully studied!";
+    if !text.ends_with(suffix) {
         return None;
     }
-    let item_name = &text[prefix.len()..text.len() - 1];
+    let item_name = &text[..text.len() - suffix.len()];
     if item_name.is_empty() {
         return None;
     }
@@ -471,7 +471,7 @@ mod tests {
 
     #[test]
     fn test_item_studied() {
-        let msg = status_msg("You carefully study the Moldy Ancient Shoes.");
+        let msg = status_msg("Moldy Ancient Shoes carefully studied!");
         let event = parse_status_message(&msg).unwrap();
         if let ChatStatusEvent::ItemStudied { item_name, .. } = event {
             assert_eq!(item_name, "Moldy Ancient Shoes");
@@ -482,10 +482,10 @@ mod tests {
 
     #[test]
     fn test_item_studied_long_name() {
-        let msg = status_msg("You carefully study the Exceptional Werewolf Sword.");
+        let msg = status_msg("CrudBurst's Hammer of Thumping of Hammering carefully studied!");
         let event = parse_status_message(&msg).unwrap();
         if let ChatStatusEvent::ItemStudied { item_name, .. } = event {
-            assert_eq!(item_name, "Exceptional Werewolf Sword");
+            assert_eq!(item_name, "CrudBurst's Hammer of Thumping of Hammering");
         } else {
             panic!("Expected ItemStudied, got {:?}", event);
         }
