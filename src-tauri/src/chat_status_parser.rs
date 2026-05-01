@@ -493,10 +493,10 @@ mod tests {
 
     #[test]
     fn test_report_saved_character() {
-        let msg = status_msg("Saved report to C:/Users/danie/AppData/LocalLow/Elder Game/Project Gorgon/Reports/Character_Zenith_Dreva.json");
+        let msg = status_msg("Saved report to C:/Users/TestUser/AppData/LocalLow/Elder Game/Project Gorgon/Reports/Character_TestPlayer_Dreva.json");
         let event = parse_status_message(&msg).unwrap();
         if let ChatStatusEvent::ReportSaved { file_path, .. } = event {
-            assert_eq!(file_path, "C:/Users/danie/AppData/LocalLow/Elder Game/Project Gorgon/Reports/Character_Zenith_Dreva.json");
+            assert_eq!(file_path, "C:/Users/TestUser/AppData/LocalLow/Elder Game/Project Gorgon/Reports/Character_TestPlayer_Dreva.json");
         } else {
             panic!("Expected ReportSaved, got {:?}", event);
         }
@@ -504,7 +504,7 @@ mod tests {
 
     #[test]
     fn test_report_saved_inventory() {
-        let msg = status_msg("Saved report to C:/Users/danie/AppData/LocalLow/Elder Game/Project Gorgon/Reports/Zenith_Dreva_items_2026-04-20-01-53-45Z.json");
+        let msg = status_msg("Saved report to C:/Users/TestUser/AppData/LocalLow/Elder Game/Project Gorgon/Reports/TestPlayer_Dreva_items_2026-04-20-01-53-45Z.json");
         let event = parse_status_message(&msg).unwrap();
         if let ChatStatusEvent::ReportSaved { file_path, .. } = event {
             assert!(file_path.contains("items_"));
@@ -516,7 +516,7 @@ mod tests {
     #[test]
     fn test_book_saved_not_report() {
         // "Saved book to ..." should NOT match ReportSaved
-        let msg = status_msg("Saved book to C:/Users/danie/AppData/LocalLow/Elder Game/Project Gorgon/Books/HelpScreen_260419_185352.txt");
+        let msg = status_msg("Saved book to C:/Users/TestUser/AppData/LocalLow/Elder Game/Project Gorgon/Books/HelpScreen_260419_185352.txt");
         assert!(parse_status_message(&msg).is_none());
     }
 

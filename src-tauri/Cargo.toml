@@ -3,6 +3,8 @@ name = "glogger"
 version = "0.8.1"
 description = "Project: Gorgon Log Watcher and Data Tracker"
 authors = ["Daniel"]
+license = "GPL-3.0"
+repository = "https://github.com/danielout/glogger"
 edition = "2021"
 
 [lib]

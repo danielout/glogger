@@ -26,5 +26,8 @@ dist-ssr
 # Don't upload our sample data
 docs/samples/
 
+# But DO track sanitized test data logs (overrides *.log above)
+!test_data/**/*.log
+
 .claude
 CLAUDE.md

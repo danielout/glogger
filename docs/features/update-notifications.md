@@ -11,7 +11,7 @@ Glogger has two update systems:
 
 ### How It Works
 
-- **Source:** GitHub Releases on [danielout/glogger-release](https://github.com/danielout/glogger-release)
+- **Source:** GitHub Releases on [danielout/glogger](https://github.com/danielout/glogger)
 - Uses the [Tauri updater plugin](https://v2.tauri.app/plugin/updater/) (`tauri-plugin-updater`) which checks a `latest.json` manifest attached to the latest release.
 - The manifest includes download URLs and cryptographic signatures for each platform. Signatures are verified before installation.
 - Failures (no network, rate-limited, GitHub down) are silently ignored.

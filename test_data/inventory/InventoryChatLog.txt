@@ -1,6 +1,6 @@
-26-04-14 08:41:55	**************************************** Logged In As Zenith. Server Dreva. Timezone Offset -07:00:00.
+26-04-14 08:41:55	**************************************** Logged In As TestPlayer. Server Dreva. Timezone Offset -07:00:00.
 26-04-14 08:41:55	******************** Entering Area: Casino
-26-04-14 08:41:58	[Guild] -SYSTEM- Message of the Day: "Welcome back to Corpse-Talk, the #1 podcast from Serbule Hills to the Kur Mountains! Today's topic: undercutting the competition!"
+26-04-14 08:41:58	[Guild] -SYSTEM- pellentesque habitant morbi tristique
 26-04-14 08:41:58	[Status] You have 5 friends online.
 26-04-14 08:41:58	[Status] Joined chat room "Help". There are 152 other users here.
 26-04-14 08:41:58	[Status] Joined chat room "Trade". There are 159 other users here.
@@ -10,106 +10,106 @@
 26-04-14 08:41:58	[Status] Joined chat room "dragon". There are 15 other users here.
 26-04-14 08:41:58	[Status] Joined chat room "-apptesting". You are the first user in this room.
 26-04-14 08:41:58	[NPC Chatter] Otis: OTIS SHOP OPEN! COME BUY OTIS JUNK NOW.
-26-04-14 08:42:08	[Nearby] Hieg: indeeed
-26-04-14 08:42:13	[Nearby] Aruna: i would sit like this if i was
-26-04-14 08:42:16	[Nearby] Hieg: LOL
-26-04-14 08:42:25	[Status] Saved report to C:/Users/danie/AppData/LocalLow/Elder Game/Project Gorgon/Reports/Zenith_Dreva_items_2026-04-14-15-42-25Z.json
-26-04-14 08:42:26	[Status] Saved report to C:/Users/danie/AppData/LocalLow/Elder Game/Project Gorgon/Reports/Character_Zenith_Dreva.json
-26-04-14 08:42:48	[Emotes] Hieg pets Dood
-26-04-14 08:42:50	[Global] Sammich: Puddinng is urmp
-26-04-14 08:42:58	[Nearby] Ratera: bat doesnt have that many animations tbh
-26-04-14 08:43:06	[Nearby] Aruna: you can fly !
-26-04-14 08:43:10	[Nearby] Ratera: but more than just being a riiiiiiii
-26-04-14 08:43:12	[Nearby] Hieg: i can fly too
-26-04-14 08:43:19	[Nearby] Ratera: thats also how i swim
-26-04-14 08:43:23	[Nearby] Dood: I too can fly.. for a short amount of time
-26-04-14 08:43:27	[Global] Barbie: any other games aside from the casino
-26-04-14 08:43:28	[Nearby] Hieg: wdym
-26-04-14 08:43:35	[Global] Antonius: dice game
-26-04-14 08:43:38	[Global] Barbie: where
-26-04-14 08:43:40	[Nearby] Dood: any animals can fly :v
-26-04-14 08:43:42	[Global] Antonius: statehelm
-26-04-14 08:43:45	[Nearby] Hieg: look at me
-26-04-14 08:43:53	[Global] Barbie: i heard of it but i looked and couldnt find it
-26-04-14 08:43:55	[Nearby] Dood: Floatybun
-26-04-14 08:43:57	[Nearby] Aruna: ewwww DC today
-26-04-14 08:44:02	[Emotes] Aruna sits down.
-26-04-14 08:44:03	[Global] Antonius: they don't want your business
-26-04-14 08:44:05	[Nearby] Dood: Sooperbun
-26-04-14 08:44:07	[Global] Antonius: keeping it hidden
-26-04-14 08:44:10	[Emotes] Aruna kneels.
-26-04-14 08:44:10	[Global] Barbie: lame
-26-04-14 08:44:11	[Nearby] Ratera: dc is fuuun
-26-04-14 08:44:18	[Global] Antonius: there are 2 in statehelm that i know
+26-04-14 08:42:08	[Nearby] PlayerM: qui officia deserunt mollit anim
+26-04-14 08:42:13	[Nearby] PlayerK: consectetur adipiscing elit
+26-04-14 08:42:16	[Nearby] PlayerM: sed do eiusmod tempor incididunt
+26-04-14 08:42:25	[Status] Saved report to C:/Users/TestUser/AppData/LocalLow/Elder Game/Project Gorgon/Reports/TestPlayer_Dreva_items_2026-04-14-15-42-25Z.json
+26-04-14 08:42:26	[Status] Saved report to C:/Users/TestUser/AppData/LocalLow/Elder Game/Project Gorgon/Reports/Character_TestPlayer_Dreva.json
+26-04-14 08:42:48	[Emotes] PlayerA waves
+26-04-14 08:42:50	[Global] PlayerK: in voluptate velit esse cillum dolore
+26-04-14 08:42:58	[Nearby] PlayerE: etiam erat velit scelerisque
+26-04-14 08:43:06	[Nearby] PlayerK: fames ac turpis egestas
+26-04-14 08:43:10	[Nearby] PlayerE: qui officia deserunt mollit anim
+26-04-14 08:43:12	[Nearby] PlayerM: nulla facilisi etiam dignissim
+26-04-14 08:43:19	[Nearby] PlayerE: senectus et netus et malesuada
+26-04-14 08:43:23	[Nearby] PlayerF: sed do eiusmod tempor incididunt
+26-04-14 08:43:27	[Global] PlayerN: ut labore et dolore magna aliqua
+26-04-14 08:43:28	[Nearby] PlayerM: etiam erat velit scelerisque
+26-04-14 08:43:35	[Global] PlayerC: viverra mauris in aliquam sem
+26-04-14 08:43:38	[Global] PlayerN: excepteur sint occaecat cupidatat
+26-04-14 08:43:40	[Nearby] PlayerF: fames ac turpis egestas
+26-04-14 08:43:42	[Global] PlayerC: fringilla ut morbi tincidunt augue
+26-04-14 08:43:45	[Nearby] PlayerM: ut enim ad minim veniam
+26-04-14 08:43:53	[Global] PlayerN: laboris nisi ut aliquip ex ea
+26-04-14 08:43:55	[Nearby] PlayerF: duis aute irure dolor in reprehenderit
+26-04-14 08:43:57	[Nearby] PlayerK: curabitur pretium tincidunt lacus
+26-04-14 08:44:02	[Emotes] PlayerA waves
+26-04-14 08:44:03	[Global] PlayerC: fames ac turpis egestas
+26-04-14 08:44:05	[Nearby] PlayerF: duis aute irure dolor in reprehenderit
+26-04-14 08:44:07	[Global] PlayerC: in voluptate velit esse cillum dolore
+26-04-14 08:44:10	[Emotes] PlayerA waves
+26-04-14 08:44:10	[Global] PlayerN: fames ac turpis egestas
+26-04-14 08:44:11	[Nearby] PlayerE: senectus et netus et malesuada
+26-04-14 08:44:18	[Global] PlayerC: curabitur pretium tincidunt lacus
 26-04-14 08:44:36	******************** Entering Area: Statehelm
-26-04-14 08:44:42	[Global] Barbie: all i did was get robbed on repeat xd
-26-04-14 08:44:51	[Global] Bigtuna: just like any big city
-26-04-14 08:45:43	[Global] SolusekRo: Just dropped at Serb well
+26-04-14 08:44:42	[Global] PlayerN: lorem ipsum dolor sit amet
+26-04-14 08:44:51	[Global] PlayerB: fringilla ut morbi tincidunt augue
+26-04-14 08:45:43	[Global] PlayerH: lorem ipsum dolor sit amet
 [Item: Mycologist's Display #2]
-26-04-14 08:46:01	[Global] Mediocreates: one dice game is in the bar outside city wall to the south in the ghetto
+26-04-14 08:46:01	[Global] PlayerE: quis nostrud exercitation ullamco
 26-04-14 08:46:07	[Status] Great Phlogiston x1000 added to inventory.
 26-04-14 08:46:09	[Status] Great Phlogiston x1000 added to inventory.
 26-04-14 08:48:12	[Status] Great Phlogiston x750 added to inventory.
-26-04-14 08:49:49	[Global] HatsOffToYouSir: anyone know if statehelm bank door is still broken
-26-04-14 08:50:00	[Global] Vesperis: was this morning....
-26-04-14 08:50:06	[Global] Radizzt: all the door seem to be broken right now
-26-04-14 08:50:47	[Trade] PizzaExpress: WTB Astounding Metal Slabs
+26-04-14 08:49:49	[Global] PlayerJ: proin sagittis nisl rhoncus mattis
+26-04-14 08:50:00	[Global] PlayerC: ut enim ad minim veniam
+26-04-14 08:50:06	[Global] PlayerO: excepteur sint occaecat cupidatat
+26-04-14 08:50:47	[Trade] PlayerH: non proident sunt in culpa
 26-04-14 08:51:03	[Status] Great Phlogiston x250 added to inventory.
 26-04-14 08:51:09	[Status] Great Phlogiston x500 added to inventory.
 26-04-14 08:51:09	[Status] Great Phlogiston x250 added to inventory.
-26-04-14 08:51:30	[Trade] Rathi: WTB Harp, Poppy Seeds
+26-04-14 08:51:30	[Trade] PlayerD: maecenas volutpat blandit aliquam
 26-04-14 08:51:42	[Status] Great Phlogiston x750 added to inventory.
 26-04-14 08:51:42	[Status] Great Phlogiston x250 added to inventory.
-26-04-14 08:51:54	[Global] WhiteFurry: Anyone got a Psychic Resistance Potion for me? No one sells this.
-26-04-14 08:52:54	[Trade] MrScrub: If anyone has the mats, i can craft no fee
+26-04-14 08:51:54	[Global] PlayerK: duis aute irure dolor in reprehenderit
+26-04-14 08:52:54	[Trade] PlayerB: non proident sunt in culpa
 [Recipe: Astounding Darkness Medallion (Max-Enchanted)] [Recipe: Astounding Magic Ring (Max-Enchanted)]
 26-04-14 08:53:10	[Status] Large Prism x100 added to inventory.
 26-04-14 08:53:59	[Status] Egg added to inventory.
-26-04-14 08:54:00	[Trade] PizzaExpress: wow 90 jewel crafting
-26-04-14 08:54:01	[Trade] PizzaExpress: how much you burnt
-26-04-14 08:54:07	[Trade] ZvezdaS: what are base bonuses of it
-26-04-14 08:54:15	[Trade] PizzaExpress: darkness is like direct dark dmg +146
-26-04-14 08:54:22	[Trade] PizzaExpress: the astounding magic ring is lvl 95 direct ring like this
-26-04-14 08:54:24	[Global] Nsaneocatic: is there a point to uncrossing oil on a fresh grave? it doesnt seem to do anything or give any xp
-26-04-14 08:54:27	[Trade] Dood: Want
-26-04-14 08:54:31	[Trade] PizzaExpress: similar stat like this
+26-04-14 08:54:00	[Trade] PlayerH: consectetur adipiscing elit
+26-04-14 08:54:01	[Trade] PlayerH: fames ac turpis egestas
+26-04-14 08:54:07	[Trade] PlayerG: non proident sunt in culpa
+26-04-14 08:54:15	[Trade] PlayerH: id est laborum
+26-04-14 08:54:22	[Trade] PlayerH: senectus et netus et malesuada
+26-04-14 08:54:24	[Global] PlayerK: quis nostrud exercitation ullamco
+26-04-14 08:54:27	[Trade] PlayerF: proin sagittis nisl rhoncus mattis
+26-04-14 08:54:31	[Trade] PlayerH: curabitur pretium tincidunt lacus
 [Item: Grand Ring of Nice Looking Hammers]
-26-04-14 08:54:40	[Trade] PizzaExpress: but that necklace is bis
-26-04-14 08:54:44	[Trade] PizzaExpress: for dark dmg
-26-04-14 08:54:44	[Global] Antonius: gives compassion if you dont have
-26-04-14 08:54:45	[Help] Heroican: is there any way to kick [status] messages out of my all tab?
-26-04-14 08:54:57	[Trade] ZvezdaS: but thas direct dmg
-26-04-14 08:54:58	[Trade] MrScrub: dood i'm still salty you took that recipie
-26-04-14 08:55:08	[Trade] Dood: But I gave it to Wyvern!
-26-04-14 08:55:09	[Trade] Frostarch: WTB chilling goblets, icy frog skin
-26-04-14 08:55:14	[Global] Nsaneocatic: so the same as burying? thats...unfortunate i suppose thanks
-26-04-14 08:55:20	[Trade] PizzaExpress: what lvl 90 necklace you cna make
-26-04-14 08:55:21	[Global] Purrrfecta: Puddin is up
-26-04-14 08:55:27	[Trade] PizzaExpress: i happen to lack a lvl 90 necklace anyways
-26-04-14 08:55:27	[Help] Zenith: Your best bet is making a new Pseudo-all tab and just adding everything but status :D
-26-04-14 08:55:30	[Trade] PizzaExpress: tryin to get legendary :P
-26-04-14 08:55:43	[Trade] MrScrub: besides that, nothing XD, they all suck, there's a priest one that's good, but need to elvel priest to 87
-26-04-14 08:55:49	[Trade] PizzaExpress: ahh nvm
-26-04-14 08:55:58	[Trade] PizzaExpress: guess i will just hope egg drops 1 good one for me later
+26-04-14 08:54:40	[Trade] PlayerH: excepteur sint occaecat cupidatat
+26-04-14 08:54:44	[Trade] PlayerH: qui officia deserunt mollit anim
+26-04-14 08:54:44	[Global] PlayerC: sed do eiusmod tempor incididunt
+26-04-14 08:54:45	[Help] PlayerF: excepteur sint occaecat cupidatat
+26-04-14 08:54:57	[Trade] PlayerG: curabitur pretium tincidunt lacus
+26-04-14 08:54:58	[Trade] PlayerB: duis aute irure dolor in reprehenderit
+26-04-14 08:55:08	[Trade] PlayerF: curabitur pretium tincidunt lacus
+26-04-14 08:55:09	[Trade] PlayerK: curabitur pretium tincidunt lacus
+26-04-14 08:55:14	[Global] PlayerK: senectus et netus et malesuada
+26-04-14 08:55:20	[Trade] PlayerH: viverra mauris in aliquam sem
+26-04-14 08:55:21	[Global] PlayerI: sed do eiusmod tempor incididunt
+26-04-14 08:55:27	[Trade] PlayerH: consectetur adipiscing elit
+26-04-14 08:55:27	[Help] TestPlayer: excepteur sint occaecat cupidatat
+26-04-14 08:55:30	[Trade] PlayerH: eu fugiat nulla pariatur
+26-04-14 08:55:43	[Trade] PlayerB: qui officia deserunt mollit anim
+26-04-14 08:55:49	[Trade] PlayerH: fringilla ut morbi tincidunt augue
+26-04-14 08:55:58	[Trade] PlayerH: qui officia deserunt mollit anim
 26-04-14 08:56:03	[Status] Brain x5 added to inventory.
-26-04-14 08:56:20	[Global] FatBrute: omw
-26-04-14 08:56:24	[Trade] PizzaExpress: btw im a tool crafter here :D
+26-04-14 08:56:20	[Global] PlayerO: eu fugiat nulla pariatur
+26-04-14 08:56:24	[Trade] PlayerH: laboris nisi ut aliquip ex ea
 [Recipe: Awesome Spring Fairy Top (Max-Enchanted)] [Recipe: Awesome Spring Fairy Leggings (Max-Enchanted)] [Recipe: Awesome Spring Fairy Shoes (Max-Enchanted)]
-26-04-14 08:56:34	[Trade] PizzaExpress: bring me mats and get your spring fairy op
+26-04-14 08:56:34	[Trade] PlayerH: fringilla ut morbi tincidunt augue
 26-04-14 08:56:36	[Status] Brain added to inventory.
-26-04-14 08:56:56	[Trade] PizzaExpress: i swear im getting that level 100 sooner or later
+26-04-14 08:56:56	[Trade] PlayerH: ut enim ad minim veniam
 26-04-14 08:57:08	[Status] Osslar Skull added to inventory.
-26-04-14 08:57:09	[Global] Purrrfecta: anyone wana join up for ol' Pudders?
-26-04-14 08:57:16	[Trade] Dood: wtb Lv95 Darkness medallion craft :v
-26-04-14 08:57:32	[Global] Hansel: two out here for pudding now
-26-04-14 08:57:45	[Global] Hansel: 4!
-26-04-14 08:57:45	[Global] Fadette: omw Pud
-26-04-14 08:57:59	[Status] Saved report to C:/Users/danie/AppData/LocalLow/Elder Game/Project Gorgon/Reports/Zenith_Dreva_items_2026-04-14-15-57-59Z.json
-26-04-14 08:58:00	[Status] Saved report to C:/Users/danie/AppData/LocalLow/Elder Game/Project Gorgon/Reports/Character_Zenith_Dreva.json
-26-04-14 08:58:09	[Global] Rokken: omw pudding
-26-04-14 08:58:29	[Help] Heroican: for Mentalism, what's the calculation for crit chance based on phrenology?
-26-04-14 08:58:43	[Global] Antonius: falling through the world in vidaria is tiresome
-26-04-14 08:58:53	[Help] PizzaExpress: very low
-26-04-14 08:59:18	[Help] PizzaExpress: low enough to just ignore it
-26-04-14 08:59:28	[Global] Riitox: Anything that activates Batle Chemistry except for the beakers in main and offhand?
+26-04-14 08:57:09	[Global] PlayerI: ut labore et dolore magna aliqua
+26-04-14 08:57:16	[Trade] PlayerF: qui officia deserunt mollit anim
+26-04-14 08:57:32	[Global] PlayerI: excepteur sint occaecat cupidatat
+26-04-14 08:57:45	[Global] PlayerI: ut enim ad minim veniam
+26-04-14 08:57:45	[Global] PlayerL: fames ac turpis egestas
+26-04-14 08:57:59	[Status] Saved report to C:/Users/TestUser/AppData/LocalLow/Elder Game/Project Gorgon/Reports/TestPlayer_Dreva_items_2026-04-14-15-57-59Z.json
+26-04-14 08:58:00	[Status] Saved report to C:/Users/TestUser/AppData/LocalLow/Elder Game/Project Gorgon/Reports/Character_TestPlayer_Dreva.json
+26-04-14 08:58:09	[Global] PlayerA: duis aute irure dolor in reprehenderit
+26-04-14 08:58:29	[Help] PlayerF: eu fugiat nulla pariatur
+26-04-14 08:58:43	[Global] PlayerC: ut labore et dolore magna aliqua
+26-04-14 08:58:53	[Help] PlayerH: sed do eiusmod tempor incididunt
+26-04-14 08:59:18	[Help] PlayerH: viverra mauris in aliquam sem
+26-04-14 08:59:28	[Global] PlayerM: in voluptate velit esse cillum dolore
 26-04-14 08:59:36	**************************************** Logged Out

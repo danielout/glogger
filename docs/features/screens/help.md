@@ -24,7 +24,7 @@ Helper components:
 - **`ShortcutRow.vue`** — Keyboard shortcut display row.
 
 ### Glogger Changelog
-**`ChangelogTab.vue`** — Fetches release notes from the public GitHub releases repo (`danielout/glogger-release`) via the `fetch_github_releases` Tauri command. Renders markdown release bodies with basic formatting (headers, bold, code, lists). Loads on mount with retry on failure.
+**`ChangelogTab.vue`** — Fetches release notes from the GitHub releases (`danielout/glogger`) via the `fetch_github_releases` Tauri command. Renders markdown release bodies with basic formatting (headers, bold, code, lists). Loads on mount with retry on failure.
 
 ### Known Issues
 **`KnownIssuesTab.vue`** — Known bugs, limitations, and tips. Extracted from the original `HelpView`. Uses `IssueCard.vue` for individual entries with severity indicators (bug/limitation/cosmetic).
@@ -36,7 +36,7 @@ Helper components:
 
 Two Tauri commands in `src-tauri/src/external_fetch.rs` support the network tabs:
 
-- **`fetch_github_releases`** — Returns up to 20 releases from the `glogger-release` GitHub repo via the GitHub API.
+- **`fetch_github_releases`** — Returns up to 20 releases from the `glogger` GitHub repo via the GitHub API.
 - **`fetch_pg_news`** — Returns the raw text content from the PG news URL.
 
 Both use `reqwest` with a custom user agent, matching the pattern in `update_check.rs`.

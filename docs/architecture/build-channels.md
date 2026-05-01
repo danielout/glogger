@@ -17,8 +17,8 @@ glogger has three build channels, each with an isolated app data directory so th
 - **Window title:** `glogger v{version}` (production) / `glogger beta v{version}` (pre-1.0)
 - **How to build:** `npm run tauri:build`
 - **CI workflow:** `.github/workflows/release.yml` (manual dispatch)
-- **Published to:** `glogger-release` GitHub repo
-- **Auto-updater:** Yes — checks `glogger-release` for `latest.json`
+- **Published to:** `glogger` GitHub repo (Releases)
+- **Auto-updater:** Yes — checks `glogger` releases for `latest.json`
 
 ## Experimental
 
@@ -27,7 +27,7 @@ glogger has three build channels, each with an isolated app data directory so th
 - **Window title:** `glogger v{version} EXPERIMENTAL`
 - **How to build:** `npm run tauri:build:experimental`
 - **CI workflow:** `.github/workflows/experimental.yml` (manual dispatch)
-- **Published to:** `glogger-experimental` GitHub repo
+- **Published to:** `glogger` GitHub repo (pre-releases)
 - **Auto-updater:** Disabled — testers download manually
 
 ### Data seeding behavior
