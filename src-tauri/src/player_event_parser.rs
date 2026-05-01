@@ -286,6 +286,12 @@ pub enum PlayerEvent {
         corpse_entity_id: Option<u32>,
         /// Name of the corpse (e.g., "Bear Groupie"), if a CorpseSearch context is active
         corpse_name: Option<String>,
+        /// Resolved item name (from instance_registry or preceding UpdateItemCode)
+        item_name: Option<String>,
+        /// Resolved item type ID (from preceding UpdateItemCode encoding)
+        item_type_id: Option<u16>,
+        /// Quantity picked up (from preceding AddItem initial_quantity or UpdateItemCode delta)
+        quantity: u32,
     },
 }
 
@@ -744,6 +750,20 @@ pub struct PlayerEventParser {
     /// Set when we see ProcessInputBox with "Send Note to <player>",
     /// consumed when "Note Sent" confirmation appears.
     pending_stall_note_send: Option<PendingStallNoteSend>,
+
+    /// Last item event emitted in this process_line call. Used by parse_remove_loot
+    /// to identify the item for stacking cases where RemoveLoot has an orphaned instance_id.
+    last_item_event: Option<LastItemEvent>,
+}
+
+/// Tracks the most recent item gain event within a single process_line call.
+/// This allows ProcessRemoveLoot to resolve the item it refers to.
+#[derive(Clone)]
+struct LastItemEvent {
+    instance_id: u64,
+    item_name: String,
+    item_type_id: Option<u16>,
+    quantity: u32,
 }
 
 impl PlayerEventParser {
@@ -758,6 +778,7 @@ impl PlayerEventParser {
             pending_chat_gains: Vec::new(),
             pending_pigeon_send: None,
             pending_stall_note_send: None,
+            last_item_event: None,
         }
     }
 
@@ -969,11 +990,31 @@ impl PlayerEventParser {
             // Flush pending deletes before processing new events
             self.flush_pending_deletes(&mut events);
             if let Some(ev) = self.parse_add_item(line) {
+                // Track for RemoveLoot correlation
+                if let PlayerEvent::ItemAdded { instance_id, item_name, initial_quantity, .. } = &ev {
+                    self.last_item_event = Some(LastItemEvent {
+                        instance_id: *instance_id,
+                        item_name: item_name.clone(),
+                        item_type_id: None,
+                        quantity: *initial_quantity,
+                    });
+                }
                 events.push(ev);
             }
         } else if line.contains("ProcessUpdateItemCode(") {
             self.flush_pending_deletes(&mut events);
             if let Some(ev) = self.parse_update_item_code(line) {
+                // Track for RemoveLoot correlation (positive deltas only)
+                if let PlayerEvent::ItemStackChanged { instance_id, item_name, item_type_id, delta, .. } = &ev {
+                    if *delta > 0 {
+                        self.last_item_event = Some(LastItemEvent {
+                            instance_id: *instance_id,
+                            item_name: item_name.clone().unwrap_or_default(),
+                            item_type_id: Some(*item_type_id),
+                            quantity: *delta as u32,
+                        });
+                    }
+                }
                 events.push(ev);
             }
         } else if line.contains("ProcessDeleteItem(") {
@@ -1731,7 +1772,7 @@ impl PlayerEventParser {
     /// ProcessRemoveLoot(instanceId)
     /// Fires when the player picks up an item from a corpse's loot window.
     /// Skinning/butchering rewards do NOT produce this event.
-    fn parse_remove_loot(&self, line: &str) -> Option<PlayerEvent> {
+    fn parse_remove_loot(&mut self, line: &str) -> Option<PlayerEvent> {
         let ts = parse_timestamp(line)?;
         let args_start = line.find("ProcessRemoveLoot(")? + "ProcessRemoveLoot(".len();
         let args_end = line[args_start..].find(')')? + args_start;
@@ -1752,11 +1793,36 @@ impl PlayerEventParser {
             None => (None, None),
         };
 
+        // Resolve item identity:
+        // 1. Direct match: instance_id matches a known item from instance_registry
+        //    (set by a preceding ProcessAddItem with the same id)
+        // 2. Fallback: use last_item_event (the most recent AddItem/UpdateItemCode)
+        //    This handles the stacking case where RemoveLoot has an orphaned id
+        let (item_name, item_type_id, quantity) =
+            if let Some(info) = self.instance_registry.get(&instance_id) {
+                // Direct match — this instance was seen in a ProcessAddItem
+                let qty = self.last_item_event
+                    .as_ref()
+                    .filter(|e| e.instance_id == instance_id)
+                    .map(|e| e.quantity)
+                    .unwrap_or(1);
+                (Some(info.item_name.clone()), info.item_type_id, qty)
+            } else if let Some(last) = &self.last_item_event {
+                // Orphaned instance_id (stacking case) — use the immediately
+                // preceding UpdateItemCode which is the item that grew
+                (Some(last.item_name.clone()), last.item_type_id, last.quantity)
+            } else {
+                (None, None, 1)
+            };
+
         Some(PlayerEvent::LootPickedUp {
             timestamp: ts,
             instance_id,
             corpse_entity_id,
             corpse_name,
+            item_name,
+            item_type_id,
+            quantity,
         })
     }
 

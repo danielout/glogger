@@ -306,6 +306,9 @@ export interface LootPickedUpEvent {
   instance_id: number
   corpse_entity_id: number | null
   corpse_name: string | null
+  item_name: string | null
+  item_type_id: number | null
+  quantity: number
 }
 
 // === Union Type ===

@@ -112,18 +112,6 @@ pub struct DataIngestCoordinator {
     /// Maps enemy entity_id → (kill_row_id, timestamp) for attributing corpse loot
     /// to specific kills. Entries expire after 120 seconds.
     recent_kills: std::collections::HashMap<String, (i64, std::time::Instant)>,
-    /// Rolling buffer of recent item gain events for correlating with LootPickedUp.
-    /// Keyed by instance_id so we can match ProcessRemoveLoot to the actual item.
-    recent_item_events: Vec<RecentItemEvent>,
-}
-
-/// A recent item gain event, buffered for correlation with LootPickedUp events.
-struct RecentItemEvent {
-    instance_id: u64,
-    item_name: String,
-    quantity: i32,
-    item_type_id: Option<u16>,
-    timestamp: std::time::Instant,
 }
 
 impl DataIngestCoordinator {
@@ -165,7 +153,6 @@ impl DataIngestCoordinator {
             debug_capture: DebugCaptureState::new(),
             pending_cow_interaction: None,
             recent_kills: std::collections::HashMap::new(),
-            recent_item_events: Vec::new(),
         })
     }
 
@@ -1419,131 +1406,41 @@ impl DataIngestCoordinator {
         }
     }
 
-    /// Process a batch of player events to:
-    /// 1. Buffer recent item gains for correlation with LootPickedUp
-    /// 2. When LootPickedUp arrives, match it to the actual item and link to a kill
+    /// Process a batch of player events for LootPickedUp signals.
+    /// The parser now resolves item identity directly in LootPickedUp events,
+    /// so the coordinator just needs to link them to kills.
     fn attribute_loot_to_kills(&mut self, events: &[PlayerEvent]) {
-        // Prune expired entries (> 30s old)
-        self.recent_item_events
-            .retain(|e| e.timestamp.elapsed().as_secs() < 30);
-
-        let now = std::time::Instant::now();
-
-        for event in events {
-            match event {
-                // Buffer item gains for later correlation
-                PlayerEvent::ItemAdded {
-                    item_name,
-                    instance_id,
-                    initial_quantity,
-                    ..
-                } => {
-                    self.recent_item_events.push(RecentItemEvent {
-                        instance_id: *instance_id,
-                        item_name: item_name.clone(),
-                        quantity: *initial_quantity as i32,
-                        item_type_id: None,
-                        timestamp: now,
-                    });
-                }
-                PlayerEvent::ItemStackChanged {
-                    instance_id,
-                    item_name,
-                    item_type_id,
-                    delta,
-                    ..
-                } => {
-                    if *delta > 0 {
-                        let name = item_name
-                            .as_deref()
-                            .unwrap_or("")
-                            .to_string();
-                        self.recent_item_events.push(RecentItemEvent {
-                            instance_id: *instance_id,
-                            item_name: name,
-                            quantity: *delta,
-                            item_type_id: Some(*item_type_id),
-                            timestamp: now,
-                        });
-                    }
-                }
-
-                // LootPickedUp — the ground truth signal that an item came from a corpse
-                PlayerEvent::LootPickedUp {
-                    instance_id,
-                    corpse_entity_id,
-                    corpse_name,
-                    ..
-                } => {
-                    let corpse_entity_id = match corpse_entity_id {
-                        Some(id) => id,
-                        None => continue, // No active corpse search context
-                    };
-
-                    // Find the kill_id for this corpse entity
-                    let kill_id = match self
-                        .recent_kills
-                        .get(&corpse_entity_id.to_string())
-                    {
-                        Some((id, _)) => *id,
-                        None => continue, // Corpse wasn't from a tracked kill
-                    };
-
-                    // Try to identify the item:
-                    // 1. Direct instance_id match (new stack case — AddItem used same id)
-                    // 2. Most recent ItemStackChanged with a matching item_type_id (stacking case)
-                    let matched = self
-                        .recent_item_events
-                        .iter()
-                        .rev()
-                        .find(|e| e.instance_id == *instance_id);
-
-                    let (item_name, quantity) = if let Some(m) = matched {
-                        (m.item_name.clone(), m.quantity)
-                    } else {
-                        // Stacking case: the RemoveLoot instance_id doesn't match any
-                        // AddItem. Find the most recent positive ItemStackChanged in this
-                        // batch — it's the item that was updated when this loot merged.
-                        // We look for events from this same batch (timestamp == now).
-                        let stacking_match = self
-                            .recent_item_events
-                            .iter()
-                            .rev()
-                            .find(|e| {
-                                e.item_type_id.is_some()
-                                    && e.timestamp == now
-                                    && !e.item_name.is_empty()
-                            });
-
-                        match stacking_match {
-                            Some(m) => (m.item_name.clone(), m.quantity),
-                            None => continue, // Can't identify the item
-                        }
-                    };
-
-                    if item_name.is_empty() {
-                        continue;
-                    }
-
-                    // Persist to enemy_kill_loot
-                    if let Ok(conn) = self.db_pool.get() {
-                        conn.execute(
-                            "INSERT INTO enemy_kill_loot (kill_id, item_name, quantity) VALUES (?1, ?2, ?3)",
-                            rusqlite::params![kill_id, item_name, quantity],
-                        )
-                        .ok();
-
-                        let _ = corpse_name; // used for debugging if needed
-                    }
-                }
-
-                _ => {}
-            }
+        if self.recent_kills.is_empty() {
+            return;
         }
 
-        // Cap buffer size
-        if self.recent_item_events.len() > 200 {
-            self.recent_item_events.drain(..self.recent_item_events.len() - 100);
+        for event in events {
+            if let PlayerEvent::LootPickedUp {
+                corpse_entity_id: Some(corpse_entity_id),
+                item_name: Some(item_name),
+                quantity,
+                ..
+            } = event
+            {
+                if item_name.is_empty() {
+                    continue;
+                }
+
+                // Find the kill_id for this corpse entity
+                let kill_id = match self.recent_kills.get(&corpse_entity_id.to_string()) {
+                    Some((id, _)) => *id,
+                    None => continue,
+                };
+
+                // Persist to enemy_kill_loot
+                if let Ok(conn) = self.db_pool.get() {
+                    conn.execute(
+                        "INSERT INTO enemy_kill_loot (kill_id, item_name, quantity) VALUES (?1, ?2, ?3)",
+                        rusqlite::params![kill_id, item_name, *quantity],
+                    )
+                    .ok();
+                }
+            }
         }
     }
 
