@@ -1778,8 +1778,10 @@ impl PlayerEventParser {
         let args_end = line[args_start..].find(')')? + args_start;
         let instance_id: u64 = line[args_start..args_end].trim().parse().ok()?;
 
-        // Attach the active CorpseSearch context info, if any
-        let corpse_ctx = self.activity_contexts.iter().find(|c| {
+        // Attach the most recent CorpseSearch context (last = most recently opened).
+        // Multiple corpse searches can be active simultaneously (30s timeout each),
+        // so we must use the newest one — that's the corpse currently being looted.
+        let corpse_ctx = self.activity_contexts.iter().rev().find(|c| {
             matches!(&c.source, ActivitySource::CorpseSearch { .. })
         });
         let (corpse_entity_id, corpse_name) = match corpse_ctx {
@@ -1807,9 +1809,11 @@ impl PlayerEventParser {
                     .map(|e| e.quantity)
                     .unwrap_or(1);
                 (Some(info.item_name.clone()), info.item_type_id, qty)
-            } else if let Some(last) = &self.last_item_event {
+            } else if let Some(last) = self.last_item_event.take() {
                 // Orphaned instance_id (stacking case) — use the immediately
-                // preceding UpdateItemCode which is the item that grew
+                // preceding UpdateItemCode which is the item that grew.
+                // Take (consume) it so a second RemoveLoot in the same tick
+                // without its own UpdateItemCode won't reuse this match.
                 (Some(last.item_name.clone()), last.item_type_id, last.quantity)
             } else {
                 (None, None, 1)

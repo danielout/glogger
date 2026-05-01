@@ -1201,8 +1201,21 @@ ProcessRemoveLoot(203413293)                          ← orphaned instanceId (n
 
 1. Parse `ProcessRemoveLoot(instanceId)` during a `CorpseSearch` context
 2. Check if `instanceId` matches a recent `ProcessAddItem` → item identity known directly
-3. If no match (stacking case), find the `ProcessUpdateItemCode` in the same tick → decode `encodedValue & 0xFFFF` for `itemTypeId`, resolve to item name via CDN
-4. Ignore `ProcessAddItem`/`ProcessUpdateItemCode` events during `CorpseSearch` that are **not** followed by `ProcessRemoveLoot` → those are skinning/butchering rewards
+3. If no match (stacking case), use the immediately preceding `ProcessUpdateItemCode` (the parser's `last_item_event`) → it contains the `itemTypeId` and item name from the instance registry
+4. Consume `last_item_event` after fallback use (`.take()`) so a second orphaned `RemoveLoot` doesn't reuse a stale match
+5. Ignore `ProcessAddItem`/`ProcessUpdateItemCode` events during `CorpseSearch` that are **not** followed by `ProcessRemoveLoot` → those are skinning/butchering rewards
+
+**Corpse lifecycle signals:**
+
+| Signal | Meaning | Reliability |
+|--------|---------|-------------|
+| `ProcessTalkScreen(entityId, "Search Corpse of X", ...)` | Corpse search opened — new CorpseSearch context | Always fires |
+| `ProcessTalkScreen` for a **different** entityId | Previous corpse interaction ended | Always fires |
+| `ProcessScreenText(GeneralInfo, "You bury the corpse.")` | Anatomy performed — strong signal that corpse interaction is complete | Not always (bosses/elites can't be buried, some players skip it) |
+| `ProcessTalkScreen(entityId, ..., [], ...)` (empty buttons) | All actions consumed on this corpse (skinned/butchered/looted) | Reliable but doesn't mean player is done clicking |
+| CorpseSearch context timeout (30s) | Auto-cleanup if no explicit close | Fallback only |
+
+Note: neither Player.log nor Chat.log has millisecond timestamps, so events within the same second can't be reliably ordered across logs. Within a single log file, line order is authoritative.
 
 ### Motherlode Survey Lifecycle
 
