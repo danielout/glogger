@@ -1426,6 +1426,81 @@ pub async fn set_mushroom_circles(
     Ok(())
 }
 
+// ── Item ownership lookup ──────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ItemOwnershipLocation {
+    pub location: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ItemOwnershipInfo {
+    pub total_count: i64,
+    pub locations: Vec<ItemOwnershipLocation>,
+}
+
+#[tauri::command]
+pub fn get_item_ownership(
+    db: State<'_, DbPool>,
+    character_name: String,
+    server_name: String,
+    item_name: String,
+) -> Result<ItemOwnershipInfo, String> {
+    let conn = db.get().map_err(|e| format!("Database error: {e}"))?;
+
+    let mut locations: Vec<ItemOwnershipLocation> = Vec::new();
+
+    // Inventory
+    let inv_count: i64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(stack_size), 0) FROM game_state_inventory
+             WHERE character_name = ?1 AND server_name = ?2 AND item_name = ?3",
+            rusqlite::params![character_name, server_name, item_name],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
+
+    if inv_count > 0 {
+        locations.push(ItemOwnershipLocation {
+            location: "Inventory".to_string(),
+            count: inv_count,
+        });
+    }
+
+    // Storage vaults
+    let mut stmt = conn
+        .prepare(
+            "SELECT vault_key, SUM(stack_size) FROM game_state_storage
+             WHERE character_name = ?1 AND server_name = ?2 AND item_name = ?3
+             GROUP BY vault_key ORDER BY vault_key",
+        )
+        .map_err(|e| format!("Query error: {e}"))?;
+
+    let vault_rows = stmt
+        .query_map(rusqlite::params![character_name, server_name, item_name], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+        })
+        .map_err(|e| format!("Query error: {e}"))?;
+
+    for row in vault_rows {
+        let (vault_key, count) = row.map_err(|e| format!("Row error: {e}"))?;
+        if count > 0 {
+            locations.push(ItemOwnershipLocation {
+                location: vault_key,
+                count,
+            });
+        }
+    }
+
+    let total_count: i64 = locations.iter().map(|l| l.count).sum();
+
+    Ok(ItemOwnershipInfo {
+        total_count,
+        locations,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

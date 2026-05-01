@@ -92,16 +92,18 @@ pub struct ItemDropSource {
     pub drop_rate: f64,
 }
 
-/// Given an item name, find all enemies that have dropped it and their drop rates.
+/// Given an item name (display or internal), find all enemies that have dropped it and their drop rates.
 #[tauri::command]
 pub fn get_item_drop_sources(
     db: State<'_, DbPool>,
     item_name: String,
+    internal_name: Option<String>,
 ) -> Result<Vec<ItemDropSource>, String> {
     let conn = db
         .get()
         .map_err(|e| format!("Database connection error: {e}"))?;
 
+    // Match on either display name or internal name (loot table stores internal names from log)
     let mut stmt = conn
         .prepare(
             "SELECT k.enemy_name,
@@ -110,14 +112,14 @@ pub fn get_item_drop_sources(
                     SUM(l.quantity) as total_qty
              FROM enemy_kill_loot l
              JOIN enemy_kills k ON l.kill_id = k.id
-             WHERE l.item_name = ?1
+             WHERE l.item_name = ?1 OR (?2 IS NOT NULL AND l.item_name = ?2)
              GROUP BY k.enemy_name
              ORDER BY times_dropped DESC, total_qty DESC",
         )
         .map_err(|e| format!("Failed to prepare drop source query: {e}"))?;
 
     let rows = stmt
-        .query_map([&item_name], |row| {
+        .query_map(rusqlite::params![&item_name, &internal_name], |row| {
             let enemy_name: String = row.get(0)?;
             let times_dropped: i64 = row.get(2)?;
             Ok((enemy_name, row.get::<_, i64>(1)?, times_dropped, row.get::<_, i64>(3)?))

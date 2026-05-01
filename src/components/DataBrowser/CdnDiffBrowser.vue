@@ -31,27 +31,34 @@
 
         <!-- File list -->
         <div v-if="summaryLoaded" class="flex-1 overflow-y-auto">
-          <button
-            v-for="file in sortedSummary"
-            :key="file.file_name"
-            class="w-full text-left bg-transparent border-none px-3 py-2 cursor-pointer text-xs font-mono transition-colors hover:bg-surface-elevated border-b border-border-default"
-            :class="{
-              'bg-surface-elevated! text-text-primary': selectedFile === file.file_name,
-              'text-text-secondary': selectedFile !== file.file_name,
-              'opacity-40': !fileHasChanges(file),
-            }"
-            @click="selectFile(file.file_name)"
-          >
-            <div class="flex items-center justify-between">
-              <span>{{ file.file_name }}</span>
-              <div v-if="fileHasChanges(file)" class="flex gap-1.5">
-                <span v-if="file.added_count" class="text-accent-green">+{{ file.added_count }}</span>
-                <span v-if="file.removed_count" class="text-accent-red">-{{ file.removed_count }}</span>
-                <span v-if="file.changed_count" class="text-accent-gold">~{{ file.changed_count }}</span>
-              </div>
-              <span v-else class="text-text-dim">--</span>
+          <template v-for="(file, idx) in sortedSummary" :key="file.file_name">
+            <!-- Section divider between data files and translation files -->
+            <div
+              v-if="isTranslationFile(file.file_name) && idx > 0 && !isTranslationFile(sortedSummary[idx - 1].file_name)"
+              class="px-3 py-1.5 text-[0.6rem] uppercase tracking-wider text-text-dim bg-surface-dark/40 border-b border-border-default"
+            >
+              Translation Strings
             </div>
-          </button>
+            <button
+              class="w-full text-left bg-transparent border-none px-3 py-2 cursor-pointer text-xs font-mono transition-colors hover:bg-surface-elevated border-b border-border-default"
+              :class="{
+                'bg-surface-elevated! text-text-primary': selectedFile === file.file_name,
+                'text-text-secondary': selectedFile !== file.file_name,
+                'opacity-40': !fileHasChanges(file),
+              }"
+              @click="selectFile(file.file_name)"
+            >
+              <div class="flex items-center justify-between">
+                <span>{{ file.file_name }}</span>
+                <div v-if="fileHasChanges(file)" class="flex gap-1.5">
+                  <span v-if="file.added_count" class="text-accent-green">+{{ file.added_count }}</span>
+                  <span v-if="file.removed_count" class="text-accent-red">-{{ file.removed_count }}</span>
+                  <span v-if="file.changed_count" class="text-accent-gold">~{{ file.changed_count }}</span>
+                </div>
+                <span v-else class="text-text-dim">--</span>
+              </div>
+            </button>
+          </template>
         </div>
       </div>
     </template>
@@ -223,13 +230,42 @@ const summaryError = ref<string | null>(null);
 const summary = ref<FileDiffSummary[]>([]);
 const currentVersion = ref(0);
 
+const TRANSLATION_FILE_NAMES = new Set([
+  "strings_abilities",
+  "strings_ai",
+  "strings_areas",
+  "strings_attributes",
+  "strings_directedgoals",
+  "strings_effects",
+  "strings_items",
+  "strings_lorebookinfo",
+  "strings_lorebooks",
+  "strings_npcs",
+  "strings_playertitles",
+  "strings_quests",
+  "strings_recipes",
+  "strings_requested",
+  "strings_skills",
+  "strings_storagevaults",
+  "strings_tsysclientinfo",
+  "strings_ui",
+]);
+
+function isTranslationFile(name: string): boolean {
+  return TRANSLATION_FILE_NAMES.has(name);
+}
+
+/** Data files first (sorted by change count), then translation files (same sort). */
 const sortedSummary = computed(() => {
-  return [...summary.value].sort((a, b) => {
+  const byChanges = (a: FileDiffSummary, b: FileDiffSummary) => {
     const aChanges = a.added_count + a.removed_count + a.changed_count;
     const bChanges = b.added_count + b.removed_count + b.changed_count;
     if (aChanges !== bChanges) return bChanges - aChanges;
     return a.file_name.localeCompare(b.file_name);
-  });
+  };
+  const data = summary.value.filter((f) => !isTranslationFile(f.file_name));
+  const translation = summary.value.filter((f) => isTranslationFile(f.file_name));
+  return [...data.sort(byChanges), ...translation.sort(byChanges)];
 });
 
 function fileHasChanges(file: FileDiffSummary): boolean {

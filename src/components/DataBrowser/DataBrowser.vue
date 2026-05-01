@@ -23,6 +23,9 @@
         <template v-else-if="activeTab === 'enemies'">
           <EnemyBrowser :nav-target="props.navTarget" />
         </template>
+        <template v-else-if="activeTab === 'areas'">
+          <AreaBrowser :nav-target="props.navTarget" />
+        </template>
         <template v-else-if="activeTab === 'effects'">
           <EffectBrowser />
         </template>
@@ -50,6 +53,7 @@ import RecipeBrowser from "./RecipeBrowser.vue";
 import QuestBrowser from "./QuestBrowser.vue";
 import NpcBrowser from "./NpcBrowser.vue";
 import EnemyBrowser from "./EnemyBrowser.vue";
+import AreaBrowser from "./AreaBrowser.vue";
 import EffectBrowser from "./EffectBrowser.vue";
 import LoreBrowser from "./LoreBrowser.vue";
 import TitleBrowser from "./TitleBrowser.vue";

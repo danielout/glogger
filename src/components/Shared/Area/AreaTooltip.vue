@@ -20,6 +20,19 @@
       </div>
     </div>
 
+    <!-- Monsters in this area -->
+    <div v-if="areaMonsters.length" class="mb-1.5">
+      <div class="text-text-muted text-[10px] uppercase tracking-wide mb-1">Monsters</div>
+      <div class="flex flex-wrap gap-x-1.5 gap-y-0.5 text-xs">
+        <template v-for="(name, idx) in displayedMonsters" :key="name">
+          <EnemyInline :reference="name" /><span v-if="idx < displayedMonsters.length - 1" class="text-text-dim">,</span>
+        </template>
+      </div>
+      <div v-if="areaMonsters.length > maxMonsters" class="text-text-dim text-[10px] mt-0.5">
+        +{{ areaMonsters.length - maxMonsters }} more
+      </div>
+    </div>
+
     <!-- Area key (subtle) -->
     <div class="text-text-dim text-[10px] mt-1">
       {{ areaKey }}
@@ -28,10 +41,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
 import { useGameDataStore } from '../../../stores/gameDataStore'
 import type { NpcInfo } from '../../../types/gameData'
 import NpcInline from '../NPC/NpcInline.vue'
+import EnemyInline from '../Enemy/EnemyInline.vue'
 
 const props = defineProps<{
   areaKey: string
@@ -40,6 +55,7 @@ const props = defineProps<{
 }>()
 
 const maxNpcs = 8
+const maxMonsters = 12
 
 const gameData = useGameDataStore()
 
@@ -52,4 +68,17 @@ const areaNpcs = computed<NpcInfo[]>(() => {
 })
 
 const displayedNpcs = computed(() => areaNpcs.value.slice(0, maxNpcs))
+
+// Monsters in this area (loaded from translation strings)
+const areaMonsters = ref<string[]>([])
+
+watchEffect(async () => {
+  try {
+    areaMonsters.value = await invoke<string[]>('get_monsters_in_area', { area: props.areaKey })
+  } catch {
+    areaMonsters.value = []
+  }
+})
+
+const displayedMonsters = computed(() => areaMonsters.value.slice(0, maxMonsters))
 </script>

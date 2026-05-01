@@ -65,6 +65,9 @@
               <div v-if="visitedTypes.has('enemies')" v-show="store.activeType === 'enemies'" class="h-full">
                 <EnemyBrowser :nav-target="store.activeType === 'enemies' ? navTarget : null" />
               </div>
+              <div v-if="visitedTypes.has('areas')" v-show="store.activeType === 'areas'" class="h-full">
+                <AreaBrowser :nav-target="store.activeType === 'areas' ? navTarget : null" />
+              </div>
               <div v-if="visitedTypes.has('effects')" v-show="store.activeType === 'effects'" class="h-full">
                 <EffectBrowser />
               </div>
@@ -103,6 +106,7 @@ import RecipeBrowser from "./RecipeBrowser.vue";
 import QuestBrowser from "./QuestBrowser.vue";
 import NpcBrowser from "./NpcBrowser.vue";
 import EnemyBrowser from "./EnemyBrowser.vue";
+import AreaBrowser from "./AreaBrowser.vue";
 import EffectBrowser from "./EffectBrowser.vue";
 import LoreBrowser from "./LoreBrowser.vue";
 import TitleBrowser from "./TitleBrowser.vue";

@@ -62,6 +62,9 @@ use cdn_commands::{
     get_lorebook_categories,
     get_recipe_ingredient_keywords,
     get_npcs_in_area,
+    get_monsters_in_area,
+    get_all_areas,
+    get_all_monsters,
     get_quest_sources,
     get_recipe_sources,
     get_recipes_for_item,
@@ -76,6 +79,7 @@ use cdn_commands::{
     get_vendors_for_item,
     get_storage_vault_metadata,
     get_storage_vault_zones,
+    get_storage_vaults_in_area,
     get_all_tsys,
     get_tsys_power_info,
     get_tsys_power_info_batch,
@@ -181,7 +185,7 @@ use db::game_state_commands::{
     get_character_report_stats, get_game_state_books, get_game_state_storage,
     get_game_state_vendor, get_game_state_world, get_gift_log, get_milking_timers,
     add_manual_gift, remove_last_gift, set_manual_vendor_gold, get_tracked_skills, set_tracked_skills,
-    get_computed_stats,
+    get_computed_stats, get_item_ownership,
     get_attribute_extremes,
     get_player_milking_leaderboard,
     get_teleportation_binds,
@@ -542,6 +546,9 @@ pub fn run() {
             get_all_npcs,
             search_npcs,
             get_npcs_in_area,
+            get_monsters_in_area,
+            get_all_areas,
+            get_all_monsters,
             // Enemy (AI) queries
             get_all_enemies,
             search_enemies,
@@ -571,6 +578,7 @@ pub fn run() {
             // Storage vault queries
             get_storage_vault_zones,
             get_storage_vault_metadata,
+            get_storage_vaults_in_area,
             // Icons
             get_icon_path,
             // Source queries
@@ -757,6 +765,7 @@ pub fn run() {
             get_milking_timers,
             get_character_report_stats,
             get_computed_stats,
+            get_item_ownership,
             get_attribute_extremes,
             get_player_milking_leaderboard,
             get_tracked_skills,

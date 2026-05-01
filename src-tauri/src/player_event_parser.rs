@@ -275,6 +275,18 @@ pub enum PlayerEvent {
         /// Attached item name (pigeons only)
         item_name: Option<String>,
     },
+
+    // === Loot Events ===
+    /// Fired when an item is picked up from a corpse's loot window.
+    /// Only actual drops produce this — skinning/butchering rewards do not.
+    LootPickedUp {
+        timestamp: String,
+        instance_id: u64,
+        /// Entity ID of the corpse being searched, if a CorpseSearch context is active
+        corpse_entity_id: Option<u32>,
+        /// Name of the corpse (e.g., "Bear Groupie"), if a CorpseSearch context is active
+        corpse_name: Option<String>,
+    },
 }
 
 #[derive(serde::Serialize, Clone, Debug, PartialEq)]
@@ -1006,6 +1018,11 @@ impl PlayerEventParser {
             if let Some(ev) = self.parse_remove_from_storage(line) {
                 events.push(ev);
             }
+        } else if line.contains("ProcessRemoveLoot(") {
+            self.flush_pending_deletes(&mut events);
+            if let Some(ev) = self.parse_remove_loot(line) {
+                events.push(ev);
+            }
         } else if line.contains("ProcessDoDelayLoop(") {
             self.flush_pending_deletes(&mut events);
             if let Some(ev) = self.parse_delay_loop(line) {
@@ -1708,6 +1725,38 @@ impl PlayerEventParser {
             instance_id,
             quantity,
             provenance,
+        })
+    }
+
+    /// ProcessRemoveLoot(instanceId)
+    /// Fires when the player picks up an item from a corpse's loot window.
+    /// Skinning/butchering rewards do NOT produce this event.
+    fn parse_remove_loot(&self, line: &str) -> Option<PlayerEvent> {
+        let ts = parse_timestamp(line)?;
+        let args_start = line.find("ProcessRemoveLoot(")? + "ProcessRemoveLoot(".len();
+        let args_end = line[args_start..].find(')')? + args_start;
+        let instance_id: u64 = line[args_start..args_end].trim().parse().ok()?;
+
+        // Attach the active CorpseSearch context info, if any
+        let corpse_ctx = self.activity_contexts.iter().find(|c| {
+            matches!(&c.source, ActivitySource::CorpseSearch { .. })
+        });
+        let (corpse_entity_id, corpse_name) = match corpse_ctx {
+            Some(c) => match &c.source {
+                ActivitySource::CorpseSearch {
+                    entity_id,
+                    corpse_name,
+                } => (Some(*entity_id), Some(corpse_name.clone())),
+                _ => (None, None),
+            },
+            None => (None, None),
+        };
+
+        Some(PlayerEvent::LootPickedUp {
+            timestamp: ts,
+            instance_id,
+            corpse_entity_id,
+            corpse_name,
         })
     }
 
