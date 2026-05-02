@@ -2,18 +2,18 @@
 
 ## Overview
 
-The character screen is an 8-tab hub for all character-specific data: skill progression, character report stats, NPC relationships, quest tracking, death tracking, gourmand progress, Statehelm reputation tracking, build planning, and account-wide analytics. Data comes from a mix of live session tracking, persisted game state, character report imports, and CDN enrichment.
+The character screen is a 9-tab hub for all character-specific data: skill progression, character report stats, NPC relationships, quest tracking, death tracking, gourmand progress, Statehelm reputation tracking, build planning, and account-wide analytics. Data comes from a mix of live session tracking, persisted game state, character report imports, and CDN enrichment.
 
 ## Architecture
 
 ### Files
 
 **Frontend (Vue/TS):**
-- `src/components/Character/CharacterView.vue` — 8-tab container
+- `src/components/Character/CharacterView.vue` — 9-tab container
 - `src/components/Character/SkillsScreen.vue` — skills tab (two-panel + tracked skills)
 - `src/components/Character/NpcsScreen.vue` — NPCs tab (two-panel favor/services)
 - `src/components/Character/QuestsScreen.vue` — quests tab (two-panel with eligibility)
-- Stats, Gourmand, and Build Planner tabs are rendered inline in CharacterView
+- Stats, Gourmand, Build Planner, and Account tabs are rendered inline in CharacterView
 
 **Stores:**
 - `characterStore` — character report import, snapshot management, recipe/NPC data
@@ -23,34 +23,44 @@ The character screen is an 8-tab hub for all character-specific data: skill prog
 ### Component Hierarchy
 
 ```
-CharacterView.vue                   — 8-tab container
+CharacterView.vue                   — 9-tab container
 ├── SkillsScreen.vue                — unified skill view
 │   ├── TrackedSkillsBar.vue        — pinned skill cards at top
 │   │   └── TrackedSkillCard.vue    — individual tracked skill
 │   ├── SkillListPanel.vue          — filterable/sortable skill list (left)
 │   └── SkillDetailPanel.vue        — selected skill detail (right)
 ├── Stats tab (inline)              — character report snapshots
-│   ├── SnapshotList.vue            — snapshot selector
 │   ├── SnapshotComparison.vue      — compare two snapshots
 │   ├── SkillTable.vue              — skill levels from report
 │   ├── StatsTable.vue              — combat/attribute stats
 │   ├── CurrencyTable.vue           — currency holdings
-│   └── RecipeTable.vue             — known recipes
+│   ├── RecipeTable.vue             — known recipes
+│   ├── ReportStatsSection.vue      — report-sourced stats
+│   ├── ComputedStatsCard.vue       — computed stat summaries
+│   └── PlayerAttributesCard.vue    — live player attributes
 ├── NpcsScreen.vue                  — NPC relationships
 │   ├── NpcListPanel.vue            — searchable NPC list (left)
+│   ├── NpcFilterPanel.vue          — NPC filter controls
 │   └── NpcDetailPanel.vue          — selected NPC detail (right)
 │       ├── NpcFavorSection.vue     — favor level and progress
 │       ├── NpcServicesSection.vue  — vendor/training/barter/storage
-│       └── NpcPreferencesSection.vue — gift preferences
+│       ├── NpcPreferencesSection.vue — gift preferences
+│       ├── NpcGiftCalculatorSection.vue — gift calculator
+│       ├── NpcInventoryGiftsSection.vue — inventory gift matching
+│       ├── NpcQuestsSection.vue    — NPC-related quests
+│       ├── NpcStorageSection.vue   — NPC storage access
+│       └── NpcVendorSection.vue    — vendor inventory/gold
 ├── QuestsScreen.vue                — quest reference with eligibility
 │   ├── QuestListPanel.vue          — searchable quest list (left)
 │   └── QuestDetailPanel.vue        — selected quest detail (right)
 │       ├── QuestRequirementsSection.vue
 │       ├── QuestObjectivesSection.vue
 │       └── QuestRewardsSection.vue
-├── Gourmand tab                    — food tracking for Gourmand skill
+├── DeathsView.vue                  — death tracking and analysis
+├── Gourmand tab (GourmandView)     — food tracking for Gourmand skill
 ├── StatehelmView.vue               — Statehelm weekly gift tracker
-└── Build Planner tab               — combat build planning (mods, abilities, CP budget)
+├── Build Planner tab               — combat build planning (mods, abilities, CP budget)
+└── Account tab (AggregateView)     — account-wide analytics
 ```
 
 ## Per-Tab Documentation
@@ -59,6 +69,7 @@ CharacterView.vue                   — 8-tab container
 - [character-stats.md](character/character-stats.md) — Stats: character report import, snapshot management
 - [character-npcs.md](character/character-npcs.md) — NPCs: favor progression, services, gift preferences
 - [character-quests.md](character/character-quests.md) — Quests: personalized quest reference with requirement eligibility
+- [character-deaths.md](character/character-deaths.md) — Deaths: death tracking, killer analysis, damage sources
 - [character-gourmand.md](character/character-gourmand.md) — Gourmand: food tracking and progress
 - [character-statehelm.md](character/character-statehelm.md) — Statehelm: weekly gift tracking and NPC services
 - [character-buildplanner.md](character/character-buildplanner.md) — Build Planner: combat build planning with mod/ability/CP management

@@ -252,6 +252,11 @@ pub fn run_migrations(conn: &Connection, tz_offset_seconds: Option<i32>) -> Resu
         super::record_migration(conn, 45)?;
     }
 
+    if current_version < 46 {
+        migration_v46_gourmand_manually_marked(conn)?;
+        super::record_migration(conn, 46)?;
+    }
+
     Ok(())
 }
 
@@ -2307,6 +2312,19 @@ fn migration_v44_hoplology_dedup(conn: &Connection) -> Result<()> {
          ALTER TABLE hoplology_studies_new RENAME TO hoplology_studies;
          CREATE INDEX IF NOT EXISTS idx_hoplology_char_server
              ON hoplology_studies(character_name, server_name, studied_at DESC);"
+    )?;
+    Ok(())
+}
+
+/// Migration V46: Add `manually_marked` column to `gourmand_eaten_foods`.
+///
+/// This column was added to the v1 schema definition (for fresh installs) but
+/// no incremental migration was created, so existing databases from before that
+/// edit are missing it. All existing rows get `manually_marked = 0` (imported
+/// from report, not manually toggled).
+fn migration_v46_gourmand_manually_marked(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "ALTER TABLE gourmand_eaten_foods ADD COLUMN manually_marked INTEGER NOT NULL DEFAULT 0;",
     )?;
     Ok(())
 }
