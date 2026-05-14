@@ -11,7 +11,7 @@ use tauri::State;
 
 use crate::cdn_commands::GameDataState;
 use crate::db::DbPool;
-use crate::settings::SettingsManager;
+use crate::settings::{get_default_player_log_path, SettingsManager};
 
 /// Timestamped log line for startup diagnostics.
 macro_rules! startup_log {
@@ -65,9 +65,15 @@ struct ReportHeader {
 #[tauri::command]
 pub fn validate_game_data_path(path: String) -> GameDataPathValidation {
     let base = Path::new(&path);
+
+    // Player.log may live alongside game data (Windows) or at the default
+    // macOS path (~/Library/Logs/Elder Game/Project Gorgon/Player.log).
+    let player_log_found = base.join("Player.log").exists()
+        || Path::new(&get_default_player_log_path()).exists();
+
     GameDataPathValidation {
         path_exists: base.exists() && base.is_dir(),
-        player_log_found: base.join("Player.log").exists(),
+        player_log_found,
         chat_logs_found: base.join("ChatLogs").is_dir(),
         reports_found: base.join("Reports").is_dir(),
     }

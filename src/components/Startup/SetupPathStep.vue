@@ -2,8 +2,9 @@
   <div class="card p-6">
     <h2 class="text-lg text-text-primary mb-2">Locate Project Gorgon</h2>
     <p class="text-text-muted text-sm mb-6">
-      Select the folder where Project Gorgon stores its data.
-      On Windows this is typically in AppData\LocalLow\Elder Game\Project Gorgon.
+      Select the folder where Project Gorgon stores its data (ChatLogs, Reports, Books).
+      On Windows: <code>AppData\LocalLow\Elder Game\Project Gorgon</code><br />
+      On macOS: <code>~/Library/Application Support/unity.Elder Game.Project Gorgon</code>
     </p>
 
     <div class="flex gap-2 mb-4">
@@ -11,7 +12,7 @@
         v-model="localPath"
         @blur="onPathChange"
         @keyup.enter="onPathChange"
-        placeholder="Path to Elder Game\Project Gorgon folder..."
+        placeholder="Path to Project Gorgon data folder..."
         class="input flex-1" />
       <button @click="browse" class="btn btn-secondary whitespace-nowrap">Browse</button>
     </div>
@@ -62,7 +63,7 @@ async function onPathChange() {
 }
 
 async function browse() {
-  const selected = await open({ directory: true, multiple: false });
+  const selected = await open({ directory: true, multiple: false, defaultPath: localPath.value || undefined });
   if (selected) {
     localPath.value = selected;
     await startupStore.validatePath(selected);

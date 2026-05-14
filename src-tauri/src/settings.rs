@@ -15,7 +15,9 @@ pub struct AppSettings {
     /// Auto-watch Player.log on startup (legacy)
     pub auto_watch_on_startup: bool,
 
-    /// Root game data directory (%AppData%\LocalLow\Elder Game\Project Gorgon\)
+    /// Root game data directory.
+    /// Windows: %AppData%\..\LocalLow\Elder Game\Project Gorgon\
+    /// macOS:   ~/Library/Application Support/unity.Elder Game.Project Gorgon/
     pub game_data_path: String,
 
     /// Automatically purge old data
@@ -261,7 +263,7 @@ fn default_report_watch_interval() -> u32 {
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
-            log_file_path: String::new(),
+            log_file_path: get_default_player_log_path(),
             auto_watch_on_startup: false,
             game_data_path: get_default_game_data_path(),
             auto_purge_enabled: false,
@@ -374,9 +376,16 @@ impl SettingsManager {
         self.settings.read().unwrap().game_data_path.clone()
     }
 
-    /// Get Player.log path (constructed from game data path)
+    /// Get Player.log path.
+    ///
+    /// Uses the explicit `log_file_path` setting when non-empty (macOS).
+    /// Falls back to `game_data_path / "Player.log"` for backward compat (Windows).
     pub fn get_player_log_path(&self) -> Option<PathBuf> {
         let settings = self.settings.read().unwrap();
+
+        if !settings.log_file_path.is_empty() {
+            return Some(PathBuf::from(&settings.log_file_path));
+        }
 
         if settings.game_data_path.is_empty() {
             return None;
@@ -397,9 +406,31 @@ impl SettingsManager {
     }
 }
 
-/// Get default game data path (Windows-specific)
-fn get_default_game_data_path() -> String {
-    // %APPDATA%\..\LocalLow\Elder Game\Project Gorgon\
+/// Get the default Player.log path, or empty string if not determinable.
+/// On macOS Player.log lives under ~/Library/Logs/, separate from game data.
+/// On Windows returns empty so callers fall back to game_data_path/Player.log.
+pub fn get_default_player_log_path() -> String {
+    if cfg!(target_os = "macos") {
+        if let Ok(home) = std::env::var("HOME") {
+            return PathBuf::from(home)
+                .join("Library")
+                .join("Logs")
+                .join("Elder Game")
+                .join("Project Gorgon")
+                .join("Player.log")
+                .to_str()
+                .unwrap_or_default()
+                .to_string();
+        }
+    }
+    String::new()
+}
+
+/// Get default game data path (platform-aware).
+///
+/// Windows: %APPDATA%\..\LocalLow\Elder Game\Project Gorgon\
+/// macOS:   ~/Library/Application Support/unity.Elder Game.Project Gorgon/
+pub fn get_default_game_data_path() -> String {
     if cfg!(target_os = "windows") {
         if let Ok(local_appdata_low) = std::env::var("APPDATA") {
             // APPDATA points to Roaming, we need LocalLow
@@ -412,6 +443,16 @@ fn get_default_game_data_path() -> String {
             if !path.is_empty() {
                 return path;
             }
+        }
+    } else if cfg!(target_os = "macos") {
+        if let Ok(home) = std::env::var("HOME") {
+            return PathBuf::from(home)
+                .join("Library")
+                .join("Application Support")
+                .join("unity.Elder Game.Project Gorgon")
+                .to_str()
+                .unwrap_or_default()
+                .to_string();
         }
     }
 
@@ -444,6 +485,18 @@ pub fn save_settings(
 #[tauri::command]
 pub fn get_server_list() -> Vec<String> {
     PG_SERVERS.iter().map(|s| s.to_string()).collect()
+}
+
+/// Return the platform-appropriate default Player.log path.
+#[tauri::command]
+pub fn get_default_player_log_path_command() -> String {
+    get_default_player_log_path()
+}
+
+/// Return the platform-appropriate default game data path.
+#[tauri::command]
+pub fn get_default_game_data_path_command() -> String {
+    get_default_game_data_path()
 }
 
 /// Get the settings file path (for user reference)
