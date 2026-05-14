@@ -114,9 +114,11 @@ import StallInventoryTab from './StallInventoryTab.vue'
 import StallShopLogTab from './StallShopLogTab.vue'
 import { useStallTrackerStore } from '../../stores/stallTrackerStore'
 import { useViewPrefs } from '../../composables/useViewPrefs'
+import { useSettingsStore } from '../../stores/settingsStore'
 import type { ImportResult, ExportResult } from '../../types/stallTracker'
 
 const store = useStallTrackerStore()
+const settingsStore = useSettingsStore()
 
 // Ephemeral status text shown in the action row (auto-clears after 5s).
 const actionMessage = ref<string>('')
@@ -136,6 +138,7 @@ async function handleImport() {
   if (actionInProgress.value) return
   const selected = await openDialog({
     multiple: true,
+    defaultPath: settingsStore.settings.gameDataPath || undefined,
     filters: [{ name: 'Shop log book', extensions: ['txt'] }],
   })
   if (!selected) return

@@ -255,6 +255,7 @@ const parseError = ref<string | null>(null);
 async function browseAndParsePlayerLog() {
   const selected = await open({
     multiple: false,
+    defaultPath: settingsStore.settings.logFilePath || settingsStore.settings.gameDataPath || undefined,
     filters: [{ name: "Log Files", extensions: ["log", "txt"] }],
   });
   if (selected) {
@@ -293,6 +294,7 @@ let unlistenProgress: UnlistenFn | null = null;
 async function pickPlayerLogForReplay() {
   const selected = await open({
     multiple: false,
+    defaultPath: settingsStore.settings.logFilePath || settingsStore.settings.gameDataPath || undefined,
     filters: [{ name: "Log Files", extensions: ["log", "txt"] }],
   });
   if (selected) {
@@ -303,6 +305,7 @@ async function pickPlayerLogForReplay() {
 async function pickChatLogForReplay() {
   const selected = await open({
     multiple: false,
+    defaultPath: (settingsStore.settings.gameDataPath ? settingsStore.settings.gameDataPath + "/ChatLogs" : undefined),
     filters: [{ name: "Log Files", extensions: ["log", "txt"] }],
   });
   if (selected) {

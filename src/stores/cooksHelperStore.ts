@@ -4,6 +4,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { useCraftingStore } from './craftingStore'
 import { useGameStateStore } from './gameStateStore'
+import { useSettingsStore } from './settingsStore'
 import type { RecipeInfo } from '../types/gameData/recipes'
 import type { FoodItem } from '../types/gourmand'
 import type { MaterialNeed } from '../types/crafting'
@@ -145,7 +146,9 @@ export const useCooksHelperStore = defineStore('cooksHelper', () => {
   async function importFile() {
     error.value = null
 
+    const settingsStore = useSettingsStore()
     const filePath = await open({
+      defaultPath: (settingsStore.settings.gameDataPath ? settingsStore.settings.gameDataPath + '/Reports' : undefined),
       filters: [{ name: 'Gourmand Skill Report', extensions: ['txt'] }],
     })
 
