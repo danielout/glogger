@@ -217,7 +217,8 @@ use external_fetch::{fetch_github_releases, fetch_pg_news};
 use gst_manager::{gst_check_status, gst_download, gst_launch};
 use unified_search::unified_search;
 use settings::{
-    get_server_list, get_settings_file_path, load_settings, save_settings, SettingsManager,
+    get_default_game_data_path_command, get_default_player_log_path_command, get_server_list,
+    get_settings_file_path, load_settings, save_settings, SettingsManager,
 };
 use setup_commands::{
     complete_setup, delete_character, get_user_characters, import_latest_inventory_for_character,
@@ -617,6 +618,8 @@ pub fn run() {
             load_settings,
             save_settings,
             get_settings_file_path,
+            get_default_player_log_path_command,
+            get_default_game_data_path_command,
             get_server_list,
             // Setup / Onboarding
             validate_game_data_path,

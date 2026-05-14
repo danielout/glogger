@@ -13,8 +13,8 @@
       <div class="flex flex-col gap-2.5">
         <SetupStep number="1" title="Set your Game Data path">
           Go to <button class="text-accent-gold bg-transparent border-none cursor-pointer underline p-0 font-inherit text-inherit" @click="$emit('navigate', 'settings')">Settings &rarr; General</button>
-          and set the path to your Project: Gorgon installation folder.
-          This is the folder containing your <code class="text-accent-gold bg-surface-dark px-1.5 py-0.5 rounded-sm text-xs">Player.log</code> file. This should have been auto-detected during the setup, but in case that failed you can manually set it here.
+          and set the path to your Project: Gorgon data folder.
+          This is the folder containing <code class="text-accent-gold bg-surface-dark px-1.5 py-0.5 rounded-sm text-xs">ChatLogs</code> and <code class="text-accent-gold bg-surface-dark px-1.5 py-0.5 rounded-sm text-xs">Reports</code>. On Windows <code class="text-accent-gold bg-surface-dark px-1.5 py-0.5 rounded-sm text-xs">Player.log</code> lives here too; on macOS it is auto-detected from <code class="text-accent-gold bg-surface-dark px-1.5 py-0.5 rounded-sm text-xs">~/Library/Logs/</code>.
         </SetupStep>
         <SetupStep number="2" title="Enable Chat Logging in-game">
           In Project Gorgon, open Settings &rarr; GUI and enable

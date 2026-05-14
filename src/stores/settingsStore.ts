@@ -252,10 +252,12 @@ export const useSettingsStore = defineStore("settings", () => {
   }
 
   async function updateGameDataPath(path: string) {
+    const oldPath = settings.value.gameDataPath;
     settings.value.gameDataPath = path;
-    // Update log path if it was using the old game data path
-    if (settings.value.logFilePath.includes("Player.log")) {
-      settings.value.logFilePath = path + "\\Player.log";
+    // Update log path only if it was derived from the old game data path
+    // (Windows: same directory). On macOS the paths are independent.
+    if (oldPath && settings.value.logFilePath.startsWith(oldPath)) {
+      settings.value.logFilePath = path + settings.value.logFilePath.slice(oldPath.length);
     }
     await saveSettings(settings.value);
   }
@@ -266,15 +268,15 @@ export const useSettingsStore = defineStore("settings", () => {
   }
 
   function getPlayerLogPath(): string {
-    return settings.value.gameDataPath + "\\Player.log";
+    return settings.value.gameDataPath + "/Player.log";
   }
 
   function getChatLogsPath(): string {
-    return settings.value.gameDataPath + "\\ChatLogs";
+    return settings.value.gameDataPath + "/ChatLogs";
   }
 
   function getReportsPath(): string {
-    return settings.value.gameDataPath + "\\Reports";
+    return settings.value.gameDataPath + "/Reports";
   }
 
   async function updateAutoPurgeEnabled(enabled: boolean) {
