@@ -2,8 +2,9 @@
   <div class="flex flex-col gap-4 h-full">
     <!-- Not tailing warning -->
     <div v-if="!coordinator.isPlayerLogTailing"
-      class="p-3 bg-yellow-900/20 border border-yellow-700/40 rounded text-sm text-yellow-300">
-      Player log tailing is not active. Start tailing to track your inventory in real-time.
+      class="p-3 bg-yellow-900/20 border border-yellow-700/40 rounded text-sm text-yellow-300 flex items-center justify-between">
+      <span>Player log tailing is not active. Start tailing to track your inventory in real-time.</span>
+      <button @click="startTailing" class="btn btn-secondary text-xs whitespace-nowrap ml-3">Start Tailing</button>
     </div>
 
     <!-- Summary bar -->
@@ -121,6 +122,14 @@ const store = useGameStateStore()
 const coordinator = useCoordinatorStore()
 
 const searchQuery = ref('')
+
+async function startTailing() {
+  try {
+    await coordinator.startPlayerTailing()
+  } catch (e) {
+    console.error('Failed to start Player.log tailing:', e)
+  }
+}
 
 const filteredItems = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
