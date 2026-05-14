@@ -15,14 +15,16 @@
             >glogger</component>
             <div class="flex items-center gap-1.5">
               <span
-                class="w-2 h-2 rounded-full"
+                class="w-2 h-2 rounded-full cursor-pointer"
                 :class="isPlayerLogTailing ? 'bg-status-active' : 'bg-status-inactive'"
-                :title="isPlayerLogTailing ? 'Player.log: tailing' : 'Player.log: not tailing'"
+                :title="isPlayerLogTailing ? 'Player.log: tailing (click to stop)' : 'Player.log: not tailing (click to start)'"
+                @click="togglePlayerLog"
               />
               <span
-                class="w-2 h-2 rounded-full"
+                class="w-2 h-2 rounded-full cursor-pointer"
                 :class="isChatLogTailing ? 'bg-status-active' : 'bg-status-inactive'"
-                :title="isChatLogTailing ? 'Chat log: tailing' : 'Chat log: not tailing'"
+                :title="isChatLogTailing ? 'Chat log: tailing (click to stop)' : 'Chat log: not tailing (click to start)'"
+                @click="toggleChatLog"
               />
             </div>
           </div>
@@ -184,6 +186,22 @@ const coordinatorStore = useCoordinatorStore();
 const dataBrowserStore = useDataBrowserStore();
 const isPlayerLogTailing = computed(() => coordinatorStore.isPlayerLogTailing);
 const isChatLogTailing = computed(() => coordinatorStore.isChatLogTailing);
+
+async function togglePlayerLog() {
+  if (isPlayerLogTailing.value) {
+    await coordinatorStore.stopPlayerTailing();
+  } else {
+    await coordinatorStore.startPlayerTailing();
+  }
+}
+
+async function toggleChatLog() {
+  if (isChatLogTailing.value) {
+    await coordinatorStore.stopChatTailing();
+  } else {
+    await coordinatorStore.startChatTailing();
+  }
+}
 
 const navItems: { view: AppView; label: string }[] = [
   { view: "dashboard", label: "Dashboard" },
