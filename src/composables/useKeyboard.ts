@@ -94,14 +94,16 @@ export function useKeyboard(options: KeyboardOptions) {
       const tabs = resolveArray(tabsSource);
       let handled = false;
 
-      if ((event.shiftKey && event.key === "ArrowLeft") || event.key.toLowerCase() === "q") {
-        const idx = tabs.indexOf(activeTab.value);
-        activeTab.value = tabs[(idx - 1 + tabs.length) % tabs.length];
-        handled = true;
-      } else if ((event.shiftKey && event.key === "ArrowRight") || event.key.toLowerCase() === "e") {
-        const idx = tabs.indexOf(activeTab.value);
-        activeTab.value = tabs[(idx + 1) % tabs.length];
-        handled = true;
+      if (!event.metaKey && !event.ctrlKey) {
+        if ((event.shiftKey && event.key === "ArrowLeft") || event.key.toLowerCase() === "q") {
+          const idx = tabs.indexOf(activeTab.value);
+          activeTab.value = tabs[(idx - 1 + tabs.length) % tabs.length];
+          handled = true;
+        } else if ((event.shiftKey && event.key === "ArrowRight") || event.key.toLowerCase() === "e") {
+          const idx = tabs.indexOf(activeTab.value);
+          activeTab.value = tabs[(idx + 1) % tabs.length];
+          handled = true;
+        }
       }
 
       if (handled) {
