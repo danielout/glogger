@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { useSettingsStore } from "./settingsStore";
 import type {
   BrewingRecipe,
   BrewingIngredient,
@@ -311,8 +312,10 @@ export const useBreweryStore = defineStore("brewery", () => {
   async function importCsv(character: string): Promise<BrewingScanResult | null> {
     if (scanning.value) return null;
 
+    const settingsStore = useSettingsStore();
     const { open } = await import("@tauri-apps/plugin-dialog");
     const filePath = await open({
+      defaultPath: settingsStore.settings.gameDataPath || undefined,
       filters: [{ name: "CSV", extensions: ["csv"] }],
       multiple: false,
     });

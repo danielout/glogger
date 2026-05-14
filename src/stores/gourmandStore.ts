@@ -5,6 +5,7 @@ import { listen } from '@tauri-apps/api/event'
 import { open, save } from '@tauri-apps/plugin-dialog'
 import { useGameStateStore } from './gameStateStore'
 import { useCharacterStore } from './characterStore'
+import { useSettingsStore } from './settingsStore'
 import type { FoodItem, GourmandFoodEntry, GourmandImportResult } from '../types/gourmand'
 
 export const useGourmandStore = defineStore('gourmand', () => {
@@ -153,7 +154,9 @@ export const useGourmandStore = defineStore('gourmand', () => {
   async function importReport() {
     error.value = null
 
+    const settingsStore = useSettingsStore()
     const filePath = await open({
+      defaultPath: (settingsStore.settings.gameDataPath ? settingsStore.settings.gameDataPath + '/Reports' : undefined),
       filters: [{ name: 'Gourmand Report', extensions: ['txt'] }],
     })
 

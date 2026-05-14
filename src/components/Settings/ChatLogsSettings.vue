@@ -225,6 +225,7 @@ const parseResult = ref<string | null>(null);
 async function selectAndParseFile() {
   const selected = await open({
     multiple: false,
+    defaultPath: (settingsStore.settings.gameDataPath ? settingsStore.settings.gameDataPath + "/ChatLogs" : undefined),
     filters: [{ name: "Chat Log Files", extensions: ["log", "txt"] }],
   });
   if (selected) {
@@ -243,6 +244,7 @@ async function parseFolder() {
   const selected = await open({
     directory: true,
     multiple: false,
+    defaultPath: (settingsStore.settings.gameDataPath ? settingsStore.settings.gameDataPath + "/ChatLogs" : undefined),
   });
   if (selected) {
     parseResult.value = null;
